@@ -1,25 +1,27 @@
-/** M07 — Evaluation.
+/** M07: Evaluation (curriculum v2 numbers it M09; the id stays `fde-v1-m07`
+ * until B9 renumbers the manifest).
  *
  * M05 produced grounded answers and refusals; M06 produced tool calls a
  * dispatcher was willing to run. This module is the number that says whether
  * either of them got better, and the ways that number lies.
  *
- * Two lessons, one four-question check, one graded metrics function. The
- * first lesson is about the set: where labelled cases come from, why the
- * held-out half is split off before any tuning, and the three quiet ways an
- * answer from that half leaks back into the system it was meant to measure.
- * The second is about the report: accuracy, coverage, cost and p95 latency as
- * four separate numbers, the slice an aggregate hides, and the honest
- * comparison against a deterministic baseline.
+ * Two lessons, one six-question check, one graded metrics function. The
+ * first lesson is about the set: a golden set built from real failures, the
+ * reference solution that proves a task can be passed, the held-out half
+ * split off before any tuning, and the quiet ways an answer from that half
+ * leaks back into the system it was meant to measure. The second is about the
+ * report: accuracy, coverage, cost per request and p95 latency side by side,
+ * a failure-mode taxonomy read from each wrong answer's trace, the slice an
+ * aggregate hides, and the honest comparison against a deterministic baseline.
  *
- * Every case, prediction, score and latency figure in this module is an
- * authored fixture. `__cases` and `__predictions` in the task harness build a
- * 36-case held-out set and six named prediction sets from a compact pattern
- * table; nothing calls a provider, needs a key or opens a socket. Marlbrook
- * Systems, its queues and its ticket ids are invented for this path, and no
- * real customer data appears in them. A fixture accuracy is identical on
- * every run, which is what makes it gradeable and exactly what a live model
- * is not. */
+ * Every case, prediction, trace, score, cost and latency figure in this
+ * module is an authored fixture. `__cases` and `__predictions` in the task
+ * harness build a 36-case held-out set and named prediction sets from a
+ * compact pattern table; nothing calls a provider, needs a key or opens a
+ * socket. Marlbrook Systems, its queues, its articles and its ticket ids are
+ * invented for this path, and no real customer data appears in them. A
+ * fixture accuracy is identical on every run, which is what makes it
+ * gradeable and exactly what a live model is not. */
 
 import type { ModuleSource } from '../../types';
 
@@ -27,13 +29,22 @@ import type { ModuleSource } from '../../types';
  * function is graded against. Appended after the learner's code so the
  * fixtures cannot be shadowed.
  *
- * 36 cases in three slices of twelve. The prediction sets are written as one
- * character per case — `c` correct, `w` wrong, `a` abstained, `n`/`e`/`o` a
- * malformed answer, `x` no prediction at all — so the shape of each candidate
- * is readable in one line. `candidate` is the important one: it wins on the
- * aggregate, 27 correct against 30, while the returns slice falls from 10 to
- * 7. `cautious` is the other trap: it is right on 22 of the 24 cases it
- * answers and on 22 of all 36. */
+ * 36 cases in three slices of twelve. Each case names the article that
+ * supports its label (`sourceId`) and the tool the router should call. The
+ * prediction sets are written as one character per case (`c` correct, `w`
+ * wrong, `a` abstained, `n`/`e`/`o` a malformed answer, `x` no prediction at
+ * all) so the shape of each candidate is readable in one line. `candidate` is
+ * the important one: it wins on the aggregate, 30 correct against 27, while
+ * the returns slice falls from 10 to 7. `cautious` is the other trap: it is
+ * right on 22 of the 24 cases it answers and on 22 of all 36.
+ *
+ * `__RUNS` adds what a real run would log beside each answer: cost, latency
+ * and a trace of retrieved article ids and the tool called. One character per
+ * case again: `.` and `h` retrieve the right article and call queue.assign,
+ * `r` retrieves the wrong article, `t` calls refunds.create, and `-` records
+ * no trace at all, which is what the keyword baseline leaves behind. The
+ * candidate's three slow cases put its p95 at 2400 ms while 33 of 36 take
+ * 900 ms. */
 const EVALUATION_FIXTURES = `
 var __LABELS = ['tier-1', 'tier-2', 'finance', 'ops'];
 var __CASE_ROWS = [
@@ -54,7 +65,9 @@ var __cases = function (which) {
   var rows = which === 'twoSlices'
     ? __CASE_ROWS.filter(function (row) { return row[1] !== 'returns'; })
     : __CASE_ROWS;
-  return rows.map(function (row) { return { id: row[0], slice: row[1], expected: row[2] }; });
+  return rows.map(function (row) {
+    return { id: row[0], slice: row[1], expected: row[2], sourceId: 'KB-' + row[1], tool: 'queue.assign' };
+  });
 };
 var __wrong = function (expected) {
   return __LABELS[(__LABELS.indexOf(expected) + 1) % __LABELS.length];
@@ -68,6 +81,21 @@ var __PATTERNS = {
   allAbstain: 'aaaaaaaaaaaa' + 'aaaaaaaaaaaa' + 'aaaaaaaaaaaa',
   malformed:  'nnnnnnnnnnnn' + 'eeeeeeeeeeee' + 'oooooooooooo',
   messy:      'ccccccccwwxx' + 'ccccccccaane' + 'cccccccwwxxx'
+};
+var __RUNS = {
+  baseline:  { trace: '------------' + '------------' + '------------', costCents: 0, latencyMs: 12, slow: {} },
+  candidate: { trace: '...........h' + '............' + '.......rrrth', costCents: 0.35, latencyMs: 900, slow: { 'C-30': 2400, 'C-33': 2400, 'C-36': 2600 } },
+  cautious:  { trace: '.......h....' + '............' + '.......t....', costCents: 0.4, latencyMs: 1840, slow: {} }
+};
+var __traced = function (entry, row, run, index) {
+  if (!run) return entry;
+  entry.costCents = run.costCents;
+  entry.latencyMs = run.slow[row[0]] || run.latencyMs;
+  var mark = run.trace.charAt(index);
+  if (mark === '.' || mark === 'h') { entry.retrieved = ['KB-' + row[1]]; entry.tool = 'queue.assign'; }
+  else if (mark === 'r') { entry.retrieved = [row[1] === 'returns' ? 'KB-delivery' : 'KB-returns']; entry.tool = 'queue.assign'; }
+  else if (mark === 't') { entry.retrieved = ['KB-' + row[1]]; entry.tool = 'refunds.create'; }
+  return entry;
 };
 var __EXTRAS = {
   messy: [
@@ -88,15 +116,18 @@ var __predictions = function (name) {
     return __CASE_ROWS.map(function (row) { return { caseId: 'Z-' + row[0].slice(2), answer: row[2] }; });
   }
   var pattern = __PATTERNS[name] || '';
+  var run = __RUNS[name];
   var out = [];
   __CASE_ROWS.forEach(function (row, index) {
     var mark = pattern.charAt(index);
-    if (mark === 'c') out.push({ caseId: row[0], answer: row[2] });
-    else if (mark === 'w') out.push({ caseId: row[0], answer: __wrong(row[2]) });
-    else if (mark === 'a') out.push({ caseId: row[0], answer: null });
-    else if (mark === 'n') out.push({ caseId: row[0], answer: 42 });
-    else if (mark === 'e') out.push({ caseId: row[0], answer: '   ' });
-    else if (mark === 'o') out.push({ caseId: row[0], answer: { label: row[2] } });
+    var entry = null;
+    if (mark === 'c') entry = { caseId: row[0], answer: row[2] };
+    else if (mark === 'w') entry = { caseId: row[0], answer: __wrong(row[2]) };
+    else if (mark === 'a') entry = { caseId: row[0], answer: null };
+    else if (mark === 'n') entry = { caseId: row[0], answer: 42 };
+    else if (mark === 'e') entry = { caseId: row[0], answer: '   ' };
+    else if (mark === 'o') entry = { caseId: row[0], answer: { label: row[2] } };
+    if (entry) out.push(__traced(entry, row, run, index));
   });
   return out.concat(__EXTRAS[name] || []);
 };
@@ -106,32 +137,38 @@ export const FDE_M07: ModuleSource = {
   id: 'fde-v1-m07',
   title: 'Evaluation',
   outcomes: [
-    'Build a labelled set out of real failures, give every case a slice label, and split the held-out half off once, before any tuning starts.',
+    'Build a golden set out of real failures, give every case a slice label and a reviewed expected answer, and split the held-out half off once, before any tuning starts.',
     'Name the three ways a held-out answer leaks back into the system measuring it, and say what each one inflates.',
-    'Report accuracy, coverage, cost and p95 latency as four numbers, and say which of them answers the question the customer actually asked.',
+    'Report accuracy, coverage, cost per request and p95 latency side by side, and say which of them answers the question the customer actually asked.',
+    'Sort each wrong answer into retrieval miss, tool misuse, hallucination or unclassified from its trace, and say where the fix for each one starts.',
     'Read a per-slice table and spot the slice a rising aggregate is hiding.',
     'State the rule that decides which candidate wins before you run the comparison, and hold a deterministic baseline to the same measurement.',
   ],
   competencies: ['evaluation'],
   dependsOn: ['fde-v1-m05', 'fde-v1-m06'],
-  estimatedMinutes: 110,
+  estimatedMinutes: 140,
   lessons: [
     {
       id: 'fde-v1-m07-l1',
-      title: 'Reference cases and leakage',
+      title: 'Golden sets, reference cases and leakage',
       summary:
-        'Label policy, sampled versus regression cases, recorded partitions and what makes evaluation information contaminate selection.',
-      estimatedMinutes: 25,
+        'What a golden set holds and where its first cases come from, the reference solution that proves a task can be passed, capability versus regression sets, recorded partitions, and what makes evaluation information contaminate selection.',
+      estimatedMinutes: 30,
       sources: [
         {
-          label: 'NIST AI Risk Management Framework',
-          url: 'https://www.nist.gov/itl/ai-risk-management-framework',
-          reviewedOn: '2026-09-08',
+          label: 'Anthropic, “Demystifying evals for AI agents” (9 January 2026): tasks, 20 to 50 tasks from real failures, reference solutions, capability and regression evals',
+          url: 'https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents',
+          reviewedOn: '2026-10-21',
         },
         {
-          label: 'Python docs — random',
+          label: 'Snowflake, Staff Applied AI Engineer (FDE) posting: quality metrics, evaluation frameworks and golden datasets',
+          url: 'https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Python docs: random, notes on reproducibility',
           url: 'https://docs.python.org/3/library/random.html',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-21',
         },
       ],
       sections: [
@@ -139,6 +176,25 @@ export const FDE_M07: ModuleSource = {
           kind: 'prose',
           body:
             'Marlbrook’s support workbench reads an incoming ticket and proposes a queue for it. It gets that right most of the time, and “most of the time” is the whole problem: nobody in the room can say whether last week’s change helped, hurt, or moved the failures somewhere quieter. What settles it is a set of tickets with the right queue written down before the system sees them.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'Call that set the golden set: cases with inputs, an agreed expected answer, a slice label and a record of who agreed. Snowflake’s Staff Applied AI Engineer (FDE) posting asks the engineer to translate “ambiguous customer goals into measurable quality metrics, evaluation frameworks, and golden datasets”. Anthropic’s “Demystifying evals for AI agents” defines a task as “a single test with defined inputs and success criteria” and says “20-50 simple tasks drawn from real failures is a great start”. You do not need hundreds of cases before you measure anything.',
+        },
+        {
+          kind: 'prose',
+          body:
+            'The same article asks for a reference solution per task: “a known working output that passes all graders”. It proves two things at once, that the task can be passed and that the grader is configured correctly. Every graded exercise in this path follows that rule: its reference solution must pass its own visible and hidden checks before the exercise ships.',
+        },
+        {
+          kind: 'table',
+          caption: 'Two kinds of set, as the Anthropic article separates them. A case can move from the first to the second once the system passes it reliably.',
+          headers: ['Set', 'Expected pass rate', 'What it is for'],
+          rows: [
+            ['Capability set', 'Starts low', 'A hill to climb: cases the system cannot pass yet, which show whether a change made progress.'],
+            ['Regression set', 'Close to 100%', 'A guard: cases the system already passes, which catch a change that breaks them.'],
+          ],
         },
         {
           kind: 'prose',
@@ -174,24 +230,24 @@ export const FDE_M07: ModuleSource = {
             shape: 'array',
             frames: [
               {
-                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v1", "dev 17/24 ≈ 0.71", "held-out —"],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v1", "dev 17/24 ≈ 0.71", "held-out: not run"],
                 note: 'The fixed partition has 24 development and 12 held-out cases. All cases are answered in this trace; prompt v1 gets 17 of 24 development labels right. No held-out result has been used.',
                 counter: { label: 'Held-out runs', value: 0 },
               },
               {
-                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v2", "dev 18/24 = 0.75", "held-out —"],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v2", "dev 18/24 = 0.75", "held-out: not run"],
                 marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
                 note: 'Prompt v2 gets 18 of 24 development labels right. The held-out partition stays untouched.',
                 counter: { label: 'Held-out runs', value: 0 },
               },
               {
-                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v3", "dev 20/24 ≈ 0.83", "held-out —"],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v3", "dev 20/24 ≈ 0.83", "held-out: not run"],
                 marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
                 note: 'Prompt v3 gets 20 of 24 development labels right. This is selection using the same development cases, not fresh external evidence.',
                 counter: { label: 'Held-out runs', value: 0 },
               },
               {
-                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v4", "dev 21/24 = 0.875", "held-out —"],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v4", "dev 21/24 = 0.875", "held-out: not run"],
                 marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
                 note: 'Prompt v4 gets 21 of 24 development labels right and is selected before the held-out run.',
                 counter: { label: 'Held-out runs', value: 0 },
@@ -263,20 +319,35 @@ export const FDE_M07: ModuleSource = {
     },
     {
       id: 'fde-v1-m07-l2',
-      title: 'Quality against cost and latency',
+      title: 'Failure modes, cost and latency beside quality',
       summary:
-        'Explicit denominators, coverage and conditional quality, observed slice changes, cost/latency distributions and a predeclared comparison policy.',
-      estimatedMinutes: 25,
+        'Explicit denominators, coverage and conditional quality, cost per request and p95 latency in the same report, a failure-mode taxonomy read from traces, observed slice changes and a predeclared comparison policy.',
+      estimatedMinutes: 35,
       sources: [
         {
-          label: 'Google SRE Book — Service Level Objectives',
-          url: 'https://sre.google/sre-book/service-level-objectives/',
-          reviewedOn: '2026-09-08',
+          label: 'Anthropic, “Demystifying evals for AI agents” (9 January 2026): latency, token usage, cost per task and error rates tracked on a static bank of tasks; reading transcripts',
+          url: 'https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents',
+          reviewedOn: '2026-10-21',
         },
         {
-          label: 'OpenTelemetry — Traces',
+          label: 'Snowflake, Staff Applied AI Engineer (FDE) posting, preferred qualifications: failure-mode analysis that categorizes errors as hallucination, retrieval miss, planning failure and tool misuse',
+          url: 'https://jobs.ashbyhq.com/snowflake/12455179-f3ff-4739-b8c0-c21f3c116b87',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Harvey, Founding Forward Deployed Engineer posting on Built In (listing removed 9 February 2026): evals and harnesses per client, success metrics for custom builds',
+          url: 'https://builtin.com/job/forward-deployment-engineer/7406694',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'Google SRE Book: Service Level Objectives, latency as a distribution',
+          url: 'https://sre.google/sre-book/service-level-objectives/',
+          reviewedOn: '2026-10-21',
+        },
+        {
+          label: 'OpenTelemetry: Traces and spans',
           url: 'https://opentelemetry.io/docs/concepts/signals/traces/',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-21',
         },
       ],
       sections: [
@@ -286,8 +357,13 @@ export const FDE_M07: ModuleSource = {
             'Report the metrics needed to assess the agreed quality, coverage, latency and cost objectives. Improvements can trade off, but not every improvement necessarily worsens another metric. Name each denominator, sample and measurement method before comparing candidates.',
         },
         {
+          kind: 'prose',
+          body:
+            'Put cost and latency in the same report as quality, computed over the same cases. Anthropic’s evals article lists “latency, token usage, cost per task, and error rates” as numbers you can track on a static bank of tasks. Harvey’s founding FDE posting asked for evals and harnesses that capture real-world quality “on a client-by-client basis” and for “crisp success metrics” per custom build. A customer who agreed a latency limit and a budget reads all three numbers in one row.',
+        },
+        {
           kind: 'table',
-          caption: 'The four numbers a candidate is reported on, and what each one leaves out.',
+          caption: 'The four numbers a candidate is reported on, side by side, and what each one leaves out.',
           headers: ['Number', 'What it answers', 'What it cannot tell you'],
           rows: [
             [
@@ -301,8 +377,8 @@ export const FDE_M07: ModuleSource = {
               'Whether the cases it declined were the hard ones or a random third',
             ],
             [
-              'Cost per case',
-              'Total agreed processing cost divided by all input cases; state which costs are included',
+              'Cost per request',
+              'Total agreed processing cost divided by every request in the set, abstentions included; state which costs are included',
               'What an abstention costs, because that bill arrives as an operator’s time',
             ],
             [
@@ -320,8 +396,8 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'code',
           language: 'javascript',
-          code: 'const report = {\n  total: 36, answered: 24, abstained: 12, correct: 22,\n  accuracy: 0.6111, // this exercise: correct / total, a correct-answer yield\n  coverage: 0.6667, // answered / total\n  accuracyWhenAnswered: 0.9167, // correct / answered, explicitly conditional accuracy\n  costPerCaseUsd: 0.004, // hypothetical included processing cost / total\n  p95LatencyMs: 1840, // hypothetical, with quantile method to be specified\n};',
-          caption: 'One authored run with explicit denominators. Conditional accuracy and correct-answer yield differ by about 30.56 percentage points.',
+          code: 'const report = {\n  total: 36, answered: 24, abstained: 12, correct: 22,\n  accuracy: 0.6111, // this exercise: correct / total, a correct-answer yield\n  coverage: 0.6667, // answered / total\n  accuracyWhenAnswered: 0.9167, // correct / answered, explicitly conditional accuracy\n  costPerRequestCents: 0.4, // authored included processing cost / total, abstentions included\n  p95LatencyMs: 1840, // authored, nearest-rank p95\n};',
+          caption: 'One authored run with explicit denominators, cost and latency in the same object. Conditional accuracy and correct-answer yield differ by about 30.56 percentage points.',
         },
         {
           kind: 'callout',
@@ -332,7 +408,7 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Slices are how you find out where the accuracy came from. Split by whatever the customer would split by: ticket topic, tenant, language, channel, the accounts on the enterprise contract. Marlbrook’s set slices by topic — billing, delivery, returns — and twelve cases each is small, but a slice that is too small to prove a regression is also too small to prove there is not one.',
+            'Slices are how you find out where the accuracy came from. Split by whatever the customer would split by: ticket topic, tenant, language, channel, the accounts on the enterprise contract. Marlbrook’s set slices by topic into billing, delivery and returns. Twelve cases each is small, but a slice that is too small to prove a regression is also too small to prove there is not one.',
         },
         {
           kind: 'trace',
@@ -345,17 +421,17 @@ export const FDE_M07: ModuleSource = {
                 note: 'The baseline on the held-out set: 8 of 12 billing tickets, 9 of 12 delivery, 10 of 12 returns, 27 of 36 overall.',
               },
               {
-                cells: ['billing 0.92', 'delivery 0.75', 'returns 0.83', 'overall —'],
+                cells: ['billing 0.92', 'delivery 0.75', 'returns 0.83', 'overall: not yet'],
                 marks: [{ index: 0, role: 'active' }],
                 note: 'The candidate’s billing slice goes from 8 of 12 to 11 of 12. Three tickets that used to reach the wrong queue now reach the right one.',
               },
               {
-                cells: ['billing 0.92', 'delivery 1.00', 'returns 0.83', 'overall —'],
+                cells: ['billing 0.92', 'delivery 1.00', 'returns 0.83', 'overall: not yet'],
                 marks: [{ index: 1, role: 'active' }],
                 note: 'Delivery goes from 9 of 12 to 12 of 12. Two slices out of three are better, and so far the change looks unambiguous.',
               },
               {
-                cells: ['billing 0.92', 'delivery 1.00', 'returns 0.58', 'overall —'],
+                cells: ['billing 0.92', 'delivery 1.00', 'returns 0.58', 'overall: not yet'],
                 marks: [{ index: 2, role: 'compare' }],
                 note: 'Returns falls from 10 of 12 to 7 of 12. Three returns tickets that used to be routed correctly now are not, and nothing in the aggregate has been computed yet.',
               },
@@ -366,6 +442,33 @@ export const FDE_M07: ModuleSource = {
               },
             ],
           },
+        },
+        {
+          kind: 'prose',
+          body:
+            'A slice tells you where the errors are. A failure-mode taxonomy tells you which part of the system made them. Snowflake’s FDE posting lists, as a preferred qualification, experience with “failure-mode analysis on agent or RAG systems”, categorizing errors as hallucination, retrieval miss, planning failure and tool misuse, and “driving each down with targeted evals”. This module uses three of those labels plus a fourth for errors you cannot read. The Marlbrook router makes one call per ticket, so it has no plan to fail. The posting names the labels without defining them, so the definitions below are this module’s convention. Hallucination is the catch-all for generation errors: the evidence arrived, the expected tool ran, and the answer is still wrong. That is narrower than the everyday sense of an invented or unsupported answer, which here would also cover a retrieval miss.',
+        },
+        {
+          kind: 'table',
+          caption: 'The four labels the exercise assigns to a wrong answer, checked in this order, and where the fix for each one starts.',
+          headers: ['Label', 'What the trace shows', 'Where the fix starts'],
+          rows: [
+            ['Unclassified', 'No retrieved ids and no tool name: nothing was logged', 'Instrumentation. Record the trace before you change the system.'],
+            ['Retrieval miss', 'The article that supports the case’s label is not among the retrieved ids', 'The index, the chunking or the access filter from M05. A prompt change cannot fix evidence the model never saw.'],
+            ['Tool misuse', 'The run called a different tool from the one the case expects', 'The tool definitions and the gates from M06.'],
+            ['Hallucination', 'The right article arrived and the right tool ran, and the answer is still wrong', 'The generation step: the prompt, the model choice, the output validation from M04.'],
+          ],
+        },
+        {
+          kind: 'prose',
+          body:
+            'Classify the candidate’s five wrong returns answers and the regression reads differently. Three never retrieved the returns article, one called refunds.create instead of assigning a queue, and one had the evidence and still answered wrong. A prompt edit aimed at the returns slice would address one of the five. The keyword baseline’s nine errors all land in unclassified, because a rule table logs no retrieval and no tool call.',
+        },
+        {
+          kind: 'callout',
+          tone: 'warning',
+          body:
+            'A rule that reads two trace fields gives you a first sort of the errors. Anthropic’s article warns that you will not know whether your graders work “unless you read the transcripts and grades from many trials”. Read a sample from every label before you act on the counts, and expect some errors to need a label this rule does not have.',
         },
         {
           kind: 'prose',
@@ -385,19 +488,19 @@ export const FDE_M07: ModuleSource = {
             [
               'Keyword router, 40 rules',
               '0.75 · 1.00',
-              '0.0000 USD displayed · 12 ms',
+              '0 cents per request · p95 12 ms',
               'The authored baseline for the stated evaluation; compare all agreed objectives, not only speed and per-call cost',
             ],
             [
-              'Single model call, no retrieval',
+              'Model call with retrieval',
               '0.83 · 1.00',
-              '0.0035 USD · 900 ms',
-              'About 8.33 percentage points on this sample for a hypothetical 0.35 US cents and 900 ms per ticket',
+              '0.35 cents per request · p95 2400 ms',
+              'About 8.33 percentage points on this sample for an authored 0.35 US cents per request; 33 of 36 requests take 900 ms, and three slow ones set the p95',
             ],
             [
               'Model call with an abstention threshold',
               '0.61 · 0.67',
-              '0.0040 USD · 1840 ms',
+              '0.40 cents per request · p95 1840 ms',
               'Right on 22 of the 24 it answers, and it hands 12 of 36 tickets back to a person',
             ],
           ],
@@ -405,7 +508,7 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The rule baseline is a serious candidate, but displayed 0.0000 USD is a rounded hypothetical included cost, not proof of zero compute/maintenance cost. The 12 ms figure is authored here, not a universal deterministic latency. Decide whether a candidate meets the actual quality, coverage, auditability and latency objectives; a 200 ms constraint alone does not establish every part of a release decision.',
+            'The rule baseline is a serious candidate, but its 0 cents is an authored included cost, not proof of zero compute/maintenance cost. The 12 ms figure is authored here, not a universal deterministic latency. Decide whether a candidate meets the actual quality, coverage, auditability and latency objectives; a 200 ms constraint alone does not establish every part of a release decision.',
         },
         {
           kind: 'prose',
@@ -416,7 +519,7 @@ export const FDE_M07: ModuleSource = {
           kind: 'callout',
           tone: 'note',
           body:
-            'Costs/latencies here are authored figures, not measured provider prices or realistic-performance guarantees. Measure the full candidates, state included costs and operator effort, and re-evaluate when inputs, provider, model, prompt, policy or retrieval change.',
+            'Every model output, retrieval result, trace, cost and latency in this lesson and the exercise is an authored fixture, not a measured provider price, a recorded model response or a performance guarantee. Measure the full candidates, state included costs and operator effort, and re-evaluate when inputs, provider, model, prompt, policy or retrieval change.',
         },
         {
           kind: 'prose',
@@ -432,10 +535,10 @@ export const FDE_M07: ModuleSource = {
       kind: 'lesson',
       purpose: 'exercise',
       verification: 'self_reviewed',
-      title: 'Read: reference cases and leakage',
-      summary: 'Label policy, representative versus regression cases, recorded independent partitions and contamination limits.',
+      title: 'Read: golden sets, reference cases and leakage',
+      summary: 'Golden sets built from real failures, reference solutions, capability versus regression sets, recorded independent partitions and contamination limits.',
       competencies: ['evaluation'],
-      estimatedMinutes: 25,
+      estimatedMinutes: 30,
       lessonId: 'fde-v1-m07-l1',
     },
     {
@@ -443,10 +546,10 @@ export const FDE_M07: ModuleSource = {
       kind: 'lesson',
       purpose: 'exercise',
       verification: 'self_reviewed',
-      title: 'Read: quality against cost and latency',
-      summary: 'Explicit metric denominators, abstention behavior, slice changes, quantile methods and a bounded comparison policy.',
+      title: 'Read: failure modes, cost and latency beside quality',
+      summary: 'Explicit metric denominators, cost per request and p95 latency in one report, a failure-mode taxonomy, slice changes and a bounded comparison policy.',
       competencies: ['evaluation'],
-      estimatedMinutes: 25,
+      estimatedMinutes: 35,
       lessonId: 'fde-v1-m07-l2',
     },
     {
@@ -456,9 +559,9 @@ export const FDE_M07: ModuleSource = {
       verification: 'machine_verified',
       title: 'Reading an evaluation report',
       summary:
-        'Four evaluation decisions: explicit leakage, correctly labelled yield/error/abstention counts, aggregate-versus-slice observations and conditional quality alongside coverage.',
+        'Six evaluation decisions: explicit leakage, correctly labelled yield/error/abstention counts, aggregate-versus-slice observations, conditional quality alongside coverage, a failure mode read from a trace, and a release decision on quality, latency and cost together.',
       competencies: ['evaluation'],
-      estimatedMinutes: 15,
+      estimatedMinutes: 20,
       passThreshold: 0.8,
       questions: [
         {
@@ -493,6 +596,32 @@ export const FDE_M07: ModuleSource = {
           explanation: "A has 75% conditional accuracy, 100% coverage and 75% correct-answer yield. B has about 91.7% conditional accuracy, 66.7% coverage and 61.1% yield, with 12 abstentions. B is more accurate on its selected answers, while A gets more of all 36 cases correct. Rejecting additional cases can raise or lower conditional accuracy depending on which cases are rejected; it is not automatically monotonic. A refusal-all system has undefined answered-case accuracy, not proof of calibration. Whether abstention counts as an error or a handoff cost depends on the evaluation/workflow definition, so label the metrics and report both coverage and conditional quality.",
           competencies: ['evaluation'],
         },
+        {
+          id: 'fde-v1-m07-q5',
+          prompt: 'A wrong answer on case C-33 carries this trace: the retriever returned only KB-delivery, and the router called queue.assign, the tool the case expects. The article that supports C-33’s label is KB-returns. Under this module’s taxonomy, which failure mode is it, and where does the fix start?',
+          options: [
+            'A retrieval miss: the supporting article never reached the model, so the fix starts in the index, the chunking or the access filter.',
+            'A hallucination: the model answered without support, so the fix starts with a prompt that forbids answers the context does not support.',
+            'Tool misuse: the router put the ticket in the wrong queue, so the fix starts in the queue.assign definition and its argument schema.',
+            'Unclassified: one trace cannot separate retrieval from generation, so the fix starts with more logging before any change.',
+          ],
+          correct: 0,
+          explanation: 'The retrieved ids do not include KB-returns, so the model never saw the evidence for this label. That is a retrieval miss, and the fix belongs in M05’s territory: what the index holds, how it was chunked, and whether an access filter dropped the article. Calling it a hallucination skips the earlier check: in this module, hallucination applies only when the right evidence arrived and the answer is still wrong, and a stricter prompt cannot supply a missing article. It is not tool misuse, because the run called the tool the case expects; a wrong queue value is the wrong answer, not a wrong tool. It is not unclassified either: the trace records both the retrieved ids and the tool, which is enough to place it.',
+          competencies: ['evaluation'],
+        },
+        {
+          id: 'fde-v1-m07-q6',
+          prompt: 'Two candidates ran on the same 36-case golden set. A: correct-answer yield 0.83 (30 of 36), p95 latency 2400 ms, cost per request 0.35 cents. B: yield 0.81 (29 of 36), p95 900 ms, cost per request 0.12 cents. Before the run the customer agreed: yield at least 0.80, p95 under 2000 ms, and among candidates that meet both, the cheaper one wins. Which recommendation follows that agreement?',
+          options: [
+            'Choose B: both meet the yield floor, only B meets the latency limit, and B costs less per request.',
+            'Choose A: it has the higher yield, and one more correct ticket in 36 outweighs both latency and cost.',
+            'Choose A: three slow requests set its p95, so its mean latency, well under 2000 ms, is the fairer figure to hold it to.',
+            'Choose neither: one ticket of difference on 36 cases is within noise, so the run cannot separate the candidates.',
+          ],
+          correct: 0,
+          explanation: 'Apply the rule the customer agreed before seeing results. Both candidates clear the 0.80 yield floor; only B has a p95 under 2000 ms, so A is out, and B is also the cheaper one. Choosing A for its extra correct ticket rewrites the rule after the run, which is the move a predeclared rule exists to stop. Swapping p95 for the mean changes the metric the customer agreed; the slow tail is the experience the latency limit protects. The noise concern does not change what the agreed rule selects: yield is only a floor, both measured values clear it, and the rule then decides on latency and cost, where the gap is large. B clears the floor by one ticket (28 of 36 would be 0.78), so report that margin and its uncertainty beside the recommendation.',
+          competencies: ['evaluation'],
+        },
       ],
     },
     {
@@ -502,21 +631,23 @@ export const FDE_M07: ModuleSource = {
       verification: 'machine_verified',
       title: 'Metrics that do not hide the slice',
       summary:
-        'Score a held-out set into accuracy, coverage and per-slice numbers that keep abstentions visible, then compare two candidates under a rule fixed in advance and flag the slice the aggregate buried.',
+        'Score a held-out set into accuracy, coverage, cost per request, p95 latency, failure modes and per-slice numbers that keep abstentions visible, then compare two candidates under a rule fixed in advance and flag the slice the aggregate buried.',
       competencies: ['evaluation'],
-      estimatedMinutes: 45,
+      estimatedMinutes: 55,
       code: {
         language: 'javascript',
         prompt:
-          'Marlbrook’s held-out set holds 36 support tickets, twelve in each of three slices — `billing`, `delivery` and `returns` — and each case records the queue an operator agreed it belongs in. You are writing the two functions the release check runs over it.\n\n**`evaluate(cases, predictions)`** returns one report:\n\n`{ total, answered, abstained, correct, accuracy, coverage, accuracyWhenAnswered, bySlice }`\n\n`cases` is an array of `{ id, slice, expected }`. `predictions` is an array of `{ caseId, answer }`. Count like this:\n\n1. **Every case counts once**, whether or not a prediction exists for it. A case with no prediction is an abstention, not a missing row.\n2. **First prediction wins.** A second prediction for the same `caseId` is ignored, whatever it says. The pipeline delivers duplicates.\n3. **A prediction whose `caseId` matches no case is ignored.** It came from another run.\n4. **An answer counts as answered only when it is a string that is non-empty after trimming.** `null`, `undefined`, a number, an object and `\'   \'` are all abstentions.\n5. `accuracy` is `correct / total`, so an abstention counts against you. `coverage` is `answered / total`. `accuracyWhenAnswered` is `correct / answered`. Report `0` for any of them when the denominator is `0`.\n6. **Round every rate** with `Math.round(value * 10000) / 10000`. Counts stay integers.\n7. `bySlice` maps each slice name to an object with the same seven fields, over that slice’s cases only. A case whose `slice` is not a non-empty string joins the slice named `unlabelled`.\n8. A `cases` that is not an array gives a report of zeros with an empty `bySlice`. A `predictions` that is not an array means everything abstained.\n\n**`compare(baseline, candidate)`** takes two of those reports and returns:\n\n`{ better, accuracyDelta, coverageDelta, regressedSlices, sliceMismatch, aggregateHidesRegression }`\n\n- If either argument is not a usable report — not an object, or missing `bySlice`, `accuracy` or `coverage` — return `better: \'not-comparable\'` with both deltas `0` and both arrays empty and aggregateHidesRegression:false. A usable report is a non-array ordinary object with finite accuracy/coverage rates in [0,1] and an ordinary non-array bySlice map whose own entries are non-array objects with finite accuracy in [0,1].\n- `sliceMismatch` lists, sorted ascending, every slice name present in one report and not the other. If it is non-empty the summary partitions differ under this comparison policy, so return `better: \'not-comparable\'`, both deltas `0` and `regressedSlices: []`, keeping the mismatch list.\n- Otherwise `accuracyDelta` is `candidate.accuracy - baseline.accuracy` and `coverageDelta` is `candidate.coverage - baseline.coverage`, each computed from the already-rounded rates and rounded again the same way.\n- `regressedSlices` holds one `{ slice, baselineAccuracy, candidateAccuracy, delta }` for every slice whose accuracy fell, sorted by slice name ascending. `delta` is candidate minus baseline, rounded.\n- **The rule for `better`, applied in this order:** `coverageDelta < -0.05` gives `\'baseline\'`, because a candidate that answers far less has bought its accuracy by handing work back. Then `accuracyDelta > 0.01` gives `\'candidate\'`, `accuracyDelta < -0.01` gives `\'baseline\'`, and anything left is `\'tie\'`.\n- `aggregateHidesRegression` is `true` when `better` is `\'candidate\'` or `\'tie\'` and `regressedSlices` is not empty. That is the flag: the aggregate did not lose, and at least one slice did.\n\nOne fixture matters more than the others. `__predictions(\'candidate\')` beats `__predictions(\'baseline\')` 30 correct to 27 while its returns slice falls from 10 of 12 to 7 of 12, so a comparison that only reads the aggregate reports a clean win while the observed returns count regresses. Slice-name equality alone does not establish identical case ids/labels or a valid statistical comparison; callers must verify dataset identity upstream.\n\nDomain: at most 1,000 ordinary case objects with unique non-empty string ids and string expected labels; unusable slice values join unlabelled. Predictions contain at most 2,000 ordinary values, with malformed entries ignored as described. Strings have at most 100 UTF-16 code units; no getters/proxies. Correctness compares the original answer string exactly to expected; trimming decides only whether an answer is non-empty. Preserve arbitrary valid ids and slice names, including __proto__. Comparison inputs follow the usable-report shape or are rejected and never mutated.\n\nTarget: O(n log n) time, where n is the combined input entry/slice count for each operation, using bounded-length fields and the usual dictionary/set model.\n\n`__cases`, `__predictions`, `__CASE_ROWS` and `__PATTERNS` come from the task harness. Every case, label and prediction in them is authored for this exercise and identical on every run. Nothing here calls a model or opens a network connection, and a fixture accuracy is not evidence about how a live router would score these tickets.',
+          'Marlbrook’s held-out set holds 36 support tickets, twelve in each of three slices (`billing`, `delivery` and `returns`), and each case records the queue an operator agreed it belongs in. You are writing the two functions the release check runs over it.\n\n**`evaluate(cases, predictions)`** returns one report:\n\n`{ total, answered, abstained, correct, accuracy, coverage, accuracyWhenAnswered, costPerRequestCents, p95LatencyMs, failures, bySlice }`\n\n`cases` is an array of `{ id, slice, expected, sourceId?, tool? }`. `predictions` is an array of `{ caseId, answer, costCents?, latencyMs?, retrieved?, tool? }`. Count like this:\n\n1. **Every case counts once**, whether or not a prediction exists for it. A case with no prediction is an abstention, not a missing row.\n2. **First prediction wins.** A second prediction for the same `caseId` is ignored, whatever it says. The pipeline delivers duplicates.\n3. **A prediction whose `caseId` matches no case is ignored.** It came from another run.\n4. **An answer counts as answered only when it is a string that is non-empty after trimming.** `null`, `undefined`, a number, an object and `\'   \'` are all abstentions.\n5. `accuracy` is `correct / total`, so an abstention counts against you. `coverage` is `answered / total`. `accuracyWhenAnswered` is `correct / answered`. Report `0` for any of them when the denominator is `0`.\n6. **Round every rate** with `Math.round(value * 10000) / 10000`. Counts stay integers.\n7. `bySlice` maps each slice name to an object with the same seven fields, over that slice’s cases only. A case whose `slice` is not a non-empty string joins the slice named `unlabelled`.\n8. A `cases` that is not an array gives a report of zeros with an empty `bySlice`. A `predictions` that is not an array means everything abstained.\n9. **Cost and latency.** The counted prediction for a case (the first one for its `caseId`) may carry `costCents` and `latencyMs`. Use a value only when it is a finite number of at least 0, and ignore it otherwise. `costPerRequestCents` is the sum of the usable `costCents` of counted predictions, abstentions included, divided by `total` and rounded like a rate; it is `0` when `total` is `0`. `p95LatencyMs` is the nearest-rank 95th percentile of the usable `latencyMs` values: sort them ascending as numbers and take the value at position `Math.ceil(0.95 * n)`, counting from 1. With no usable values it is `0`.\n10. **Failure modes.** `failures` is `{ retrievalMiss, toolMisuse, hallucination, unclassified }` and counts every answered case whose answer is wrong, over the whole set only. A prediction may carry a trace: `retrieved`, an array of article ids, and `tool`, the name of the tool it called. A case may carry `sourceId`, the article that supports its label, and `tool`, the tool it expects. Give each wrong answer the first label that matches:\n    1. The prediction has no `retrieved` array and no string `tool`: `unclassified`. There is no trace to read.\n    2. `retrieved` is an array, the case has a string `sourceId`, and the array does not contain it: `retrievalMiss`.\n    3. The prediction’s `tool` is a string, the case has a string `tool`, and the two differ: `toolMisuse`.\n    4. Anything else: `hallucination`, this module’s catch-all label for generation errors. The evidence arrived, the expected tool ran, and the answer is still wrong.\n\n**`compare(baseline, candidate)`** takes two of those reports and returns:\n\n`{ better, accuracyDelta, coverageDelta, regressedSlices, sliceMismatch, aggregateHidesRegression }`\n\n- If either argument is not a usable report (not an object, or missing `bySlice`, `accuracy` or `coverage`), return `better: \'not-comparable\'` with both deltas `0` and both arrays empty and aggregateHidesRegression:false. A usable report is a non-array ordinary object with finite accuracy/coverage rates in [0,1] and an ordinary non-array bySlice map whose own entries are non-array objects with finite accuracy in [0,1].\n- `sliceMismatch` lists, sorted ascending, every slice name present in one report and not the other. If it is non-empty the summary partitions differ under this comparison policy, so return `better: \'not-comparable\'`, both deltas `0` and `regressedSlices: []`, keeping the mismatch list.\n- Otherwise `accuracyDelta` is `candidate.accuracy - baseline.accuracy` and `coverageDelta` is `candidate.coverage - baseline.coverage`, each computed from the already-rounded rates and rounded again the same way.\n- `regressedSlices` holds one `{ slice, baselineAccuracy, candidateAccuracy, delta }` for every slice whose accuracy fell, sorted by slice name ascending. `delta` is candidate minus baseline, rounded.\n- **The rule for `better`, applied in this order:** `coverageDelta < -0.05` gives `\'baseline\'`, because a candidate that answers far less has bought its accuracy by handing work back. Then `accuracyDelta > 0.01` gives `\'candidate\'`, `accuracyDelta < -0.01` gives `\'baseline\'`, and anything left is `\'tie\'`.\n- `aggregateHidesRegression` is `true` when `better` is `\'candidate\'` or `\'tie\'` and `regressedSlices` is not empty. That is the flag: the aggregate did not lose, and at least one slice did.\n\nOne fixture matters more than the others. `__predictions(\'candidate\')` beats `__predictions(\'baseline\')` 30 correct to 27 while its returns slice falls from 10 of 12 to 7 of 12, so a comparison that only reads the aggregate reports a clean win while the observed returns count regresses. Slice-name equality alone does not establish identical case ids/labels or a valid statistical comparison; callers must verify dataset identity upstream. `compare` reads quality only; it does not read cost, latency or failures, which the report carries beside them for the person deciding.\n\nThe same candidate logs a trace for every answer. Its five wrong returns answers split into three retrieval misses, one call to `refunds.create` and one hallucination, and its cost and latency sit beside its accuracy: 0.35 cents per request and a p95 of 2400 ms, set by three slow requests. The keyword baseline logs no trace, so its nine errors stay unclassified.\n\nDomain: at most 1,000 ordinary case objects with unique non-empty string ids and string expected labels; unusable slice values join unlabelled. Predictions contain at most 2,000 ordinary values, with malformed entries ignored as described. Strings have at most 100 UTF-16 code units; no getters/proxies. Correctness compares the original answer string exactly to expected; trimming decides only whether an answer is non-empty. Preserve arbitrary valid ids and slice names, including __proto__. Comparison inputs follow the usable-report shape or are rejected and never mutated. A `retrieved` array holds at most 20 strings.\n\nTarget: O(n log n) time, where n is the combined input entry/slice count for each operation, using bounded-length fields and the usual dictionary/set model.\n\n`__cases`, `__predictions`, `__CASE_ROWS`, `__PATTERNS` and `__RUNS` come from the task harness. Every case, label, prediction, trace, cost and latency in them is authored for this exercise and identical on every run. Nothing here calls a model or opens a network connection, and a fixture accuracy, cost or latency is not evidence about how a live router would perform on these tickets.',
         contract: [
           'Count every case in `cases` exactly once, including cases no prediction mentions.',
           'The first prediction for a `caseId` wins; later ones are ignored. A `caseId` that matches no case is ignored.',
           'An answer counts as answered only when it is a string that is non-empty after trimming.',
           'Round every rate with `Math.round(value * 10000) / 10000`, and report 0 wherever the denominator is 0. Never divide by zero.',
           'Never report `correct / answered` as `accuracy`. The two fields are separate and both are required.',
+          'Divide cost by every case in the set, and sort latencies as numbers before you read the p95.',
+          'Classify only wrong answers, by the first matching rule: no trace, then retrieval, then tool, then hallucination.',
           'Do not mutate `cases` or `predictions`. `compare` reads the two reports only and never re-reads the cases.',
-          '`__cases`, `__predictions`, `__CASE_ROWS` and `__PATTERNS` come from the task harness. Read from them, do not redefine them.',
+          '`__cases`, `__predictions`, `__CASE_ROWS`, `__PATTERNS` and `__RUNS` come from the task harness. Read from them, do not redefine them.',
         ],
         starter: `const round4 = value => Math.round(value * 10000) / 10000;
 
@@ -528,7 +659,7 @@ const compare = (baseline, candidate) => {
 
 };
 
-// Scratch pad — change this before submitting.
+// Scratch pad: change this before submitting.
 console.log(JSON.stringify(evaluate(__cases(), __predictions('baseline'))));
 `,
         skeleton: `const round4 = value => Math.round(value * 10000) / 10000;
@@ -538,19 +669,28 @@ const evaluate = (cases, predictions) => {
   const caseList = Array.isArray(cases) ? cases : [];
   const predictionList = Array.isArray(predictions) ? predictions : [];
 
-  const answers = {};
+  const answers = Object.create(null);
   for (const prediction of predictionList) {
     // skip a non-object, a non-string caseId, and a caseId already recorded
+    // keep the whole prediction: cost, latency and trace ride along with the answer
   }
 
   const counts = { total: 0, answered: 0, abstained: 0, correct: 0 };
-  const slices = {};
+  const slices = Object.create(null);
+  const failures = { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 0 };
+  const latencies = [];
+  let cost = 0;
+
+  const classify = (item, prediction) => {
+    // no trace, then a missing source article, then a different tool, then hallucination
+  };
 
   for (const item of caseList) {
     const name = /* item.slice when it is a non-empty string, otherwise 'unlabelled' */;
     // add this case to counts and to slices[name]
+    // add a usable costCents to cost and a usable latencyMs to latencies
     // an answer that is not a non-empty string is an abstention
-    // an answer equal to item.expected is correct
+    // an answer equal to item.expected is correct; any other answer is classified
   }
 
   const shape = tally => ({
@@ -563,10 +703,12 @@ const evaluate = (cases, predictions) => {
     accuracyWhenAnswered: /* correct over answered */,
   });
 
-  const bySlice = {};
+  const bySlice = Object.create(null);
   // one shaped entry per slice name
 
-  return { ...shape(counts), bySlice };
+  const p95LatencyMs = /* sort latencies as numbers, take position Math.ceil(0.95 * n), or 0 */;
+
+  return { ...shape(counts), costPerRequestCents: /* cost over total */, p95LatencyMs, failures, bySlice };
 };
 
 const compare = (baseline, candidate) => {
@@ -599,13 +741,16 @@ const compare = (baseline, candidate) => {
   };
 };`,
         hints: [
-          'Build the answer lookup in its own pass before you count anything. Record a `caseId` only when the map does not already hold it, and you get “first prediction wins” and “duplicates ignored” from one `hasOwnProperty` check.',
+          'Build the answer lookup in its own pass before you count anything. Record a `caseId` only when the map does not already hold it, and you get “first prediction wins” and “duplicates ignored” from one `hasOwnProperty` check. Make every map keyed by an id or slice name an `Object.create(null)` object, so a case or slice called `__proto__` is stored like any other key.',
           'Keep one tally per slice and one for the whole set, and update both inside the same loop over `cases`. Then shape all of them with the same helper, so a slice can never be computed by a different rule than the total.',
           'Write the abstention test as “this is not a non-empty string”, not as “this is null”. A number, an object and three spaces all have to land on the same side of it, and the fixture sets contain all three.',
+          '`Array.prototype.sort` with no comparator sorts as text, so 2400 lands before 900. Pass `(a, b) => a - b`.',
+          'Write the failure-mode rules as one function that returns a label, with an early return per rule in the stated order. The order is the point: a run that missed the article and also called the wrong tool is a retrieval miss.',
         ],
         approach: [
-          'Walk `predictions` once into a `caseId → answer` map, keeping the first entry for each id and skipping entries that are not objects or whose `caseId` is not a string.',
-          'Walk `cases` once, adding each case to the overall tally and to its slice tally: answered when its answer is a non-empty string, correct when that answer equals `expected`, abstained otherwise.',
+          'Walk `predictions` once into a `caseId → prediction` map, keeping the first entry for each id and skipping entries that are not objects or whose `caseId` is not a string.',
+          'Walk `cases` once, adding each case to the overall tally and to its slice tally: answered when its answer is a non-empty string, correct when that answer equals `expected`, abstained otherwise. In the same loop, add the usable cost and latency, and classify each wrong answer.',
+          'After the loop, divide the cost by `total`, sort the latencies as numbers and read the nearest-rank p95.',
           'Turn every tally into the seven-field shape with one helper, dividing only when the denominator is above zero and rounding to four places.',
           'In `compare`, reject an unusable report and then a slice-name mismatch before computing anything, so a comparison across two different sets never produces a delta.',
           'Compute both deltas and the regressed-slice list, apply the coverage rule before the accuracy rule, and set the flag when the aggregate did not lose while a slice did.',
@@ -617,7 +762,7 @@ const compare = (baseline, candidate) => {
             critical: true,
             weight: 3,
             detail:
-              'Check the four counting rules — every case once, first prediction wins, a foreign `caseId` ignored, a malformed answer treated as an abstention — plus the four-place rounding, the zero-denominator cases, and the order the `better` rule is applied in.',
+              'Check the four counting rules (every case once, first prediction wins, a foreign `caseId` ignored, a malformed answer treated as an abstention) plus the four-place rounding, the zero-denominator cases, and the order the `better` rule is applied in.',
           },
           {
             id: 'slice-aware',
@@ -634,6 +779,22 @@ const compare = (baseline, candidate) => {
             weight: 3,
             detail:
               '`accuracy` is over every case and `accuracyWhenAnswered` is over the answered ones; reporting the second as the first is the failure this criterion catches. `coverage` and `abstained` have to move with them, and a run that answered nothing must not divide by zero.',
+          },
+          {
+            id: 'cost-latency',
+            label: 'Cost per request and p95 latency sit beside quality',
+            critical: false,
+            weight: 2,
+            detail:
+              'A cost or latency figure is off. Check that cost comes from the first prediction per case only, that abstentions’ costs count, that the sum is divided by every case rather than by the answered ones, that a negative, non-finite or non-number value is ignored, and that the p95 sorts latencies as numbers and reads position `Math.ceil(0.95 * n)` counting from 1.',
+          },
+          {
+            id: 'failure-taxonomy',
+            label: 'Every wrong answer gets one failure mode, read from its trace',
+            critical: false,
+            weight: 2,
+            detail:
+              'A wrong answer landed under the wrong label. Check that only answered, wrong cases are classified, and that the rules run in order: no trace at all is unclassified, a missing supporting article is a retrieval miss even when the tool was also wrong, a different tool is tool misuse, and anything left is a hallucination.',
           },
         ],
         tests: [
@@ -720,6 +881,27 @@ const compare = (baseline, candidate) => {
             },
             label: 'two runs over different sets produce a mismatch instead of a delta',
             edge: true,
+          },
+          {
+            call:
+              "(function () { var b = evaluate(__cases(), __predictions('baseline')); var c = evaluate(__cases(), __predictions('candidate')); var k = evaluate(__cases(), __predictions('cautious')); return { baseline: [b.accuracy, b.costPerRequestCents, b.p95LatencyMs], candidate: [c.accuracy, c.costPerRequestCents, c.p95LatencyMs], cautious: [k.accuracy, k.costPerRequestCents, k.p95LatencyMs] }; })()",
+            expected: {
+              baseline: [0.75, 0, 12],
+              candidate: [0.8333, 0.35, 2400],
+              cautious: [0.6111, 0.4, 1840],
+            },
+            label: 'accuracy, cost per request and p95 latency in one row per candidate, abstentions’ cost included',
+            criterion: 'cost-latency',
+          },
+          {
+            call:
+              "(function () { return { candidate: evaluate(__cases(), __predictions('candidate')).failures, baseline: evaluate(__cases(), __predictions('baseline')).failures }; })()",
+            expected: {
+              candidate: { retrievalMiss: 3, toolMisuse: 1, hallucination: 2, unclassified: 0 },
+              baseline: { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 9 },
+            },
+            label: 'the candidate’s six errors split into three retrieval misses, one tool misuse and two hallucinations; the keyword baseline leaves no trace to classify',
+            criterion: 'failure-taxonomy',
           },
         ],
         harness: EVALUATION_FIXTURES,

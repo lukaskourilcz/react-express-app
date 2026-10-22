@@ -3,7 +3,7 @@
 // every navigation.
 import type { TranslationKey } from '../i18n/translations';
 import { CURRENT_PRODUCT } from './products';
-import { GUIDE_LOCALES, NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './publicMetadata';
+import { NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './publicMetadata';
 
 type Translate = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -48,7 +48,7 @@ const PATH_TITLE_NAMES: readonly (readonly [string, TranslationKey])[] = [
 
 export function routeTitle(pathname: string, t: Translate): string {
   const publicTopic = topicFromPath(pathname);
-  if (publicTopic) return `${publicTopic.topic.title[publicTopic.locale]} · ${CURRENT_PRODUCT.brand}`;
+  if (publicTopic) return `${publicTopic.topic.title} · ${CURRENT_PRODUCT.brand}`;
   if (pathname === '/') return CURRENT_PRODUCT.title;
   const titleKey = ROUTE_TITLE_KEYS[pathname];
   if (titleKey) return t(titleKey);
@@ -131,7 +131,7 @@ export function applyRouteHead(pathname: string, t: Translate, shareHead: ShareH
   // the same ones the build writes into their static HTML.
   const page = publicPage(pathname);
   const description = publicTopic
-    ? publicTopic.topic.description[publicTopic.locale]
+    ? publicTopic.topic.description
     : page ? t(page.descriptionKey) : CURRENT_PRODUCT.description;
   setMeta('meta[name="description"]', description);
   setMeta('meta[property="og:title"]', document.title);
@@ -146,12 +146,8 @@ export function applyRouteHead(pathname: string, t: Translate, shareHead: ShareH
     const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical; document.head.append(link);
   }
   if (publicTopic && canonical) {
-    for (const locale of GUIDE_LOCALES) {
-      const link = document.createElement('link'); link.rel = 'alternate'; link.hreflang = locale;
-      link.href = `${PUBLIC_ORIGIN}${locale === 'cs' ? '/cs' : ''}/topics/${publicTopic.topic.slug}`; document.head.append(link);
-    }
     const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
-    schema.textContent = JSON.stringify(topicSchema(document.title, description, canonical, publicTopic.locale)); document.head.append(schema);
+    schema.textContent = JSON.stringify(topicSchema(document.title, description, canonical)); document.head.append(schema);
   } else if (page?.schema === 'premium' && canonical) {
     const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
     schema.textContent = JSON.stringify(premiumSchema(document.title, description, canonical)); document.head.append(schema);

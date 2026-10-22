@@ -3,6 +3,7 @@
 // in localStorage, and (when signed in) sync that progress to the user's account.
 
 import { apiFetch } from './api';
+import type { LearnLessonResponse } from '../../../shared/learning-path-api';
 import { accountEpoch } from './accountData';
 import { staleProfileStats } from './queryClient';
 import { readJSON, writeJSON } from './storage';
@@ -109,6 +110,10 @@ export type RoadmapProgress = Partial<Record<RoadmapTopic, TopicProgress>>;
 
 export function fetchRoadmapStructure(signal?: AbortSignal): Promise<RoadmapStructure> {
   return apiFetch<RoadmapStructure>('/api/quiz/roadmap', { signal });
+}
+
+export function fetchLearnLesson(id: string, signal?: AbortSignal): Promise<LearnLessonResponse> {
+  return apiFetch<LearnLessonResponse>(`/api/quiz/roadmap?${new URLSearchParams({ resource: 'lesson', id })}`, { signal });
 }
 
 export function fetchRoadmapLevel(topic: RoadmapTopic, level: number, signal?: AbortSignal): Promise<RoadmapPlayable> {

@@ -50,6 +50,8 @@ export type RoadmapTopic =
   | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
 
 export interface RoadmapLevelMeta {
+  /** Public reading shown before creating the question attempt. */
+  lessonId?: string;
   level: number;
   title: string;
   difficulty: 1 | 2 | 3 | 4 | 5;

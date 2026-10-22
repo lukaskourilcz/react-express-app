@@ -715,6 +715,10 @@ deployment (`isGithubAppConfigured`); until then the profile shows no garden
 card at all. `npm run test:garden` runs the connect step against a stand-in
 GitHub.
 
+## Lessons on Learn levels
+
+A level may name `lessonId` from `lib/learn-lessons/levels.ts`. The public, address-rate-limited `resource=lesson&id=` read on the roadmap handler returns an explicit lesson projection with a content-hash ETag and public cache headers. `lib/learn-lessons/types.ts` owns the lesson shape shared with paths. The shared `components/learn/LessonBody.tsx` renders prose, code, tables, traces, examples and callouts. Learn opens this reading before creating an attempt; Start the questions opens the ordinary level. Reading is optional, records nothing and stays separate from grading and rewards. A failed lesson read still permits questions. `/learn/big-o` uses the first two DSA lessons through this same read.
+
 ## Learning paths
 
 Two optional paths sit on top of the existing Learn levels and the Coding

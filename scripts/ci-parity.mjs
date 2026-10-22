@@ -235,7 +235,7 @@ const BUILD_ENV = {
 const npmRun = (script, extra = '') => `npm run ${script}${extra ? ` ${extra}` : ''}`;
 const step = (id, command, more = {}) => ({ id, command, ci: [command], tier: 'fast', ...more });
 
-const RESPONSIVE_LIGHT = `-- --routes /,/quiz,/topics/${TOPIC},/cs/topics/${TOPIC},/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440`;
+const RESPONSIVE_LIGHT = `-- --routes /,/quiz,/topics/${TOPIC},/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440`;
 const RESPONSIVE_DARK = `-- --routes /,/topics/${TOPIC},/daily --widths 390,768,1280`;
 const BROWSER_SPECS = [
   'public', 'guide-startup profile-leaderboard-preferences profile-path-picker', 'evolving', 'coding-pages', 'coding-workbench',

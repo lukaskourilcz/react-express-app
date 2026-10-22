@@ -1,4 +1,5 @@
-/** Server-only reference solution and hidden assertions for FDE M07.
+/** Server-only reference solution and hidden assertions for FDE M07, the
+ * module learners see as "Evaluation" (curriculum v2 numbers it M09).
  * Never imported from client code, and never from `../catalog`.
  *
  * The visible tests show each rule working on a fixture built to exercise it.
@@ -6,10 +7,12 @@
  * itself, a candidate that improves every slice and must not raise the flag, a
  * tie that hides a regression and must, duplicate delivery of every
  * prediction, a whole run of prediction ids belonging to another set, a run of
- * malformed answers, a case with no slice label, and a `compare` handed
- * something that is not a report. The three declared criteria are all
- * critical, so a working aggregate can never average away a buried slice or a
- * hidden abstention. */
+ * malformed answers, a case with no slice label, a `compare` handed something
+ * that is not a report, cost and latency figures that are not usable numbers,
+ * and wrong answers whose traces point at retrieval, the tool, the generation
+ * step or nothing at all. The slice and abstention criteria are critical, so a
+ * working aggregate can never average away a buried slice or a hidden
+ * abstention. */
 
 import type { PathCodeSolution } from '../types';
 
@@ -26,23 +29,41 @@ const evaluate = (cases, predictions) => {
     const caseId = prediction.caseId;
     if (typeof caseId !== 'string') continue;
     if (Object.prototype.hasOwnProperty.call(answers, caseId)) continue;
-    answers[caseId] = prediction.answer;
+    answers[caseId] = prediction;
   }
+
+  const usable = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  const classify = (item, entry) => {
+    const retrieved = Array.isArray(entry.retrieved) ? entry.retrieved : null;
+    const tool = typeof entry.tool === 'string' ? entry.tool : null;
+    if (retrieved === null && tool === null) return 'unclassified';
+    if (retrieved !== null && typeof item.sourceId === 'string' && retrieved.indexOf(item.sourceId) === -1) return 'retrievalMiss';
+    if (tool !== null && typeof item.tool === 'string' && tool !== item.tool) return 'toolMisuse';
+    return 'hallucination';
+  };
 
   const tally = () => ({ total: 0, answered: 0, abstained: 0, correct: 0 });
   const overall = tally();
   const slices = Object.create(null);
+  const failures = { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 0 };
+  const latencies = [];
+  let cost = 0;
 
   for (const item of caseList) {
     if (!item || typeof item !== 'object') continue;
-    const name = typeof item.slice === 'string' && item.slice.trim() !== '' ? item.slice : 'unlabelled';
+    const name = typeof item.slice === 'string' && item.slice !== '' ? item.slice : 'unlabelled';
     if (!Object.prototype.hasOwnProperty.call(slices, name)) slices[name] = tally();
     const slice = slices[name];
     overall.total += 1;
     slice.total += 1;
-    const answer = typeof item.id === 'string' && Object.prototype.hasOwnProperty.call(answers, item.id)
+    const entry = typeof item.id === 'string' && Object.prototype.hasOwnProperty.call(answers, item.id)
       ? answers[item.id]
       : null;
+    if (entry) {
+      if (usable(entry.costCents)) cost += entry.costCents;
+      if (usable(entry.latencyMs)) latencies.push(entry.latencyMs);
+    }
+    const answer = entry ? entry.answer : null;
     if (typeof answer !== 'string' || answer.trim() === '') {
       overall.abstained += 1;
       slice.abstained += 1;
@@ -53,6 +74,8 @@ const evaluate = (cases, predictions) => {
     if (answer === item.expected) {
       overall.correct += 1;
       slice.correct += 1;
+    } else {
+      failures[classify(item, entry)] += 1;
     }
   }
 
@@ -66,9 +89,18 @@ const evaluate = (cases, predictions) => {
     accuracyWhenAnswered: rate(counts.correct, counts.answered),
   });
 
+  latencies.sort((a, b) => a - b);
+  const p95LatencyMs = latencies.length > 0 ? latencies[Math.ceil(0.95 * latencies.length) - 1] : 0;
+
   const bySlice = Object.create(null);
   for (const name of Object.keys(slices).sort()) bySlice[name] = shape(slices[name]);
-  return { ...shape(overall), bySlice };
+  return {
+    ...shape(overall),
+    costPerRequestCents: rate(cost, overall.total),
+    p95LatencyMs,
+    failures,
+    bySlice,
+  };
 };
 
 const compare = (baseline, candidate) => {
@@ -190,6 +222,33 @@ export const FDE_M07_SOLUTIONS: Record<string, PathCodeSolution> = {
           unlabelled: { total: 3, answered: 3, abstained: 0, correct: 3, accuracy: 1, coverage: 1, accuracyWhenAnswered: 1 },
         },
         criterion: 'slice-aware',
+      },
+      /* ── cost per request and p95 latency beside quality ──────────────── */
+      {
+        call: "(function () { var cases = [{ id: 'A', slice: 's', expected: 'x' }, { id: 'B', slice: 's', expected: 'x' }, { id: 'C', slice: 's', expected: 'x' }, { id: 'D', slice: 's', expected: 'x' }]; var predictions = [{ caseId: 'A', answer: 'x', costCents: 1, latencyMs: 100 }, { caseId: 'A', answer: 'x', costCents: 50, latencyMs: 9000 }, { caseId: 'B', answer: null, costCents: 3, latencyMs: 300 }, { caseId: 'C', answer: 'x', costCents: NaN, latencyMs: -5 }, { caseId: 'D', answer: 'x', costCents: '5', latencyMs: '7000' }, { caseId: 'Z', answer: 'x', costCents: 80, latencyMs: 7000 }]; var r = evaluate(cases, predictions); return { cost: r.costPerRequestCents, p95: r.p95LatencyMs }; })()",
+        expected: { cost: 1, p95: 300 },
+        criterion: 'cost-latency',
+      },
+      {
+        call: "(function () { var cases = [], predictions = []; for (var i = 1; i <= 20; i++) { cases.push({ id: 'C' + i, slice: 's', expected: 'x' }); predictions.push({ caseId: 'C' + i, answer: 'x', latencyMs: (21 - i) * 100, costCents: 0.1 }); } var r = evaluate(cases, predictions); var one = evaluate([{ id: 'A', slice: 's', expected: 'x' }], [{ caseId: 'A', answer: 'x', latencyMs: 42 }]); var none = evaluate(cases, 'not an array'); return { p95: r.p95LatencyMs, cost: r.costPerRequestCents, one: one.p95LatencyMs, none: [none.p95LatencyMs, none.costPerRequestCents] }; })()",
+        expected: { p95: 1900, cost: 0.1, one: 42, none: [0, 0] },
+        criterion: 'cost-latency',
+      },
+
+      /* ── the failure taxonomy reads the trace in a fixed order ─────────── */
+      {
+        call: "(function () { var row = function (id, sourceId) { var item = { id: id, slice: 's', expected: 'tier-1', tool: 'queue.assign' }; if (sourceId) item.sourceId = sourceId; return item; }; var cases = [row('A', 'KB-1'), row('B', 'KB-1'), row('C', 'KB-1'), row('D', 'KB-1'), row('E', null), row('F', 'KB-1'), row('G', 'KB-1'), row('H', 'KB-1')]; var predictions = [{ caseId: 'A', answer: 'ops', retrieved: ['KB-2'], tool: 'refunds.create' }, { caseId: 'B', answer: 'ops', retrieved: ['KB-1'], tool: 'refunds.create' }, { caseId: 'C', answer: 'ops', tool: 'refunds.create' }, { caseId: 'D', answer: 'ops', retrieved: ['KB-1'], tool: 'queue.assign' }, { caseId: 'E', answer: 'ops', retrieved: ['KB-9'], tool: 'queue.assign' }, { caseId: 'F', answer: 'ops', retrieved: 'KB-1' }, { caseId: 'G', answer: 'tier-1', retrieved: [] }, { caseId: 'H', answer: null, retrieved: [] }]; return evaluate(cases, predictions).failures; })()",
+        expected: { retrievalMiss: 1, toolMisuse: 2, hallucination: 2, unclassified: 1 },
+        criterion: 'failure-taxonomy',
+      },
+      {
+        call: "(function () { var messy = evaluate(__cases(), __predictions('messy')).failures; var cautious = evaluate(__cases(), __predictions('cautious')).failures; var none = evaluate(__cases(), null).failures; return { messy: messy, cautious: cautious, none: none }; })()",
+        expected: {
+          messy: { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 4 },
+          cautious: { retrievalMiss: 0, toolMisuse: 1, hallucination: 1, unclassified: 0 },
+          none: { retrievalMiss: 0, toolMisuse: 0, hallucination: 0, unclassified: 0 },
+        },
+        criterion: 'failure-taxonomy',
       },
       {
         call: "compare(null, evaluate(__cases(), __predictions('baseline')))",

@@ -55,6 +55,22 @@ const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string
     { label: 'an approval accepted from any request', replace: ["if (state.status !== 'approving' || action.requestId !== state.requestId) return state;", "if (state.status !== 'approving') return state;"], criterion: 'stale-responses' },
     { label: 'a transition that writes into the state it was given', replace: ["return { ...state, status: 'ready', requestId: null, proposal: action.proposal, error: null };", "return Object.assign(state, { status: 'ready', requestId: null, proposal: action.proposal, error: null });"], criterion: 'core' },
   ],
+  'fde-v1-m06-tool-dispatcher': [
+    { label: 'a dispatcher that runs an approval tool without waiting for approval', replace: ['    if (tool.approval) {', '    if (false) {'], criterion: 'approval-held' },
+    { label: 'a rejection that leaves the call approvable', replace: ['    const entry = take(callId);\n    if (!entry) return { ok: false, reason: \'unknown_call\' };\n    return settle(entry.store, entry.key, { ok: false, reason: \'rejected\', callId });', "    if (!Object.prototype.hasOwnProperty.call(waiting, callId)) return { ok: false, reason: 'unknown_call' };\n    return { ok: false, reason: 'rejected', callId };"], criterion: 'approval-held' },
+    { label: 'a sub-agent that keeps every scope it asks for', replace: ['const scopes = asked.filter(scope => held.indexOf(scope) !== -1);', 'const scopes = asked;'], criterion: 'scope-enforced' },
+    { label: 'a sub-agent with no call budget', replace: ["        if (used >= maxCalls) return { ok: false, reason: 'budget_exhausted', maxCalls };\n", ''], criterion: 'subagent-budget' },
+    { label: 'a sub-agent budget that accepts Infinity, fractions and numeric strings', replace: ['spec && Number.isInteger(spec.maxCalls) && spec.maxCalls > 0 ? spec.maxCalls : 0', 'spec && spec.maxCalls > 0 ? spec.maxCalls : 0'], criterion: 'subagent-budget' },
+    { label: 'a sub-agent replay that skips the budget check', replace: ["        if (used >= maxCalls) return { ok: false, reason: 'budget_exhausted', maxCalls };", "        if (used >= maxCalls && !(options && options.idempotencyKey !== undefined && options.idempotencyKey in keys)) return { ok: false, reason: 'budget_exhausted', maxCalls };"], criterion: 'subagent-budget' },
+    { label: 'a sub-agent approval settled into the parent key store', replace: ['waiting[callId] = { tool, name, args: { ...request }, key, store };', 'waiting[callId] = { tool, name, args: { ...request }, key, store: completed };'], criterion: 'approval-held' },
+  ],
+  'fde-v1-m07-evaluation-metrics': [
+    { label: 'a comparison that reads only the aggregate and hides the regressed slice', replace: ['.filter(entry => entry.candidateAccuracy < entry.baselineAccuracy);', '.filter(() => false);'], criterion: 'slice-aware' },
+    { label: 'accuracy computed over answered cases only', replace: ['accuracy: rate(counts.correct, counts.total),', 'accuracy: rate(counts.correct, counts.answered),'], criterion: 'abstention-separate' },
+    { label: 'cost divided by answered cases instead of every request', replace: ['costPerRequestCents: rate(cost, overall.total),', 'costPerRequestCents: rate(cost, overall.answered),'], criterion: 'cost-latency' },
+    { label: 'latencies sorted as text before the p95 is read', replace: ['latencies.sort((a, b) => a - b);', 'latencies.sort();'], criterion: 'cost-latency' },
+    { label: 'every wrong answer called a hallucination', replace: ['failures[classify(item, entry)] += 1;', 'failures.hallucination += 1;'], criterion: 'failure-taxonomy' },
+  ],
   'fde-v1-m10-operator-state': [
     { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
   ],
