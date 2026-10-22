@@ -5,7 +5,9 @@ import { JSDOM } from 'jsdom';
 const dir = 'client/dist';
 const sitemap = new JSDOM(readFileSync(`${dir}/sitemap.xml`, 'utf8'), { contentType: 'application/xml' });
 const urls = [...sitemap.window.document.querySelectorAll('loc')].map(node => new URL(node.textContent));
-assert.equal(urls.length, 20, 'Home, five guides in two languages, /premium, /premium/cancel, /daily, /coding and its five track pages');
+assert(!urls.some(url => url.pathname.startsWith('/cs/')), 'retired guide URLs stay out of the sitemap');
+assert(!existsSync(`${dir}/cs`), 'no retired guide HTML is emitted');
+assert.equal(urls.length, 15, 'Home, five English guides, /premium, /premium/cancel, /daily, /coding and its five track pages');
 // The app pages with public HTML (#222, #239). /premium/success stays out: a
 // Stripe return means nothing to anyone else, and the app marks it noindex.
 const APP_PAGES = ['/premium', '/premium/cancel', '/daily'];
@@ -60,13 +62,12 @@ for (const url of urls) {
     }
     continue;
   }
-  const lang = url.pathname.startsWith('/cs/') ? 'cs' : 'en';
-  assert.equal(doc.documentElement.lang, lang);
+  assert.equal(doc.documentElement.lang, 'en');
   assert.equal(doc.querySelectorAll('details').length, 3, 'Practice is present without JS');
-  assert.equal(doc.querySelectorAll('link[hreflang]').length, 2);
+  assert.equal(doc.querySelectorAll('link[hreflang]').length, 0);
   for (const alternate of doc.querySelectorAll('link[hreflang]')) assert(existsSync(path.join(dir, new URL(alternate.href).pathname, 'index.html')));
   const schema = JSON.parse(doc.querySelector('#public-schema').textContent);
-  assert.equal(schema['@type'], 'LearningResource'); assert.equal(schema.url, url.href); assert.equal(schema.inLanguage, lang);
+  assert.equal(schema['@type'], 'LearningResource'); assert.equal(schema.url, url.href); assert.equal(schema.inLanguage, 'en');
   // A guide is free to read without an account; Premium is not a guide.
   assert.equal(schema.name, doc.title); assert.equal(schema.isAccessibleForFree, true);
   assert(doc.querySelector('pre code'), `${url}: the guide carries its code example`);
@@ -140,19 +141,19 @@ for (const day of days) {
   assert(!/ss-radio-card|correctAnswer|explanation/.test(html), `${day}: no question in the HTML`);
 }
 // V3-6: the app ships English only, so the code a coding screen loads carries
-// no Czech. A chunk counts as coding when its source map lists a module of the
+// no unexpected accented glyphs. A chunk counts as coding when its source map lists a module of the
 // coding client or a shared coding module (the build emits hidden maps).
-const CZECH = /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g;
+const UNEXPECTED_DIACRITICS = /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g;
 const CODING_SOURCE = /(?:^|\/)(?:src\/coding\/|src\/components\/coding\/|shared\/coding-)/;
 const codingChunks = readdirSync(`${dir}/assets`, { recursive: true })
   .filter((file) => file.endsWith('.js') && existsSync(`${dir}/assets/${file}.map`))
   .filter((file) => JSON.parse(readFileSync(`${dir}/assets/${file}.map`, 'utf8')).sources.some((source) => CODING_SOURCE.test(source)));
 assert(codingChunks.some((file) => /^CodingWorkbench-/.test(file)), 'the workbench chunk was found by its source map');
 for (const file of codingChunks) {
-  const found = readFileSync(`${dir}/assets/${file}`, 'utf8').match(CZECH) ?? [];
-  assert.equal(found.length, 0, `${file}: ${found.length} Czech characters in a coding chunk`);
+  const found = readFileSync(`${dir}/assets/${file}`, 'utf8').match(UNEXPECTED_DIACRITICS) ?? [];
+  assert.equal(found.length, 0, `${file}: ${found.length} unexpected accented glyphs in a coding chunk`);
 }
 assert(readFileSync(`${dir}/robots.txt`, 'utf8').includes(`Sitemap: ${urls[0].origin}/sitemap.xml`));
 assert(!existsSync(`${dir}/mockServiceWorker.js`), 'Mocks must never ship with the app');
 assert(!readdirSync(`${dir}/assets`).some(file => /storybook|mocks|\.stories\./i.test(file)));
-console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages, ${Object.keys(SECTION_PAGES).length} Coding section pages, hidden system design, ${days.length} question-of-the-day pages, and no Czech in ${codingChunks.length} coding chunks.`);
+console.log(`Public HTML passed: ${urls.length} URLs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages, ${Object.keys(SECTION_PAGES).length} Coding section pages, hidden system design, ${days.length} question-of-the-day pages, and no unexpected accented glyphs in ${codingChunks.length} coding chunks.`);

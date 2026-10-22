@@ -73,7 +73,7 @@ const loadChallenge = routeChunk(exact('/challenge'), () => import('./components
 const loadDev = routeChunk(under('/dev'), () => import('./components/dev/DevPage'));
 const loadLegal = routeChunk(exact('/privacy', '/terms'), () => import('./components/LegalPages'));
 const loadPublicInfo = routeChunk(exact('/classroom'), () => import('./components/PublicInfoPages'));
-const loadTopic = routeChunk(under('/topics', '/cs/topics'), () => import('./components/TopicLandingPage'));
+const loadTopic = routeChunk(under('/topics'), () => import('./components/TopicLandingPage'));
 const loadToday = routeChunk(exact('/today'), () => import('./components/Today'));
 const loadCollection = routeChunk(exact('/collection'), () => import('./components/Collection'));
 const loadTyping = routeChunk(exact('/typing'), () => import('./components/TypingRacer'));
@@ -262,7 +262,7 @@ function AccountRetry({ retry, busy }: { retry: () => void; busy: boolean }) {
 function App() {
   const reduceMotion = useReducedMotion();
   const location = useLocation();
-  const startupGuidePath = useRef(/^(?:\/cs)?\/topics\//.test(location.pathname) ? location.pathname : null);
+  const startupGuidePath = useRef(/^\/topics\//.test(location.pathname) ? location.pathname : null);
   const navigate = useNavigate();
   const { t } = useLanguage();
   const config = useGameConfig();
@@ -849,7 +849,6 @@ function App() {
                   <Route path="/daily/:date" element={<DailyQuestionPage />} />
                   <Route path="/classroom" element={<ClassroomPage />} />
                   <Route path="/topics/:slug" element={<TopicLandingPage />} />
-                  <Route path="/cs/topics/:slug" element={<TopicLandingPage />} />
                   <Route path="/dev" element={<DevPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

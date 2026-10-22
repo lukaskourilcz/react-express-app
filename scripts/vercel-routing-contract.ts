@@ -128,8 +128,17 @@ export function vercelRoutingContracts(): void {
   // exception is a permanent redirect of a moved page, which ends the request
   // on purpose and comes after every header rule, so the 308 still carries
   // the app's security headers.
-  const redirects = phases.main.filter((route) => route.status !== undefined);
+  const retiredGuides = phases.main.filter((route) => route.src === '^/cs/topics(?:/.*)?$');
+  assert.equal(retiredGuides.length, 1, 'retired guide URLs answer the app shell with HTTP 404');
+  const redirects = phases.main.filter((route) => route.status === 308);
   for (const route of phases.main) {
+    if (route.src === '^/cs/topics(?:/.*)?$') {
+      assert.equal(route.dest, '/index.html');
+      assert.equal(route.status, 404);
+      assert.equal(route.continue, undefined);
+      assert.equal(route.headers?.['X-Robots-Tag'], 'noindex');
+      continue;
+    }
     if (redirects.includes(route)) continue;
     assert.ok(route.continue === true && route.headers && !route.dest && route.status === undefined, `${route.src} runs before the filesystem check and must only add headers`);
   }
@@ -137,7 +146,7 @@ export function vercelRoutingContracts(): void {
     assert.equal(route.status, 308, `${route.src} is a permanent redirect`);
     assert.ok(route.dest === undefined && route.continue === undefined, `${route.src} answers with a redirect and ends the request`);
     assert.deepEqual(Object.keys(route.headers ?? {}), ['Location'], `${route.src} sets Location and nothing else`);
-    assert.ok(phases.main.indexOf(route) > Math.max(...phases.main.filter((one) => !redirects.includes(one)).map((one) => phases.main.indexOf(one))), `${route.src} comes after every header rule`);
+    assert.ok(phases.main.indexOf(route) > Math.max(...phases.main.filter((one) => one.status === undefined).map((one) => phases.main.indexOf(one))), `${route.src} comes after every header rule`);
     for (const path of [...ASSET_PATHS, ...DOCUMENTS]) assert.ok(!routeMatches(route, path), `${route.src} would redirect ${path}`);
   }
   // The FDE path moved into its Learn section (#489, plan decision D4). Its

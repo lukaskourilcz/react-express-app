@@ -8,6 +8,9 @@
 // shell from importing this file.
 
 export const learnEn = {
+  'learn.lesson.startQuestions': 'Start the questions',
+  'learn.lesson.readingOnly': 'Reading is optional. It records no progress and earns no XP.',
+  'learn.lesson.error': 'The lesson could not load. Try again or start the questions.',
   // ── Learn sections (docs/learn-sections-fde-flagship-plan.md, 5.3) ────
   'learn.section.web-developer': 'Web Developer',
   'learn.section.software-engineer': 'Software Engineer',

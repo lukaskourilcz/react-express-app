@@ -1,0 +1,32 @@
+{
+  "kind": "b7-native-individual-review",
+  "reviewedIds": [
+    "fde-v1-m06-checks",
+    "fde-v1-m07-checks",
+    "fde-v1-m06-l1",
+    "fde-v1-m06-l2",
+    "fde-v1-m06-l1-read",
+    "fde-v1-m06-l2-read",
+    "fde-v1-m06-tool-dispatcher",
+    "fde-v1-m07-l1",
+    "fde-v1-m07-l2",
+    "fde-v1-m07-l1-read",
+    "fde-v1-m07-l2-read",
+    "fde-v1-m07-evaluation-metrics",
+    "fde-v1-m06-q5",
+    "fde-v1-m06-q6",
+    "fde-v1-m07-q5",
+    "fde-v1-m07-q6"
+  ],
+  "uniqueCoverageAdded": 4,
+  "currentReviewFiles": [
+    "review-2026-10-15-n026.jsonl",
+    "review-2026-10-15-n027.jsonl",
+    "review-2026-10-15-n036.jsonl",
+    "review-2026-10-15-n037.jsonl",
+    "review-2026-10-22-b7.jsonl"
+  ],
+  "history": "docs/audit/wip/native/history/review-2026-10-22-b7-before.json",
+  "proof": null,
+  "note": "Issue #503 (B7) revised FDE M06 and M07. Twelve stale records are replaced in place (revision 2, previousHash = the replaced contentHash) and four new check questions get first records. Reviewer is a model separate from the content author; same-session model review, no independent/human acceptance. Content fixes in this batch: dispatcher and metrics skeletons use null-prototype maps, metrics reference slice check matches the prompt, M07 q6 explanation reports the one-ticket floor margin."
+}

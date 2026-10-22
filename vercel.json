@@ -2,7 +2,9 @@
   "buildCommand": "npm run build:react-runner && npm ci --prefix client && npm run build --prefix client",
   "outputDirectory": "client/dist",
   "framework": null,
-  "regions": ["arn1"],
+  "regions": [
+    "arn1"
+  ],
   "functions": {
     "api/quiz/roadmap.ts": {
       "maxDuration": 45,
@@ -22,7 +24,7 @@
         "Referrer-Policy": "strict-origin-when-cross-origin",
         "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
         "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com 'sha256-JM+ysqF5UCaNnTZNolsR4tAwCDI8tkTesBj06v/nBBo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://link.com https://*.link.com https://*.supabase.co wss://*.supabase.co https://*.ingest.de.sentry.io; frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://link.com https://*.link.com; child-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://link.com https://*.link.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com 'sha256-GJpptaB9Bz6CfF0DRrD6q4aJv4Y6KtADhfPP5CcRGMQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://link.com https://*.link.com https://*.supabase.co wss://*.supabase.co https://*.ingest.de.sentry.io; frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://link.com https://*.link.com; child-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://link.com https://*.link.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
       },
       "continue": true
     },
@@ -74,6 +76,15 @@
       "status": 308
     },
     {
+      "src": "^/cs/topics(?:/.*)?$",
+      "dest": "/index.html",
+      "status": 404,
+      "headers": {
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
       "handle": "filesystem"
     },
     {
@@ -106,10 +117,6 @@
     {
       "source": "/ingest/(.*)",
       "destination": "https://eu.i.posthog.com/$1"
-    },
-    {
-      "source": "/cs/topics/:slug",
-      "destination": "/cs/topics/:slug/index.html"
     },
     {
       "source": "/topics/:slug",
@@ -160,7 +167,7 @@
       "destination": "/robots.txt"
     },
     {
-      "source": "/((?!api/|assets/|ingest/|sandbox/|topics/|cs/topics/).*)",
+      "source": "/((?!api/|assets/|ingest/|sandbox/|topics/).*)",
       "destination": "/index.html"
     }
   ]

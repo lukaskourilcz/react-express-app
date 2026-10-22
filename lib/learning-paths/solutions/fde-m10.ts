@@ -11,7 +11,12 @@
  *
  * The two guard criteria carry the assertions that matter here, so a working
  * happy path cannot average away a screen that approves stale data or lets a
- * dead request overwrite a live one. */
+ * dead request overwrite a live one.
+ *
+ * The module's three written artifacts (`fde-v1-m10-runbook`,
+ * `fde-v1-m10-workshop-outline`, `fde-v1-m10-pushback-email`) have nothing
+ * here: the grader records each as self-reviewed after checking presence and
+ * length caps, so there is no reference to seal. */
 
 import type { PathCodeSolution } from '../types';
 

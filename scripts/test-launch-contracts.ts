@@ -68,6 +68,7 @@ import { AUDITED_CATEGORIES, CODING_TASKS_AUDITED, REVIEW_REGISTRY } from '../li
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
+import { learnLessonContracts } from './learn-lesson-contract';
 import { applyEligibility, getEffectiveQuestions, getEffectiveQuestionsById, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
@@ -2794,9 +2795,6 @@ function englishOnlyContracts() {
     'shared/coding-locale.ts': 'the Czech koruna currency name',
     'shared/coding-utc-time.ts': 'the Czechia Time zone label',
     'shared/launch-offer.ts': 'the Czech price indication law',
-    // removed by D3 (#486): the public /cs/ guides and their checks.
-    'scripts/check-public.mjs': 'the /cs/ guide checks',
-    'tests/browser/public.spec.ts': 'the /cs/ guide checks',
   };
   const SKIPPED_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', 'test-results', 'playwright-report', '.vercel']);
   const walk = (dir: string): string[] => readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
@@ -5514,9 +5512,10 @@ async function main() {
       const bootstrap = html.indexOf("devquiz:color-mode");
       assert.ok(bootstrap > 0, 'index.html must set the colour mode before first paint');
       assert.ok(
-        html.indexOf('root.lang = root.dataset.publicLocale') > 0,
-        'index.html must set the document language before first paint, so a prerendered guide is read in its own language',
+        html.includes("root.lang = 'en'"),
+        'index.html fixes English before first paint',
       );
+      assert.ok(!html.includes('devquiz.lang') && !html.includes('navigator.language'), 'obsolete preferences never change the document language');
       const firstBlocking = html.search(/<link[^>]+rel="stylesheet"/);
       if (firstBlocking >= 0) {
         assert.ok(
@@ -5839,6 +5838,7 @@ async function main() {
   await dailySwitchContracts();
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
+  await learnLessonContracts();
   consentContracts();
   classroomRevealContracts();
   monthlyXpContracts();
