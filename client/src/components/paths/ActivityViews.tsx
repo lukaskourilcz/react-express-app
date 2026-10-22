@@ -277,6 +277,38 @@ export function CheckActivity({
 const DRAFT_DEBOUNCE_MS = 900;
 export type DraftStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict' | 'offline';
 
+/**
+ * The autosave debounce. What is still waiting when the view unmounts is sent
+ * rather than dropped: typing and then following a link within the debounce
+ * used to lose those last keystrokes. The workspace forgets an activity's
+ * draft channel before it swaps the view, so a late send never lands on the
+ * next activity.
+ */
+function useDraftQueue<T>(send: (value: T) => void): (value: T) => void {
+  const timer = useRef<number | null>(null);
+  const pending = useRef<{ value: T } | null>(null);
+  const latest = useRef(send);
+  useEffect(() => {
+    latest.current = send;
+  });
+  const flush = useCallback(() => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+    const waiting = pending.current;
+    pending.current = null;
+    if (waiting) latest.current(waiting.value);
+  }, []);
+  useEffect(() => flush, [flush]);
+  return useCallback(
+    (value: T) => {
+      pending.current = { value };
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(flush, DRAFT_DEBOUNCE_MS);
+    },
+    [flush],
+  );
+}
+
 export function CodeActivity({
   code,
   fixtureNote,
@@ -303,7 +335,7 @@ export function CodeActivity({
   const t = useT();
   const [source, setSource] = useState<string>(() => (typeof draft?.content.code === 'string' ? draft.content.code : code.starter));
   const [hintsShown, setHintsShown] = useState(0);
-  const timer = useRef<number | null>(null);
+  const queueDraft = useDraftQueue(onDraft);
 
   const hints = code.hints;
   const approach = code.approach ?? [];
@@ -314,18 +346,6 @@ export function CodeActivity({
     () => [...hints.map((text) => ({ kind: 'hint' as const, text })), ...approach.map((text) => ({ kind: 'approach' as const, text }))],
     [hints, approach],
   );
-
-  const queueDraft = useCallback(
-    (next: string) => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => onDraft(next), DRAFT_DEBOUNCE_MS);
-    },
-    [onDraft],
-  );
-
-  useEffect(() => () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-  }, []);
 
   const verdict = result?.code ?? null;
 
@@ -484,7 +504,9 @@ export function ArtifactActivity({
   busy: boolean;
 }) {
   const t = useT();
-  const initial = useMemo(() => {
+  // Read once: every autosave hands down a new draft, and the boxes keep what
+  // the learner is typing rather than the copy the server echoes back.
+  const [values, setValues] = useState<Record<string, string>>(() => {
     const saved = (draft?.content.artifact ?? {}) as Record<string, string | string[]>;
     const out: Record<string, string> = {};
     for (const field of artifact.fields) {
@@ -492,9 +514,7 @@ export function ArtifactActivity({
       out[field.id] = Array.isArray(value) ? value.join('\n') : typeof value === 'string' ? value : '';
     }
     return out;
-  }, [artifact.fields, draft]);
-  const [values, setValues] = useState<Record<string, string>>(initial);
-  const timer = useRef<number | null>(null);
+  });
 
   const shaped = useCallback(
     (next: Record<string, string>): Record<string, string | string[]> => {
@@ -508,18 +528,13 @@ export function ArtifactActivity({
     [artifact.fields],
   );
 
+  // Shaped when it is sent, not on every keystroke.
+  const queueDraft = useDraftQueue((next: Record<string, string>) => onDraft(shaped(next)));
   const change = (id: string, value: string) => {
-    setValues((current) => {
-      const next = { ...current, [id]: value };
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => onDraft(shaped(next)), DRAFT_DEBOUNCE_MS);
-      return next;
-    });
+    const next = { ...values, [id]: value };
+    setValues(next);
+    queueDraft(next);
   };
-
-  useEffect(() => () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-  }, []);
 
   // A field over its cap fails the server's check and records the attempt as
   // needing revision, so it is not sent: focus goes to the first such field,

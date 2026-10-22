@@ -2,7 +2,7 @@
 // retried as a new attempt, switching activities starts clean, and a draft
 // autosave never argues with itself.
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -332,6 +332,15 @@ describe('the draft autosave', () => {
     await waitFor(() => expect(calls.drafts.map((one) => one.code)).toEqual(['written offline']));
     await waitFor(() => expect(status()).toBe('Draft saved'));
     expect(localStorage.getItem(`devshark:path:draft:${ENROLLMENT}:${A}`)).toBeNull();
+  });
+
+  it('sends the last keystrokes when the learner leaves the page before the debounce', async () => {
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await type('typed just before leaving');
+    expect(calls.drafts).toHaveLength(0);
+    await act(async () => { cleanup(); });
+    expect(calls.drafts.map((one) => [one.activityId, one.code])).toEqual([[A, 'typed just before leaving']]);
   });
 
   it('opens with the copy kept on this device when the server has nothing newer, and saves it', async () => {
