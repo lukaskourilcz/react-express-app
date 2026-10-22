@@ -58,6 +58,10 @@ const DEFAULT_ROUTES = [
   '/quiz',
   '/daily',
   '/learn',
+  // The three Learn sections (#488); /learn resolves to one of them.
+  '/learn/web-developer',
+  '/learn/software-engineer',
+  '/learn/forward-deployed-engineer',
   '/big-o',
   '/learn/big-o',
   '/today',

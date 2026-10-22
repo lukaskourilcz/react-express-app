@@ -29,6 +29,7 @@ import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } fr
 import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession } from '../quiz-tokens';
 import { createLearningPathSession, pathCodeAttemptVersion } from './session';
+import { canonicalCodingTaskId } from './dsa-coding-tasks';
 import {
   activityIn,
   activitySummary,
@@ -56,6 +57,7 @@ import { activityDomainScores, diagnosticCompetencies, diagnosticEvidence } from
 import {
   isLearningPathId,
   isBaseTrack,
+  isOffLoopModule,
   moduleComplete,
   nextActivityId as computeNextActivity,
   pathGuidedComplete,
@@ -247,7 +249,7 @@ function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgres
     const recorded = row?.activity_states ?? {};
     return {
       moduleId: module.id,
-      completed: !module.optional && moduleComplete(module, states),
+      completed: !isOffLoopModule(module) && moduleComplete(module, states),
       completedAt: row?.completed_at ?? null,
       activities: module.activities.map((activity) => {
         const value = recorded[activity.id];
@@ -804,9 +806,10 @@ export function recordedState(prior: EvidenceState | undefined, next: EvidenceSt
 /** A module's completion requirements in the shape
  * `accept_learning_path_result` takes: each required activity with every
  * state that satisfies it (`SATISFYING_STATES`, the rule `moduleComplete`
- * applies). An optional module sends none and never completes. */
+ * applies). An off-loop module (optional or on a shelf) sends none and never
+ * completes. */
 export function moduleRequirements(module: MergedPath['modules'][number]): { activityId: string; states: readonly EvidenceState[] }[] {
-  if (module.optional) return [];
+  if (isOffLoopModule(module)) return [];
   return module.requires.map((requirement) => ({
     activityId: requirement.activityId,
     states: SATISFYING_STATES[requirement.state],
@@ -1028,7 +1031,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const states = stateMap(rows);
   const effectiveState = recordedState(states.get(activity.id), state);
   states.set(activity.id, effectiveState);
-  const moduleWillComplete = !module.optional && moduleComplete(module, states);
+  const moduleWillComplete = !isOffLoopModule(module) && moduleComplete(module, states);
 
   const manifest = publicManifest(path);
   const projected = projectModuleProgress(module, rows, activity, effectiveState, score, domainScores);
@@ -1080,7 +1083,9 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // other. With the requirements, the routine (migration 054) decides
   // completion again from the states it writes, one result at a time. Before
   // 054 is installed it does not take them, and the call is made without.
-  const canonicalTaskId = activity.reuseTaskId ?? `path-code-${createHash('sha256').update(`${path.id}:${activity.id}`).digest('hex').slice(0,32)}`;
+  // The DSA exercises E2 turned into coding tasks record under the task's id,
+  // so a path pass and a Coding pass share one record and one award (#493).
+  const canonicalTaskId = canonicalCodingTaskId(path.id, activity);
   const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
   const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
     : path.id === 'dsa-foundations' && language === 'javascript' ? 'algorithms' : language;
@@ -1150,8 +1155,8 @@ function projectModuleProgress(
   states.set(activity.id, state);
   return {
     moduleId: module.id,
-    completed: !module.optional && moduleComplete(module, states),
-    completedAt: row?.completed_at ?? (moduleComplete(module, states) && !module.optional ? now : null),
+    completed: !isOffLoopModule(module) && moduleComplete(module, states),
+    completedAt: row?.completed_at ?? (moduleComplete(module, states) && !isOffLoopModule(module) ? now : null),
     activities: module.activities.map((one) => {
       const value = recorded[one.id];
       if (one.id !== activity.id) {

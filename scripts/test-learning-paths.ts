@@ -23,11 +23,13 @@ import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
-import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
+import { isOffLoopModule, moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
 import { PATH_LIMITS } from '../shared/learning-path-api';
 import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
+import { DSA_PATH_CODING_TASKS, canonicalCodingTaskId } from '../lib/learning-paths/dsa-coding-tasks';
 import { handlerContracts } from './learning-path-handler-contracts';
 import { diagnosticCompetencyContracts } from './diagnostic-competency-contracts';
+import { schemaContracts } from './learning-path-schema-contracts';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
@@ -151,7 +153,7 @@ async function main() {
         ...module.requires.map((one) => new Map([...met, [one.activityId, 'needs_revision' as EvidenceState]])),
       ];
       for (const states of cases) {
-        const expected = !module.optional && moduleComplete(module, states);
+        const expected = !isOffLoopModule(module) && moduleComplete(module, states);
         if (databaseSays(states) !== expected) {
           fail(`${where}/${module.id}: the requirements sent to the database say ${!expected} where moduleComplete says ${expected} for ${JSON.stringify([...states])}`);
         }
@@ -224,7 +226,7 @@ async function main() {
     // A lesson never gates a module, but a new learner is sent to the first
     // lesson, then the next, and only then to the first unmet requirement.
     {
-      const first = manifest.modules.find((module) => !module.optional);
+      const first = manifest.modules.find((module) => !isOffLoopModule(module));
       const lessons = first?.activities.filter((activity) => activity.kind === 'lesson') ?? [];
       const states = new Map<string, EvidenceState>();
       for (const lesson of lessons) {
@@ -536,8 +538,37 @@ async function main() {
   const catalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue must not import the solutions');
 
+  /* ── one coding record per DSA exercise (#493) ─────────────────────── */
+  // A DSA path pass records under the Coding task the exercise became, so it
+  // and a Coding pass share one record and one award. The queue keeps its
+  // path id: its path contract (a harness-declared buffer) is not the task's.
+  {
+    const dsa = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations')!;
+    const code = dsa.modules.flatMap((module) => module.activities).filter((activity) => activity.kind === 'code');
+    const mapped = code.filter((activity) => !activity.reuseTaskId && activity.id !== 'dsa-v1-d04-head-index-queue');
+    assert.deepEqual(Object.keys(DSA_PATH_CODING_TASKS).sort(), mapped.map((activity) => activity.id).sort(), 'every DSA exercise but the reuse and the queue maps to a Coding task');
+    const targets = Object.values(DSA_PATH_CODING_TASKS);
+    assert.equal(new Set(targets).size, targets.length, 'each Coding task takes one exercise');
+    for (const id of targets) {
+      const task = codingTaskById(id);
+      assert.ok(task && task.topic === 'dsa' && task.track === 'algorithms', `${id} is an issued DSA Foundations task`);
+    }
+    for (const activity of code) {
+      const id = canonicalCodingTaskId(dsa.id, activity);
+      if (activity.reuseTaskId) assert.equal(id, activity.reuseTaskId, `${activity.id} keeps the task it reuses`);
+      else if (activity.id === 'dsa-v1-d04-head-index-queue') assert.match(id, /^path-code-[0-9a-f]{32}$/, 'the queue keeps its path id');
+      else assert.equal(id, DSA_PATH_CODING_TASKS[activity.id]);
+    }
+    assert.equal(canonicalCodingTaskId(dsa.id, { id: 'dsa-v1-d07-binary-search', reuseTaskId: 'js-binary-search' }), 'js-binary-search');
+    const fde = LEARNING_PATHS.find((path) => path.id === 'fde');
+    for (const activity of (fde?.modules ?? []).flatMap((module) => module.activities).filter((one) => one.kind === 'code' && !one.reuseTaskId)) {
+      assert.match(canonicalCodingTaskId(fde!.id, activity), /^path-code-[0-9a-f]{32}$/, `${activity.id}: an FDE exercise keeps its path id`);
+    }
+  }
+
   /* ── the handlers: availability, refusals, rate limits ─────────────── */
   diagnosticCompetencyContracts();
+  schemaContracts(fail);
   await handlerContracts(fail);
 
   if (failures.length > 0) {

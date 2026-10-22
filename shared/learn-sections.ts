@@ -10,41 +10,25 @@
  *
  * Keep this module pure: browser and server both read it. */
 
-import type { LearningPathId } from './learning-paths';
+import { SOFTWARE_ENGINEER, type LearnSection, type LearnSectionId } from './learn-section-ids';
 
-export const LEARN_SECTION_IDS = ['web-developer', 'software-engineer', 'forward-deployed-engineer'] as const;
-export type LearnSectionId = (typeof LEARN_SECTION_IDS)[number];
-
-export const isLearnSectionId = (value: unknown): value is LearnSectionId =>
-  typeof value === 'string' && (LEARN_SECTION_IDS as readonly string[]).includes(value);
-
-export interface LearnSection {
-  id: LearnSectionId;
-  /** Learn topics in the order the section rail shows them. */
-  topics: readonly string[];
-  /** Learning paths that live in this section. Only FDE, in its own section. */
-  paths: readonly LearningPathId[];
-  /** How a learner joins: the base track implies Web Developer; Software
-   * Engineer is an explicit opt-in; FDE is the role specialization. */
-  membership: 'base-track' | 'opt-in' | 'specialization';
-}
+// The ids, the section shape, Software Engineer and the opt-in list live in
+// `./learn-section-ids`, the slice the browser's initial bundle carries. This
+// module re-exports them, so the server and lazy code import one place.
+export { LEARN_SECTION_IDS, OPT_IN_SECTIONS, SOFTWARE_ENGINEER, isLearnSectionId } from './learn-section-ids';
+export type { LearnSection, LearnSectionId } from './learn-section-ids';
 
 /** The membership matrix the owner approved on 21 October 2026 (plan
  * section 5.1, decision D2): Databases is shared into Software Engineer; AI &
  * LLMs belongs to FDE; Node.js, Databases, General, DevOps & Cloud and
  * Security are FDE foundations; Git and General are shared by Web Developer and
- * Software Engineer. DSA Advanced joins Software Engineer with epic E. */
+ * Software Engineer. DSA Advanced joins Software Engineer with epic E.
+ * Software Engineer's own list sits in `./learn-section-ids`. */
 const WEB_DEVELOPER: LearnSection = {
   id: 'web-developer',
   topics: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'databases', 'git', 'general'],
   paths: [],
   membership: 'base-track',
-};
-const SOFTWARE_ENGINEER: LearnSection = {
-  id: 'software-engineer',
-  topics: ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general'],
-  paths: [],
-  membership: 'opt-in',
 };
 const FORWARD_DEPLOYED_ENGINEER: LearnSection = {
   id: 'forward-deployed-engineer',
@@ -54,12 +38,6 @@ const FORWARD_DEPLOYED_ENGINEER: LearnSection = {
 };
 
 export const LEARN_SECTIONS: readonly LearnSection[] = [WEB_DEVELOPER, SOFTWARE_ENGINEER, FORWARD_DEPLOYED_ENGINEER];
-
-/** The sections a learner joins by choice, in section order: the only ones
- * `planTopics` appends. Kept apart from `LEARN_SECTIONS` so the browser's
- * initial bundle, which plans but does not render sections, carries only
- * these. The launch contracts check it equals the opt-in subset. */
-export const OPT_IN_SECTIONS: readonly LearnSection[] = [SOFTWARE_ENGINEER];
 
 /** Sections that list `topic`, in section order. A topic in more than one is
  * shared: the rail shows it in each, with the same progress. */

@@ -4,8 +4,9 @@ import AxeBuilder from '@axe-core/playwright';
 // Astryx gives an unselected segment its hover rule in place of its
 // transparent base, so without the shared rule in astryx-theme.css the
 // browser paints it ButtonFace, a mid grey in dark mode that the secondary
-// label fails. /roadmap has no local override; /leaderboard used to.
-for (const route of ['/roadmap', '/leaderboard']) for (const theme of ['light', 'dark']) {
+// label fails. /roadmap has no local override; /leaderboard used to. The
+// Learn section switcher (#488) is the third.
+for (const route of ['/roadmap', '/leaderboard', '/learn/web-developer']) for (const theme of ['light', 'dark']) {
   test(`${theme}: ${route} segmented control shows the track at rest`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ colorScheme: theme as 'light' | 'dark', reducedMotion: 'reduce' });

@@ -53,6 +53,9 @@ enables the coding scope gate. A new identity or changed task, solution or grade
 therefore stays withheld until its exact version receives a passing review. The
 45 hidden system-design tasks remain unreviewed and unissued; completing the
 issued tracks does not approve them.
+On 21 October 2026 the 29 DSA Foundations tasks of #493 joined under that gate:
+each row records a model review of its exact hash, with every case regraded in
+the production grader, and no independent or human reader. 754 tasks are issued.
 
 Retirement is not deletion. A withheld item stays in its source file and in
 `getQuestionsForHistoryById`, so an old attempt still finds its explanation

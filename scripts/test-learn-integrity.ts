@@ -46,8 +46,10 @@ const BACKEND = {
 };
 const HEARTS = { id: '6f5e4d3c-2b1a-4f0e-9d8c-7b6a5f4e3d2c', email: 'hearts@example.invalid', token: 'learn-contract-hearts' };
 const REPEAT = { id: '8a7b6c5d-4e3f-4a2b-9c1d-0e9f8a7b6c5d', email: 'repeat@example.invalid', token: 'learn-contract-repeat' };
-const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown>; unconfirmed?: boolean }> = [LEARNER, OTHER, OWNER, BROKEN, OWNER_UNCONFIRMED, BACKEND, HEARTS, REPEAT];
-const PREMIUM = new Set([OWNER.id]);
+/** A Premium account past the Big O introduction, for DSA level 3. */
+const DSA = { id: '1d2c3b4a-5f6e-4d7c-8b9a-a0b1c2d3e4f5', email: 'dsa@example.invalid', token: 'learn-contract-dsa' };
+const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown>; unconfirmed?: boolean }> = [LEARNER, OTHER, OWNER, BROKEN, OWNER_UNCONFIRMED, BACKEND, HEARTS, REPEAT, DSA];
+const PREMIUM = new Set([OWNER.id, DSA.id]);
 const DAY = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
 type Row = Record<string, unknown>;
@@ -633,6 +635,35 @@ async function main() {
       }
     }
     console.log('PASS learn: a replayed step pays its XP again after an hour, as XP only, and says when it opens');
+    // ── DSA level 3 seals its coding task (#493) ──────────────────────────
+    // The DSA path's exercises fill the DSA levels through the same parent
+    // attempt as JavaScript: the level seals the task, stores the attempt with
+    // that task list before the intro is served, and hands back a coding
+    // session bound to the attempt, which the coding resource accepts.
+    {
+      tables.roadmap_progress.push({ user_id: DSA.id, extra: { unlocked: ['dsa'] }, data: { dsa: { levels: { '1': { passed: true, bestPct: 100 }, '2': { passed: true, bestPct: 100 } }, checkpoints: {} } } });
+      const level = await call('GET', { topic: 'dsa', level: '3' }, DSA.token);
+      assert.equal(level.statusCode, 200, `DSA level 3 opens past the introduction: ${JSON.stringify(level.body?.error)}`);
+      const coding = level.body.coding as Array<{ task: { id: string; topic?: string; tests?: unknown[] }; session: string }>;
+      assert.deepEqual(coding.map((item) => item.task.id), ['alg-dsa-reverse-in-place'], 'DSA level 3 seals the reverse-in-place task');
+      assert.equal(coding[0].task.topic, 'dsa', 'the sealed task carries its DSA topic');
+      const attemptId = tokens.decodeSessionEnvelope(level.body.sessionId)!.attemptId;
+      const attempt = tables.roadmap_attempts.find((row) => row.attempt_id === attemptId);
+      assert.ok(attempt, 'the parent attempt is stored before the intro is served');
+      assert.deepEqual(attempt!.coding_task_ids, ['alg-dsa-reverse-in-place'], 'with the sealed task list');
+      const session = tokens.decodeCodingSession(coding[0].session);
+      assert.equal(session?.roadmapAttemptId, attemptId, 'the coding session is bound to the level attempt');
+      assert.equal(session?.taskId, 'alg-dsa-reverse-in-place');
+      const opened = await call('POST', { resource: 'coding-task', id: 'alg-dsa-reverse-in-place' }, DSA.token, { session: coding[0].session });
+      assert.equal(opened.statusCode, 200, `the coding resource opens the linked task: ${JSON.stringify(opened.body?.error)}`);
+      assert.equal(opened.body.task.id, 'alg-dsa-reverse-in-place');
+      // Held back until E3: the Big O introduction and DSA level 10 seal none.
+      const intro = await call('GET', { topic: 'dsa', level: '1' });
+      assert.equal(intro.statusCode, 200, JSON.stringify(intro.body?.error));
+      assert.equal((intro.body.coding ?? []).length, 0, 'a guest on DSA level 1 is asked for no coding task before E3');
+    }
+    console.log('PASS learn: DSA level 3 seals its coding task into the parent attempt and the coding resource opens it');
+
     // A direct visit to the public guide's second intro must be completable,
     // rather than open successfully and then fail its SQL prerequisite.
     const bigO=await call('GET',{topic:'dsa',level:'2'},OTHER.token);

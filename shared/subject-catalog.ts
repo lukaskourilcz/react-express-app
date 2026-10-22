@@ -12,7 +12,7 @@ export const SUBJECT_SCOPE_CATALOG = {
     questionCount: 2014,
     // Active challenges listed in the Coding section, excluding hidden tracks.
     // The launch contract recomputes this from the server's active catalogue.
-    codingChallengeCount: 725,
+    codingChallengeCount: 754,
     // `abbreviations`, `testing` and `code-snippets` are gone from `topics`:
     // they are no longer taught as paths of their own (see
     // shared/retired-content.ts). They stay in `categories` on purpose, so

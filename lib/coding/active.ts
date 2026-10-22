@@ -14,7 +14,7 @@
  * `./catalog` directly and never issues. */
 
 import type { CodingTask, CodingTaskSummary, CodingTrack } from '../../shared/coding-catalog';
-import { formatOf, isCodingSectionTrack } from '../../shared/coding-catalog';
+import { DSA_LEVELS_AWAITING_E3, formatOf, isCodingSectionTrack, isLearnCodingTopic } from '../../shared/coding-catalog';
 import type { EligibilityReason } from '../../shared/curation';
 import { codingTaskEligibility, taskHash } from '../curation';
 import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, levelTaskQuota, summarize } from './catalog';
@@ -85,7 +85,13 @@ export function tasksForLevel(topic: CodingTask['topic'], level: number): Coding
   );
 }
 
+/** The tasks a Learn level seals into its attempt: the first `levelTaskQuota`
+ * of `tasksForLevel`, for the Learn topics that carry coding
+ * (`LEARN_CODING_TOPICS`) and none for any other. `skipPostpones` reads this
+ * too, so a task no level issues is never said to come back. */
 export function levelCodingTasks(topic: CodingTask['topic'], level: number): CodingTask[] {
+  if (!isLearnCodingTopic(topic)) return [];
+  if (topic === 'dsa' && DSA_LEVELS_AWAITING_E3.has(level)) return [];
   return tasksForLevel(topic, level).slice(0, levelTaskQuota(level));
 }
 
