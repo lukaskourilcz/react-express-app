@@ -86,14 +86,39 @@ In English, at desktop width and a narrow phone width:
 
 1. Open Home, Today, Learn (each section), Quiz, Coding, Collection, Play, Leaderboard, Profile, Rewards, Premium, Privacy and Terms. Check header and footer branding and keyboard focus.
 2. Complete a quiz. Refresh and confirm XP and stats increment once; resubmitting the same receipt changes nothing. Start "Review weak areas" and confirm it draws from your own weak categories.
-3. Create and join a multiplayer room in two sessions. Test start, answer, reconnect, finish and the Realtime-disconnected fallback.
+3. Create and join a multiplayer room in two sessions. Test start, answer, reconnect, finish and the Realtime-disconnected fallback. `scripts/check-live-browser.mjs` automates the match part with test accounts ([operator smoke scripts](#operator-smoke-scripts)).
 4. Complete a Daily and a Challenge run. Each leaderboard updates once, and a repeat completion awards no XP.
 5. Sign in to `/dev` as an admin and confirm a normal account is refused.
-6. Delete a disposable account and confirm the auth identity and owned rows are gone.
+6. Delete a disposable account and confirm the auth identity and owned rows are gone. `scripts/check-live-accounts.mjs` deletes its two test accounts and checks that their tokens stop working.
 7. Request `/api/health`. It answers 200 only when the database check and the service-role check pass, and reports `rateLimiter: configured`; a 503 is an alert.
 8. With a free account, and again signed out, confirm React level 13, a Premium coding challenge and the stage after a project's free stages each open the upgrade sheet.
 9. With `LEARNING_PATH_FDE_ENABLED` set on the preview, walk the FDE path: read the outline signed out, sign in, start the path, open an activity, submit a wrong and a right answer, close the tab mid-draft and reopen it, then send the same idempotency key twice and confirm the second call replays the stored result. A free account opens the diagnostic and the first module and meets the upgrade sheet after that. A paused path keeps its evidence and leaves the queue, and removing the FDE specialization pauses it without deleting anything.
 10. With the switch unset, confirm Learn levels, checkpoints, Coding, Today, Profile, XP and account deletion still work and the path says it is previewable.
+
+## Operator smoke scripts
+
+Three scripts in `scripts/` test a live deployment. No npm script, CI job or schedule runs them: you start them by hand from the repository root, and each writes its result to `artifacts/`. Run them only against a deployment you may test, and only with dedicated test accounts. Never use the owner's account or a learner's account. Previews share the production database, so a run against a preview writes production rows too.
+
+| Script | What it checks | Environment |
+|---|---|---|
+| `scripts/check-live-accounts.mjs` | Signs in two test accounts through Supabase, then checks non-admin denial on `/api/admin/questions`, coding-draft isolation through the API and the Data API, that a sealed coding session refuses the other account, and a full Multiplayer and Classroom match (hidden answers, host-only start, duplicate answers, finish). Last, it deletes both accounts through `/api/user/delete-account` and confirms their tokens stop working. Writes `artifacts/live-account-check.json`. | `SMOKE_ACCOUNT_FILE` (required), `SMOKE_BASE_URL` (default `https://devshark.app`), `SMOKE_KEEP_FIXTURES` (any value skips the deletion) |
+| `scripts/check-live-browser.mjs` | Drives the same two accounts in headless Chromium through a Multiplayer and a Classroom match, with an offline reconnect and a reload during Classroom. Writes `artifacts/live-browser-results.json`, and page text and screenshots when a step fails. | `SMOKE_SESSION_FILE` (required), `SMOKE_BASE_URL` (required), `CHROME_BIN` (optional Chrome binary) |
+| `scripts/check-grading-load.ts` | Sends ten anonymous reference-solution submissions for three React tasks: one cold, then three batches at concurrency 3. Each must pass with no XP awarded. Writes p50, p95 and maximum latency to `artifacts/grading-load.json`. | `SMOKE_BASE_URL` (required) |
+
+`SMOKE_ACCOUNT_FILE` names a local JSON file, kept out of the repository: `{ "url": "<Supabase URL>", "key": "<anon key>", "users": [{ "id": "…", "email": "…", "password": "…" }, …] }` with exactly two users. The account script stops unless both emails match `launch-audit-*@example.invalid` and both accounts carry `app_metadata.launch_audit` set to `"2026-09-15"`, and it checks the marker again before each deletion. Only the service role can set app metadata, so create the two accounts in Supabase for this purpose alone.
+
+To run the account and browser checks together:
+
+1. `SMOKE_KEEP_FIXTURES=1 SMOKE_ACCOUNT_FILE=<file> SMOKE_BASE_URL=<deployment> node scripts/check-live-accounts.mjs`. It keeps the accounts and writes their sessions to `/tmp/devshark-launch-sessions.json` (mode 600).
+2. `SMOKE_SESSION_FILE=/tmp/devshark-launch-sessions.json SMOKE_BASE_URL=<deployment> node scripts/check-live-browser.mjs`. The script stores each session under the production Supabase project's storage key and waits for a player named "Launch audit 1" in the lobby.
+3. Run step 1 again without `SMOKE_KEEP_FIXTURES` to delete the accounts, then delete `/tmp/devshark-launch-sessions.json`: it holds live tokens.
+
+The grading check needs no account. Bundle it first, the way `package.json` runs the other TypeScript scripts:
+
+```bash
+npx esbuild scripts/check-grading-load.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/grading-load.mjs --log-level=warning
+SMOKE_BASE_URL=<deployment> node node_modules/.cache/shark/grading-load.mjs
+```
 
 ## Release and observation
 
