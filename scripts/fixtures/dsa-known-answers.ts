@@ -2,8 +2,8 @@
 // `npm run test:coding` through scripts/coding-known-answers.ts.
 //
 // DSA_FOUNDATIONS_WRONG holds the flawed variants each task's checks must
-// fail: the mistakes the DSA path's criteria name, the shortcuts its hidden
-// assertions were written for, and the attacks scripts/test-path-authority.ts
+// fail: the mistakes the retired DSA path's criteria named, the shortcuts its
+// hidden assertions were written for, and the attacks scripts/test-path-authority.ts
 // proves against the path harness (a replaced Proxy, a replaced RegExp test,
 // a shadow counter, repeated property definitions). `criterion` names the
 // critical criterion of the source path activity the variant breaks, so the
@@ -22,37 +22,40 @@ import type { KnownAnswer } from '../coding-known-answers';
 
 export type DsaKnownAnswer = KnownAnswer & { criterion?: string };
 
-/** The DSA path activity each task was converted from. */
-export const DSA_SOURCE_ACTIVITY: Readonly<Record<string, string>> = {
-  'alg-dsa-sum-of-evens': 'dsa-v1-d01-linear-accumulator',
-  'alg-dsa-halving-steps': 'dsa-v1-d01-halving-counter',
-  'alg-dsa-max-gap': 'dsa-v1-d01-pair-versus-pass',
-  'alg-dsa-reverse-in-place': 'dsa-v1-d02-reverse-in-place',
-  'alg-dsa-dedupe-sorted': 'dsa-v1-d02-dedupe-sorted',
-  'alg-dsa-palindrome': 'dsa-v1-d02-palindrome-two-pointer',
-  'alg-dsa-frequency-map': 'dsa-v1-d03-frequency-map',
-  'alg-dsa-first-unique': 'dsa-v1-d03-first-unique',
-  'alg-dsa-set-intersection': 'dsa-v1-d03-set-intersection',
-  'alg-dsa-stack': 'dsa-v1-d04-stack-api',
-  'alg-dsa-balanced-brackets': 'dsa-v1-d04-balanced-brackets',
-  'alg-dsa-queue': 'dsa-v1-d04-head-index-queue',
-  'alg-dsa-prepend-and-find': 'dsa-v1-d05-prepend-and-find',
-  'alg-dsa-delete-first-match': 'dsa-v1-d05-delete-first-match',
-  'alg-dsa-reverse-list': 'dsa-v1-d05-reverse-list',
-  'alg-dsa-recursive-list-sum': 'dsa-v1-d06-recursive-list-sum',
-  'alg-dsa-factorial': 'dsa-v1-d06-bounded-factorial',
-  'alg-dsa-iterative-countdown': 'dsa-v1-d06-iterative-countdown',
-  'alg-dsa-linear-search': 'dsa-v1-d07-linear-search',
-  'alg-dsa-first-occurrence': 'dsa-v1-d07-first-occurrence',
-  'alg-dsa-selection-sort': 'dsa-v1-d08-selection-sort',
-  'alg-dsa-insertion-sort': 'dsa-v1-d08-insertion-sort',
-  'alg-dsa-merge-sort': 'dsa-v1-d08-merge-sort',
-  'alg-dsa-tree-size-height': 'dsa-v1-d09-height-and-size',
-  'alg-dsa-tree-traversals': 'dsa-v1-d09-traversals',
-  'alg-dsa-bst-search-insert': 'dsa-v1-d09-bst-search-insert',
-  'alg-dsa-record-index': 'dsa-v1-d10-record-index',
-  'alg-dsa-repair-level-order': 'dsa-v1-d10-repair-traversal',
-  'alg-dsa-frequency-index': 'dsa-v1-d10-frequency-index',
+/** The critical criteria of the path exercise each task was converted from.
+ * E5 (#496) retired the DSA Foundations path; these ids were copied from it
+ * at main d3dc3a33 so the contract still proves a known wrong answer for every
+ * one of them. `from` names the retired path activity for the record. */
+export const DSA_CRITICAL_CRITERIA: Readonly<Record<string, { from: string; critical: readonly string[] }>> = {
+  'alg-dsa-sum-of-evens': { from: 'dsa-v1-d01-linear-accumulator', critical: ['core', 'single-pass'] },
+  'alg-dsa-halving-steps': { from: 'dsa-v1-d01-halving-counter', critical: ['core'] },
+  'alg-dsa-max-gap': { from: 'dsa-v1-d01-pair-versus-pass', critical: ['core', 'linear-budget'] },
+  'alg-dsa-reverse-in-place': { from: 'dsa-v1-d02-reverse-in-place', critical: ['core', 'in-place'] },
+  'alg-dsa-dedupe-sorted': { from: 'dsa-v1-d02-dedupe-sorted', critical: ['core', 'in-place'] },
+  'alg-dsa-palindrome': { from: 'dsa-v1-d02-palindrome-two-pointer', critical: ['core'] },
+  'alg-dsa-frequency-map': { from: 'dsa-v1-d03-frequency-map', critical: ['core', 'first-appearance-order'] },
+  'alg-dsa-first-unique': { from: 'dsa-v1-d03-first-unique', critical: ['core'] },
+  'alg-dsa-set-intersection': { from: 'dsa-v1-d03-set-intersection', critical: ['core', 'duplicate-free'] },
+  'alg-dsa-stack': { from: 'dsa-v1-d04-stack-api', critical: ['core', 'underflow'] },
+  'alg-dsa-balanced-brackets': { from: 'dsa-v1-d04-balanced-brackets', critical: ['core', 'nesting-order'] },
+  'alg-dsa-queue': { from: 'dsa-v1-d04-head-index-queue', critical: ['core', 'constant-dequeue'] },
+  'alg-dsa-prepend-and-find': { from: 'dsa-v1-d05-prepend-and-find', critical: ['core'] },
+  'alg-dsa-delete-first-match': { from: 'dsa-v1-d05-delete-first-match', critical: ['core'] },
+  'alg-dsa-reverse-list': { from: 'dsa-v1-d05-reverse-list', critical: ['core', 'in-place-links'] },
+  'alg-dsa-recursive-list-sum': { from: 'dsa-v1-d06-recursive-list-sum', critical: ['core', 'recursive'] },
+  'alg-dsa-factorial': { from: 'dsa-v1-d06-bounded-factorial', critical: ['core'] },
+  'alg-dsa-iterative-countdown': { from: 'dsa-v1-d06-iterative-countdown', critical: ['core', 'no-recursion'] },
+  'alg-dsa-linear-search': { from: 'dsa-v1-d07-linear-search', critical: ['core', 'one-pass'] },
+  'alg-dsa-first-occurrence': { from: 'dsa-v1-d07-first-occurrence', critical: ['core', 'logarithmic'] },
+  'alg-dsa-selection-sort': { from: 'dsa-v1-d08-selection-sort', critical: ['core', 'selection-method'] },
+  'alg-dsa-insertion-sort': { from: 'dsa-v1-d08-insertion-sort', critical: ['core', 'insertion-method'] },
+  'alg-dsa-merge-sort': { from: 'dsa-v1-d08-merge-sort', critical: ['core', 'merge-method'] },
+  'alg-dsa-tree-size-height': { from: 'dsa-v1-d09-height-and-size', critical: ['core'] },
+  'alg-dsa-tree-traversals': { from: 'dsa-v1-d09-traversals', critical: ['core'] },
+  'alg-dsa-bst-search-insert': { from: 'dsa-v1-d09-bst-search-insert', critical: ['core', 'follows-bst-path'] },
+  'alg-dsa-record-index': { from: 'dsa-v1-d10-record-index', critical: ['core', 'logarithmic-lookup'] },
+  'alg-dsa-repair-level-order': { from: 'dsa-v1-d10-repair-traversal', critical: ['core'] },
+  'alg-dsa-frequency-index': { from: 'dsa-v1-d10-frequency-index', critical: ['core', 'preprocessed'] },
 };
 
 const PAIRS_GAP = 'function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,a-b);return best;}';

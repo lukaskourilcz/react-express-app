@@ -1,8 +1,8 @@
-// Server-only reference solutions and hidden tests for lib/coding/tasks/dsa-foundations.ts.
+// Server-only reference solutions and hidden tests for lib/coding/tasks/dsa.ts.
 // Never import from client code.
 //
-// Each reference is the DSA path's (lib/learning-paths/solutions/dsa-d01.ts
-// to dsa-d10.ts), and the hidden tests are the path's hidden assertions with
+// Each reference is the retired DSA path's (E5, #496, removed its
+// lib/learning-paths/solutions/dsa-d*.ts), and the hidden tests are its hidden assertions with
 // their harness calls rewritten through `../tasks/dsa-probes`. They aim at the
 // shortcut each visible set leaves open: a second traversal the visible read
 // budget happened not to catch, a reversed copy handed back instead of the
@@ -10,7 +10,7 @@
 // between instances, a queue that fits 32 values but not 64, a list rebuilt
 // instead of rewired, a call count on inputs the learner never saw, and a
 // search that reads every node. The mistakes they were written for are
-// graded as known wrong answers (scripts/fixtures/dsa-foundations-known-answers.ts).
+// graded as known wrong answers (scripts/fixtures/dsa-known-answers.ts).
 
 import type { CodingSolution } from '../types';
 import {

@@ -1,10 +1,11 @@
 // DSA Foundations (#493): the DSA path's code exercises as coding tasks.
 //
-// Each task is one exercise of the dsa-foundations learning path
-// (`lib/learning-paths/content/dsa/d01.ts` to `d10.ts`), on the algorithms
-// track with topic `dsa` and the DSA Learn level that teaches it
-// (docs/learn-sections-fde-flagship-plan.md, section 12.2). The path's binary
-// search stays a reuse of `js-binary-search` and has no task here.
+// Each task began as one exercise of the DSA Foundations learning path, on
+// the algorithms track with topic `dsa` and the DSA Learn level that teaches
+// it (docs/learn-sections-fde-flagship-plan.md, section 12.2). E5 (#496)
+// retired that path; these tasks, their ids and their graders are what
+// remains of its exercises, and Learn serves them on the DSA levels. The
+// path's binary search was a reuse of `js-binary-search` and has no task here.
 //
 // The path graded method through harnesses appended after the learner's code.
 // Here each counter is a self-contained check built by `./dsa-probes`, so the
@@ -14,7 +15,7 @@
 // `debug` task.
 //
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
-// Solutions and hidden checks live in `../solutions/dsa-foundations.ts`.
+// Solutions and hidden checks live in `../solutions/dsa.ts`.
 
 import type { CodingTaskSource } from '../types';
 import {

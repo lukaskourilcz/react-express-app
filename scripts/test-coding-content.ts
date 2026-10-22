@@ -35,9 +35,8 @@ import {
 } from '../shared/coding-catalog';
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
 import { KNOWN_RIGHT_CODE, KNOWN_WRONG_CODE, type KnownAnswer } from './coding-known-answers';
-import { DSA_FOUNDATIONS_WRONG, DSA_SOURCE_ACTIVITY } from './fixtures/dsa-known-answers';
+import { DSA_CRITICAL_CRITERIA, DSA_FOUNDATIONS_WRONG } from './fixtures/dsa-known-answers';
 import { DSA_FOUNDATIONS_TASKS } from '../lib/coding/tasks/dsa';
-import { activityIn, pathById } from '../lib/learning-paths/catalog';
 import { complexityGuidance } from '../shared/coding-complexity';
 import { REACT_VARIANTS } from './coding-react-variants';
 import { docsFor, taskResources } from '../shared/coding-docs';
@@ -589,19 +588,19 @@ async function main() {
   if (levelCodingTasks('algorithms', 1).length > 0 || levelCodingTasks('system-design', 0).length > 0) fail('only the Learn coding topics seal coding into a level');
 
   /* ── DSA Foundations (#493) ─────────────────────────────────────────── */
-  // The DSA path's code exercises, one task each but the reused binary
-  // search: on the algorithms track with topic dsa, an authored runtime
-  // target, and a known wrong answer for every critical criterion of the
-  // path activity it came from (a wrong entry with no criterion breaks the
-  // default one, `core`). Section 5 of the known-answer run grades each one
-  // and requires it to fail a check tagged with its criterion.
+  // The DSA path's code exercises became one task each (the binary search
+  // was reused): on the algorithms track with topic dsa, an authored runtime
+  // target, and a known wrong answer for every critical criterion of the path
+  // activity it came from (a wrong entry with no criterion breaks the default
+  // one, `core`). E5 (#496) retired the path, so those criteria now come from
+  // DSA_CRITICAL_CRITERIA, copied from it. Section 5 of the known-answer run
+  // grades each wrong answer and requires it to fail a check tagged with its
+  // criterion.
   {
-    const dsa = pathById('dsa-foundations');
     if (DSA_FOUNDATIONS_TASK_IDS.size !== 29) fail(`DSA Foundations has ${DSA_FOUNDATIONS_TASK_IDS.size} tasks, not 29`);
-    const pathCode = (dsa?.modules ?? []).flatMap((module) => module.activities).filter((activity) => activity.kind === 'code' && !activity.reuseTaskId);
-    if (pathCode.length !== 29) fail(`the DSA path has ${pathCode.length} authored code exercises, not 29`);
-    const sources = new Set(Object.values(DSA_SOURCE_ACTIVITY));
-    for (const activity of pathCode) if (!sources.has(activity.id)) fail(`${activity.id}: a DSA path exercise with no coding task`);
+    const recorded = Object.keys(DSA_CRITICAL_CRITERIA);
+    if (recorded.length !== 29) fail(`DSA_CRITICAL_CRITERIA records ${recorded.length} retired path exercises, not 29`);
+    for (const id of recorded) if (!DSA_FOUNDATIONS_TASK_IDS.has(id)) fail(`${id}: a retired path exercise with no DSA Foundations task`);
     for (const id of DSA_FOUNDATIONS_TASK_IDS) {
       const task = byId.get(id);
       if (!task) { fail(`${id}: a DSA Foundations id with no task`); continue; }
@@ -616,11 +615,17 @@ async function main() {
       }
       const wrong = DSA_FOUNDATIONS_WRONG.filter((known) => known.id === id);
       if (wrong.length === 0) fail(`${id}: needs at least one known wrong answer`);
-      const activity = dsa && DSA_SOURCE_ACTIVITY[id] ? activityIn(dsa, DSA_SOURCE_ACTIVITY[id])?.activity : undefined;
-      if (!activity?.code) { fail(`${id}: no source activity in the DSA path`); continue; }
+      const source = DSA_CRITICAL_CRITERIA[id];
+      if (!source || source.critical.length === 0) { fail(`${id}: no critical criteria recorded from its retired path exercise`); continue; }
       const covered = new Set(wrong.map((known) => known.criterion ?? 'core'));
-      for (const criterion of activity.code.criteria.filter((one) => one.critical)) {
-        if (!covered.has(criterion.id)) fail(`${id}: no known wrong answer breaks the critical criterion ${criterion.id} of ${activity.id}`);
+      for (const criterion of source.critical) {
+        if (!covered.has(criterion)) fail(`${id}: no known wrong answer breaks the critical criterion ${criterion} of ${source.from}`);
+      }
+      // A criterion a check names must be one the source declared, so a
+      // renamed tag cannot leave a criterion without its checks.
+      const tagged = new Set([...(task.tests ?? []), ...(solutionFor(id)?.hiddenTests ?? [])].map((test) => test.criterion ?? 'core'));
+      for (const criterion of source.critical) {
+        if (!tagged.has(criterion)) fail(`${id}: no visible or hidden check is tagged with the critical criterion ${criterion}`);
       }
     }
   }
