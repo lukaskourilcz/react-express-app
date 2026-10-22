@@ -3247,7 +3247,7 @@ on the associated pull request.
 
 Owner-selected Managed Payments uses supported `embedded_page`: Stripe's actual API refused `form` for this merchant model. The optional plain branch implements Checkout Form SDK with the supplied appearance. Required consent is collected before session creation; server metadata preserves the waiver/version/timestamp and existing signed fulfillment records it. No schema or grading changes; twelve API handlers remain.
 
-Production Stripe/Vercel setup is prepared (live restricted key, public key, exclusive EUR 4.99/59.88 prices, forever 55% coupon through 30 November, nine-event webhook and default Portal). **Sales are disabled at the owner's request while identity verification waits.** Remaining setup is solely in [STRIPE_INTEGRATION_TODO.md](../../STRIPE_INTEGRATION_TODO.md).
+Production Stripe/Vercel setup is prepared (live restricted key, public key, exclusive EUR 4.99/59.88 prices, forever 55% coupon through 30 November, nine-event webhook and default Portal). **Sales are disabled at the owner's request while identity verification waits.** Remaining setup is solely in [STRIPE_INTEGRATION_TODO.md](../STRIPE_INTEGRATION_TODO.md).
 
 Premium membership disables Start free with an explanatory tooltip and colors the header diamond gold. Duplicate page kickers are replaced by green semantic main headings and the existing varied wave. Native select arrows are inset by 1rem. React success omits the complexity/first-pass/repeat-XP prose while retaining actual server XP, navigation and genuine exceptional states. Coding toolbar controls show icons and accessible tooltips below 1220px.
 
