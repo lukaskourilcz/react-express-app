@@ -71,7 +71,12 @@ function pathCopyFields(path: MergedPath): { path: string; value: string }[] {
         const at = `${lesson.id}.section[${index}]`;
         if (section.kind === 'prose' || section.kind === 'callout') out.push({ path: at, value: section.body });
         else if (section.kind === 'code') out.push({ path: `${at}.caption`, value: section.caption });
-        else if (section.kind === 'table') {
+        else if (section.kind === 'example') {
+          // The note is what tells the learner a runnable snippet is
+          // exploration only, so a blank one must not ship.
+          out.push({ path: `${at}.caption`, value: section.caption });
+          out.push({ path: `${at}.note`, value: section.note });
+        } else if (section.kind === 'table') {
           out.push({ path: `${at}.caption`, value: section.caption });
         } else if (section.kind === 'trace') {
           out.push({ path: `${at}.caption`, value: section.caption });

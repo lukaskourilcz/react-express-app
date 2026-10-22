@@ -147,6 +147,12 @@ export function schemaContracts(fail: Fail): void {
     const { at } = variant((s) => { activityOf(s, 'fde-v1-x01-drill').fixtureNote = ''; });
     if (!at.includes('missing_copy@fde/fde-v1-x01-drill.fixtureNote')) fail(`schema empty fixture note: expected missing_copy, got ${at.join(', ')}`);
   }
+  {
+    const { at } = variant((s) => {
+      moduleOf(s, LOOP).lessons[0].sections.push({ kind: 'example', language: 'javascript', code: 'console.log(1);', caption: 'Run it.', note: ' ' });
+    });
+    if (!at.includes('missing_copy@fde/fde-v1-x01-l1.section[1].note')) fail(`schema blank example note: expected missing_copy, got ${at.join(', ')}`);
+  }
   expectErrors('scenario on a code activity', (s) => { activityOf(s, 'fde-v1-x01-drill').scenario = 'A case.'; }, ['misplaced_scenario']);
   expectErrors('fixture note on a check', (s) => { activityOf(s, 'fde-v1-x01-case').fixtureNote = 'A note.'; }, ['misplaced_fixture_note']);
   expectErrors('fixture note on a reused task', (s) => {
