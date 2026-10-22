@@ -5879,3 +5879,59 @@ Fast parity at 7c3e2a8f6598b52d4e7e65202058a5b919df0be7 passed 28 checks with 25
 READY production dpl_7qigZgX2t7RY4yPTqRdKggxwSibx matches that exact merge. Read-only guest checks at 390px in light and dark themes passed: Home and Premium return 200, Home matches the fetched manifest (13 required modules, 24 lessons and 68 module/capstone questions), the CTA reaches the canonical FDE outline, Premium states the free diagnostic/first-module boundary, and no page errors, horizontal overflow or API writes occurred. The public catalogue still reports disabled. Evidence: /private/tmp/codex-b13-production-smoke.log.
 
 A deployment-scoped 15-minute runtime scan found two stderr entries categorized as errors, both Node 24 DEP0169 url.parse deprecation warnings on /api/quiz/roadmap. The targeted runtime-error query returned that same warning group; no other group was returned. The accepted guest requests were 200. This is not a claim of warning-free logs or authenticated production completion. The warning is recorded for follow-up; FDE stays disabled until B14.
+
+## DSA Advanced and minimal Learn topic cards — 22 October 2026
+
+Issue #495 (PR #556, merge 4206cc16): DSA Advanced joins Software Engineer as an opt-in Premium topic, with 15 levels, 120 questions and 15 new plus 9 placed coding tasks. Required run passed after one spec fix (1327b1af): the topic-card helper matched by prefix and found both DSA cards. Owner request (PR #557, merge 132633be): Learn topic cards show the logo, the topic name and the levels line only; the "Also in …" line and its accessible-name suffix are gone, and section membership is unchanged. Main had moved after #557's CI, so the merged tree was rechecked locally before merging: types, client, launch, build, bundle, and learning-release plus learn-sections (32/32).
+
+A read-only guest check on devshark.app after the deploy, in headless Chromium at 390px: `/learn/software-engineer` lists 9 cards including DSA Advanced, `/learn/web-developer` lists 10, no card shows "Also in", the level counts show ("0 / 6 levels"), and the pages raised no errors. No signed-in or Premium check was made.
+
+## Standalone DSA path retired — 22 October 2026
+
+Issue #496 (PR #555, merge c1d1c1dd67b6d07e99b972508caaa7e3322104e1): the DSA Foundations learning path is retired; FDE is the only path. Its exercises remain the Coding tasks E2 created: all 769 coding-index ids are identical before and after the merge, and the graders and solutions are unchanged apart from a file rename. The eighteen original `dsa-v1-*` readings are still served by Learn and stay bound to their eighteen archived lesson reviews by content hash (`audit:native-reviews` reports 18/33 Learn lessons); the other 111 path records moved verbatim to `history/`, none rescored or rebound. Stored `dsa-foundations` enrollments are left out of the enrollment list and Today; their progress and activity routes answer 404. `/roadmap/paths/dsa-foundations` and everything under it answer a permanent 308 to `/learn/software-engineer?topic=dsa`. Every authority script kept or gained assertions (path-authority 17→21, handler contracts 63→71, lesson contract 42→47). Head 0cebac71 passed required run 39758404194 (coding 21m49s, browser 14m10s) with main already merged into it.
+
+Open owner items: the Terms of use still name "the FDE and DSA learning paths"; remove `LEARNING_PATH_DSA_ENABLED` from Vercel if any environment still sets it.
+
+## Migration 066 in production — 22 October 2026
+
+Backup verified first: `supabase backups list` for rvlybcjdpafwyeuojvhl showed a COMPLETED physical backup at 2026-10-22 03:52:56 UTC and completed daily physical backups for each of the seven days before (WAL-G on, PITR off). Applied migrations ended at 065, matching the repository. `supabase/supabase-schema-066.sql` (sha256 aeb6111c…0c3c, from B3 commit b908b692) was applied in full through the connector as `066_learning_path_quota_result`. Before the apply the function did not exist; the rollback is a single `DROP FUNCTION public.accept_learning_path_quota_result(jsonb,jsonb,text,text,integer,text)`. After: one overload, SECURITY DEFINER, `search_path=""`, EXECUTE for service_role only (anon and authenticated false), and `md5(prosrc)` 6f1362b2e93561607c4373bfc8e03756 equals the md5 of the function body in the repository file. No data was read or changed.
+
+## B3 decomposition cases and any-nine completion — 22 October 2026
+
+Issue #499: M02 Decomposition cases adds two readings and twelve original four-question customer cases. Both readings and any nine passed cases complete the module (`requiresAtLeast`); the other three stay open for practice. Migration 066 adds the service-only `accept_learning_path_quota_result`, which counts the quota under the enrollment lock; without it a quota submit answers 503 `migration_required`. Existing result routines, rewards, tiers and the twelve handlers are unchanged.
+
+PR #545 is merged at 62c8b7b933e4437d122d9a6b270cf27845d15563. Head ff70b250 passed required run 39766593505: coding 25m21s (the slowest gate), browser 16m49s, tests 5m38s, static 2m12s, SQL 34s. Migration 066 is applied in production (entry above). READY production dpl_FkTVDEQF58m2Bjd11gwRakoeEFvS matches the merge SHA.
+
+FDE stayed off in production, so no learner could reach the cases there. No production smoke check, authenticated run or quota submission was made for this entry; B14 exercised the any-nine completion on a local stack.
+
+## B9 codify-pattern module and final FDE numbering — 22 October 2026
+
+Issue #505: M14 Codify the pattern (two sourced readings, four scenario questions and a required self-reviewed pattern note) joins the loop, the path moves to its final M01–M14 then C01 order with the decomposition cases at M02, and the optional Python bridge gains two readings and two checks. Lesson, activity and question ids keep their authored slugs, so recorded evidence keeps its ids. No Python runs, no handler or migration is added.
+
+PR #550 is merged at 1c5612b35f0bbfad1b004364dcd0bb42c651717b. Head 08fb1a61 passed required run 39768456086: coding 21m30s, browser 13m07s, tests 4m54s, static 2m12s, SQL 38s. READY production dpl_7UkWmB8v1vpXfkK2R5S6Ry8r98hu matches the merge SHA.
+
+FDE stayed off in production. No production smoke check or authenticated run was made for this entry.
+
+## Hidden system-design task fixes — 22 October 2026
+
+PR #558 (refs #391): the 29 hidden system-design tasks the 22 October review marked needs-fix are corrected (13 content defects, 16 length clues, all 40 drill hints made task-specific), the review is committed under `docs/audit/`, and a sequence drill may accept a second valid order through the server-only `acceptedOrders`. The track stays hidden; no learner sees these tasks.
+
+PR #558 is merged at 8491aaaf61a954045a0280b53cd1b92666043000. Head 217eb2dd passed required run 39769602515: coding 20m27s, browser 16m24s, tests 4m25s, static 2m42s, SQL 42s. READY production dpl_DdxdCFDFH2ug4RhuMN2LEQa77d13 matches the merge SHA.
+
+The tasks remain hidden, so this establishes no learner-facing behaviour. No production check was made.
+
+## B10 interview-practice shelf — 22 October 2026
+
+Issue #506: four optional modules, IP01–IP04, sit on the `interview-prep` shelf after the capstone: two code rounds on foreign TypeScript services, twelve design cases and five capped self-reviewed reflections whose case bank links M02's twelve cases. Shelf work never changes guided completion, the next action or the required counts. No handler, migration or tier change.
+
+PR #554 is merged at c147e3c4499532365f66eb8bdd7ef65d072be8b2. Head 28010ab1 passed required run 39775898505: coding 25m42s, browser 12m53s, tests 5m47s, static 2m23s, SQL 37s. READY production dpl_AJ6teJjeQEPojk6KVjc9kp7RV8pm matches the merge SHA.
+
+FDE stayed off in production. `interview-shelf.spec.ts` was not part of CI's browser job at this merge; B14 (#510) added it. No production smoke check or authenticated run was made.
+
+## B11 capstone writing and portfolio exports — 22 October 2026
+
+Issue #507: the capstone adds an executive update and a five-minute walkthrough script, both required and self-reviewed, and guided completion now needs both plus every teaching module M01–M14. The FDE hub exports the learner's saved writing as JSON and Markdown through the existing owner-checked draft read, with no attempt or progress write. The completion label stays "FDE guided path completed".
+
+PR #552 is merged at 1b7cc5780146df5921cfa081f589c9693070a78e. Head 1d69460e passed required run 39785534528: coding 22m27s, browser 19m29s, tests 4m28s, static 2m41s, SQL 45s. READY production dpl_BuNpmNWHMWfv4JLxQ2mchLqLBVp2 matches the merge SHA.
+
+FDE stayed off in production. The final copy commit (fccd873f) changed the export note, and `portfolio-export.spec.ts`, which CI did not run, kept the old wording; B14 found and fixed the stale assertion. No production smoke check or authenticated run was made.
