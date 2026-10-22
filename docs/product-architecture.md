@@ -1804,3 +1804,21 @@ usage, approvals and publication; this operation reads no learner records and
 adds no model calls or publishing credentials. See
 [marketing-social-bridge.md](marketing-social-bridge.md) for the header contract,
 limits and setup.
+
+### Learning-path taster access (B12)
+
+Enrollment and resumption are free. `learning-path-activity` in the pure shared
+tier contract reads the supplied manifest: every activity in its diagnostic
+module and first required module is free; the remainder is Premium. Optional
+and shelf modules never become the first required module. Unknown paths or
+activities fail closed. The server index uses the authored manifests; path
+screens supply their fetched public manifests to the same client rule.
+
+Both start and submit enforce this activity boundary after verifying the
+caller-owned enrollment. A lapsed account may reopen recorded verified passes
+and self-reviewed work. Draft reads and saves retain their existing access.
+The client marks individual locked activities and the server's next action,
+with the usual upgrade sheet on activation. The picker can save a free FDE
+preference even when its catalogue is unavailable; that never invents an
+enrollment. The Premium page and sheet state that the diagnostic and first
+module are free. The production FDE switch remains an owner release item.

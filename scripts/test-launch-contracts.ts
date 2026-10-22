@@ -176,6 +176,7 @@ import {
   parseLearningPreference,
   pathGuidedComplete,
   pathInventory,
+  isOffLoopModule,
 } from '../shared/learning-paths';
 import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack, isDifficulty } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
@@ -662,9 +663,19 @@ async function tierContracts() {
   assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 1 }, index), 'free', "React's first part is open");
   assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 2 }, index), 'premium', "React's second part ends above level 12");
   assert.equal(contentTier({ kind: 'learn-level', topic: 'typescript', level: 1 }, index), 'premium');
-  assert.equal(contentTier({ kind: 'learning-path', pathId: 'fde' }, index), 'premium');
+  assert.equal(contentTier({ kind: 'learning-path', pathId: 'fde' }, index), 'free');
   assert.equal(contentTier({ kind: 'coding-task', taskId: 'js-no-such-task' }, index), 'premium', 'unknown content can only lock');
   assert.equal(isOpenTo('premium', { kind: 'learning-path', pathId: 'dsa-foundations' }, index), true);
+  for (const path of LEARNING_PATHS) {
+    const tasterIndex = { ...index, learningPaths: [publicManifest(path)] };
+    const first = path.modules.find(module => !isOffLoopModule(module))!;
+    const diagnostic = path.modules.find(module => module.activities.some(activity => activity.id === path.diagnosticActivityId));
+    for (const module of path.modules) for (const activity of module.activities) {
+      assert.equal(contentTier({ kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, tasterIndex), module === first || module === diagnostic ? 'free' : 'premium', `${activity.id}: the taster follows the manifest`);
+    }
+    assert.equal(contentTier({ kind: 'learning-path-activity', pathId: path.id, activityId: 'unknown-activity' }, tasterIndex), 'premium');
+  }
+
   assert.equal(isOpenTo('free', { kind: 'learn-level', topic: 'html', level: 3 }, index), true);
 
   // 4. The entitlement routines read no learning, score or streak table, and
