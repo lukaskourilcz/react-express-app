@@ -1,6 +1,6 @@
 # Premium gating reference
 
-Shared by `learn-question-authoring`, `coding-task-authoring` and the learning-path skill of issue C4. Read it before you add content a learner starts, change what the free tier opens, or touch a 402 path. Every rule names the file it comes from; when a rule here and the code disagree, the code wins and this file is stale.
+Shared by `learn-question-authoring`, `coding-task-authoring` and `learning-path-module-authoring`. Read it before you add content a learner starts, change what the free tier opens, or touch a 402 path. Every rule names the file it comes from; when a rule here and the code disagree, the code wins and this file is stale.
 
 ## One contract
 
@@ -14,7 +14,7 @@ Shared by `learn-question-authoring`, `coding-task-authoring` and the learning-p
 
 | Kind | Rule in `contentTier` | Where the data lives |
 |---|---|---|
-| `learn-level` | Free for every topic in `FREE_LEARN_TOPICS` (`html`, `css`, `javascript`); free up to `FREE_LEARN_LEVELS[topic]` (`react: 12`, `dsa: 2`); Premium otherwise | `shared/tiers.ts` |
+| `learn-level` | Free for every topic in `FREE_LEARN_TOPICS` (`html`, `css`, `javascript`); free up to `FREE_LEARN_LEVELS[topic]` (`react: 12`, `dsa: 5`); Premium otherwise | `shared/tiers.ts` |
 | `learn-part-test` | Free for a `FREE_LEARN_TOPICS` topic; Premium when any level in the part is Premium (`partRanges` from `shared/progression.ts`) | `shared/tiers.ts`, `shared/progression.ts` |
 | `coding-task` | Free when the index row carries `free: true`; an evolving stage falls through to the stage rule | `shared/coding-index.ts`, generated |
 | `evolving-stage` | Free for the first `freeStageCount(stages)` stages, Premium after | `shared/tiers.ts` `freeStageCount`, `shared/evolving.ts` |
@@ -23,7 +23,7 @@ Shared by `learn-question-authoring`, `coding-task-authoring` and the learning-p
 
 Unknown content is Premium, so a gap in the index can only lock, never open (`contentTier` doc comment). `isOpenTo(tier, content, index)` answers "may this tier start it" with the same function.
 
-A Learn question carries no tier of its own: its level does. Adding a question to a level never changes what the free tier opens. Changing `FREE_LEARN_TOPICS` or `FREE_LEARN_LEVELS` does, and `tierContracts` pins today's values (`FREE_LEARN_LEVELS.react === 12`, `FREE_LEARN_LEVELS.dsa === 2`, React level 13 Premium). Epic E raises `FREE_LEARN_LEVELS.dsa` to 5 (`docs/learn-sections-fde-flagship-plan.md`, section 9, E3); that change edits the contract and its assertions together.
+A Learn question carries no tier of its own: its level does. Adding a question to a level never changes what the free tier opens. Changing `FREE_LEARN_TOPICS` or `FREE_LEARN_LEVELS` does, and `tierContracts` pins today's values (`FREE_LEARN_LEVELS.react === 12`, `FREE_LEARN_LEVELS.dsa === 5`, React level 13 Premium). A change to either list edits the contract and its assertions together.
 
 ## The free coding list
 
@@ -32,7 +32,7 @@ A Learn question carries no tier of its own: its level does. Adding a question t
 - The share of issued tasks with `free: true` stays within `FREE_CODING_SHARE` (`min 0.16`, `max 0.22`, `target 0.19`). `tierContracts` check 2 fails outside the band.
 - `tierContracts` also asserts: every listed id exists in the coding index and appears once; the list holds standalone tasks only, never an evolving stage; every free task whose label is derived from its tier reads Easy; the first tier-1 task of each technique group in each section track is free.
 - Evolving stages are free by rule, not by list: `freeStageCount` opens the head of each stage list (three stages of a ten-stage project, two of a FullStack app, one of a short path). `tierContracts` walks every project as a free account and checks the Terms copy (`legal.terms.plans.free` in `client/src/i18n/translations.ts`) names those stages.
-- The counts written in prose ("144 of 754", "754 issued", the Easy, Medium and Hard split) live in `shared/tiers.ts` (the `FREE_CODING_TASK_IDS` comment and the `freeCodingCounts` doc comment), `README.md` (the freemium paragraph, "Current content" and the Coding section bullet), `about-project.md`, `docs/product-architecture.md` (the coding catalogue, free tier and evolving-project paragraphs), `docs/interactive-content-manifest.md` and `docs/learn-sections-fde-flagship-plan.md` (the current-state table). No test reads them. Every newly issued task raises the issued total (754 today) even when the free list stays the same, and a new free task raises the free count too; update them in the same change. The per-track splits next to them (JavaScript, TypeScript, React and Algorithms) move with the track of the new task.
+- The counts written in prose ("144 of 769", the issued total, the Easy, Medium and Hard split) live in `shared/tiers.ts` (the `FREE_CODING_TASK_IDS` comment and the `freeCodingCounts` doc comment) and in the living docs that describe the coding catalogue, `docs/product-architecture.md` among them. No test reads them, so find them with `grep -rn '<old total>' shared/tiers.ts README.md about-project.md docs/ --include='*.md'` and skip dated records such as `docs/release-acceptance.md`. Every newly issued task raises the issued total even when the free list stays the same, and a new free task raises the free count too; update them in the same change. The per-track splits next to them (JavaScript, TypeScript, React and Algorithms) move with the track of the new task.
 
 ## The server
 
