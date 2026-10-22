@@ -72,3 +72,28 @@ MCQs use plausible options of comparable specificity, with the scenario constrai
 Code-reviewed source files remain the publishing authority. Extend the current `/dev` quality/reporting workflow to inspect FDE inventory and link issue reports; do not require a new full CMS. A catalog validator must reject duplicate IDs, dependency cycles, missing sources, invalid task references and public answer leakage. Every critical task has a passing reference and intentionally flawed variants.
 
 Keep provider specifics in versioned reference notes. Verify current official Python, SQL, provider and protocol docs at authoring time. Technical recommendations in this specification are curriculum scope, not pinned package selections. Require quarterly source review and an immediate review for a broken API example or reported grading defect.
+
+
+## Optional interview practice (B10)
+
+Four modules sit on the interview-prep shelf after the required loop. They
+have no completion requirements and add nothing to guided progress, phase
+counts, the guided time estimate or completion rewards.
+
+| Module | Practice |
+| --- | --- |
+| IP01 Learning round | Two lessons and three original 300–500-line TypeScript services to extend: rate cards, event selectors and an asset ledger. |
+| IP02 Re-engineering round | Two lessons and three changed v2 services to debug: tenant quote batches, actor-scoped event pages and ledger previews. Earlier helpers may be familiar; the new contracts differ. |
+| IP03 System design | Two lessons and twelve fictional customer scenarios, each with four objective questions and authored feedback. |
+| IP04 Case bank and reflections | Two lessons linking the twelve original M02 cases, plus five capped STAR-style self-review artifacts. |
+
+Suggested rehearsal times are guidance; no timer runs. Exercises execute only
+in the existing sandbox and call no customer system. Machine checks establish
+the authored bounded assertions, not engineering or interview readiness.
+Reflection fields establish presence and length only; their quality stays
+self-reviewed. Fictional rehearsal must be labelled, and no fabricated work
+history or measured result is requested. These are original exercises, with
+no employer question, scoring key or hiring guarantee.
+
+The case bank uses the final M02 route from B3/B9. B10 remains draft until
+those dependencies exist. All lesson/activity identifiers remain stable.

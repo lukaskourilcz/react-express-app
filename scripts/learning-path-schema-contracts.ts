@@ -242,4 +242,22 @@ export function schemaContracts(fail: Fail): void {
   if (pathInventory(slippedManifest).modules !== 1) fail('schema defence: a shelf module without optional counts toward the reward\'s module total');
   const slippedMerged = slippedPath.modules.find((module) => module.id === SHELF)!;
   if (JSON.stringify(moduleRequirements(slippedMerged)) !== '[]') fail('schema defence: a shelf module sends the database completion requirements');
+
+  // B10: published foreign-code fixtures stay complete enough to trace, fit
+  // the actual submission cap and remain outside guided completion.
+  const fde = LEARNING_PATHS.find(path => path.id === 'fde')!;
+  const interview = fde.modules.filter(module => module.shelf === 'interview-prep');
+  if (interview.length !== 4) fail('interview shelf: expected four authored practice modules');
+  for (const module of interview) {
+    if (!module.optional || module.requires.length || module.lessons.length !== 2) fail(`${module.id}: shelf practice needs two readings and no guided requirements`);
+    for (const activity of module.activities.filter(one => one.kind === 'code')) {
+      const starter = activity.code!.starter.trim();
+      const lines = starter.split(/\r?\n/).length;
+      if (lines < 300 || lines > 500) fail(`${activity.id}: foreign-code fixture must have 300–500 substantive lines`);
+      if (new TextEncoder().encode(starter).length > 20 * 1024) fail(`${activity.id}: foreign-code starter exceeds the code submission limit`);
+    }
+  }
+  const withoutShelf = { ...publicManifest(fde), modules: publicManifest(fde).modules.filter(module => module.shelf !== 'interview-prep') };
+  if (JSON.stringify(pathInventory(withoutShelf)) !== JSON.stringify(pathInventory(publicManifest(fde)))) fail('interview shelf: published practice changed guided inventory');
+
 }

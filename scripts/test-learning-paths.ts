@@ -49,6 +49,242 @@ const KNOWN_WRONG_REUSED: Record<string, { label: string; code: string }> = {
  * C2-7): the reference with one mistake put back in, and the criterion that
  * must now catch it. */
 const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string]; criterion: string }[]> = {
+"fde-v1-ip02-actor-page": [
+{"label": "always consumes one event", "replace": ["const page = owned.slice(0, eventLimit);", "const page = owned.slice(0, 1);"], "criterion": "page-boundary"},
+  {
+    "label": "includes another tenant in the actor page",
+    "replace": [
+      "events.filter(event => event.tenantId === actorTenantId)",
+      "events.slice()"
+    ],
+    "criterion": "tenant-boundary"
+  },
+  {
+    "label": "consumes every owned event in one page",
+    "replace": [
+      "const page = owned.slice(0, eventLimit);",
+      "const page = owned;"
+    ],
+    "criterion": "page-boundary"
+  },
+  {
+    "label": "discards persisted replay state",
+    "replace": [
+      "const plan = planEvents(page, subscriptions, previousSeen);",
+      "const plan = planEvents(page, subscriptions, []);"
+    ],
+    "criterion": "replay-state"
+  }
+],
+"fde-v1-ip02-tenant-ledger": [
+{"label": "drops hypothetical preview changes", "replace": ["return { ...result, records };", "return { ...result, records, changes: [] };"], "criterion": "preview-output"},
+  {
+    "label": "accepts a command outside the actor tenant",
+    "replace": [
+      "parsed.value.filter(entry => entry.command.tenantId !== actorTenantId)",
+      "parsed.value.filter(() => false)"
+    ],
+    "criterion": "tenant-boundary"
+  },
+  {
+    "label": "returns staged records from a preview",
+    "replace": [
+      "mode === 'preview' ? snapshot.map(copyRecord) : result.records",
+      "result.records"
+    ],
+    "criterion": "preview-output"
+  },
+  {
+    "label": "treats same-revision conflicts as stale",
+    "replace": [
+      "command.revision < previous.revision",
+      "command.revision <= previous.revision"
+    ],
+    "criterion": "revision-identity"
+  }
+],
+  "fde-v1-ip02-tenant-quotes": [
+{"label": "omits shipment id from request identity", "replace": ["request.shipment.id, request.shipment.zone", "request.shipment.zone"], "criterion": "request-identity"},
+{"label": "omits declared value from request identity", "replace": ["request.shipment.weightGrams, request.shipment.declaredValueCents, request.shipment.flags", "request.shipment.weightGrams, request.shipment.flags"], "criterion": "request-identity"},
+{"label": "sorts flags despite ordered payload identity", "replace": ["request.shipment.declaredValueCents, request.shipment.flags", "request.shipment.declaredValueCents, request.shipment.flags.slice().sort()"], "criterion": "request-identity"},
+  {
+    "label": "selects another tenant’s price card",
+    "replace": [
+      "wrapper.tenantId === actorTenantId && wrapper.card.id === request.cardId",
+      "wrapper.card.id === request.cardId"
+    ],
+    "criterion": "tenant-boundary"
+  },
+  {
+    "label": "silently deduplicates a conflicting payload",
+    "replace": [
+      "const fingerprint = JSON.stringify([request.cardId, request.shipment.id, request.shipment.zone, request.shipment.weightGrams, request.shipment.declaredValueCents, request.shipment.flags]);",
+      "const fingerprint = request.requestId;"
+    ],
+    "criterion": "request-identity"
+  },
+  {
+    "label": "returns quotes from a rejected batch",
+    "replace": [
+      "  if (errors.length > 0) return { ok: false, errors };\n  return { ok: true, quotes, duplicates };",
+      "  return { ok: true, quotes, duplicates };"
+    ],
+    "criterion": "all-or-nothing"
+  }
+],
+  "fde-v1-ip01-asset-ledger": [
+  {
+    "label": "allows an empty rename label",
+    "replace": [
+      "if (!token(label)) errors.push(issue(row, 'label:invalid'));\n      if (errors.length) return { ok: false, errors };\n      return { ok: true, value: { ...base, kind: 'rename', label } };",
+      "if (errors.length) return { ok: false, errors };\n      return { ok: true, value: { ...base, kind: 'rename', label } };"
+    ],
+    "criterion": "parsing"
+  },
+  {
+    "label": "omits the renamed label from replay identity",
+    "replace": [
+      "command.revision, command.label]);",
+      "command.revision]);"
+    ],
+    "criterion": "replay"
+  },
+  {
+    "label": "lets a rename revive retired state",
+    "replace": [
+      "      if (previous.status === 'retired') return { ok: false, errors: [issue(row, 'rename:retired')] };\n",
+      ""
+    ],
+    "criterion": "tenant-state"
+  },
+  {
+    "label": "indexes bare asset ids across tenants",
+    "replace": [
+      "JSON.stringify([value.tenantId, value.itemId])",
+      "JSON.stringify([value.itemId])"
+    ],
+    "criterion": "tenant-state"
+  },
+  {
+    "label": "returns partial staged state after an application error",
+    "replace": [
+      "if (!applied.ok) return { ok: false, errors: applied.errors };",
+      "if (!applied.ok) return { ok: true, records: Array.from(staged.values()), counts, changes };"
+    ],
+    "criterion": "atomic"
+  },
+  {
+    "label": "hides the renamed label in the audit",
+    "replace": [
+      "who + ': rename to ' + command.label",
+      "who + ': rename'"
+    ],
+    "criterion": "audit"
+  }
+],
+  "fde-v1-ip01-policy-router": [
+    { label: 'discards persisted replay identities', replace: ['const seen = new Set(previousSeen);', 'const seen = new Set<string>();'], criterion: 'tenant-replay' },
+  {
+    "label": "accepts any configured tag rather than all",
+    "replace": [
+      "selector.values.every(tag => event.tags.includes(tag))",
+      "selector.values.some(tag => event.tags.includes(tag))"
+    ],
+    "criterion": "selection"
+  },
+  {
+    "label": "matches tags without case sensitivity",
+    "replace": [
+      "event.tags.includes(tag)",
+      "event.tags.some(value => value.toLowerCase() === tag.toLowerCase())"
+    ],
+    "criterion": "selection"
+  },
+  {
+    "label": "allows an empty all-tags selector",
+    "replace": [
+      "raw.values.length < 1 || raw.values.length > 8",
+      "raw.values.length > 8"
+    ],
+    "criterion": "parsing"
+  },
+  {
+    "label": "drops the tenant authorization check",
+    "replace": [
+      "      if (subscription.tenantId !== event.tenantId) continue;\n",
+      ""
+    ],
+    "criterion": "tenant-replay"
+  },
+  {
+    "label": "deduplicates bare ids across tenants",
+    "replace": [
+      "JSON.stringify([event.tenantId, event.id])",
+      "JSON.stringify([event.id])"
+    ],
+    "criterion": "tenant-replay"
+  },
+  {
+    "label": "describes only the first configured tag",
+    "replace": [
+      "selector.values.join(', ')",
+      "selector.values[0]"
+    ],
+    "criterion": "description"
+  }
+],
+  "fde-v1-ip01-rate-card": [
+    { label: 'accepts unsafe included grams', replace: ['Number.isSafeInteger(rule.includedGrams)', 'Number.isInteger(rule.includedGrams)'], criterion: 'schema' },
+    { label: 'accepts an unsafe integer amount', replace: ['Number.isSafeInteger(value)', 'Number.isInteger(value)'], criterion: 'schema' },
+  {
+    "label": "rounds extra weight down",
+    "replace": [
+      "Math.ceil(extra / 1000)",
+      "Math.floor(extra / 1000)"
+    ],
+    "criterion": "band-pricing"
+  },
+  {
+    "label": "omits the new rule from discounts",
+    "replace": [
+      "weightBand: true",
+      "weightBand: false"
+    ],
+    "criterion": "band-pricing"
+  },
+  {
+    "label": "accepts a zero included weight",
+    "replace": [
+      "rule.includedGrams <= 0",
+      "rule.includedGrams < 0"
+    ],
+    "criterion": "schema"
+  },
+  {
+    "label": "mixes up parsed threshold and base fields",
+    "replace": [
+      "includedGrams: num('includedGrams')",
+      "includedGrams: num('baseAmount')"
+    ],
+    "criterion": "schema"
+  },
+  {
+    "label": "breaks an earlier started-unit rule",
+    "replace": [
+      "Math.ceil(grams / 1000)",
+      "Math.floor(grams / 1000)"
+    ],
+    "criterion": "regression"
+  },
+  {
+    "label": "hides the new zone suffix",
+    "replace": [
+      "'c per extra started kg' + zoneSuffix(rule.zones)",
+      "'c per extra started kg'"
+    ],
+    "criterion": "description"
+  }
+],
   'fde-v1-bridge-operator-state': [
     { label: 'a failure accepted from any request in flight', replace: ['if (!inFlight || action.requestId !== state.requestId) return state;', 'if (!inFlight) return state;'], criterion: 'stale-responses' },
     { label: 'an approval accepted from any request', replace: ["if (state.status !== 'approving' || action.requestId !== state.requestId) return state;", "if (state.status !== 'approving') return state;"], criterion: 'stale-responses' },

@@ -29,6 +29,10 @@ import { FDE_M08 } from './fde/m08';
 import { FDE_M09 } from './fde/m09';
 import { FDE_M10 } from './fde/m10';
 import { FDE_M11_DEPLOY } from './fde/m11-deploy';
+import { FDE_IP02 } from './fde/ip02';
+import { FDE_IP01 } from './fde/ip01';
+import { FDE_IP04 } from './fde/ip04';
+import { FDE_IP03 } from './fde/ip03';
 import { FDE_C01 } from './fde/c01';
 
 export const FDE_PATH: PathSource = {
@@ -86,6 +90,10 @@ export const FDE_PATH: PathSource = {
     FDE_M09,
     FDE_M10,
     FDE_C01,
+    FDE_IP01,
+    FDE_IP02,
+    FDE_IP03,
+    FDE_IP04,
   ],
   bridges: [
     {
@@ -256,6 +264,6 @@ export const FDE_PATH: PathSource = {
       reviewedOn: '2026-09-08',
     },
   ],
-  reviewedOn: '2026-09-08',
+  reviewedOn: '2026-10-22',
   completionLabel: 'FDE guided path completed',
 };
