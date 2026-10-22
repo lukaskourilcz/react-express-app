@@ -1237,6 +1237,28 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // The concept items this attempt graded, and the learner's review state
+  // for them. The state is read while the completion runs: the completion
+  // never writes it, and the review is recorded from it at the end.
+  const reviewSubject = userId && isScopeSubject(session.subject) ? session.subject : null;
+  const reviewItems = reviewSubject
+    ? graded.flatMap((answer) => {
+      const question = served.get(String(answer.question_id));
+      if (!question) return [];
+      return [{
+        itemId: question.id,
+        itemVersion: contentVersion(question),
+        category: question.category,
+        tags: question.tags,
+        correct: answer.is_correct === true,
+        kind: 'independent' as const,
+      }];
+    })
+    : [];
+  const reviewStates = userId && reviewSubject && reviewItems.length > 0
+    ? loadReviewStates(supabase, userId, reviewSubject)
+    : null;
+
   let progress: unknown;
   let applied = false;
   let repeatXp: LearnRepeatXp | null = null;
@@ -1343,28 +1365,12 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // affordance, so unlike a quiz there is nothing to downgrade. Questions left
   // unanswered when the hearts ran out are simply absent from the graded rows
   // and are not recorded as failures — they were not attempted.
-  if (userId && isScopeSubject(session.subject)) {
-    const byId = await getEffectiveQuestionsById(session.subject);
-    const items = graded.flatMap((answer) => {
-      const question = byId.get(String(answer.question_id));
-      if (!question) return [];
-      return [{
-        itemId: question.id,
-        itemVersion: contentVersion(question),
-        category: question.category,
-        tags: question.tags,
-        correct: answer.is_correct === true,
-        kind: 'independent' as const,
-      }];
-    });
-    if (items.length > 0) {
-      const states = await loadReviewStates(supabase, userId, session.subject);
-      await recordConceptReviews(
-        supabase,
-        { userId, subject: session.subject, eventId: session.attemptId!, items },
-        states,
-      );
-    }
+  if (userId && reviewSubject && reviewStates) {
+    await recordConceptReviews(
+      supabase,
+      { userId, subject: reviewSubject, eventId: session.attemptId!, items: reviewItems },
+      await reviewStates,
+    );
   }
 
   logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts, repeatXp: repeatXp?.xp ?? null });
