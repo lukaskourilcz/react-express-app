@@ -697,6 +697,27 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: opened.body!.session, order: lines.map((_, index) => `b${index + 2}`) } } as never, forged as never, null);
     assert.equal(forged.statusCode, 400, `${id}: an id the session never issued is refused`);
   }
+  // A signed-in arrangement whose record fails is still answered, and the
+  // lost record is logged rather than dropped without a trace.
+  {
+    const id = 'js-sum-array';
+    const authored = puzzleFor(id)!;
+    const opened = reply();
+    await handleCodingTask({ method: 'GET', headers: {}, query: { id } } as never, opened as never, null);
+    const byCode = new Map(opened.body!.task!.puzzle!.lines.map((line) => [line.code, line.id]));
+    const order = authored.accepted[0].map((line) => byCode.get(authored.lines.find((one) => one.id === line)!.code)!);
+    const failing = { rpc: async () => ({ data: null, error: { code: 'XX000', message: 'connection reset' } }) };
+    const lines: string[] = [];
+    const log = console.log;
+    console.log = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
+    const sent = reply();
+    try {
+      await handleCodingSubmit({ method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.72' }, query: {}, body: { session: opened.body!.session, order, user_id: 'user-puzzle-0001' } } as never, sent as never, failing as never);
+    } finally { console.log = log; }
+    assert.equal(sent.statusCode, 200, JSON.stringify(sent.body));
+    assert.equal(sent.body?.puzzle?.accepted, true);
+    assert.ok(lines.some((line) => line.includes('"kind":"puzzle_unrecorded"') && line.includes('"reason":"XX000"')), 'the failed puzzle record is logged');
+  }
   console.log('PASS integrity: a code-ordering puzzle submits through the session that issued it');
 }
 

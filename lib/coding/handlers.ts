@@ -730,6 +730,9 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
       if (written.error && isRpcMissing(written.error)) {
         return jsonError(res, 503, 'migration_required', 'Practice migration 027 is not installed');
       }
+      // The arrangement is still answered: it is evidence about ordering and
+      // records no progress. A lost record is logged, never dropped silently.
+      if (written.error) logEvent({ status: 500, kind: 'puzzle_unrecorded', reason: written.error.code ?? 'unknown' });
     }
     logEvent({ status: 200, kind: 'puzzle', track: task.track, accepted });
     res.setHeader('Cache-Control', 'private, no-store');
