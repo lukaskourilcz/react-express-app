@@ -94,6 +94,7 @@ import {
 import { itemReview, contentVersion } from '../../lib/curation';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
+import { conceptOf } from '../../shared/concepts';
 import { refuseLocked } from '../../lib/access';
 import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
@@ -1255,7 +1256,9 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       }];
     })
     : [];
-  const reviewStates = userId && reviewSubject && reviewItems.length > 0
+  // Most items name no concept, and an attempt whose items name none has
+  // nothing to record, so its state is not read at all.
+  const reviewStates = userId && reviewSubject && reviewItems.some((item) => conceptOf(item) !== null)
     ? loadReviewStates(supabase, userId, reviewSubject)
     : null;
 

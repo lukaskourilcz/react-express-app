@@ -608,6 +608,7 @@ async function main() {
       assert.ok(credits().some((one) => one.name === 'credit_verified_xp_tokens'), 'a first pass credits its coins');
       assert.equal(tableReads.filter((table) => table === 'roadmap_progress').length, 1,
         `060 says it was the first pass, so the progress row is read once, after the completion (${tableReads.join(', ')})`);
+      assert.equal(tableReads.includes('concept_reviews'), false, 'an HTML level names no concept, so no review state is read');
 
       const soon = await playLevel(true);
       assert.equal(soon.body.passed, true);
