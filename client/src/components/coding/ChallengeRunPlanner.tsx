@@ -5,7 +5,7 @@
 // One run at a time. While a run is open — active, or planned for later —
 // the planner shows that run instead of a form: where it stands, when it is
 // due, and the way to continue, start, cancel, or put it in a calendar.
-import { useId, useMemo, useState, type FormEvent } from 'react';
+import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
@@ -142,13 +142,20 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
   const [error, setError] = useState<string | null>(null);
   const minLocal = useMemo(nowLocal, []);
   const open = session.data?.session ?? null;
+  // One start at a time. The button turns busy only once the mutation's
+  // state reaches React, a task or two later, and a second press in that gap
+  // started a second run that replaced the first.
+  const starting = useRef(false);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (starting.current) return;
     setError(null);
     const scheduledFor = later ? localToIso(at) : null;
     if (later && !scheduledFor) { setError(t('coding.run.badTime')); return; }
+    starting.current = true;
     start.mutate({ count, order, ...(track ? { topic: track } : {}), ...(scheduledFor ? { scheduledFor } : {}) }, {
+      onSettled: () => { starting.current = false; },
       onSuccess: (data) => {
         const run = data.session;
         if (!run) return;
