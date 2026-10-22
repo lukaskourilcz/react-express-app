@@ -1,6 +1,6 @@
-# devShark social skill (interim)
+# devShark social graphics
 
-> **Interim.** The owner's `SKILL.md` for socials will replace this file. Until it arrives, marketingShark in `lukaskourilcz/quorum` follows these rules. They come from the V9 brand guidelines in [`docs/brand/brand-guidelines.md`](../brand/brand-guidelines.md).
+These rules apply to devShark carousels, posts and stories made outside this repository, for example by marketingShark in `lukaskourilcz/quorum`. They apply the V9 brand guidelines in [`docs/brand/brand-guidelines.md`](../brand/brand-guidelines.md). This repository posts nothing to social networks.
 
 ## Source files
 
@@ -43,7 +43,7 @@ Five slides, 1080 × 1350 px each, one question from the devShark question bank 
 
 ## QA checklist
 
-Check every draft before it enters the approval queue:
+Check every draft before anyone approves it:
 
 - [ ] Every mark comes from `client/public/brand/v9/` at its original proportions.
 - [ ] The fin tip points left, and the logo keeps the fin left of the wordmark.
