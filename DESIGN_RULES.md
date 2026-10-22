@@ -72,8 +72,8 @@ progress. Quiz and typing progress keep their fin at the progress endpoint.
 Every wavy connector gets **its own** amplitude, phase and wavelength — no two
 waves in a path are the same tile. A roadmap path, a set of level connectors, a
 row of ticks: vary `amp` / `dir` / `wavelength` per segment so the path reads as
-living water, not a repeated stamp. (See `pathWave` in `Home.tsx` for the reference
-implementation.)
+living water, not a repeated stamp. (See `pathWave` in `landing/LandingKit.tsx`, used by
+`Home.tsx`, for the reference implementation.)
 
 ### 4a. The waterline bank
 
