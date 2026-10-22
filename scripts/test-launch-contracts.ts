@@ -4917,7 +4917,7 @@ async function main() {
     assert.deepEqual(section('web-developer').topics,
       ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'databases', 'git', 'general']);
     assert.deepEqual(section('software-engineer').topics,
-      ['dsa', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
+      ['dsa', 'dsa-advanced', 'algorithms', 'system-design', 'devops', 'security', 'databases', 'git', 'general']);
     assert.deepEqual(section('forward-deployed-engineer').topics,
       ['ai', 'nodejs', 'databases', 'general', 'devops', 'security']);
     assert.deepEqual(LEARN_SECTIONS.map((one) => [one.id, one.membership, [...one.paths]]), [
