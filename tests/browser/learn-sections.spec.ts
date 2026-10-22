@@ -269,17 +269,19 @@ test.describe('Learn section states', () => {
     await context.setOffline(false);
   });
 
-  test('the open FDE path is Premium for a free account: the sheet opens and nothing is saved', async ({ page }) => {
+  test('a free account joins the FDE taster while other Premium topics stay gated', async ({ page }) => {
     await prepare(page);
     const state = await stand(page, 'frontend', { catalogEnabled: true });
     await page.goto('/learn/forward-deployed-engineer');
     const start = page.getByRole('button', { name: 'Start the FDE path' });
     await expect(start).toBeVisible();
-    await expect(page.locator('.rm-section-action .ss-premium-label')).toHaveText('Premium');
+    await expect(page.locator('.rm-section-action .ss-premium-label')).toHaveCount(0);
     await start.click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    expect(state.puts).toEqual([]);
-    expect(state.enrollmentPosts).toEqual([]);
+    await expect.poll(() => state.puts.length).toBe(1);
+    expect(state.enrollmentPosts).toHaveLength(1);
+    expect(state.enrollmentPosts[0]).toMatchObject({ pathId: 'fde', action: 'enroll' });
+    expect(state.puts[0]).toMatchObject({ specialization: 'fde' });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await page.goto('/learn/web-developer');
     await expect(topicCard(page, 'TypeScript').locator('.rm-topic-progress')).toContainText('Premium');

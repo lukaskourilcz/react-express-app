@@ -6,6 +6,8 @@ import { FdeHub } from '../src/components/paths/FdeHub';
 import type { LearningPathManifest } from '../../shared/learning-paths';
 import type { PathProgressResponse } from '../../shared/learning-path-api';
 
+const upgrade = vi.hoisted(() => vi.fn());
+vi.mock('../src/lib/upgradeSheet', () => ({ openUpgradeSheet: upgrade }));
 const share = vi.hoisted(() => ({ render: vi.fn() }));
 vi.mock('../src/components/ResultShareActions', () => ({ default: (props: unknown) => { share.render(props); return <button>Download card</button>; } }));
 const manifest = {
@@ -24,6 +26,14 @@ const progress = (states: string[], guidedComplete = false): PathProgressRespons
 const mount = (props: Partial<React.ComponentProps<typeof FdeHub>> = {}) => render(<MemoryRouter><LanguageProvider><FdeHub manifest={manifest} pending={false} error={false} retry={() => {}} reachable {...props} /></LanguageProvider></MemoryRouter>);
 
 describe('the FDE competency hub', () => {
+  it('marks a locked board activity and opens its activity-specific upgrade without navigating', () => {
+    mount({ progress: progress([]), activityLock: id => id === 'write' });
+    const row = screen.getByRole('link', { name: 'Review the handoff' }).closest('li')!;
+    expect(within(row).getByText('Premium')).toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('link'));
+    expect(upgrade).toHaveBeenCalledWith({ kind: 'learning-path-activity', ref: 'fde:write' });
+  });
+
   it('shows fresh recorded work as not started and marks the server next activity’s phase', () => {
     mount({ progress: progress([]) });
     const board = screen.getByRole('region', { name: 'Competency evidence' });

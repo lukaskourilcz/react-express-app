@@ -456,7 +456,7 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     if (action === 'enroll' && availability(path) !== 'available') {
       return jsonError(res, 503, 'path_unavailable', 'That learning path is not open for enrollment yet');
     }
-    // Premium opens the learning paths. Pausing is never refused: it starts nothing.
+    // Enrollment is free; activity starts and submissions enforce the taster boundary.
     if (action !== 'pause' && await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
     // A skill path records no career context; a role specialization records the
     // base track it sat above, for recommendations only.
@@ -575,11 +575,17 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   if (Number(row.curriculum_version) !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'This enrollment follows an older curriculum version');
   }
-  if (await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
 
   const found = activityIn(path, body.activityId);
   if (!found) return jsonError(res, 404, 'not_found', 'Unknown activity');
   const { module, activity } = found;
+  if (await refuseLocked(res, userId, { kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, {
+    cleared: async () => {
+      const state = stateMap(await loadProgressRows(supabase, row.enrollment_id)).get(activity.id);
+      return state === 'verified_pass' || state === 'self_reviewed';
+    },
+  })) return;
+
 
   if (body.previousSession !== undefined && (typeof body.previousSession !== 'string' || body.previousSession.length > 16_384)) {
     return jsonError(res, 400, 'bad_request', 'The previous session is invalid');
@@ -883,13 +889,19 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (enrollmentRow.status === 'paused') {
     return jsonError(res, 409, 'enrollment_paused', 'Resume this path before submitting work');
   }
-  if (await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
   if (session.curriculumVersion !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'The curriculum changed while this attempt was open. Start it again.');
   }
   const found = activityIn(path, session.activityId);
   if (!found) return jsonError(res, 404, 'not_found', 'Unknown activity');
   const { module, activity } = found;
+  if (await refuseLocked(res, userId, { kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, {
+    cleared: async () => {
+      const state = stateMap(await loadProgressRows(supabase, enrollmentRow.enrollment_id)).get(activity.id);
+      return state === 'verified_pass' || state === 'self_reviewed';
+    },
+  })) return;
+
   if (activity.kind !== session.activityKind || activity.purpose !== session.purpose) {
     return jsonError(res, 409, 'session_mismatch', 'This attempt no longer matches the activity');
   }

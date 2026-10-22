@@ -1,3 +1,4 @@
+import { LEARNING_PATHS } from './learning-paths/catalog';
 /** Server enforcement of the free tier and Premium.
  *
  * `shared/tiers.ts` says what each tier opens; this module asks the database
@@ -53,11 +54,12 @@ export class EntitlementUnavailableError extends Error {
 
 let index: ContentIndex | null = null;
 /** The server's `ContentIndex`: the issuable coding summaries with their
- * projected `free` flags, the evolving registry and the authored level counts. */
+ * projected `free` flags, evolving registry, authored level counts and path manifests. */
 export function serverContentIndex(): ContentIndex {
   index ??= {
     levelCounts: Object.fromEntries(ROADMAP_TOPICS.map((topic) => [topic, topicLevelCount(topic)])),
     coding: CODING_SUMMARIES,
+    learningPaths: LEARNING_PATHS,
     evolving: EVOLVING_CHALLENGES,
   };
   return index;

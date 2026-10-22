@@ -22,7 +22,7 @@
 
 import type { CodingTaskSummary } from './coding-catalog';
 import { EVOLVING_CHALLENGES, isEvolvingCheckpoint, type EvolvingChallenge } from './evolving';
-import type { LearningPathId } from './learning-paths';
+import type { LearningPathId, LearningPathManifest } from './learning-paths';
 import { partRanges } from './progression';
 
 export type Tier = 'free' | 'premium';
@@ -188,6 +188,7 @@ export type GatedContent =
   | { kind: 'coding-task'; taskId: string }
   | { kind: 'evolving-stage'; challengeId: string; stage: number }
   | { kind: 'learning-path'; pathId: LearningPathId }
+  | { kind: 'learning-path-activity'; pathId: LearningPathId; activityId: string }
   // Redeeming coins for shipped merchandise (step D8). Not content, but refused
   // with the same 402 so the browser answers it with the same upgrade sheet.
   | { kind: 'merch-redemption'; sku: string };
@@ -197,6 +198,8 @@ export type GatedKind = GatedContent['kind'];
  * browser from `shared/coding-index.ts` and the roadmap structure; both hand it
  * to the same function. */
 export interface ContentIndex {
+  /** Public manifests: first required and diagnostic module activities form the taster. */
+  learningPaths?: readonly Pick<LearningPathManifest, 'id' | 'diagnosticActivityId' | 'modules'>[];
   /** Level count per Learn topic, which decides where the part tests fall. */
   levelCounts: Readonly<Partial<Record<string, number>>>;
   /** The coding index with its projected `free` flags. */
@@ -310,8 +313,15 @@ export function contentTier(content: GatedContent, index: ContentIndex): Tier {
     case 'evolving-stage':
       return evolvingStageFree(content.challengeId, content.stage, index.evolving) ? 'free' : 'premium';
     case 'learning-path':
-      // The FDE and DSA paths are Premium in full, once their switches are on.
-      return 'premium';
+      // Enrollment is free; the activity boundary below owns content access.
+      return 'free';
+    case 'learning-path-activity': {
+      const path = index.learningPaths?.find(one => one.id === content.pathId);
+      if (!path) return 'premium';
+      const first = path.modules.find(module => !module.optional && module.shelf === undefined);
+      const diagnostic = path.diagnosticActivityId ? path.modules.find(module => module.activities.some(activity => activity.id === path.diagnosticActivityId)) : undefined;
+      return [first, diagnostic].some(module => module?.activities.some(activity => activity.id === content.activityId)) ? 'free' : 'premium';
+    }
     case 'merch-redemption':
       // Premium members redeem coins for merchandise; the crown and streak
       // protection stay open to every account.
@@ -345,6 +355,8 @@ export function gatedRef(content: GatedContent): string {
       return `${content.challengeId}:${content.stage}`;
     case 'learning-path':
       return content.pathId;
+    case 'learning-path-activity':
+      return `${content.pathId}:${content.activityId}`;
     case 'merch-redemption':
       return content.sku;
   }
