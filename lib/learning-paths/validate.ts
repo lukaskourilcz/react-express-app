@@ -225,7 +225,9 @@ function validateActivity(
         issues.push(error('check_verification', at, 'objective checks are machine-verified'));
       }
       const threshold = activity.passThreshold;
-      if (threshold === undefined || threshold <= 0 || threshold > 1) {
+      // NaN passes both comparisons, and then `score >= NaN` fails every
+      // learner on every attempt.
+      if (threshold === undefined || !Number.isFinite(threshold) || threshold <= 0 || threshold > 1) {
         issues.push(error('bad_threshold', at, 'passThreshold must be between 0 (exclusive) and 1'));
       }
       const questionIds = new Set<string>();
@@ -318,7 +320,9 @@ function validateActivity(
       for (const field of artifact.fields) {
         if (fieldIds.has(field.id)) issues.push(error('duplicate_id', `${at}/${field.id}`, 'duplicate field id'));
         fieldIds.add(field.id);
-        if (field.maxLength <= 0 || field.maxLength > 8_000) {
+        // A NaN or fractional cap passes the range test; NaN then makes every
+        // value "over the limit", so the artifact could never be submitted.
+        if (!Number.isInteger(field.maxLength) || field.maxLength <= 0 || field.maxLength > 8_000) {
           issues.push(error('bad_max_length', `${at}/${field.id}`, 'field maxLength must be between 1 and 8000'));
         }
       }

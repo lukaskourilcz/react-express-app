@@ -164,6 +164,18 @@ export function schemaContracts(fail: Fail): void {
   expectErrors('non-finite criterion weight', (s) => {
     activityOf(s, 'fde-v1-x01-drill').code!.criteria = [{ id: 'core', label: 'Required behaviour', critical: true, weight: Number.NaN }];
   }, ['bad_weight']);
+  expectErrors('non-finite pass threshold', (s) => { activityOf(s, 'fde-v1-x01-case').passThreshold = Number.NaN; }, ['bad_threshold']);
+  expectErrors('non-integer artifact field cap', (s) => {
+    moduleOf(s, SHELF).activities.push({
+      id: 'fde-v1-ip01-star', kind: 'artifact', purpose: 'exercise', verification: 'self_reviewed',
+      title: 'STAR story', summary: 'Write one STAR story.', competencies: ['integration'], estimatedMinutes: 10,
+      artifact: {
+        brief: 'Write one STAR story.',
+        fields: [{ id: 'story', label: 'Story', help: 'Tell it.', kind: 'long-text', required: true, maxLength: Number.NaN }],
+        rubricDimensions: ['clarity'],
+      },
+    });
+  }, ['bad_max_length']);
   expectErrors('diagnostic that is not a check', (s) => {
     activityOf(s, 'fde-v1-ip01-read').purpose = 'diagnostic';
     s.diagnosticActivityId = 'fde-v1-ip01-read';
