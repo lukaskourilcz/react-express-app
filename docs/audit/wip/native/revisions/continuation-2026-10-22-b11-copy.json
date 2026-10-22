@@ -3,11 +3,13 @@
   "issue": "#552",
   "reviewedAt": "2026-10-22",
   "reviewedIds": [
+    "fde-v1-c01-discovery",
     "fde-v1-c01-executive-update",
     "fde-v1-c01-handoff",
     "fde-v1-c01-walkthrough-script"
   ],
   "revisedInPlace": [
+    "fde-v1-c01-discovery",
     "fde-v1-c01-executive-update",
     "fde-v1-c01-handoff",
     "fde-v1-c01-walkthrough-script"
@@ -19,5 +21,5 @@
   ],
   "history": "docs/audit/wip/native/history/review-2026-10-22-b11-copy-before.json",
   "proof": null,
-  "note": "Three B11 records revised in place after a product-copy review of PR #552: each item was reread in full after its bounded wording correction. Each exact prior record is archived in the history file, previousHash points to its contentHash, and the current hash comes from the final catalogue. Ids, field ids, kinds, caps, required flags, rubric ids and verification are unchanged. Separate model reading in a different session from the author; no learner execution, human review or complete-catalogue claim."
+  "note": "Four C01 records (the three B11-touched items plus the discovery brief, which carried the same stale label) revised in place after a product-copy review of PR #552: each item was reread in full after its bounded wording correction. Each exact prior record is archived in the history file, previousHash points to its contentHash, and the current hash comes from the final catalogue. Ids, field ids, kinds, caps, required flags, rubric ids and verification are unchanged. Separate model reading in a different session from the author; no learner execution, human review or complete-catalogue claim."
 }
