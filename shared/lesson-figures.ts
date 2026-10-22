@@ -416,7 +416,7 @@ export const LESSON_FIGURES: readonly LessonFigure[] = [
   {
     id: 'dsa-binary-search',
     topic: 'dsa',
-    level: 11,
+    level: 10,
     title: 'Halving a sorted array',
     alt: 'Searching for 23 in [2, 5, 8, 12, 16, 23, 38, 56] — eight sorted values, taking the lower middle when the window has an even length. Step 1: the middle is 12 at index 3, which is less than 23, so the whole left half and 12 itself are discarded. Step 2: the window is [16, 23, 38, 56] and its middle is 23 — found, in two comparisons. Scanning from the left would have taken six, because 23 is the sixth value. Sorted order is the precondition: on an unsorted array this finds nothing.',
     assumes: 'The array is sorted ascending; the lower middle is taken when the window has an even length.',
