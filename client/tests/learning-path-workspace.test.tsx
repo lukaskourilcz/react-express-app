@@ -34,6 +34,8 @@ const manifest = {
 
 const calls = vi.hoisted(() => ({
   start: [] as string[],
+  startSignals: [] as (AbortSignal | undefined)[],
+  startDelay: 0,
   submit: [] as Record<string, unknown>[],
   drafts: [] as { expected: number; code: unknown; activityId: string }[],
   serverRevision: 0,
@@ -82,8 +84,10 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
       calls.serverRevision += 1;
       return { draft: { activityId: input.activityId, revision: calls.serverRevision, content: input.content, updatedAt: '' } };
     }),
-    startActivity: vi.fn(async ({ activityId, previousSession }: { activityId: string; previousSession?: string }) => {
+    startActivity: vi.fn(async ({ activityId, previousSession }: { activityId: string; previousSession?: string }, signal?: AbortSignal) => {
       calls.start.push(activityId);
+      calls.startSignals.push(signal);
+      if (calls.startDelay) await new Promise((resolve) => setTimeout(resolve, calls.startDelay));
       const base = {
         attemptId: `attempt-${calls.start.length}`,
         ...(previousSession && calls.changedOnRenewal ? { needsBriefReview: true } : {}),
@@ -127,6 +131,8 @@ beforeEach(() => {
   calls.codePassed = false;
   calls.changedOnRenewal = false;
   calls.start.length = 0;
+  calls.startSignals.length = 0;
+  calls.startDelay = 0;
   calls.submit.length = 0;
   calls.drafts.length = 0;
   calls.serverRevision = 0;
@@ -266,7 +272,6 @@ describe('switching activities', () => {
     await wait(1100);
     expect(calls.drafts.filter((one) => one.activityId === B && one.code === 'my solution for A')).toHaveLength(0);
   });
-});
 
 describe('a submission that lands after the learner moved on', () => {
   it('leaves the next activity\'s attempt and screen alone when it is refused', async () => {
@@ -301,6 +306,17 @@ describe('a submission that lands after the learner moved on', () => {
     expect(announceVerifiedQuestXp).toHaveBeenCalledWith(25);
     // A's verdict never reaches B's screen.
     expect(screen.queryByRole('heading', { name: 'Passed +25 XP' })).toBeNull();
+  });
+});
+
+  it('stops opening an activity the learner already left', async () => {
+    calls.startDelay = 300;
+    await mount(A);
+    await act(async () => { fireEvent.click(screen.getByRole('link', { name: /Activity B/ })); });
+    expect(calls.start).toEqual([A, B]);
+    expect(calls.startSignals[0]?.aborted).toBe(true);
+    expect(calls.startSignals[1]?.aborted).toBe(false);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${B}`));
   });
 });
 

@@ -629,7 +629,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     drafts.current = null;
     setBusy(Boolean(activityId && enrollmentId));
     if (!activityId || !enrollmentId) return;
-    startActivity({ enrollmentId, activityId })
+    // Leaving the activity (or the page) stops the request, so switching
+    // quickly through several activities leaves no answers in flight.
+    const controller = new AbortController();
+    startActivity({ enrollmentId, activityId }, controller.signal)
       .then((started) => {
         if (cancelled) return;
         const kept = localDraftOver(enrollmentId, activityId, started.draft);
@@ -664,6 +667,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       });
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [activityId, enrollmentId, curriculumVersion, deal, pathId]);
 

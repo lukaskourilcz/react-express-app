@@ -140,10 +140,13 @@ export function usePathProgress(
 
 /* ── activities ────────────────────────────────────────────────────────── */
 
-export function startActivity(input: StartActivityRequest): Promise<StartActivityResponse> {
+/** Opens an attempt. `signal` lets a screen the learner already left stop
+ * waiting for (and parsing) an answer nobody will read. */
+export function startActivity(input: StartActivityRequest, signal?: AbortSignal): Promise<StartActivityResponse> {
   return apiFetch<StartActivityResponse>(`${ROADMAP}?resource=learning-path-start`, {
     method: 'POST',
     body: JSON.stringify(input),
+    signal,
   });
 }
 
