@@ -33,7 +33,7 @@ Avoid central floating objects on gradients, symmetric stock-poster composition,
 
 ## Prepared product directions
 
-These are composition briefs, not accepted outputs. Generate each as a separate direction so the review compares real alternatives rather than three seeds of one prompt.
+Generate each as a separate direction, so the review compares real alternatives and not three seeds of one prompt. For the share image of October 2026 the review chose Architecture current; `generated-media-manifest.md` records all three outputs and why two were rejected.
 
 ### devShark
 
@@ -41,7 +41,7 @@ These are composition briefs, not accepted outputs. Generate each as a separate 
 2. **Build ledger** — tactile paper modules, test marks, and deployment-flow geometry form a rigorous engineering notebook composition; no fake product dashboard.
 3. **Architecture current** — one continuous technical flow crosses layered ocean-ink paper like a system diagram carried by a current; keep a strong text-safe left region.
 
-Use the devShark green sparingly against ocean ink and off-white paper. Any code, syntax, labels, or UI shown in final campaign compositions must come from deterministic HTML/SVG or authentic application captures.
+Use the devShark green sparingly against ocean ink and off-white paper. Any code, syntax, labels or UI in a final composition must come from deterministic HTML or SVG or from authentic application captures.
 
 ## Provider-neutral production workflow
 
