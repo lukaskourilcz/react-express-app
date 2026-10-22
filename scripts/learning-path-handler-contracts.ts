@@ -353,6 +353,44 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a draft that cannot be read is logged, and the activity opens ─ */
+    {
+      const id = `DRAFTERR${stamp}`.padEnd(20, 'a');
+      const row = { ...enrollmentRow('active'), enrollment_id: id };
+      const requestId = `req-draft-read-${stamp}`;
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      const lines: string[] = [];
+      const log = console.log;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        console.log = (line: unknown) => { lines.push(String(line)); };
+        const req = request('POST', `draft-read-${stamp}`, { user_id: learner, enrollmentId: id, activityId: codeActivity.id }, { headers: { 'x-request-id': requestId } });
+        const res = response();
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${learner}`, async () => 'premium');
+          await handleActivityStart(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: row },
+            rowErrors: { learning_path_drafts: { code: '57014', message: 'canceling statement due to statement timeout' } },
+            lists: { learning_path_progress: [] },
+            rpc: (name) => name === 'open_learning_path_attempt'
+              ? { data: { ok: true, expiresAt: new Date(Date.now() + 3_600_000).toISOString() } }
+              : {},
+          }));
+        });
+        if (res.statusCode !== 200) fail(`a failed draft read must still open the activity, got ${res.statusCode} ${code(res)}`);
+        else if ((res.body as StartActivityResponse).draft !== null) fail('a failed draft read must open without a draft');
+        else if ((res.body as StartActivityResponse).draftUnavailable !== true) fail('a failed draft read must say the draft is unknown, so the browser keeps its copy');
+        const logged = lines.map((line) => { try { return JSON.parse(line) as Record<string, unknown>; } catch { return null; } })
+          .find((entry) => entry?.kind === 'draft_read_failed');
+        if (!logged) fail('a failed draft read must be logged');
+        else if (logged.request_id !== requestId || logged.code !== '57014') fail(`the draft read failure must carry the request id and error code, got ${JSON.stringify(logged)}`);
+      } finally {
+        console.log = log;
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── a stored enrollment of the retired DSA path ─────────────────── */
     // E5 (#496) deletes no data, so a learning_path_enrollments row with
     // path_id 'dsa-foundations' may still exist beside an FDE one. The list
@@ -396,6 +434,59 @@ export async function handlerContracts(fail: Fail): Promise<void> {
         if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
         else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
       }
+    }
+
+    /* ── two enrolls at once ──────────────────────────────────────────── */
+    // A double click or a second tab: both requests find no row and both
+    // insert, so the later one meets the (user, path, version) unique key. It
+    // is answered with the enrollment the first one created, not a 500.
+    {
+      const fde = LEARNING_PATHS.find((one) => one.id === 'fde')!;
+      const racer = `user-enroll-race-${stamp}`;
+      const row = { ...enrollmentRow('active'), user_id: racer };
+      const calls: string[] = [];
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const res = response();
+        await handleEnrollment(request('POST', `enroll-race-${stamp}`, { user_id: racer, action: 'enroll', pathId: 'fde', curriculumVersion: fde.version }), res as never,
+          fakeSupabase({ rpc: (name) => {
+            calls.push(name);
+            return calls.length === 1
+              ? { error: { code: '23505', message: 'duplicate key value violates unique constraint "learning_path_enrollments_user_id_path_id_curriculum_version_key"' } }
+              : { data: { found: true, created: false, enrollment: row } };
+          } }));
+        const listed = (res.body as { enrollments?: { enrollmentId: string }[] } | undefined)?.enrollments;
+        if (res.statusCode !== 200 || listed?.[0]?.enrollmentId !== enrollmentId || calls.length !== 2) {
+          fail(`an enroll that lost the race to the unique key answers ${res.statusCode} ${code(res)} after ${calls.length} calls, not 200 with the existing enrollment`);
+        }
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
+    /* ── a draft save the routine would refuse is the learner's 4xx ───── */
+    // save_learning_path_draft raises on a revision past 1,000,000 and on a
+    // stored form past 64 kB; a raise must not reach the learner as a 500.
+    {
+      const writer = `user-draft-bounds-${stamp}`;
+      const draft = { user_id: writer, enrollmentId, activityId: codeActivity.id, content: { code: 'const x = 1;' } };
+      const called: string[] = [];
+      let res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 1_000_001 }), res as never,
+        fakeSupabase({ rpc: (name) => { called.push(name); return {}; } }));
+      if (res.statusCode !== 400 || called.length > 0) fail(`a draft revision past the routine's bound answers ${res.statusCode} after ${called.length} calls, not 400 before any`);
+      res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 3 }), res as never,
+        fakeSupabase({ rpc: () => ({ error: { code: 'P0001', message: 'invalid_learning_path_draft' } }) }));
+      if (res.statusCode !== 413 || code(res) !== 'too_large') fail(`a draft the routine refuses as oversized answers ${res.statusCode} ${code(res)}, not 413 too_large`);
+      // Two first saves at once: the later insert meets the (enrollment,
+      // activity) key. The other copy is newer, so it is a conflict, not a 500.
+      res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 0 }), res as never,
+        fakeSupabase({ rpc: () => ({ error: { code: '23505', message: 'duplicate key value violates unique constraint "learning_path_drafts_pkey"' } }) }));
+      if (res.statusCode !== 409 || code(res) !== 'draft_conflict') fail(`a first draft save that lost the race to the key answers ${res.statusCode} ${code(res)}, not 409 draft_conflict`);
     }
 
     /* ── every off-loop decision goes through one helper ──────────────── */

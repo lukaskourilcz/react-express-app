@@ -71,7 +71,12 @@ function pathCopyFields(path: MergedPath): { path: string; value: string }[] {
         const at = `${lesson.id}.section[${index}]`;
         if (section.kind === 'prose' || section.kind === 'callout') out.push({ path: at, value: section.body });
         else if (section.kind === 'code') out.push({ path: `${at}.caption`, value: section.caption });
-        else if (section.kind === 'table') {
+        else if (section.kind === 'example') {
+          // The note is what tells the learner a runnable snippet is
+          // exploration only, so a blank one must not ship.
+          out.push({ path: `${at}.caption`, value: section.caption });
+          out.push({ path: `${at}.note`, value: section.note });
+        } else if (section.kind === 'table') {
           out.push({ path: `${at}.caption`, value: section.caption });
         } else if (section.kind === 'trace') {
           out.push({ path: `${at}.caption`, value: section.caption });
@@ -220,7 +225,9 @@ function validateActivity(
         issues.push(error('check_verification', at, 'objective checks are machine-verified'));
       }
       const threshold = activity.passThreshold;
-      if (threshold === undefined || threshold <= 0 || threshold > 1) {
+      // NaN passes both comparisons, and then `score >= NaN` fails every
+      // learner on every attempt.
+      if (threshold === undefined || !Number.isFinite(threshold) || threshold <= 0 || threshold > 1) {
         issues.push(error('bad_threshold', at, 'passThreshold must be between 0 (exclusive) and 1'));
       }
       const questionIds = new Set<string>();
@@ -231,7 +238,9 @@ function validateActivity(
         if (question.options.length < 3) {
           issues.push(error('too_few_options', qAt, 'a question needs at least three options so a guess is not a coin flip'));
         }
-        if (question.correct < 0 || question.correct >= question.options.length) {
+        // A fractional index can never equal a chosen option, so the question
+        // would be marked wrong for every learner.
+        if (!Number.isInteger(question.correct) || question.correct < 0 || question.correct >= question.options.length) {
           issues.push(error('bad_answer', qAt, 'correct must index an option'));
         }
         const texts = question.options.map((option) => option.trim().toLowerCase());
@@ -281,7 +290,11 @@ function validateActivity(
         issues.push(error('no_critical_criterion', at, 'at least one criterion must be critical, or a pass could be averaged out'));
       }
       for (const criterion of code.criteria) {
-        if (criterion.weight <= 0) issues.push(error('bad_weight', `${at}/${criterion.id}`, 'criterion weight must be positive'));
+        // NaN or Infinity passes a `<= 0` test and then poisons the weighted
+        // score and the pass share for every submission.
+        if (!Number.isFinite(criterion.weight) || criterion.weight <= 0) {
+          issues.push(error('bad_weight', `${at}/${criterion.id}`, 'criterion weight must be a positive finite number'));
+        }
       }
       for (const test of code.tests) {
         if (!criterionIds.has(test.criterion)) {
@@ -307,7 +320,9 @@ function validateActivity(
       for (const field of artifact.fields) {
         if (fieldIds.has(field.id)) issues.push(error('duplicate_id', `${at}/${field.id}`, 'duplicate field id'));
         fieldIds.add(field.id);
-        if (field.maxLength <= 0 || field.maxLength > 8_000) {
+        // A NaN or fractional cap passes the range test; NaN then makes every
+        // value "over the limit", so the artifact could never be submitted.
+        if (!Number.isInteger(field.maxLength) || field.maxLength <= 0 || field.maxLength > 8_000) {
           issues.push(error('bad_max_length', `${at}/${field.id}`, 'field maxLength must be between 1 and 8000'));
         }
       }
@@ -365,6 +380,11 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       seenLessons.add(lesson.id);
       lessonIds.add(lesson.id);
       if (lesson.sections.length === 0) issues.push(error('empty_lesson', lAt, 'a lesson needs a body'));
+      lesson.sections.forEach((section, index) => {
+        if (section.kind === 'trace' && section.trace.frames.length === 0) {
+          issues.push(error('empty_trace', `${lAt}/section[${index}]`, 'a trace needs at least one frame to step through'));
+        }
+      });
       if (lesson.sources.length === 0) {
         issues.push(error('no_sources', lAt, 'a lesson must cite at least one source the author checked'));
       }
@@ -476,6 +496,11 @@ export function validatePath(path: MergedPath): ValidationIssue[] {
       issues.push(error('unknown_diagnostic', at, 'diagnosticActivityId does not name an activity'));
     } else if (diagnostic.purpose !== 'diagnostic') {
       issues.push(error('wrong_purpose', at, 'the diagnostic activity must carry purpose diagnostic'));
+    }
+    // The competency report is built from the diagnostic's questions; any
+    // other kind would report every competency as not assessed forever.
+    if (diagnostic && diagnostic.kind !== 'check') {
+      issues.push(error('diagnostic_not_check', at, 'the diagnostic activity must be an objective check'));
     }
   }
   for (const [id, activity] of allActivities) {

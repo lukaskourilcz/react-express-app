@@ -1,7 +1,16 @@
-import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { LessonView, RichText } from '../src/components/learn/LessonBody';
+
+const runner = vi.hoisted(() => ({ signals: [] as (AbortSignal | undefined)[] }));
+vi.mock('../src/coding/runner/run-tests', () => ({
+  // A run that never finishes on its own, like a snippet with an endless loop.
+  runCodeTests: ({ signal }: { signal?: AbortSignal }) => {
+    runner.signals.push(signal);
+    return new Promise(() => {});
+  },
+}));
 it('opens a case in Learn and keeps source links isolated in a new tab', () => {
   render(<RichText text={'Try [the case](/learn/forward-deployed-engineer/path/fde-v1-m02?activity=fde-v1-m02-cases-01). Read [the source](https://www.typescriptlang.org/docs/).'} />);
   expect(screen.getByRole('link', { name: 'the case' })).toHaveAttribute('href', '/learn/forward-deployed-engineer/path/fde-v1-m02?activity=fde-v1-m02-cases-01');
@@ -37,4 +46,34 @@ it('renders authored case-bank links in row headings without interpreting HTML c
   expect(screen.queryByRole('link', { name: 'literal heading' })).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'literal cell' })).not.toBeInTheDocument();
   expect(document.querySelector('img')).toBeNull();
+});
+
+it('stops a running lesson example when the lesson goes away', () => {
+  const view = render(<LanguageProvider><LessonView lesson={{ id: 'loops', title: 'Loops', sources: [], sections: [
+    { kind: 'example', language: 'javascript', caption: 'Count down', code: 'while (true) {}', note: 'Nothing here is graded.' },
+  ] }} /></LanguageProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Run it' }));
+  expect(runner.signals).toHaveLength(1);
+  expect(runner.signals[0]?.aborted).toBe(false);
+  view.unmount();
+  expect(runner.signals[0]?.aborted).toBe(true);
+});
+
+it('opens the next lesson with its own example code, not the edits from the last one', () => {
+  const lesson = (id: string, code: string) => ({ id, title: id, sources: [], sections: [
+    { kind: 'example' as const, language: 'javascript', caption: 'Try it', code, note: 'Nothing here is graded.' },
+  ] });
+  const view = render(<LanguageProvider><LessonView lesson={lesson('first', 'first()')} /></LanguageProvider>);
+  fireEvent.change(screen.getByLabelText('Try it'), { target: { value: 'edited()' } });
+  view.rerender(<LanguageProvider><LessonView lesson={lesson('second', 'second()')} /></LanguageProvider>);
+  expect(screen.getByLabelText('Try it')).toHaveValue('second()');
+});
+
+it('keeps the lesson readable when a trace arrives without frames', () => {
+  render(<LanguageProvider><LessonView lesson={{ id: 'empty-trace', title: 'Empty trace', sources: [], sections: [
+    { kind: 'prose', body: 'The text around it still reads.' },
+    { kind: 'trace', caption: 'A trace', trace: { shape: 'array', frames: [] } },
+  ] }} /></LanguageProvider>);
+  expect(screen.getByText('The text around it still reads.')).toBeInTheDocument();
+  expect(screen.queryByText('A trace')).toBeNull();
 });

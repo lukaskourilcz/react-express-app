@@ -3,6 +3,7 @@
  * evidence never implies an assessment of every competency. */
 import type { CheckQuestionVerdict, CompetencyResult } from '../../shared/learning-path-api';
 import type { MergedActivity, MergedPath } from './types';
+import { DEFAULT_CRITERION_THRESHOLD } from './grade';
 
 const key = (id: string, count: 'correct' | 'items') => `diagnostic:v1:${id}:${count}`;
 
@@ -29,7 +30,7 @@ export function diagnosticEvidence(activity: MergedActivity, verdicts: CheckQues
  * Older aggregate-only attempts require a retake for a precise report. */
 export function diagnosticCompetencies(path: MergedPath, evidence: Record<string, number> | null): CompetencyResult[] {
   const activity = path.modules.flatMap(module => module.activities).find(one => one.id === path.diagnosticActivityId);
-  const threshold = activity?.passThreshold ?? 0.8;
+  const threshold = activity?.passThreshold ?? DEFAULT_CRITERION_THRESHOLD;
   return path.competencies.map(competency => {
     const items = evidence?.[key(competency.id, 'items')];
     const correct = evidence?.[key(competency.id, 'correct')];

@@ -279,6 +279,9 @@ export interface StartActivityResponse {
   artifact?: PathArtifactPayload;
   /** The learner's saved draft for this activity, if any. */
   draft: PathDraft | null;
+  /** Set when the server could not read the draft: `draft: null` then means
+   * "unknown", so the browser keeps its own unsaved copy. */
+  draftUnavailable?: boolean;
   /** Prior recorded state, so a resumed workspace opens honestly. */
   previous: { state: EvidenceState; score: number | null; attempts: number } | null;
 }

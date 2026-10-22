@@ -7,7 +7,7 @@
 // carry a word as well as a border. Autoplay is opt-in and never starts under
 // a reduced-motion preference.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { runCodeTests } from '../../coding/runner/run-tests';
 import { TermsBar } from '../ui/Terms';
 import { useIsNarrowForEditor } from '../../lib/useMediaQuery';
@@ -69,8 +69,11 @@ function InlineText({ text }: { text: string }) {
   return <>{nodes}</>;
 }
 
-/** Inline code and bounded authored links; text inside code is never parsed. */
-export function RichText({ text }: { text: string }) {
+/** Inline code and bounded authored links; text inside code is never parsed.
+ * Memoised on the text: a code or artifact brief sits beside the editor, which
+ * re-renders on every keystroke, and re-parsing an unchanged brief each time
+ * was wasted work. */
+export const RichText = memo(function RichText({ text }: { text: string }) {
   const paragraphs = text.split('\n\n');
   return (
     <>
@@ -81,7 +84,7 @@ export function RichText({ text }: { text: string }) {
       ))}
     </>
   );
-}
+});
 
 const STEP_MS = 1400;
 
@@ -118,6 +121,9 @@ export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: str
 
   const frame = frames[Math.min(index, frames.length - 1)];
   const roleWord = (role: string) => t(`paths.trace.role.${role}` as never);
+  // Nothing validates that a trace has a frame; one without would otherwise
+  // throw and take the whole lesson down with it.
+  if (!frame) return null;
 
   return (
     <figure className="lp-figure lp-trace" aria-labelledby={labelId}>
@@ -279,17 +285,27 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const labelId = useId();
+  // Leaving the lesson mid-run stops the worker; an endless loop otherwise
+  // kept a thread busy until the run's own time limit.
+  const active = useRef<AbortController | null>(null);
+  useEffect(() => () => active.current?.abort(), []);
 
   const run = useCallback(async () => {
+    const controller = new AbortController();
+    active.current = controller;
     setRunning(true);
     setError(null);
     try {
-      const outcome = await runCodeTests({ track: 'javascript', code, tests: [], grade: false });
+      const outcome = await runCodeTests({ track: 'javascript', code, tests: [], grade: false, signal: controller.signal });
+      if (controller.signal.aborted) return;
       setOutput(outcome.logs);
       // A runner that never loaded is not the snippet's error.
       setError(outcome.runnerUnavailable ? t('coding.results.runnerUnavailable') : outcome.codeError);
     } finally {
-      setRunning(false);
+      if (active.current === controller) {
+        active.current = null;
+        setRunning(false);
+      }
     }
   }, [code, t]);
 
@@ -326,14 +342,20 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
   );
 }
 
-export function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto; headingLevel?: 1 | 2 }) {
+/** Memoised: a lesson is the largest thing a workspace renders, and the
+ * workspace re-renders on every busy, draft and result change while the lesson
+ * object itself stays the same. Each render also rescanned all its prose for
+ * glossary terms. */
+export const LessonView = memo(function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto; headingLevel?: 1 | 2 }) {
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const t = useT();
   return (
     <article className="lp-lesson">
       <Heading>{lesson.title}</Heading>
+      {/* Keyed by lesson as well: a view reused for the next lesson otherwise
+          kept an example's edited code and a trace's step from the last one. */}
       {lesson.sections.map((section, index) => (
-        <Section key={index} section={section} />
+        <Section key={`${lesson.id}:${index}`} section={section} />
       ))}
       {/* One control for the page: the abbreviations its prose actually uses,
           explained where the learner meets them. */}
@@ -362,4 +384,4 @@ export function LessonView({ lesson, headingLevel = 2 }: { lesson: LessonBodyDto
       )}
     </article>
   );
-}
+});

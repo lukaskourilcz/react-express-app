@@ -308,6 +308,10 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 }
 .lp-trace__cell {
   min-width: 2.75rem;
+  /* A long value (a key, a URL) wraps inside its cell instead of pushing the
+     row past a phone's edge. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 8px 10px;
   border-radius: var(--radius-inner);
   border: 1px solid var(--ss-card-line);
@@ -382,6 +386,10 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-option--correct { border-color: var(--ss-success); background: var(--ss-success-soft); }
 .lp-option--wrong { border-color: var(--ss-error); background: var(--ss-error-soft); }
 .lp-option__mark { flex: none; font-weight: 700; }
+/* An option is often code; as a flex item its text would not shrink below its
+   longest token and ran out of the card on a phone. */
+.lp-option > span { min-width: 0; overflow-wrap: anywhere; }
+.lp-option:has(input:disabled) { cursor: default; }
 .lp-explanation {
   margin: 0;
   padding: 12px 14px;
@@ -409,7 +417,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-criterion--passed { border-color: var(--ss-success); }
 .lp-criterion--failed { border-color: var(--ss-warning); }
 .lp-criterion__mark { flex: none; font-weight: 700; }
-.lp-criterion__body { min-width: 0; }
+.lp-criterion__body { min-width: 0; overflow-wrap: anywhere; }
 .lp-criterion__label { font-weight: 600; }
 .lp-criterion__critical {
   font-size: 0.78rem;
@@ -423,7 +431,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-results { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
 .lp-result { display: flex; gap: 8px; align-items: baseline; }
 .lp-result__mark { flex: none; font-weight: 700; }
-.lp-result code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+.lp-result code { min-width: 0; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
 .lp-console {
   margin: 0;
   padding: 12px 14px;
@@ -463,7 +471,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 
 .lp-rubric { display: flex; flex-direction: column; gap: 12px; }
 .lp-rubric__dimension { display: flex; flex-direction: column; gap: 6px; }
-.lp-rubric__levels { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 0.9rem; line-height: 1.55; }
+.lp-rubric__levels { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); overflow-wrap: anywhere; gap: 4px 12px; font-size: 0.9rem; line-height: 1.55; }
 .lp-rubric__levels dt { font-weight: 600; color: var(--color-text-secondary); }
 .lp-rubric__levels dd { margin: 0; }
 
@@ -480,16 +488,12 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-completion__note { margin: 0; font-size: 0.9rem; color: var(--color-text-secondary); line-height: 1.6; }
 
 @media (max-width: 30rem) {
-  .lp-activity__kind { width: auto; }
   .lp-inventory { gap: 6px 14px; }
   .lp-profile-choice { align-items: stretch; flex-direction: column; }
   .lp-profile-choice .astryx-button { width: 100%; }
   .lp-profile-inventory { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   .lp-profile-inventory dd + dt { margin-top: 8px; }
 }
-
-/* Visible to a screen reader, not to the eye. The table caption repeats the
- * figure caption so the table is self-describing when read out of context. */
 
 /* ── profile answers in the path picker ──────────────────────────────────
    Checkboxes, not cards: goals are a multi-select and a section is an
@@ -648,7 +652,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 
 /* The loop and board use text and recorded counts, with no animated score. */
 .lp-loop { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0; list-style: none; }
-.lp-loop > li { display: flex; flex-direction: column; gap: 8px; border-top: 3px solid var(--ss-card-line); padding-top: 12px; min-width: 0; }
+.lp-loop > li { display: flex; flex-direction: column; gap: 8px; border-top: 3px solid var(--ss-card-line); padding-top: 12px; min-width: 0; overflow-wrap: break-word; }
 .lp-loop > li[aria-current='step'] { border-color: var(--brand-accent); }
 .lp-loop span { color: var(--color-text-secondary); font-size: 0.875rem; }
 .lp-evidence { list-style: none; margin: 0; padding: 0; }

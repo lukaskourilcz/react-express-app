@@ -404,14 +404,17 @@ export function pathGuidedComplete(
 }
 
 /** How many self-reviewed artifacts the learner has submitted, out of the
- * manifest's total. Shown on its own line beside guided completion, which
- * already requires every artifact a module lists in `requires`. */
+ * loop's total. Shown on its own line beside guided completion, which
+ * already requires every artifact a module lists in `requires`, under copy
+ * that calls every counted piece required. Off-loop modules (the interview
+ * shelf's write-ups) are skipped, as `pathGuidedComplete` skips them, so the
+ * total never names optional practice as required. */
 export function artifactTally(
   manifest: LearningPathManifest,
   states: ReadonlyMap<string, EvidenceState>,
 ): { submitted: number; total: number } {
   const artifacts = manifest.modules.flatMap((module) =>
-    module.activities.filter((activity) => activity.kind === 'artifact'),
+    isOffLoopModule(module) ? [] : module.activities.filter((activity) => activity.kind === 'artifact'),
   );
   const submitted = artifacts.filter((activity) => {
     const state = states.get(activity.id);

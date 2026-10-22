@@ -36,6 +36,8 @@ const state = vi.hoisted(() => ({
   tier: 'premium' as 'premium' | 'free',
   availability: 'available',
   enrollments: [] as { enrollmentId: string; pathId: string; curriculumVersion: number; status: string }[],
+  enrollmentsRead: 'loaded' as 'loaded' | 'loading' | 'failed',
+  enrollmentRefetches: 0,
   progressLoaded: true,
   progressRequests: [] as string[],
   shelf: false,
@@ -89,7 +91,11 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
         versions: {},
       },
     }),
-    useEnrollments: () => ({ data: { enrollments: state.enrollments.map((one) => ({ baseTrackAtEnrollment: null, startedAt: '', updatedAt: '', ...one })) } }),
+    useEnrollments: () => (state.enrollmentsRead === 'loading'
+      ? { data: undefined, isPending: true, error: null, refetch: () => {} }
+      : state.enrollmentsRead === 'failed'
+        ? { data: undefined, isPending: false, error: new Error('down'), refetch: () => { state.enrollmentRefetches += 1; } }
+        : { data: { enrollments: state.enrollments.map((one) => ({ baseTrackAtEnrollment: null, startedAt: '', updatedAt: '', ...one })) } }),
     usePathProgress: (_user: string | undefined, enrollmentId: string | undefined) => {
       const enrollment = state.enrollments.find((one) => one.enrollmentId === enrollmentId);
       return { data: enrollment && state.progressLoaded ? progressFor(enrollment.pathId) : undefined };
@@ -131,6 +137,8 @@ beforeEach(() => {
   state.tier = 'premium';
   state.availability = 'available';
   state.enrollments = [];
+  state.enrollmentsRead = 'loaded';
+  state.enrollmentRefetches = 0;
   state.progressLoaded = true;
   state.progressRequests = [];
   state.shelf = false;
@@ -197,6 +205,14 @@ describe('the path page', () => {
     expect(within(report).queryByRole('link', { name: 'Open the diagnostic' })).toBeNull();
   });
 
+  it('a paused path lists its activities without links and offers Resume', async () => {
+    state.enrollments = [enrolled('fde', 'paused')];
+    await overview('fde');
+    expect(screen.getByText(/This path is paused/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /fde first lesson/ })).toBeNull();
+  });
+
   it('on the free plan, Start enrolls in the taster without an upgrade', async () => {
     state.tier = 'free';
     await overview('fde');
@@ -251,6 +267,19 @@ describe('the path page', () => {
     expect(screen.queryByText(/are required to complete the path/)).toBeNull();
   });
 
+  it('offers no Start while the account\'s enrollments are still loading', async () => {
+    state.enrollmentsRead = 'loading';
+    await overview('fde');
+    expect(screen.queryByRole('button', { name: 'Start this path' })).toBeNull();
+  });
+
+  it('a double click on Start sends one enrollment', async () => {
+    await overview('fde');
+    const start = screen.getByRole('button', { name: 'Start this path' });
+    await act(async () => { fireEvent.click(start); fireEvent.click(start); });
+    await waitFor(() => expect(state.changes).toHaveLength(1));
+  });
+
   it('after Premium lapses, the first module stays open', async () => {
     state.tier = 'free';
     state.enrollments = [enrolled('fde')];
@@ -279,6 +308,33 @@ describe('the module page status', () => {
     state.enrollments = [enrolled('fde')];
     await modulePage('fde-m02');
     expect(await screen.findByText('In progress', { selector: '.lp-module__meta' })).toBeInTheDocument();
+  });
+  it('claims no missing enrollment while the list loads', async () => {
+    state.enrollmentsRead = 'loading';
+    await modulePage('fde-m01');
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(screen.queryByText('Start this path to open its activities.')).toBeNull();
+  });
+  it('says the evidence could not be loaded, with a retry, when the enrollments fail', async () => {
+    state.enrollmentsRead = 'failed';
+    await modulePage('fde-m01');
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(screen.queryByText('Start this path to open its activities.')).toBeNull();
+    expect(screen.getByText(/Your evidence could not be loaded/)).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button'));
+    expect(state.enrollmentRefetches).toBe(1);
+  });
+  it('a paused enrollment lists its activities without links and leads to Resume instead of opening one the server refuses', async () => {
+    state.enrollments = [enrolled('fde', 'paused')];
+    await mount('/p/fde-m01?activity=fde-m01-l1-read', '/p/:moduleId', async () => {
+      const { ModuleWorkspace } = await import('../src/components/paths/LearningPathScreens');
+      return <ModuleWorkspace pathId="fde" />;
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(screen.getByText(/This path is paused/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Resume' })).toHaveAttribute('href', '/learn/forward-deployed-engineer/path');
+    expect(screen.queryByRole('link', { name: /fde first lesson/ })).toBeNull();
+    expect(document.querySelector('.lp-workspace')).toBeNull();
   });
   it('says Not started to a learner who has not enrolled', async () => {
     state.secondModule = true;
@@ -619,5 +675,67 @@ describe('the Profile picker', () => {
     expect(screen.queryByRole('button', { name: 'Claim the package' })).toBeNull();
     expect(document.body.textContent).not.toMatch(/package|t-shirt|merch/i);
     expect(asked).toBe(0);
+  });
+});
+
+// The claim form itself, dormant while merchandise is paused but kept working
+// for when it returns.
+describe('the package claim', () => {
+  const claimCard = async (pathId = 'fde') => {
+    const { LanguageProvider } = await import('../src/i18n/LanguageContext');
+    const { PathRewardClaim } = await import('../src/components/paths/PathRewardClaim');
+    const tree = (id: string) => <LanguageProvider><PathRewardClaim pathId={id} /></LanguageProvider>;
+    let view!: ReturnType<typeof render>;
+    await act(async () => { view = render(tree(pathId)); });
+    return { switchTo: (id: string) => act(async () => { view.rerender(tree(id)); }) };
+  };
+  const openForm = async () => {
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Claim the package' })); });
+  };
+  const claimForm = () => screen.getByRole('button', { name: 'Claim it' }).closest('form') as HTMLFormElement;
+
+  it('sends one claim for a double press, and keeps the confirmation when the read after it fails', async () => {
+    let reads = 0;
+    const claims: unknown[] = [];
+    let answer!: () => void;
+    server.use(
+      http.get('*/api/user/learning-path-reward', () => {
+        reads += 1;
+        return reads === 1 ? HttpResponse.json({ eligible: true, claimed: false, orderId: null }) : HttpResponse.json({ error: { code: 'db_error' } }, { status: 500 });
+      }),
+      http.post('*/api/user/learning-path-reward', async ({ request }) => {
+        claims.push(await request.json());
+        await new Promise<void>((resolve) => { answer = resolve; });
+        return HttpResponse.json({ claimed: true, orderId: 'order-1' });
+      }),
+    );
+    await claimCard();
+    await openForm();
+    await act(async () => {
+      fireEvent.submit(claimForm());
+      fireEvent.submit(claimForm());
+    });
+    await waitFor(() => expect(claims).toHaveLength(1));
+    await act(async () => { answer(); });
+    await waitFor(() => expect(reads).toBe(2));
+    expect(await screen.findByText('Package claimed. You will hear from us when it ships.')).toBeInTheDocument();
+    expect(claims).toHaveLength(1);
+  });
+
+  it('lets a slow read for the path before answer nothing for the path shown now', async () => {
+    let releaseFirst!: () => void;
+    server.use(http.get('*/api/user/learning-path-reward', async ({ request }) => {
+      const pathId = new URL(request.url).searchParams.get('pathId');
+      if (pathId === 'fde') {
+        await new Promise<void>((resolve) => { releaseFirst = resolve; });
+        return HttpResponse.json({ eligible: true, claimed: true, orderId: 'order-1' });
+      }
+      return HttpResponse.json({ eligible: false, claimed: false, orderId: null });
+    }));
+    const { switchTo } = await claimCard('fde');
+    await waitFor(() => expect(releaseFirst).toBeTypeOf('function'));
+    await switchTo('other');
+    await act(async () => { releaseFirst(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(screen.queryByText('Package claimed. You will hear from us when it ships.')).toBeNull();
   });
 });

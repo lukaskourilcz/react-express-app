@@ -33,17 +33,22 @@ export function PortfolioExport({ manifest, enrollmentId, states }: {
     try {
       const artifacts = manifest.modules.flatMap(module => module.activities
         .filter(activity => activity.kind === 'artifact').map(activity => ({ module, activity })));
-      const entries: PortfolioEntry[] = [];
-      // At most two caller-owned reads at once; no attempt is started or submitted.
-      for (let i = 0; i < artifacts.length; i += 2) {
-        if (controller.signal.aborted) return;
-        entries.push(...await Promise.all(artifacts.slice(i, i + 2).map(async ({ module, activity }) => {
+      const entries: PortfolioEntry[] = new Array(artifacts.length);
+      // At most two caller-owned reads at once; no attempt is started or
+      // submitted. Each lane takes the next piece as soon as its own read
+      // lands, instead of every pair waiting for its slower half.
+      let next = 0;
+      const lane = async () => {
+        while (next < artifacts.length && !controller.signal.aborted) {
+          const index = next++;
+          const { module, activity } = artifacts[index];
           const query = new URLSearchParams({ op: 'learning-path-draft', enrollmentId, activityId: activity.id });
           const response = await apiFetch<DraftGetResponse>(`/api/user/[op]?${query}`, { signal: controller.signal });
-          return { module: module.title, activityId: activity.id, title: activity.title,
+          entries[index] = { module: module.title, activityId: activity.id, title: activity.title,
             recordedState: states.get(activity.id) ?? 'not_started', saved: response.draft };
-        })));
-      }
+        }
+      };
+      await Promise.all([lane(), lane()]);
       if (controller.signal.aborted) return;
       const body = format === 'json' ? JSON.stringify(portfolioDocument(manifest, entries), null, 2) : portfolioMarkdown(manifest, entries, state => translateStatic(`paths.state.${state}`));
       downloadShareFile(new File([body], `devshark-${manifest.id}-saved-writing.${format}`, {

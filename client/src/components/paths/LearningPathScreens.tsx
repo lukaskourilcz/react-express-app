@@ -42,11 +42,8 @@ import {
   activityHref,
   changeEnrollment,
   entryFor,
-  forgetLocalDraft,
   isOpen,
-  keepDraftLocally,
   learningPathKeys,
-  localDraftOver,
   moduleHref,
   newIdempotencyKey,
   pathHref,
@@ -57,7 +54,10 @@ import {
   usePathCatalog,
   usePathProgress,
 } from '../../lib/learningPaths';
+import { forgetLocalDraft, keepDraftLocally, localDraftOver, withChangedEnrollments } from '../../lib/learningPathWorkspace';
+import { accountEpoch } from '../../lib/accountData';
 import type {
+  EnrollmentListResponse,
   PathCatalogEntry,
   PathDraft,
   PathProgressResponse,
@@ -218,6 +218,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const activityLock = useCallback((activityId: string, state: EvidenceState) =>
     state !== 'verified_pass' && state !== 'self_reviewed' && isBarred(lockOf({ kind: 'learning-path-activity', pathId, activityId })), [lockOf, pathId]);
   const [enrolling, setEnrolling] = useState(false);
+  // Set before the first await, so a second click on Start or Pause before the
+  // button re-renders as disabled sends nothing.
+  const enrollingNow = useRef(false);
   const [enrollError, setEnrollError] = useState<string | null>(null);
   // Premium opens the paths. Starting or resuming one the plan does not open
   // asks for Premium instead, and the button carries the Premium mark.
@@ -232,11 +235,12 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
 
   const enrol = useCallback(
     async (action: 'enroll' | 'pause' | 'resume') => {
-      if (!entry) return;
+      if (!entry || enrollingNow.current) return;
+      enrollingNow.current = true;
       setEnrolling(true);
       setEnrollError(null);
       try {
-        await changeEnrollment({
+        const changed = await changeEnrollment({
           pathId,
           curriculumVersion: entry.manifest.version,
           action,
@@ -246,10 +250,13 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         if (action === 'enroll') {
           capturePathEvent('learning_path_enrolled', { pathId, curriculumVersion: entry.manifest.version });
         }
-        await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(userId) });
+        const key = learningPathKeys.enrollments(userId);
+        queryClient.setQueryData<EnrollmentListResponse>(key, (list) => withChangedEnrollments(list, changed));
+        void queryClient.invalidateQueries({ queryKey: key });
       } catch (error) {
         setEnrollError(friendlyError(error));
       } finally {
+        enrollingNow.current = false;
         setEnrolling(false);
       }
     },
@@ -278,8 +285,10 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
     .map((shelf) => ({ shelf, modules: manifest.modules.filter((one) => one.shelf === shelf) }))
     .filter((one) => one.modules.length > 0);
   // Activities link only while the path is open to this learner; a closed
-  // path, or a lapsed plan, keeps its outline and evidence without dead ends.
-  const reachable = Boolean(enrollment) && open && !barred;
+  // path, a lapsed plan or a paused enrollment (the server refuses its
+  // activities with enrollment_paused until Resume) keeps its outline and
+  // evidence without dead ends.
+  const reachable = Boolean(enrollment) && enrollment?.status !== 'paused' && open && !barred;
   const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
   const diagnosticModule = manifest.diagnosticActivityId
     ? manifest.modules.find(module => module.activities.some(activity => activity.id === manifest.diagnosticActivityId))
@@ -328,7 +337,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         <div className="lp-head__actions">
           {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}
           {open && (barred || nextBarred) && premiumMark}
-          {isAuthenticated && !enrollment && open && (
+          {/* Only once the account's enrollments are known: while they load
+              (or after they failed) an enrolled learner would be offered Start. */}
+          {isAuthenticated && enrollments.data && !enrollment && open && (
             <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('enroll'))} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
           )}
           {isAuthenticated && enrollment?.status === 'paused' && open && (
@@ -559,14 +570,20 @@ interface Attempt {
  * one the server returned last, so a keystroke during a save never sends a
  * revision the server has already moved past; `queued` is the newest content
  * not sent yet. A save that lands after the learner moved on changes nothing
- * on screen, because the next activity has a channel of its own. */
+ * on screen, because the next activity has a channel of its own. `epoch` is
+ * the account it was opened under (lib/accountData.ts accountEpoch): once that
+ * account's data is forgotten or kept, the channel writes and sends nothing,
+ * so a save that lands after a sign-out puts no draft back into the browser. */
 interface DraftChannel {
   enrollmentId: string;
   activityId: string;
   revision: number;
   inFlight: boolean;
   queued: PathDraft['content'] | null;
+  epoch: number;
 }
+
+const channelGone = (channel: DraftChannel) => channel.epoch !== accountEpoch();
 
 /** Refusals that mean the attempt cannot take this submission. */
 const ATTEMPT_USED_UP = new Set(['idempotency_conflict', 'session_expired', 'attempt_expired']);
@@ -577,14 +594,17 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
   const queryClient = useQueryClient();
-  const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
+  const { userId, isAuthenticated, catalog, entry, enrollment, enrollments, progress } = usePathState(pathId);
   const pathManifests = useMemo(() => entry ? [entry.manifest] : [], [entry]);
   const { lockOf } = useLocks(undefined, { paths: pathManifests });
   const activityLock = useCallback((activityId: string, state: EvidenceState) =>
     state !== 'verified_pass' && state !== 'self_reviewed' && isBarred(lockOf({ kind: 'learning-path-activity', pathId, activityId })), [lockOf, pathId]);
 
   const activityId = search.get('activity');
-  const enrollmentId = enrollment?.enrollmentId;
+  // A paused enrollment opens no activity: the server would refuse it with
+  // enrollment_paused. The page says it is paused and leads to Resume.
+  const paused = enrollment?.status === 'paused';
+  const enrollmentId = paused ? undefined : enrollment?.enrollmentId;
   const curriculumVersion = enrollment?.curriculumVersion;
   const [open, setOpen] = useState<StartActivityResponse | null>(null);
   const [result, setResult] = useState<SubmitActivityResponse | null>(null);
@@ -601,11 +621,19 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // after a network failure reuses the key, and the server replays its stored
   // result instead of grading twice.
   const attempt = useRef<Attempt | null>(null);
+  // The submission or brief refresh running for the open activity, one at a
+  // time. Opening another activity drops it, so an answer that lands late
+  // changes nothing on the new activity's screen.
+  const working = useRef<object | null>(null);
   const [attemptUsedUp, setAttemptUsedUp] = useState(false);
   const [briefChanged, setBriefChanged] = useState(false);
   // The autosave for the open activity: one save in flight at a time, the
   // revision the next one expects, and the newest content waiting behind it.
   const drafts = useRef<DraftChannel | null>(null);
+  // The channel of the activity just left. Its view sends what its debounce
+  // still holds as it unmounts, after this screen has moved on: that save
+  // goes to the activity it was typed in, never to the next one.
+  const leftDrafts = useRef<DraftChannel | null>(null);
 
   const module = entry?.manifest.modules.find((one) => one.id === moduleId);
   const activity = module?.activities.find((one) => one.id === activityId);
@@ -619,22 +647,28 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     setBriefChanged(false);
     setResult(null);
     setAttemptUsedUp(false);
-    attempt.current = null;
-    drafts.current = null;
-    if (!activityId || !enrollmentId) return;
-    setBusy(true);
     setError(null);
-    startActivity({ enrollmentId, activityId })
+    attempt.current = null;
+    working.current = null;
+    if (drafts.current) leftDrafts.current = drafts.current;
+    drafts.current = null;
+    setBusy(Boolean(activityId && enrollmentId));
+    if (!activityId || !enrollmentId) return;
+    // Leaving the activity (or the page) stops the request, so switching
+    // quickly through several activities leaves no answers in flight.
+    const controller = new AbortController();
+    startActivity({ enrollmentId, activityId }, controller.signal)
       .then((started) => {
         if (cancelled) return;
-        const kept = localDraftOver(enrollmentId, activityId, started.draft);
+        const kept = localDraftOver(enrollmentId, activityId, started.draft, started.draftUnavailable === true);
         attempt.current = { session: started.session, expiresAt: started.expiresAt, key: newIdempotencyKey(), usedUp: false };
         drafts.current = {
           enrollmentId,
           activityId,
-          revision: started.draft?.revision ?? 0,
+          revision: started.draft?.revision ?? kept?.revision ?? 0,
           inFlight: false,
           queued: kept?.content ?? null,
+          epoch: accountEpoch(),
         };
         setOpen(started);
         setDraft(kept ?? started.draft);
@@ -659,12 +693,12 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       });
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [activityId, enrollmentId, curriculumVersion, deal, pathId]);
 
-  const pushDraft = useCallback(async () => {
-    const channel = drafts.current;
-    if (!channel || channel.inFlight || !channel.queued) return;
+  const pushDraft = useCallback(async (channel: DraftChannel | null) => {
+    if (!channel || channel.inFlight || !channel.queued || channelGone(channel)) return;
     const live = () => drafts.current === channel;
     channel.inFlight = true;
     try {
@@ -686,6 +720,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             expectedRevision: channel.revision,
             content,
           });
+          if (channelGone(channel)) return;
           channel.revision = saved.draft.revision;
           if (channel.queued) keepDraftLocally(channel.enrollmentId, channel.activityId, channel.revision, channel.queued);
           else forgetLocalDraft(channel.enrollmentId, channel.activityId);
@@ -694,6 +729,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             if (!channel.queued) setDraftStatus('saved');
           }
         } catch (caught) {
+          if (channelGone(channel)) return;
           // The newest unsaved content waits for the next keystroke or the
           // connection coming back.
           channel.queued ??= content;
@@ -707,12 +743,12 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   }, []);
 
   const saveDraft = useCallback(
-    (content: PathDraft['content']) => {
-      const channel = drafts.current;
-      if (!channel) return;
+    (forActivity: string, content: PathDraft['content']) => {
+      const channel = [drafts.current, leftDrafts.current].find((one) => one?.activityId === forActivity);
+      if (!channel || channelGone(channel)) return;
       channel.queued = content;
       keepDraftLocally(channel.enrollmentId, channel.activityId, channel.revision, content);
-      void pushDraft();
+      void pushDraft(channel);
     },
     [pushDraft],
   );
@@ -720,10 +756,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // A copy kept on this device from an earlier visit goes out as soon as the
   // activity opens, and anything waiting goes out when the connection is back.
   useEffect(() => {
-    if (open) void pushDraft();
+    if (open) void pushDraft(drafts.current);
   }, [open, pushDraft]);
   useEffect(() => {
-    const resend = () => void pushDraft();
+    const resend = () => {
+      void pushDraft(drafts.current);
+      void pushDraft(leftDrafts.current);
+    };
     window.addEventListener('online', resend);
     return () => window.removeEventListener('online', resend);
   }, [pushDraft]);
@@ -740,39 +779,62 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   }, [open]);
 
   const refreshBrief = async () => {
-    const current = attempt.current;
-    if (!open || !enrollment || !current || busy) return;
+    if (!open || !enrollment || !attempt.current || working.current) return;
+    const token = {};
+    working.current = token;
+    const live = () => working.current === token;
     setBusy(true);
     try {
       const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id });
-      if (attempt.current !== current) return;
+      if (!live()) return;
       attempt.current = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
       setOpen(fresh);
       setBriefChanged(false);
       setError(null);
       setResult(null);
-    } catch (caught) { setError(friendlyError(caught)); }
-    finally { setBusy(false); }
+    } catch (caught) {
+      if (live()) setError(friendlyError(caught));
+    } finally {
+      if (live()) {
+        working.current = null;
+        setBusy(false);
+      }
+    }
   };
 
   const submit = useCallback(
     async (payload: Record<string, unknown>) => {
       const current = attempt.current;
-      if (!open || !enrollment || !current || briefChanged) return;
+      // One submission at a time: a second click before the first re-render
+      // would otherwise open a second attempt or grade the work twice.
+      if (!open || !enrollment || !current || briefChanged || working.current) return;
       const expired = Date.parse(current.expiresAt) <= Date.now();
       // A check's answers index its own attempt's order, so a check whose
-      // attempt is used up is dealt again rather than resubmitted.
-      if (open.check && (current.usedUp || expired)) {
+      // attempt is used up is dealt again rather than resubmitted. An expired
+      // one says so and offers Try again: dealing it afresh at once would
+      // clear the learner's answers without a word.
+      if (open.check && expired && !current.usedUp) {
+        current.usedUp = true;
+        setAttemptUsedUp(true);
+        setError(t('error.pathAttemptExpired'));
+        return;
+      }
+      if (open.check && current.usedUp) {
         retry();
         return;
       }
+      const token = {};
+      working.current = token;
+      // False once the learner opened another activity (or dealt this check
+      // again): this submission's answer then belongs to a screen that is gone.
+      const live = () => working.current === token;
       setBusy(true);
       setError(null);
+      let target = current;
       try {
-        let target = current;
         if (current.usedUp || expired) {
           const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id, previousSession: current.session });
-          if (attempt.current !== current) return;
+          if (!live()) return;
           target = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
           attempt.current = target;
           if (fresh.needsBriefReview) {
@@ -788,10 +850,8 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           ...payload,
         });
         target.usedUp = true;
-        // The learner moved to another activity while this one was graded.
-        if (attempt.current !== target) return;
-        setAttemptUsedUp(false);
-        setResult(graded);
+        // The server recorded the result whatever the learner opened since,
+        // so its XP, its event and the progress it changed are kept current.
         if (!graded.replayed && graded.xpAwarded > 0) {
           announceVerifiedQuestXp(graded.xpAwarded);
           void syncXpWithServer({ announceRankUp: true });
@@ -804,24 +864,55 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             state: graded.state,
           });
         }
-        await queryClient.invalidateQueries({
+        // In the background: the verdict is on screen now, and the controls
+        // need not wait a further round trip for the outline's badges.
+        void queryClient.invalidateQueries({
           queryKey: learningPathKeys.progress(userId, enrollment.enrollmentId, enrollment.curriculumVersion),
         });
+        if (!live()) return;
+        setAttemptUsedUp(false);
+        setResult(graded);
       } catch (caught) {
+        // A late refusal belongs to the activity it was sent for, not to the
+        // one on screen now, whose attempt is untouched.
+        if (!live()) return;
         // An attempt that expired or already holds a result cannot take this
         // submission; the next one goes to a new attempt.
-        if (caught instanceof ApiError && caught.code && ATTEMPT_USED_UP.has(caught.code) && attempt.current) {
-          attempt.current.usedUp = true;
+        if (caught instanceof ApiError && caught.code && ATTEMPT_USED_UP.has(caught.code)) {
+          target.usedUp = true;
           setAttemptUsedUp(true);
         }
         if (caught instanceof ApiError && caught.code === 'task_changed') setBriefChanged(true);
         setError(friendlyError(caught));
       } finally {
-        setBusy(false);
+        if (live()) {
+          working.current = null;
+          setBusy(false);
+        }
       }
     },
     [open, enrollment, retry, queryClient, userId, pathId, briefChanged, t],
   );
+
+  // Focus follows what changed. The workspace opens below the activity list,
+  // and the control the learner used often disappears (a check's Submit, the
+  // Close button), so without this a keyboard or screen-reader user is left
+  // on a link far above the change, or on nothing. Opening another activity
+  // moves focus to its heading, closing it to the list, and a verdict to the
+  // result; a passed code exercise's banner takes focus itself.
+  const activityHeading = useRef<HTMLHeadingElement>(null);
+  const listHeading = useRef<HTMLHeadingElement>(null);
+  const resultHeading = useRef<HTMLHeadingElement>(null);
+  const focusedActivity = useRef(activityId);
+  useEffect(() => {
+    if (focusedActivity.current === activityId) return;
+    focusedActivity.current = activityId;
+    (activityId ? activityHeading.current : listHeading.current)?.focus();
+  }, [activityId]);
+  const codePassed = Boolean(open?.code && result?.state === 'verified_pass' && result.code?.outcome === 'passed');
+  useEffect(() => {
+    if (result && !codePassed) resultHeading.current?.focus();
+  }, [result, codePassed]);
 
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;
   if (catalog.isError || !entry || !module) {
@@ -834,9 +925,9 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
 
   const states = statesOf(progress.data);
   const moduleProgress = progress.data?.modules.find((one) => one.moduleId === module.id);
-  // A path that is switched off, or that the plan no longer opens, lists its
-  // activities without links: starting one would be refused.
-  const reachable = Boolean(enrollment) && isOpen(entry.availability) && !isBarred(lockOf({ kind: 'learning-path', pathId }));
+  // A path that is switched off, that the plan no longer opens or that is
+  // paused lists its activities without links: starting one would be refused.
+  const reachable = Boolean(enrollment) && !paused && isOpen(entry.availability) && !isBarred(lockOf({ kind: 'learning-path', pathId }));
   // Only the dimensions this artifact is judged against, so the learner reads
   // the criteria that apply rather than the whole rubric.
   const rubric = entry.manifest.rubric.dimensions
@@ -846,6 +937,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       title: dimension.title,
       levels: dimension.levels as unknown as Record<string, string>,
     }));
+  const shown = activity ?? open?.activity;
 
   return (
     <div className="lp-page">
@@ -882,7 +974,17 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           <span>{t('paths.signInToRecord')}</span>
         </div>
       )}
-      {isAuthenticated && !enrollment && (
+      {/* A failed read says so; a missing enrollment is only claimed once the
+          list has loaded, never while it is on its way. */}
+      {isAuthenticated && (enrollments.error || progress.error) ? (
+        <ErrorRetry
+          message={pathCopy['paths.hub.error']}
+          onRetry={() => {
+            void enrollments.refetch();
+            if (enrollment) void progress.refetch();
+          }}
+        />
+      ) : isAuthenticated && enrollments.data && !enrollment && (
         <div className="lp-notice lp-notice--info">
           <span className="lp-notice__glyph" aria-hidden="true">
             ℹ
@@ -892,9 +994,19 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           </span>
         </div>
       )}
+      {paused && (
+        <div className="lp-notice">
+          <span className="lp-notice__glyph" aria-hidden="true">
+            ⏸
+          </span>
+          <span>
+            {t('paths.paused')} <Link to={pathHref(pathId)}>{t('paths.action.resume')}</Link>
+          </span>
+        </div>
+      )}
 
       <section className="lp-section">
-        <h2>{t('paths.activities')}</h2>
+        <h2 ref={listHeading} tabIndex={-1}>{t('paths.activities')}</h2>
         <ul className="lp-activities">
           {module.activities.map((one) => (
             <ActivityRow
@@ -910,12 +1022,17 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         </ul>
       </section>
 
-      {activityId && enrollment && (
-        <section className="lp-workspace" aria-live="polite">
+      {activityId && enrollmentId && (
+        // No live region here: it would read the whole activity (a lesson, the
+        // editor) aloud on every change. Errors are alerts, the draft status
+        // is its own live region, and focus carries the rest.
+        <section className="lp-workspace">
           <div className="lp-head">
             <div className="lp-head__text">
-              <h2>{activity ? activity.title : ''}</h2>
-              {activity && <p className="lp-lead">{activity.summary}</p>}
+              {/* An activity linked from another module (an old link, or one
+                  that moved between versions) still gets its own name. */}
+              <h2 ref={activityHeading} tabIndex={-1}>{shown?.title ?? ''}</h2>
+              {shown && <p className="lp-lead">{shown.summary}</p>}
             </div>
             <div className="lp-head__actions">
               <Button variant="ghost" onClick={() => {
@@ -933,6 +1050,9 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               </span>
               <span>{error}</span>
               {briefChanged && <Button className="lp-brief-refresh" variant="secondary" isDisabled={busy} onClick={() => void refreshBrief()} label={t('coding.verdict.reloadBrief')} />}
+              {/* The activity never opened (a dropped connection, a timeout):
+                  without this the only way on was Close and open it again. */}
+              {!open && !busy && <Button className="lp-brief-refresh" variant="secondary" onClick={() => setDeal((count) => count + 1)} label={t('error.tryAgain')} />}
             </div>
           )}
 
@@ -976,13 +1096,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             />
           )}
 
-          {open?.code && result?.state === 'verified_pass' && result.code?.outcome === 'passed' && <CodingCompletion
+          {open?.code && result && codePassed && <CodingCompletion
             xp={result.xpAwarded} complexity={result.complexity} backHref={moduleHref(pathId,module.id)}
             nextHref={result.nextActivityId && result.nextActivityId !== open.activity.id ? (() => {
               const nextModule = entry.manifest.modules.find(one => one.activities.some(activity => activity.id === result.nextActivityId));
               return nextModule ? activityHref(pathId,nextModule.id,result.nextActivityId!) : undefined;
             })() : undefined} />}
-          {open?.code && !(result?.state === 'verified_pass' && result.code?.outcome === 'passed') && (
+          {open?.code && !codePassed && (
             <CodeActivity
               key={open.activity.id}
               code={open.code}
@@ -992,7 +1112,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               result={result}
               busy={busy}
               draftStatus={draftStatus}
-              onDraft={(source) => saveDraft({ code: source })}
+              onDraft={(source) => saveDraft(open.activity.id, { code: source })}
               onSubmit={(source) => submit({ code: source })}
             />
           )}
@@ -1006,15 +1126,15 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               result={result}
               busy={busy}
               draftStatus={draftStatus}
-              onDraft={(values) => saveDraft({ artifact: values })}
+              onDraft={(values) => saveDraft(open.activity.id, { artifact: values })}
               onSubmit={(values) => submit({ artifact: values })}
             />
           )}
 
-          {result && !(open?.code && result.state === 'verified_pass' && result.code?.outcome === 'passed') && (
+          {result && !codePassed && (
             <section className="lp-card lp-section">
               <div className="lp-completion__line">
-                <h2>{t('paths.result')}</h2>
+                <h2 ref={resultHeading} tabIndex={-1}>{t('paths.result')}</h2>
                 <StateBadge state={result.state} />
                 {result.score !== null && (
                   <span className="lp-module__meta">

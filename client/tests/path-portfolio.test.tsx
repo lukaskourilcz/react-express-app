@@ -56,6 +56,22 @@ describe('saved portfolio writing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export writing as JSON' }));
     await waitFor(() => expect(calls.download).toHaveBeenCalledTimes(1));
   });
+  it('starts the next read when one lands rather than waiting for a slow pair, and keeps manifest order', async () => {
+    let finishSlow!: (value: unknown) => void;
+    calls.fetch.mockReturnValueOnce(new Promise(resolve => { finishSlow = resolve; }));
+    const third = { id: 'fde-v1-c01-third-writing', kind: 'artifact' as const, title: 'More writing' };
+    const withThird = { ...manifest, modules: manifest.modules.map(module => ({ ...module, activities: [
+      ...module.activities, third as typeof module.activities[number],
+    ] })) };
+    setup(withThird); fireEvent.click(screen.getByRole('button', { name: 'Export writing as JSON' }));
+    await waitFor(() => expect(calls.fetch).toHaveBeenCalledTimes(3));
+    expect(calls.download).not.toHaveBeenCalled();
+    await act(async () => { finishSlow(saved(ids[0])); });
+    await waitFor(() => expect(calls.download).toHaveBeenCalledTimes(1));
+    const file = calls.download.mock.lastCall![0] as File;
+    const document = JSON.parse(await file.text()) as { entries: { activityId: string }[] };
+    expect(document.entries.map(entry => entry.activityId)).toEqual([...ids, third.id]);
+  });
   it('aborts pending reads and produces no file when the account/enrollment screen unmounts', async () => {
     let finish!: (value: unknown) => void;
     calls.fetch.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));

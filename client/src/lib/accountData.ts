@@ -20,6 +20,9 @@
 // sight. When that account signs in again they come back as the device copies
 // they were, and the usual rules of coding/drafts.ts decide what opens; when
 // another account signs in they are deleted unread (owner decision 4).
+// Learning-path drafts kept on this device (lib/learningPathWorkspace.ts) go
+// the same way: kept for that account alone, back in place as soon as it signs
+// in again, deleted unread for any other.
 
 import { emitAllStores } from './store';
 import { readJSON, removeStored, writeJSON } from './storage';
@@ -67,8 +70,11 @@ export function accountEpoch(): number {
 // that waits to be written. It reaches storage before the data is forgotten,
 // kept or taken back.
 const settlers = new Set<() => void>();
-export function beforeAccountChange(settle: () => void): void {
+/** Run `settle` before the account's data is forgotten or kept. Returns the
+ * way to stop, for work that lives only while a view does. */
+export function beforeAccountChange(settle: () => void): () => void {
   settlers.add(settle);
+  return () => { settlers.delete(settle); };
 }
 const settle = () => settlers.forEach((one) => one());
 
@@ -84,32 +90,66 @@ export const keptDrafts = (): Kept | null => {
   return typeof value?.userId === 'string' && value.drafts && typeof value.drafts === 'object' ? value : null;
 };
 
+// The device copies of unsaved learning-path drafts, per enrollment and
+// activity, and where an involuntary sign-out keeps them. Their keys name the
+// account's own enrollment, so they need no merging on the way back.
+export const PATH_DRAFT_KEY = /^devshark:path:draft:/;
+export const KEPT_PATH_DRAFTS = 'devshark:path:kept:v1';
+const keptPathDrafts = (): Kept | null => {
+  const value = readJSON<Kept | null>(KEPT_PATH_DRAFTS, null);
+  return typeof value?.userId === 'string' && value.drafts && typeof value.drafts === 'object' ? value : null;
+};
+
+/** What `held` keeps for `userId` (another tab may have kept some already)
+ * with the keys `pattern` matches on this device now. */
+function collectKept(userId: string, held: Kept | null, pattern: RegExp): Record<string, string> {
+  const drafts: Record<string, string> = held?.userId === userId ? { ...held.drafts } : {};
+  try {
+    for (const key of Object.keys(localStorage)) if (pattern.test(key)) drafts[key] = localStorage.getItem(key) ?? '';
+  } catch { /* storage may be disabled */ }
+  return drafts;
+}
+
 /** Forget the account's data on this device and refresh what shows it. With
  * `keepDraftsOf`, a sign-out the learner did not choose: that account's coding
- * drafts are kept for it. Says whether drafts are kept for it now. */
+ * and learning-path drafts are kept for it. Says whether drafts are kept for
+ * it now. */
 export function clearAccountData(keepDraftsOf: string | null = null): boolean {
   settle();
   epoch += 1;
-  // Another tab may have kept this account's drafts already.
-  const before = keptDrafts();
-  const drafts: Record<string, string> = keepDraftsOf && before?.userId === keepDraftsOf ? before.drafts : {};
-  if (keepDraftsOf) {
-    try {
-      for (const key of Object.keys(localStorage)) if (DRAFT_KEY.test(key)) drafts[key] = localStorage.getItem(key) ?? '';
-    } catch { /* storage may be disabled */ }
-  }
+  const drafts = keepDraftsOf ? collectKept(keepDraftsOf, keptDrafts(), DRAFT_KEY) : {};
+  const pathDrafts = keepDraftsOf ? collectKept(keepDraftsOf, keptPathDrafts(), PATH_DRAFT_KEY) : {};
   try { clear(localStorage); } catch { /* storage may be disabled */ }
   try { clear(sessionStorage); } catch { /* storage may be disabled */ }
-  const keeping = Boolean(keepDraftsOf) && Object.keys(drafts).length > 0;
-  if (keepDraftsOf && keeping) writeJSON(KEPT_DRAFTS, { userId: keepDraftsOf, drafts } satisfies Kept);
+  const keepingCode = Object.keys(drafts).length > 0;
+  const keepingPaths = Object.keys(pathDrafts).length > 0;
+  if (keepDraftsOf && keepingCode) writeJSON(KEPT_DRAFTS, { userId: keepDraftsOf, drafts } satisfies Kept);
+  if (keepDraftsOf && keepingPaths) writeJSON(KEPT_PATH_DRAFTS, { userId: keepDraftsOf, drafts: pathDrafts } satisfies Kept);
   emitAllStores();
-  return keeping;
+  return Boolean(keepDraftsOf) && (keepingCode || keepingPaths);
 }
 
-/** Another account signed in: drafts kept for an account before it are
- * deleted unread. */
+/** An account signed in: drafts kept for an account before it are deleted
+ * unread, and its own learning-path drafts go back in place. Its own coding
+ * drafts wait for it to open a coding task (coding/drafts.ts). */
 export function forgetOthersKeptDrafts(userId: string): void {
-  if ((keptDrafts()?.userId ?? userId) === userId) return;
-  removeStored(KEPT_DRAFTS);
-  emitAllStores();
+  let changed = false;
+  const paths = keptPathDrafts();
+  if (paths) {
+    changed = true;
+    removeStored(KEPT_PATH_DRAFTS);
+    if (paths.userId === userId) {
+      try {
+        // A copy written here since is newer than the one kept.
+        for (const [key, value] of Object.entries(paths.drafts)) {
+          if (PATH_DRAFT_KEY.test(key) && localStorage.getItem(key) === null) localStorage.setItem(key, value);
+        }
+      } catch { /* storage may be disabled */ }
+    }
+  }
+  if ((keptDrafts()?.userId ?? userId) !== userId) {
+    changed = true;
+    removeStored(KEPT_DRAFTS);
+  }
+  if (changed) emitAllStores();
 }

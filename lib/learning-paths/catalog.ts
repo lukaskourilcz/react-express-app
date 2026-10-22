@@ -153,6 +153,22 @@ export function readinessFor(path: MergedPath): PathReadiness {
 
 export const allReadiness = (): PathReadiness[] => LEARNING_PATHS.map(readinessFor);
 
+/** The content verdict per merged path, computed once per instance. A merged
+ * path never changes after `mergePath`, and only the `stale_review` warning
+ * depends on the clock, so the error verdict cannot change either. Without
+ * this, every settings read, catalog read, enrollment, start and submit
+ * re-ran the whole validator over the path. */
+const contentReadyByPath = new WeakMap<MergedPath, boolean>();
+
+function contentReady(path: MergedPath): boolean {
+  let ready = contentReadyByPath.get(path);
+  if (ready === undefined) {
+    ready = validatePath(path).every((issue) => issue.level !== 'error');
+    contentReadyByPath.set(path, ready);
+  }
+  return ready;
+}
+
 /** Server capability per path. A path is available only when the deployment
  * enabled it, the content validates and the storage migration is installed.
  * Each of those is reported separately so an operator can tell them apart. */
@@ -162,7 +178,7 @@ export function availabilityFor(input: {
   storageInstalled: boolean;
 }): PathAvailability {
   if (!input.enabled) return 'disabled';
-  if (!readinessFor(input.path).contentReady) return 'content_incomplete';
+  if (!contentReady(input.path)) return 'content_incomplete';
   if (!input.storageInstalled) return 'storage_missing';
   return 'available';
 }

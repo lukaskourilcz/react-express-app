@@ -54,6 +54,18 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   const canvas = document.createElement('canvas');
   canvas.width = 1200;
   canvas.height = 630;
+  try {
+    return await paintShareCard(canvas, input);
+  } finally {
+    // The 1200x630 pixel buffer (about 3 MB) otherwise lives until garbage
+    // collection, and iOS Safari caps the total canvas memory of a page, so a
+    // few cards in a row could fail. A zero size frees it now.
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+}
+
+async function paintShareCard(canvas: HTMLCanvasElement, input: ShareCardInput): Promise<File | null> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
@@ -68,8 +80,7 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   ctx.fillStyle = dark ? '#101c24' : '#ffffff';
   ctx.strokeStyle = dark ? '#30404b' : '#dce7e0';
   ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(64, 54, 1072, 522, 44);
+  roundedRect(ctx, 64, 54, 1072, 522, 44);
   ctx.fill();
   ctx.stroke();
 
@@ -135,6 +146,23 @@ export async function createShareCardFile(input: ShareCardInput): Promise<File |
   });
 }
 
+/** `roundRect` arrived in Safari 16 and Firefox 112. The build targets older
+ * browsers, where calling it threw and every share card failed, so the corners
+ * are drawn with arcs when it is missing. */
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, width, height, radius);
+    return;
+  }
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, radius);
+  ctx.arcTo(x + width, y + height, x, y + height, radius);
+  ctx.arcTo(x, y + height, x, y, radius);
+  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.closePath();
+}
+
 /** A label followed by figures: only the label shortens, so the figures always
  * show whole. A long competency name once hid its counts behind the ellipsis. */
 export function fitLabel(ctx: Pick<CanvasRenderingContext2D, 'measureText'>, label: string, figures: string, max: number): string {
@@ -155,8 +183,18 @@ export function downloadShareFile(file: File): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = file.name;
-  anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  anchor.hidden = true;
+  // Some browsers (Firefox before 75, several in-app web views) ignore a click
+  // on an anchor that is not in the document.
+  document.body.appendChild(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+  }
+  // A slow phone can still be reading a large export a second later, and
+  // revoking the URL then cancels the download; 40 s is FileSaver's margin.
+  window.setTimeout(() => URL.revokeObjectURL(url), 40_000);
 }
 
 // The kit's fin body, mirrored with translate(24 0) scale(-1 1) so the tip

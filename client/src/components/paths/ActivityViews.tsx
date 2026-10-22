@@ -5,10 +5,13 @@
 // components — and none of them decides anything. Each collects a submission, hands it to the server, and renders
 // the verdict the server sent back.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Editor } from '../../coding/Editor';
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
+import { beforeAccountChange } from '../../lib/accountData';
+import { lazyShellPart } from '../../lib/routeRecovery';
+import ErrorRetry from '../ErrorRetry';
+import { ShellPartBoundary } from '../ShellPartBoundary';
 import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { LessonView, RichText } from '../learn/LessonBody';
 import type {
@@ -274,8 +277,49 @@ export function CheckActivity({
 
 /* ── code exercise ─────────────────────────────────────────────────────── */
 
+// The editor (CodeMirror) loads when a code exercise opens, not with the
+// path overview and module pages, which never show it. Its own boundary keeps
+// the activity standing when its code does not load.
+const Editor = lazyShellPart(() => import('../../coding/Editor').then((m) => ({ default: m.Editor })));
+
 const DRAFT_DEBOUNCE_MS = 900;
+const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
 export type DraftStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict' | 'offline';
+
+/**
+ * The autosave debounce. What is still waiting when the view unmounts is sent
+ * rather than dropped: typing and then following a link within the debounce
+ * used to lose those last keystrokes. The workspace forgets an activity's
+ * draft channel before it swaps the view, so a late send never lands on the
+ * next activity.
+ */
+function useDraftQueue<T>(send: (value: T) => void): (value: T) => void {
+  const timer = useRef<number | null>(null);
+  const pending = useRef<{ value: T } | null>(null);
+  const latest = useRef(send);
+  useEffect(() => {
+    latest.current = send;
+  });
+  const flush = useCallback(() => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+    const waiting = pending.current;
+    pending.current = null;
+    if (waiting) latest.current(waiting.value);
+  }, []);
+  useEffect(() => flush, [flush]);
+  // A sign-out writes what waits first, so the device copy it keeps for the
+  // account (lib/accountData.ts) holds the last keystrokes too.
+  useEffect(() => beforeAccountChange(flush), [flush]);
+  return useCallback(
+    (value: T) => {
+      pending.current = { value };
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(flush, DRAFT_DEBOUNCE_MS);
+    },
+    [flush],
+  );
+}
 
 export function CodeActivity({
   code,
@@ -303,7 +347,39 @@ export function CodeActivity({
   const t = useT();
   const [source, setSource] = useState<string>(() => (typeof draft?.content.code === 'string' ? draft.content.code : code.starter));
   const [hintsShown, setHintsShown] = useState(0);
-  const timer = useRef<number | null>(null);
+  const queueDraft = useDraftQueue(onDraft);
+  // Reset replaces the learner's code, and the autosave then writes the
+  // starter over their draft, so it asks first, as the coding workbench does.
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const resetButton = useRef<HTMLButtonElement>(null);
+  // The confirmed Reset leaves with its question, so focus goes back to the
+  // Reset that asked rather than to the page.
+  const reset = () => {
+    setConfirmingReset(false);
+    setSource(code.starter);
+    queueDraft(code.starter);
+    resetButton.current?.focus();
+  };
+  // Keeping the code, by the button or by Escape, hands focus back to Reset.
+  const keepCode = () => {
+    setConfirmingReset(false);
+    resetButton.current?.focus();
+  };
+  const onConfirmKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    keepCode();
+  };
+  // A revealed rung takes focus, so a screen reader reads it and the last
+  // press, whose button then disappears, does not drop focus to the page.
+  const ladderList = useRef<HTMLOListElement>(null);
+  const revealed = useRef(false);
+  useEffect(() => {
+    if (!revealed.current) return;
+    revealed.current = false;
+    (ladderList.current?.lastElementChild as HTMLElement | null)?.focus();
+  }, [hintsShown]);
 
   const hints = code.hints;
   const approach = code.approach ?? [];
@@ -314,18 +390,6 @@ export function CodeActivity({
     () => [...hints.map((text) => ({ kind: 'hint' as const, text })), ...approach.map((text) => ({ kind: 'approach' as const, text }))],
     [hints, approach],
   );
-
-  const queueDraft = useCallback(
-    (next: string) => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => onDraft(next), DRAFT_DEBOUNCE_MS);
-    },
-    [onDraft],
-  );
-
-  useEffect(() => () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-  }, []);
 
   const verdict = result?.code ?? null;
 
@@ -348,13 +412,16 @@ export function CodeActivity({
           {ladder.length > 0 && (
             <section className="lp-section">
               <h3>{t('paths.code.hints')}</h3>
-              <ol className="lp-list">
+              <ol className="lp-list" ref={ladderList}>
                 {ladder.slice(0, hintsShown).map((rung, index) => (
-                  <li key={index}>{rung.text}</li>
+                  <li key={index} tabIndex={-1}>{rung.text}</li>
                 ))}
               </ol>
               {hintsShown < ladder.length && (
-                <Button variant="ghost" onClick={() => setHintsShown((n) => n + 1)} label={t('paths.code.nextHint', { remaining: ladder.length - hintsShown })} />
+                <Button variant="ghost" onClick={() => {
+                  revealed.current = true;
+                  setHintsShown((n) => Math.min(n + 1, ladder.length));
+                }} label={t('paths.code.nextHint', { remaining: ladder.length - hintsShown })} />
               )}
               {code.skeleton && hintsShown >= ladder.length && (
                 <details>
@@ -385,24 +452,34 @@ export function CodeActivity({
           <span className="lp-actions__status" aria-live="polite">
             {t(`paths.draft.${draftStatus}` as never)}
           </span>
-          <Button variant="ghost" onClick={() => {
-              setSource(code.starter);
-              queueDraft(code.starter);
-            }} isDisabled={busy} label={t('paths.code.reset')} />
+          <Button variant="ghost" ref={resetButton} onClick={() => (source === code.starter ? reset() : setConfirmingReset(true))} isDisabled={busy} label={t('paths.code.reset')} />
           <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || submitBlocked || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
+        {confirmingReset && (
+          <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('paths.code.reset')} onKeyDown={onConfirmKeyDown}>
+            <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
+            <div className="cd-actions">
+              <Button variant="primary" onClick={reset} label={t('coding.reset')} />
+              <Button variant="secondary" onClick={keepCode} ref={focusOnMount} label={t('coding.resetCancel')} />
+            </div>
+          </div>
+        )}
 
-        <Editor
-          value={source}
-          onChange={(next) => {
-            setSource(next);
-            queueDraft(next);
-          }}
-          track={code.language === 'typescript' ? 'typescript' : code.language === 'react' ? 'react' : 'javascript'}
-          ariaLabel={t('paths.code.editorLabel')}
-          readOnly={busy}
-          minHeight={320}
-        />
+        <Suspense fallback={<div className="cd-note" role="status" style={{ minHeight: 320 }}>{t('common.loading')}</div>}>
+          <ShellPartBoundary fallback={(retry, retrying) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={retrying} />}>
+            <Editor
+              value={source}
+              onChange={(next) => {
+                setSource(next);
+                queueDraft(next);
+              }}
+              track={code.language === 'typescript' ? 'typescript' : code.language === 'react' ? 'react' : 'javascript'}
+              ariaLabel={t('paths.code.editorLabel')}
+              readOnly={busy}
+              minHeight={320}
+            />
+          </ShellPartBoundary>
+        </Suspense>
 
         {code.tests && code.tests.length > 0 && (
           <section className="lp-section lp-card lp-card--muted">
@@ -455,6 +532,15 @@ export function CodeActivity({
 
 /* ── written artifact ──────────────────────────────────────────────────── */
 
+/** A field's length as the server measures it against `maxLength`
+ * (the server artifact grader, grade.ts): the trimmed text, or a list's trimmed,
+ * non-empty lines joined by newlines. Counting the raw box instead flagged
+ * blank lines and trailing spaces the server never sees. */
+function artifactFieldLength(kind: PathArtifactPayload['fields'][number]['kind'], raw: string): number {
+  if (kind !== 'list') return raw.trim().length;
+  return raw.split('\n').map((one) => one.trim()).filter(Boolean).join('\n').length;
+}
+
 export function ArtifactActivity({
   artifact,
   rubric,
@@ -475,7 +561,9 @@ export function ArtifactActivity({
   busy: boolean;
 }) {
   const t = useT();
-  const initial = useMemo(() => {
+  // Read once: every autosave hands down a new draft, and the boxes keep what
+  // the learner is typing rather than the copy the server echoes back.
+  const [values, setValues] = useState<Record<string, string>>(() => {
     const saved = (draft?.content.artifact ?? {}) as Record<string, string | string[]>;
     const out: Record<string, string> = {};
     for (const field of artifact.fields) {
@@ -483,9 +571,7 @@ export function ArtifactActivity({
       out[field.id] = Array.isArray(value) ? value.join('\n') : typeof value === 'string' ? value : '';
     }
     return out;
-  }, [artifact.fields, draft]);
-  const [values, setValues] = useState<Record<string, string>>(initial);
-  const timer = useRef<number | null>(null);
+  });
 
   const shaped = useCallback(
     (next: Record<string, string>): Record<string, string | string[]> => {
@@ -499,18 +585,25 @@ export function ArtifactActivity({
     [artifact.fields],
   );
 
+  // Shaped when it is sent, not on every keystroke.
+  const queueDraft = useDraftQueue((next: Record<string, string>) => onDraft(shaped(next)));
   const change = (id: string, value: string) => {
-    setValues((current) => {
-      const next = { ...current, [id]: value };
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => onDraft(shaped(next)), DRAFT_DEBOUNCE_MS);
-      return next;
-    });
+    const next = { ...values, [id]: value };
+    setValues(next);
+    queueDraft(next);
   };
 
-  useEffect(() => () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-  }, []);
+  // A field over its cap fails the server's check and records the attempt as
+  // needing revision, so it is not sent: focus goes to the first such field,
+  // whose description carries the count that says why.
+  const submit = () => {
+    const over = artifact.fields.find((field) => artifactFieldLength(field.kind, values[field.id] ?? '') > field.maxLength);
+    if (over) {
+      document.getElementById(`lp-field-${over.id}`)?.focus();
+      return;
+    }
+    onSubmit(shaped(values));
+  };
 
   return (
     <div className="lp-split">
@@ -551,13 +644,15 @@ export function ArtifactActivity({
           <span className="lp-actions__status" aria-live="polite">
             {t(`paths.draft.${draftStatus}` as never)}
           </span>
-          <Button variant="primary" onClick={() => onSubmit(shaped(values))} isDisabled={busy} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
+          <Button variant="primary" onClick={submit} isDisabled={busy} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
 
         <div className="lp-fields">
           {artifact.fields.map((field) => {
             const value = values[field.id] ?? '';
-            const over = value.length > field.maxLength;
+            const used = artifactFieldLength(field.kind, value);
+            const over = used > field.maxLength;
+            const describedBy = `lp-help-${field.id} lp-count-${field.id}`;
             const failed = result?.criteria.find((one) => one.id === `field:${field.id}` && !one.passed);
             return (
               <div key={field.id} className="lp-field">
@@ -571,7 +666,8 @@ export function ArtifactActivity({
                 {field.kind === 'long-text' || field.kind === 'list' ? (
                   <textarea
                     id={`lp-field-${field.id}`}
-                    aria-describedby={`lp-help-${field.id}`}
+                    aria-describedby={describedBy}
+                    aria-invalid={over || undefined}
                     value={value}
                     onChange={(event) => change(field.id, event.target.value)}
                     rows={field.kind === 'list' ? 6 : 10}
@@ -580,15 +676,16 @@ export function ArtifactActivity({
                 ) : (
                   <input
                     id={`lp-field-${field.id}`}
-                    aria-describedby={`lp-help-${field.id}`}
+                    aria-describedby={describedBy}
+                    aria-invalid={over || undefined}
                     type={field.kind === 'url' ? 'url' : 'text'}
                     value={value}
                     onChange={(event) => change(field.id, event.target.value)}
                     disabled={busy}
                   />
                 )}
-                <span className={`lp-field__count${over ? ' lp-field__count--over' : ''}`}>
-                  {t('paths.artifact.count', { used: value.length, max: field.maxLength })}
+                <span id={`lp-count-${field.id}`} className={`lp-field__count${over ? ' lp-field__count--over' : ''}`}>
+                  {t('paths.artifact.count', { used, max: field.maxLength })}
                 </span>
                 {failed?.detail && <p className="lp-field__help">{failed.detail}</p>}
               </div>

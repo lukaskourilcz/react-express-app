@@ -9,7 +9,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { staleProfileStats } from './queryClient';
-import { readJSON, removeStored, writeJSON } from './storage';
 import type {
   DraftSaveRequest,
   DraftSaveResponse,
@@ -20,7 +19,6 @@ import type {
   LearningPreferenceResponse,
   PathAvailability,
   PathCatalogEntry,
-  PathDraft,
   PathProgressResponse,
   StartActivityRequest,
   StartActivityResponse,
@@ -34,12 +32,9 @@ const USER = '/api/user/[op]';
 
 export const learningPathKeys = {
   catalog: () => ['learning-path', 'catalog'] as const,
-  preference: (userId: string | undefined) => ['learning-path', 'preference', userId ?? 'anon'] as const,
   enrollments: (userId: string | undefined) => ['learning-path', 'enrollments', userId ?? 'anon'] as const,
   progress: (userId: string | undefined, enrollmentId: string | undefined, version: number | undefined) =>
     ['learning-path', 'progress', userId ?? 'anon', enrollmentId ?? '', version ?? 0] as const,
-  draft: (enrollmentId: string | undefined, activityId: string | undefined) =>
-    ['learning-path', 'draft', enrollmentId ?? '', activityId ?? ''] as const,
 };
 
 /* ── catalog ───────────────────────────────────────────────────────────── */
@@ -72,10 +67,6 @@ export const entryFor = (
 export const isOpen = (availability: PathAvailability | undefined): boolean => availability === 'available';
 
 /* ── preference ────────────────────────────────────────────────────────── */
-
-export function fetchLearningPreference(signal?: AbortSignal): Promise<LearningPreferenceResponse> {
-  return apiFetch<LearningPreferenceResponse>(`${USER}?op=learning-preference`, { signal });
-}
 
 export function saveLearningPreference(input: LearningPreferenceRequest): Promise<LearningPreferenceResponse> {
   return apiFetch<LearningPreferenceResponse>(`${USER}?op=learning-preference`, {
@@ -140,10 +131,13 @@ export function usePathProgress(
 
 /* ── activities ────────────────────────────────────────────────────────── */
 
-export function startActivity(input: StartActivityRequest): Promise<StartActivityResponse> {
+/** Opens an attempt. `signal` lets a screen the learner already left stop
+ * waiting for (and parsing) an answer nobody will read. */
+export function startActivity(input: StartActivityRequest, signal?: AbortSignal): Promise<StartActivityResponse> {
   return apiFetch<StartActivityResponse>(`${ROADMAP}?resource=learning-path-start`, {
     method: 'POST',
     body: JSON.stringify(input),
+    signal,
   });
 }
 
@@ -177,39 +171,6 @@ export function savePathDraft(input: DraftSaveRequest): Promise<DraftSaveRespons
     method: 'PUT',
     body: JSON.stringify(input),
   });
-}
-
-/* A copy of an unsaved draft on this device, so a draft the server has not
- * taken yet (offline, or a failed save) survives a reload. It records the
- * server revision it was typed on: once the server has moved past that,
- * another device saved since, and the server's copy wins, as a save would. */
-
-const localDraftKey = (enrollmentId: string, activityId: string) => `devshark:path:draft:${enrollmentId}:${activityId}`;
-
-export function keepDraftLocally(enrollmentId: string, activityId: string, baseRevision: number, content: PathDraft['content']): void {
-  writeJSON(localDraftKey(enrollmentId, activityId), { baseRevision, content });
-}
-
-export function forgetLocalDraft(enrollmentId: string, activityId: string): void {
-  removeStored(localDraftKey(enrollmentId, activityId));
-}
-
-/** The copy kept on this device when it is newer than the server's draft,
- * shaped as a draft at the server's revision; otherwise null. */
-export function localDraftOver(enrollmentId: string, activityId: string, server: PathDraft | null): PathDraft | null {
-  const kept = readJSON<{ baseRevision?: unknown; content?: unknown } | null>(localDraftKey(enrollmentId, activityId), null);
-  if (!kept || !kept.content || typeof kept.content !== 'object') return null;
-  const revision = server?.revision ?? 0;
-  if (kept.baseRevision !== revision || JSON.stringify(kept.content) === JSON.stringify(server?.content ?? null)) {
-    forgetLocalDraft(enrollmentId, activityId);
-    return null;
-  }
-  return {
-    activityId,
-    revision,
-    content: kept.content as PathDraft['content'],
-    updatedAt: server?.updatedAt ?? new Date().toISOString(),
-  };
 }
 
 /* ── routes ────────────────────────────────────────────────────────────── */

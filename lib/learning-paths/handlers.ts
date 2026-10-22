@@ -55,8 +55,19 @@ import {
 import type { MergedActivity, MergedPath } from './types';
 import { activityDomainScores, diagnosticCompetencies, diagnosticEvidence } from './competencies';
 import {
+  isExperienceLevel,
+  isLearnerGoal,
   isLearningPathId,
   isBaseTrack,
+  isStudyTime,
+  LEARNER_PROFILE_META_KEY,
+  LEARNING_PREFERENCE_META_KEY,
+  LEGACY_TRACK_META_KEY,
+  MAX_LEARNER_GOALS,
+  missingProfileFields,
+  parseLearnerProfile,
+  parseLearningPreference,
+  profileFromPreference,
   isOffLoopModule,
   moduleComplete,
   nextActivityId as computeNextActivity,
@@ -91,6 +102,7 @@ import type {
   SubmitActivityResponse,
 } from '../../shared/learning-path-api';
 import { PATH_LIMITS } from '../../shared/learning-path-api';
+import { LEARN_SECTION_IDS, isLearnSectionId } from '../../shared/learn-section-ids';
 import { MAX_ADDRESS_FIELD, MERCH_ENABLED, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
 
 const logEvent = createLogger('learning-paths');
@@ -100,6 +112,8 @@ const notAvailable = (res: VercelResponse) =>
   jsonError(res, 404, 'not_available', 'Learning paths are not part of this product');
 
 const ID = /^[A-Za-z0-9_-]{16,64}$/;
+/** The highest revision save_learning_path_draft accepts (migration 026). */
+const MAX_DRAFT_REVISION = 1_000_000;
 const newId = () => randomBytes(18).toString('base64url');
 
 /** Storage readiness is discovered, not configured: the first call that hits a
@@ -108,6 +122,8 @@ let storageInstalled: boolean | null = null;
 export const markStorageMissing = () => { storageInstalled = false; };
 export const markStorageInstalled = () => { storageInstalled = true; };
 
+/** `availabilityFor` caches the content verdict per path (catalog.ts), so this
+ * stays cheap on every settings, catalog, enrollment, start and submit call. */
 function availability(path: MergedPath): PathAvailability {
   return availabilityFor({
     path,
@@ -241,6 +257,22 @@ function stateMap(rows: ProgressRow[]): Map<string, EvidenceState> {
   return states;
 }
 
+type RecordedActivity = NonNullable<ProgressRow['activity_states']>[string];
+
+/** One activity's recorded progress as the client reads it. */
+function activityProgress(activity: MergedActivity, value: RecordedActivity | undefined): ModuleProgress['activities'][number] {
+  const domainScores = activityDomainScores(activity, value?.domainScores);
+  return {
+    activityId: activity.id,
+    state: (value?.state as EvidenceState) ?? 'not_started',
+    verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
+    score: typeof value?.score === 'number' ? value.score : null,
+    ...(domainScores ? { domainScores } : {}),
+    attempts: Number(value?.attempts ?? 0),
+    updatedAt: value?.updatedAt ?? null,
+  };
+}
+
 function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgress[] {
   const byModule = new Map(rows.map((row) => [row.module_id, row]));
   const states = stateMap(rows);
@@ -251,18 +283,7 @@ function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgres
       moduleId: module.id,
       completed: !isOffLoopModule(module) && moduleComplete(module, states),
       completedAt: row?.completed_at ?? null,
-      activities: module.activities.map((activity) => {
-        const value = recorded[activity.id];
-        return {
-          activityId: activity.id,
-          state: (value?.state as EvidenceState) ?? 'not_started',
-          verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
-          score: typeof value?.score === 'number' ? value.score : null,
-          ...(activityDomainScores(activity, value?.domainScores) ? { domainScores: activityDomainScores(activity, value?.domainScores)! } : {}),
-          attempts: Number(value?.attempts ?? 0),
-          updatedAt: value?.updatedAt ?? null,
-        };
-      }),
+      activities: module.activities.map((activity) => activityProgress(activity, recorded[activity.id])),
     };
   });
 }
@@ -306,10 +327,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     const { data, error } = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
     if (error) return jsonError(res, 500, 'db_error', 'Could not read the account preference');
     const metadata = (data.user?.user_metadata ?? {}) as Record<string, unknown>;
-    const {
-      parseLearningPreference, parseLearnerProfile, profileFromPreference, missingProfileFields,
-      LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
-    } = await import('../../shared/learning-paths');
     const legacy = metadata[LEGACY_TRACK_META_KEY];
     const preference = parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]);
     // An account that only ever saved a v1 preference reads back as the plan it
@@ -333,12 +350,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     if (specialization !== null && specialization !== 'fde') {
       return jsonError(res, 400, 'bad_request', 'specialization must be fde or null');
     }
-    const {
-      LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
-      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime,
-      parseLearnerProfile, profileFromPreference, parseLearningPreference, missingProfileFields,
-    } = await import('../../shared/learning-paths');
-
     // Validate every field the request actually carries. An answer the server
     // does not recognise is rejected rather than dropped: a learner who thinks
     // they answered should not silently be asked again.
@@ -354,7 +365,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     if (body.studyTime !== undefined && !isStudyTime(body.studyTime)) {
       return jsonError(res, 400, 'bad_request', 'studyTime must be one of the published bands');
     }
-    const { LEARN_SECTION_IDS, isLearnSectionId } = await import('../../shared/learn-sections');
     if (body.sections !== undefined
         && (!Array.isArray(body.sections) || body.sections.length > LEARN_SECTION_IDS.length
           || !body.sections.every(isLearnSectionId))) {
@@ -460,7 +470,7 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     // recommendations only.
     const baseTrack = path.kind === 'role_specialization' && isBaseTrack(body.baseTrack) ? body.baseTrack : null;
 
-    const saved = await withTimeout(supabase.rpc('upsert_learning_path_enrollment', {
+    const upsert = () => withTimeout(supabase.rpc('upsert_learning_path_enrollment', {
       p_user_id: userId,
       p_enrollment_id: newId(),
       p_path_id: path.id,
@@ -468,6 +478,12 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
       p_base_track: baseTrack,
       p_action: action,
     }));
+    let saved = await upsert();
+    // Two enrolls at once (a double click, a second tab) both find no row and
+    // both insert; the later one meets the (user, path, version) unique key.
+    // The earlier one's row is the enrollment, so the call is made once more
+    // and finds it, instead of answering 500 to a learner who is enrolled.
+    if (saved.error?.code === '23505') saved = await upsert();
     if (saved.error) {
       if (migrationMissing(res, saved.error)) return;
       return jsonError(res, 500, 'db_error', 'Could not record the enrollment');
@@ -509,10 +525,14 @@ export async function handlePathProgress(req: VercelRequest, res: VercelResponse
     const path = pathById(row.path_id);
     if (!path) return jsonError(res, 404, 'not_found', 'Unknown learning path');
 
-    const rows = await loadProgressRows(supabase, enrollmentId);
+    // Independent reads of an enrollment already proven to be the caller's.
+    const [rows, evidence] = await Promise.all([
+      loadProgressRows(supabase, enrollmentId),
+      loadDiagnosticEvidence(supabase, userId, enrollmentId, path),
+    ]);
     const manifest = publicManifest(path);
     const states = stateMap(rows);
-    const competencies = diagnosticCompetencies(path, await loadDiagnosticEvidence(supabase, userId, enrollmentId, path));
+    const competencies = diagnosticCompetencies(path, evidence);
     const enrollment = toEnrollment(row);
     const body: PathProgressResponse = {
       enrollment,
@@ -577,13 +597,16 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const found = activityIn(path, body.activityId);
   if (!found) return jsonError(res, 404, 'not_found', 'Unknown activity');
   const { module, activity } = found;
+  // One read of the progress rows serves both the plan check's "already
+  // passed" exception and the previous result the workspace shows.
+  let progress: Promise<ProgressRow[]> | null = null;
+  const progressRows = () => (progress ??= loadProgressRows(supabase, row.enrollment_id));
   if (await refuseLocked(res, userId, { kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, {
     cleared: async () => {
-      const state = stateMap(await loadProgressRows(supabase, row.enrollment_id)).get(activity.id);
+      const state = stateMap(await progressRows()).get(activity.id);
       return state === 'verified_pass' || state === 'self_reviewed';
     },
   })) return;
-
 
   if (body.previousSession !== undefined && (typeof body.previousSession !== 'string' || body.previousSession.length > 16_384)) {
     return jsonError(res, 400, 'bad_request', 'The previous session is invalid');
@@ -598,16 +621,25 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const attemptId = newId();
   // Purpose comes from the manifest, never from the request: it decides
   // whether a result can count as placement evidence or as core completion.
-  const opened = await withTimeout(supabase.rpc('open_learning_path_attempt', {
-    p_user_id: userId,
-    p_attempt_id: attemptId,
-    p_enrollment_id: row.enrollment_id,
-    p_activity_id: activity.id,
-    p_purpose: activity.purpose,
-    p_curriculum_version: path.version,
-    p_rubric_version: path.rubric.version,
-    p_ttl_minutes: 180,
-  }));
+  // The attempt, the saved draft and the prior result are independent, so the
+  // three round trips run together; the attempt's answer is still judged
+  // first, and a payload failure is rethrown only once the attempt is open.
+  const [opened, built, rows] = await Promise.all([
+    withTimeout(supabase.rpc('open_learning_path_attempt', {
+      p_user_id: userId,
+      p_attempt_id: attemptId,
+      p_enrollment_id: row.enrollment_id,
+      p_activity_id: activity.id,
+      p_purpose: activity.purpose,
+      p_curriculum_version: path.version,
+      p_rubric_version: path.rubric.version,
+      p_ttl_minutes: 180,
+    })),
+    buildActivityPayload(path, activity, supabase, row.enrollment_id)
+      .then((payload) => ({ payload }), (failure: unknown) => ({ failure })),
+    // Prior state is context, not a precondition: a workspace still opens.
+    progressRows().catch(() => null),
+  ]);
   if (opened.error) {
     if (migrationMissing(res, opened.error)) return;
     return jsonError(res, 500, 'db_error', 'Could not start the activity');
@@ -618,7 +650,8 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     return jsonError(res, 404, 'not_found', 'Unknown enrollment');
   }
 
-  const payload = await buildActivityPayload(path, activity, supabase, row.enrollment_id);
+  if ('failure' in built) throw built.failure;
+  const { payload } = built;
   if ('error' in payload) return jsonError(res, payload.status, payload.code, payload.message);
 
   const session = createLearningPathSession({
@@ -634,20 +667,14 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     ...(payload.answerKey ? { answerKey: payload.answerKey } : {}),
   });
 
-  let previous: StartActivityResponse['previous'] = null;
-  try {
-    const rows = await loadProgressRows(supabase, row.enrollment_id);
-    const recorded = rows.find((one) => one.module_id === module.id)?.activity_states?.[activity.id];
-    if (recorded) {
-      previous = {
+  const recorded = rows?.find((one) => one.module_id === module.id)?.activity_states?.[activity.id];
+  const previous: StartActivityResponse['previous'] = recorded
+    ? {
         state: (recorded.state as EvidenceState) ?? 'not_started',
         score: typeof recorded.score === 'number' ? recorded.score : null,
         attempts: Number(recorded.attempts ?? 0),
-      };
-    }
-  } catch {
-    // Prior state is context, not a precondition: a workspace still opens.
-  }
+      }
+    : null;
 
   res.setHeader('Cache-Control', 'private, no-store');
   const out: StartActivityResponse = {
@@ -662,6 +689,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     ...(payload.code ? { code: payload.code } : {}),
     ...(payload.artifact ? { artifact: payload.artifact } : {}),
     draft: payload.draft,
+    ...(payload.draftUnavailable ? { draftUnavailable: true } : {}),
     previous,
   };
   logEvent({ status: 200, kind: 'start', path: path.id, activityKind: activity.kind, purpose: activity.purpose });
@@ -677,6 +705,8 @@ type ActivityPayload =
       code?: StartActivityResponse['code'];
       artifact?: StartActivityResponse['artifact'];
       draft: PathDraft | null;
+      /** The draft read failed, so `draft: null` does not mean "no draft". */
+      draftUnavailable?: boolean;
     };
 
 /** Builds the learner-facing payload. Options are shuffled per attempt and the
@@ -688,11 +718,18 @@ async function buildActivityPayload(
   enrollmentId: string,
 ): Promise<ActivityPayload> {
   let draft: PathDraft | null = null;
+  let draftUnavailable = false;
   if (activity.kind === 'code' || activity.kind === 'artifact') {
-    const { data } = await withTimeout(
+    const { data, error } = await withTimeout(
       supabase.from('learning_path_drafts').select('activity_id,revision,content,updated_at')
         .eq('enrollment_id', enrollmentId).eq('activity_id', activity.id).maybeSingle(),
     );
+    // The activity still opens, from its starter; the log line (with the
+    // request id) is how a draft that seems lost gets traced.
+    if (error) {
+      draftUnavailable = true;
+      logEvent({ kind: 'draft_read_failed', activityKind: activity.kind, code: (error as { code?: string }).code ?? null });
+    }
     if (data) {
       draft = {
         activityId: activity.id,
@@ -759,6 +796,7 @@ async function buildActivityPayload(
           ...(code.suite ? { suite: code.suite } : {}),
         },
         draft,
+        ...(draftUnavailable ? { draftUnavailable: true } : {}),
       };
     }
     case 'artifact': {
@@ -770,6 +808,7 @@ async function buildActivityPayload(
           rubricDimensions: activity.artifact.rubricDimensions,
         },
         draft,
+        ...(draftUnavailable ? { draftUnavailable: true } : {}),
       };
     }
   }
@@ -941,6 +980,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   let questions: SubmitActivityResponse['questions'] = null;
   let code: SubmitActivityResponse['code'] = null;
   let complexity: ComplexityReport | null = null;
+  /** Set for a graded code submission: what the coding ledger records. */
+  let coding: { track: string; codeHash: string } | null = null;
   let feedback: SubmitActivityResponse['feedback'] = [];
   let artifact: Record<string, string | string[]> | null = null;
 
@@ -1009,8 +1050,13 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       score = graded.score;
       criteria = graded.criteria;
       code = graded.code;
-      complexity = assessComplexity(activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!
-        : { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
+      // A reused task resolved above (merged is non-null), so its lookup holds.
+      const task = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId) : undefined;
+      complexity = assessComplexity(task ?? { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
+      coding = {
+        track: task?.track ?? merged.language,
+        codeHash: createHash('sha256').update(body.code).digest('hex'),
+      };
       feedback = codeFeedback(graded);
       break;
     }
@@ -1101,14 +1147,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // The DSA exercises E2 turned into coding tasks record under the task's id,
   // so a path pass and a Coding pass share one record and one award (#493).
   const canonicalTaskId = canonicalCodingTaskId(path.id, activity);
-  const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
-  const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
-    : language;
   const packet = { ...acceptParams, p_module_requires: moduleRequirements(module) };
-  const codingParams = activity.kind === 'code' ? {
-    p_task_id: canonicalTaskId, p_track: codeTrack,
+  const codingParams = coding ? {
+    p_task_id: canonicalTaskId, p_track: coding.track,
     p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
-    p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+    p_code_hash: coding.codeHash,
   } : {};
   let accepted = module.requiresAtLeast
     ? await withTimeout(supabase.rpc('accept_learning_path_quota_result', {
@@ -1171,30 +1214,16 @@ function projectModuleProgress(
   const row = rows.find((one) => one.module_id === module.id);
   const recorded = row?.activity_states ?? {};
   const now = new Date().toISOString();
-  const states = new Map<string, EvidenceState>();
-  for (const one of rows) {
-    for (const [id, value] of Object.entries(one.activity_states ?? {})) {
-      if (typeof value?.state === 'string') states.set(id, value.state as EvidenceState);
-    }
-  }
+  const states = stateMap(rows);
   states.set(activity.id, state);
+  const completed = !isOffLoopModule(module) && moduleComplete(module, states);
   return {
     moduleId: module.id,
-    completed: !isOffLoopModule(module) && moduleComplete(module, states),
-    completedAt: row?.completed_at ?? (moduleComplete(module, states) && !isOffLoopModule(module) ? now : null),
+    completed,
+    completedAt: row?.completed_at ?? (completed ? now : null),
     activities: module.activities.map((one) => {
       const value = recorded[one.id];
-      if (one.id !== activity.id) {
-        return {
-          activityId: one.id,
-          state: (value?.state as EvidenceState) ?? 'not_started',
-          verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
-          score: typeof value?.score === 'number' ? value.score : null,
-          ...(activityDomainScores(one, value?.domainScores) ? { domainScores: activityDomainScores(one, value?.domainScores)! } : {}),
-          attempts: Number(value?.attempts ?? 0),
-          updatedAt: value?.updatedAt ?? null,
-        };
-      }
+      if (one.id !== activity.id) return activityProgress(one, value);
       const bestScore = Math.max(typeof value?.score === 'number' ? value.score : 0, score ?? 0);
       return {
         activityId: one.id,
@@ -1389,12 +1418,16 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
       return jsonError(res, 400, 'bad_request', 'An activityId is required');
     }
     try {
-      const owned = await loadEnrollment(supabase, userId, enrollmentId);
+      // The draft read carries the owner too, so it can run beside the
+      // ownership check instead of after it.
+      const [owned, { data, error }] = await Promise.all([
+        loadEnrollment(supabase, userId, enrollmentId),
+        withTimeout(
+          supabase.from('learning_path_drafts').select('activity_id,revision,content,updated_at')
+            .eq('enrollment_id', enrollmentId).eq('activity_id', activityId).eq('user_id', userId).maybeSingle(),
+        ),
+      ]);
       if (!owned) return jsonError(res, 404, 'not_found', 'Unknown enrollment');
-      const { data, error } = await withTimeout(
-        supabase.from('learning_path_drafts').select('activity_id,revision,content,updated_at')
-          .eq('enrollment_id', enrollmentId).eq('activity_id', activityId).maybeSingle(),
-      );
       if (error) return jsonError(res, 500, 'db_error', 'Could not load the draft');
       res.setHeader('Cache-Control', 'private, no-store');
       const out: DraftGetResponse = {
@@ -1423,7 +1456,10 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
     if (typeof body.activityId !== 'string' || !/^[a-z0-9-]{3,96}$/.test(body.activityId)) {
       return jsonError(res, 400, 'bad_request', 'An activityId is required');
     }
-    if (!Number.isInteger(body.expectedRevision) || (body.expectedRevision as number) < 0) {
+    // save_learning_path_draft raises on a revision outside 0..1,000,000, and
+    // a raise is a 500; the bound is checked here so a bad value is a 400.
+    if (!Number.isInteger(body.expectedRevision) || (body.expectedRevision as number) < 0
+        || (body.expectedRevision as number) > MAX_DRAFT_REVISION) {
       return jsonError(res, 400, 'bad_request', 'expectedRevision must be a whole number');
     }
     const content = body.content;
@@ -1448,6 +1484,19 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
     }));
     if (saved.error) {
       if (migrationMissing(res, saved.error)) return;
+      // Two first saves of one activity at once (a second tab or device) both
+      // find no row and both insert at revision 0; the later one meets the
+      // (enrollment, activity) key. The other save's copy is now the newer
+      // one, which is a conflict, not a server failure.
+      if (saved.error.code === '23505') {
+        return jsonError(res, 409, 'draft_conflict', 'A newer draft was saved elsewhere. Reload before saving again.');
+      }
+      // Every other field the routine checks was checked above, so its raise
+      // means the stored form outgrew its 64 kB (pg_column_size measures the
+      // binary JSONB, which can exceed the text this handler measured).
+      if (/invalid_learning_path_draft/.test(saved.error.message ?? '')) {
+        return jsonError(res, 413, 'too_large', 'A draft is limited to 64 kB');
+      }
       return jsonError(res, 500, 'db_error', 'Could not save the draft');
     }
     markStorageInstalled();

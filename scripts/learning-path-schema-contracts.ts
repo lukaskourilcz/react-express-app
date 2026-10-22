@@ -21,7 +21,7 @@ import { LEARNING_PATHS, activitySummary, moduleSummary, publicManifest } from '
 import { moduleRequirements } from '../lib/learning-paths/handlers';
 import { mergePath, type MergedActivity, type ModuleSource, type PathSource } from '../lib/learning-paths/types';
 import { validatePath } from '../lib/learning-paths/validate';
-import { isOffLoopModule, nextActivityId, pathGuidedComplete, pathInventory, type EvidenceState, type LearningPathManifest } from '../shared/learning-paths';
+import { artifactTally, isOffLoopModule, nextActivityId, pathGuidedComplete, pathInventory, type EvidenceState, type LearningPathManifest } from '../shared/learning-paths';
 import { SCHEMA_FIXTURE_NOTE, SCHEMA_FIXTURE_SCENARIO, schemaFixture, schemaFixtureSource } from './learning-path-schema-fixture';
 
 type Fail = (message: string) => void;
@@ -147,6 +147,18 @@ export function schemaContracts(fail: Fail): void {
     const { at } = variant((s) => { activityOf(s, 'fde-v1-x01-drill').fixtureNote = ''; });
     if (!at.includes('missing_copy@fde/fde-v1-x01-drill.fixtureNote')) fail(`schema empty fixture note: expected missing_copy, got ${at.join(', ')}`);
   }
+  {
+    const { at } = variant((s) => {
+      moduleOf(s, LOOP).lessons[0].sections.push({ kind: 'example', language: 'javascript', code: 'console.log(1);', caption: 'Run it.', note: ' ' });
+    });
+    if (!at.includes('missing_copy@fde/fde-v1-x01-l1.section[1].note')) fail(`schema blank example note: expected missing_copy, got ${at.join(', ')}`);
+  }
+  expectErrors('trace with no frames', (s) => {
+    moduleOf(s, LOOP).lessons[0].sections.push({ kind: 'trace', caption: 'Step through it.', trace: { shape: 'array', frames: [] } });
+  }, ['empty_trace']);
+  expectErrors('trace with a frame', (s) => {
+    moduleOf(s, LOOP).lessons[0].sections.push({ kind: 'trace', caption: 'Step through it.', trace: { shape: 'array', frames: [{ cells: ['1'], note: 'One cell.' }] } });
+  }, [], ['empty_trace']);
   expectErrors('scenario on a code activity', (s) => { activityOf(s, 'fde-v1-x01-drill').scenario = 'A case.'; }, ['misplaced_scenario']);
   expectErrors('fixture note on a check', (s) => { activityOf(s, 'fde-v1-x01-case').fixtureNote = 'A note.'; }, ['misplaced_fixture_note']);
   expectErrors('fixture note on a reused task', (s) => {
@@ -154,6 +166,26 @@ export function schemaContracts(fail: Fail): void {
     delete drill.code;
     drill.reuseTaskId = 'js-binary-search';
   }, [], ['misplaced_fixture_note', 'bad_reuse', 'missing_copy']);
+  expectErrors('fractional answer index', (s) => { activityOf(s, 'fde-v1-x01-case').questions![0].correct = 0.5; }, ['bad_answer']);
+  expectErrors('non-finite criterion weight', (s) => {
+    activityOf(s, 'fde-v1-x01-drill').code!.criteria = [{ id: 'core', label: 'Required behaviour', critical: true, weight: Number.NaN }];
+  }, ['bad_weight']);
+  expectErrors('non-finite pass threshold', (s) => { activityOf(s, 'fde-v1-x01-case').passThreshold = Number.NaN; }, ['bad_threshold']);
+  expectErrors('non-integer artifact field cap', (s) => {
+    moduleOf(s, SHELF).activities.push({
+      id: 'fde-v1-ip01-star', kind: 'artifact', purpose: 'exercise', verification: 'self_reviewed',
+      title: 'STAR story', summary: 'Write one STAR story.', competencies: ['integration'], estimatedMinutes: 10,
+      artifact: {
+        brief: 'Write one STAR story.',
+        fields: [{ id: 'story', label: 'Story', help: 'Tell it.', kind: 'long-text', required: true, maxLength: Number.NaN }],
+        rubricDimensions: ['clarity'],
+      },
+    });
+  }, ['bad_max_length']);
+  expectErrors('diagnostic that is not a check', (s) => {
+    activityOf(s, 'fde-v1-ip01-read').purpose = 'diagnostic';
+    s.diagnosticActivityId = 'fde-v1-ip01-read';
+  }, ['diagnostic_not_check'], ['wrong_purpose', 'diagnostic_required']);
   expectErrors('loop module depends on a shelf module', (s) => { moduleOf(s, LOOP).dependsOn = [SHELF]; }, ['loop_depends_on_shelf']);
   expectErrors('shelf module depends on a loop module', (s) => { moduleOf(s, SHELF).dependsOn = [LOOP]; }, [], ['loop_depends_on_shelf']);
   {
@@ -245,6 +277,10 @@ export function schemaContracts(fail: Fail): void {
       if (got !== value) fail(`schema inventory: ${key} is ${got}, expected ${value} with the shelf left out`);
     }
     if (counted.estimatedMinutes !== inventory.estimatedMinutes) fail('schema inventory: shelf minutes reached the path estimate');
+    // The progress screen says all of the tally's total are required, so a
+    // shelf write-up must stay out of it, submitted or not.
+    const tally = artifactTally(stocked, new Map([['fde-v1-ip01-star', 'self_reviewed']]));
+    if (tally.total !== 0 || tally.submitted !== 0) fail(`schema tally: a shelf artifact reached the required artifact count (${tally.submitted}/${tally.total})`);
   }
 
   /* ── 7. the shelf stays off the loop even without its optional flag ── */
