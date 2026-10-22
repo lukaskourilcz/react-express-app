@@ -156,7 +156,11 @@ import {
   validateProgressionGraph,
 } from '../shared/progression';
 import { LEARN_SECTION_IDS, LEARN_SECTIONS, OPT_IN_SECTIONS, learnerSections, sectionsForTopic } from '../shared/learn-sections';
+import { OPT_IN_SECTIONS as INITIAL_OPT_IN_SECTIONS } from '../shared/learn-section-ids';
 import {
+  EXPERIENCE_LEVELS,
+  LEARNER_GOALS,
+  STUDY_TIMES,
   isLearnerProfileComplete,
   missingProfileFields,
   parseLearnerProfile,
@@ -193,7 +197,7 @@ import {
   isOpenTo,
 } from '../shared/tiers';
 import { EVOLVING_CHALLENGES, evolvingStage, evolvingUnlocked, isEvolvingCheckpoint } from '../shared/evolving';
-import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, tierLockReason } from '../shared/coding-catalog';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, DSA_LEVELS_AWAITING_E3, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -205,6 +209,8 @@ import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/con
 import { WAIVER_TEXT } from '../lib/billing/sync';
 import { en as ENGLISH } from '../client/src/i18n/translations';
 import { privacyEn as PRIVACY_ENGLISH } from '../client/src/i18n/translations.privacy';
+import { learnEn as LEARN_ENGLISH } from '../client/src/i18n/translations.learn';
+import { pickerEn as PICKER_ENGLISH } from '../client/src/i18n/translations.picker';
 import { NOINDEX_PATHS, PUBLIC_PAGES, premiumSchema } from '../client/src/lib/publicMetadata';
 import {
   DEFAULT_COIN_SETTINGS,
@@ -310,7 +316,7 @@ async function auditGateContracts() {
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
   assert.equal(CODING_TASKS_AUDITED, true, 'completed coding review must also withhold future unreviewed or changed tasks');
   const reviewedCoding = CODING_TASKS.filter(task => isCodingSectionTrack(task.track));
-  assert.equal(reviewedCoding.length, 725, 'all currently issued coding identities are included in the completed wave');
+  assert.equal(reviewedCoding.length, 754, 'all currently issued coding identities are included in the completed wave');
   for (const task of reviewedCoding) {
     assert.equal(codingTaskEligibility(task, solutionFor(task.id)).reason, 'reviewed', `${task.id}: current coding content requires a passing review`);
     assert.ok(codingTaskById(task.id), `${task.id}: the completed gate must preserve current availability`);
@@ -1031,7 +1037,7 @@ function publicCopyContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
   // devShark is freemium: no shipped English string may still promise that
   // everything is free.
-  for (const [key, value] of Object.entries(ENGLISH)) {
+  for (const [key, value] of Object.entries({ ...ENGLISH, ...LEARN_ENGLISH })) {
     assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
   }
   // The sentence the buyer ticks in Checkout is the one /premium and the
@@ -1056,6 +1062,10 @@ function publicCopyContracts() {
   assert.doesNotMatch(ENGLISH['legal.terms.plans.premium'], /merchandise/);
   // Design audit P0.4: grading and end states are stated, not cheered. No
   // exclamation mark and no "Well done" in any verdict, result or end key.
+  // The Learn page's own dictionary states results the same way.
+  for (const [key, value] of Object.entries(LEARN_ENGLISH)) {
+    assert.doesNotMatch(value, /!|Well done/i, `${key} cheers instead of stating the result`);
+  }
   for (const [key, value] of Object.entries(ENGLISH)) {
     // Round two added the Learn end states (design review 2 R2-P1.13).
     if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)|roadmap\.(levelComplete|levelFailed|outOfHeartsTitle|checkpointComplete|allDone)/.test(key)) continue;
@@ -3717,8 +3727,8 @@ async function main() {
   // exactly what happened when they were added: javascript level 3 (quota 1)
   // swapped js-fizz-values for js-debug-average, and level 10 dropped
   // js-activate-user.
-  for (const codeTopic of ['javascript', 'typescript', 'react'] as const) {
-    for (let level = 1; level <= ROADMAP_LEVELS; level++) {
+  for (const codeTopic of ['javascript', 'typescript', 'react', 'dsa'] as const) {
+    for (let level = 1; level <= (codeTopic === 'dsa' ? 15 : ROADMAP_LEVELS); level++) {
       for (const task of levelCodingTasks(codeTopic, level)) {
         assert.notEqual(
           formatOf(task),
@@ -3728,6 +3738,29 @@ async function main() {
       }
     }
   }
+  // DSA Foundations (#493): the DSA path's exercises fill the DSA Learn
+  // levels through the same parent-attempt flow. Level 3 seals its one task;
+  // the Big O introduction (1-2) and the levels E3 re-sequences (10, 11, 14)
+  // seal none yet. The Coding section lists all 29 under Algorithms, and only
+  // they name a Learn level there.
+  assert.deepEqual(levelCodingTasks('dsa', 3).map((task) => task.id), ['alg-dsa-reverse-in-place'], 'DSA level 3 seals the reverse-in-place task');
+  assert.deepEqual(levelCodingTasks('dsa', 9).map((task) => task.id), ['alg-dsa-factorial', 'alg-dsa-recursive-list-sum'], 'DSA level 9 seals factorial and the recursive sum');
+  for (const level of [1, 2, 10, 11, 14, 15]) assert.deepEqual(levelCodingTasks('dsa', level), [], `DSA level ${level} seals no coding task before E3`);
+  assert.deepEqual(levelCodingTasks('algorithms', 1), [], 'the algorithms topic is never sealed into a Learn level');
+  const dsaRows = CODING_INDEX.filter((row) => row.topic === 'dsa');
+  assert.equal(dsaRows.length, 29, 'the index lists the 29 DSA Foundations tasks');
+  assert.ok(dsaRows.every((row) => row.track === 'algorithms' && row.id.startsWith('alg-dsa-')), 'DSA Foundations tasks are listed under Algorithms');
+  // A DSA task names its Learn level only once that level issues it: levels
+  // 10, 11 and 14 still carry titles their tasks do not match until E3.
+  for (const row of CODING_INDEX.filter((one) => one.track === 'algorithms')) {
+    assert.equal(hasLearnLevel(row), row.topic === 'dsa' && !DSA_LEVELS_AWAITING_E3.has(row.level), `${row.id}: only a DSA Foundations task on an issuing level names its Learn level`);
+  }
+  for (const id of ['alg-dsa-linear-search', 'alg-dsa-selection-sort', 'alg-dsa-record-index', 'alg-dsa-sum-of-evens']) {
+    const row = CODING_INDEX.find((one) => one.id === id);
+    assert.ok(row && !hasLearnLevel(row), `${id}: sits on a DSA level that does not issue it yet, so it names no level`);
+  }
+  assert.ok(hasLearnLevel(CODING_INDEX.find((one) => one.id === 'alg-dsa-reverse-in-place')!), 'alg-dsa-reverse-in-place names DSA level 3, which seals it');
+  assert.equal(CODING_INDEX.filter((row) => row.topic !== undefined && row.topic !== 'dsa').length, 0, 'the index carries a topic only where it differs from the track');
   // And the fix must not be to delete them: they still exist and stay reachable
   // through the Coding section, which is what made debugging discoverable.
   const repairTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
@@ -4777,7 +4810,7 @@ async function main() {
   // A curriculum edit that strands a learner — a cycle, a prerequisite on a
   // topic that no longer exists, a plan whose first stage nothing can open —
   // fails here rather than in front of the learner.
-  const graphProblems = validateProgressionGraph(ROADMAP_TOPICS);
+  const graphProblems = validateProgressionGraph(ROADMAP_TOPICS, LEARN_SECTIONS);
   assert.deepEqual(
     graphProblems,
     [],
@@ -4876,11 +4909,30 @@ async function main() {
     ]);
     assert.deepEqual(OPT_IN_SECTIONS, LEARN_SECTIONS.filter((one) => one.membership === 'opt-in'),
       'planTopics appends exactly the opt-in sections');
+    assert.equal(INITIAL_OPT_IN_SECTIONS, OPT_IN_SECTIONS, 'learn-sections re-exports the opt-in list of learn-section-ids');
+    // The initial bundle plans (shared/progression.ts) and parses profiles
+    // (shared/learning-paths.ts) but renders no section. Neither may import
+    // the full registry, or every section's topic list ships to every visitor.
+    for (const file of ['shared/progression.ts', 'shared/learning-paths.ts']) {
+      assert.doesNotMatch(readFileSync(file, 'utf8'), /from '\.\/learn-sections'/,
+        `${file} imports from ./learn-section-ids, never the full ./learn-sections registry`);
+    }
     // Shared topics: one id, listed in several sections.
     assert.deepEqual(sectionsForTopic('databases'), ['web-developer', 'software-engineer', 'forward-deployed-engineer']);
     assert.deepEqual(sectionsForTopic('git'), ['web-developer', 'software-engineer']);
     assert.deepEqual(sectionsForTopic('ai'), ['forward-deployed-engineer']);
     assert.ok(SPECIALIZATION_BRIDGE_TOPICS.fde.includes('ai'), 'the FDE bridge brings AI & LLMs into the plan');
+    // A section a learner belongs to never lists a topic their plan lacks:
+    // FDE comes with the specialization, so its bridge carries every FDE topic.
+    for (const track of Object.keys(WEBDEV_PLAN_STAGES) as BaseTrack[]) {
+      const fde = planTopics({
+        schemaVersion: 2, baseTrack: track, specialization: 'fde', skillPaths: [],
+        goals: ['level-up'], experience: 'some', studyTime: '15-30', updatedAt: null,
+      });
+      for (const topic of section('forward-deployed-engineer').topics) {
+        assert.ok(fde.includes(topic), `an FDE learner on ${track} plans the FDE section topic ${topic}`);
+      }
+    }
 
     const frontend = {
       schemaVersion: 2 as const, baseTrack: 'frontend' as const, specialization: null, skillPaths: [],
@@ -5578,6 +5630,11 @@ async function main() {
     const outside = codingTaskById('js-count-multiples');
     assert.ok(outside && outside.level > 0 && !levelCodingTasks(outside.topic, outside.level).some((one) => one.id === outside.id), 'js-count-multiples has a level number but no level issues it');
     assert.equal(skipPostpones('js-count-multiples'), false, 'a task outside every quota is optional');
+    // #493: a DSA task its level issues comes back; one on a level held back
+    // for E3, and an Algorithms task no Learn level issues, do not.
+    assert.equal(skipPostpones('alg-dsa-reverse-in-place'), true, 'a DSA task DSA level 3 issues comes back');
+    assert.equal(skipPostpones('alg-dsa-linear-search'), false, 'DSA level 10 issues nothing until E3');
+    assert.equal(skipPostpones('alg-easy2-count-jewels'), false, 'an Algorithms task is optional');
 
     // C1-8: ten cleared JavaScript Learn levels open tier 3 on the task page
     // (handleCodingTask reads them from the roadmap row). A practice run and
@@ -5828,6 +5885,35 @@ function consentContracts() {
   assert.ok(!Object.keys(ENGLISH).some((key) => key.startsWith('legal.privacy.')), 'privacy keys live in translations.privacy.ts alone');
   const legalImporters = ['client/src/App.tsx', 'client/src/main.tsx', 'client/src/i18n/LanguageContext.tsx', 'client/src/components/BrandFooter.tsx', 'client/src/components/CookieConsent.tsx'];
   for (const file of legalImporters) assert.doesNotMatch(read(file), /translations\.privacy/, `${file} pulls the privacy policy into the shell`);
+  // The Learn page's section and placement copy ships with the Learn chunk
+  // (translations.learn.ts), never with the shell.
+  assert.ok(!Object.keys(ENGLISH).some((key) => key.startsWith('learn.') || key.startsWith('placement.')),
+    'learn.* and placement.* keys live in translations.learn.ts alone');
+  const shellFiles = ['client/src/App.tsx', 'client/src/main.tsx', 'client/src/i18n/LanguageContext.tsx', 'client/src/lib/routePreload.ts', 'client/src/lib/routeHead.ts'];
+  for (const file of shellFiles) assert.doesNotMatch(read(file), /translations\.learn/, `${file} pulls the Learn copy into the shell`);
+  for (const id of LEARN_SECTION_IDS) {
+    assert.ok(`learn.section.${id}` in LEARN_ENGLISH, `section ${id} has a name in translations.learn.ts`);
+    assert.ok(`learn.section.line.${id}` in LEARN_ENGLISH, `section ${id} has a line in translations.learn.ts`);
+  }
+
+  // The path picker's words (#490) ride in the Profile chunk the same way:
+  // no key in both dictionaries, no shell import, and the app's copy rules.
+  for (const key of Object.keys(PICKER_ENGLISH)) {
+    assert.ok(!(key in ENGLISH), `${key} lives in translations.picker.ts alone`);
+  }
+  for (const file of legalImporters) assert.doesNotMatch(read(file), /translations\.picker/, `${file} pulls the path picker's copy into the shell`);
+  // The picker and the card build these keys from the option ids, so every
+  // id needs its words here or the option reads as its raw key.
+  for (const id of LEARN_SECTION_IDS) {
+    assert.ok(`profile.section.${id}` in PICKER_ENGLISH, `the Profile card names the ${id} section`);
+  }
+  for (const goal of LEARNER_GOALS) assert.ok(`profile.goal.${goal}` in PICKER_ENGLISH, `the picker names the ${goal} goal`);
+  for (const level of EXPERIENCE_LEVELS) assert.ok(`profile.experience.${level}` in PICKER_ENGLISH, `the picker names the ${level} experience level`);
+  for (const band of STUDY_TIMES) assert.ok(`profile.studyTime.${band}` in PICKER_ENGLISH, `the picker names the ${band} study time`);
+  for (const [key, value] of Object.entries(PICKER_ENGLISH)) {
+    assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
+    assert.doesNotMatch(value, /certif|hired|hiring|job[- ]ready|guaranteed?|AI[- ]powered|AI tutor/i, `${key} makes a certification, hiring or AI claim`);
+  }
 }
 
 void main().catch((error) => {

@@ -119,5 +119,6 @@ test('the homepage path keeps every step in view and starts the selected topic b
   await start.focus();
   await expect(start).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/learn\?topic=typescript$/);
+  // Learn names the topic's section in the address (#488).
+  await expect(page).toHaveURL(/\/learn\/web-developer\?topic=typescript$/);
 });

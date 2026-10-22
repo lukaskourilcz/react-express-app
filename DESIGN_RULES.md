@@ -148,7 +148,10 @@ plain clickable cards; don't combine it with a fin-school hover.)
 - Paper grain + wave tile: the `--ss-grain` / `--ss-wave` data-URIs.
 - New copy becomes new English keys in `i18n/translations.ts`; devShark ships
   English only, with no second language. Never hard-code user-visible English
-  in a component.
+  in a component. Copy that only one lazy route reads may sit in that route's
+  own dictionary (`translations.learn.ts`, `translations.paths.ts` and the
+  others the `route-and-chunk` skill lists), which keeps it off the first
+  download.
 
 ## 8. Shared loading and motion vocabulary
 
@@ -179,6 +182,12 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   like a page. A signed-out visitor never waits for account data. Never mount
   a route's `Suspense` boundary inside an element keyed by the path: a fresh
   boundary shows its fallback even in a transition.
+- The route box is keyed by `routeBoxKey` (`lib/routePreload.ts`): the path,
+  except that `/learn` and every `/learn/<section>` share one key. A Learn
+  section switch therefore remounts nothing: the box, its `RouteErrorBoundary`
+  and route focus stay, and focus stays on the switcher. A replace inside one
+  box (`/learn` resolving to its section) logs no pageview, and a nav link to
+  the box on screen (Learn on `/learn/<section>`) replaces rather than pushes.
 - A page that fails keeps the shell. `RouteErrorBoundary` sits inside the
   route `Suspense` and inside the keyed route box; outside the `Suspense`,
   catching would remount it and bring the blank beat back. Its panel is the

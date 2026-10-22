@@ -10,6 +10,7 @@
 // KNOWN_RIGHT_CODE lists correct answers a check once refused because it read
 // something the statement does not ask for. Each must keep passing.
 import { FULLSTACK_APPS } from '../lib/coding/tasks/fullstack';
+import { DSA_FOUNDATIONS_RIGHT, DSA_FOUNDATIONS_WRONG } from './fixtures/dsa-foundations-known-answers';
 
 export interface KnownAnswer {
   id: string;
@@ -42,6 +43,7 @@ const fullstackWrong = FULLSTACK_APPS.flatMap((app): KnownAnswer[] => {
 
 export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
   ...fullstackWrong,
+  ...DSA_FOUNDATIONS_WRONG,
   { id: 'ts-fullstack-links-2', label: 'a POST that answers with the stored link itself', replace: [['return reply(201, { ...link });', 'return reply(201, link);']] },
   { id: 'ts-fullstack-links-3', label: 'a POST and a visit that answer with the stored link itself', replace: [['return reply(201, { ...link });', 'return reply(201, link);'], ['return reply(200, { ...link });', 'return reply(200, link);']] },
   { id: 'ts-fullstack-links-3', label: 'any method on /api/links/SLUG deleting the link', replace: [['if (link && parts.length === 4 && method === "DELETE") {', 'if (link && parts.length === 4) {']] },
@@ -70,6 +72,7 @@ export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
 ];
 
 export const KNOWN_RIGHT_CODE: readonly KnownAnswer[] = [
+  ...DSA_FOUNDATIONS_RIGHT,
   { id: "ts-only-the-strings", label: "a simple typeof guard with its predicate inferred by current TypeScript", code: "const isString=(value:unknown)=>typeof value === \"string\"; const onlyStrings=(values:unknown[]):string[]=>values.filter(isString);" },
   { id: 'ts-easy2-article-previews', label: 'a preview written title first', replace: [['({ id, title }));', '({ title, id }));']] },
   { id: 'ts-easy2-fields-from-the-api', label: 'a profile written avatar first', code: 'type ApiUser = { user_name: string; avatar_url?: string };\ntype Profile = { avatar: string | null; name: string };\n\nfunction toProfile(raw: ApiUser): Profile {\n  const { avatar_url: avatar = null, user_name: name } = raw;\n  return { avatar, name };\n}\n' },
