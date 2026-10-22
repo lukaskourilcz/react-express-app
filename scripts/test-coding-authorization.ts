@@ -75,7 +75,11 @@ async function main() {
   const endedSubmit = response();
   await handleCodingSubmit({ ...request(linkedA, 'account-a'), headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '203.0.113.71' } } as never, endedSubmit as never, endedLink as never);
   assert.deepEqual([endedSubmit.statusCode, errorCode(endedSubmit.body)], [409, 'invalid_session'], `a verdict for an attempt that ended mid-submit is an ended link (${JSON.stringify(endedSubmit.body)})`);
-  console.log('Coding Learn link ended mid-submit passed: 409 invalid_session, not 500.');
+  const endedReveal = response();
+  await handleCodingReveal(request(linkedA, 'account-a') as never, endedReveal as never, endedLink as never);
+  assert.deepEqual([endedReveal.statusCode, errorCode(endedReveal.body)], [409, 'invalid_session'], `a reveal for an attempt that ended mid-request is an ended link (${JSON.stringify(endedReveal.body)})`);
+  assert.ok(!(endedReveal.body as { solution?: string }).solution, 'an ended link reveals nothing');
+  console.log('Coding Learn link ended mid-submit and mid-reveal passed: 409 invalid_session, not 500.');
 
   // #493: a Learn-linked DSA session is gated as the DSA level it belongs to.
   // DSA level 6 is Premium, so a guest and a free account are refused with

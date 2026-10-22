@@ -890,6 +890,9 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
     }));
     if (marked.error) {
       if (isRpcMissing(marked.error)) return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
+      // The level attempt ended after the link check: nothing was recorded
+      // and nothing is revealed, as for any ended link.
+      if (raisedEndedLearnAttempt(marked.error)) return learnAttemptEnded(res);
       return jsonError(res, 500, 'db_error', 'Could not record the reveal');
     }
     try { progress = await loadProgressRow(supabase, userId, task.id); } catch { /* the reveal itself succeeded */ }
