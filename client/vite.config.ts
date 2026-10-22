@@ -21,9 +21,31 @@ import { CODING_SECTION_TRACKS } from '../shared/coding-catalog';
 import { freeCodingCounts } from '../shared/tiers';
 import { addDays, qotdImagePath, qotdPath, qotdTrack, utcToday, QOTD_EPOCH } from '../shared/daily-question';
 
+import { LEARN_SECTIONS } from '../shared/learn-sections';
+import { pathInventory } from '../shared/learning-paths';
+import { FDE_PATH } from '../lib/learning-paths/content/fde';
+import { mergePath } from '../lib/learning-paths/types';
+import { SectionPreviewStatic } from './src/components/learn/SectionPreviewStatic';
+
 /** The English dictionary for the static pages, with the app's {name} slots. */
 const translate: Translate = (key, vars) => en[key].replace(/\{(\w+)\}/g, (slot, name: string) => (vars && name in vars ? String(vars[name]) : slot));
+const sectionBody = (id: string) => ({ t }: { t: Translate }) => {
+  const section = LEARN_SECTIONS.find(one => one.id === id)!;
+  const page = PUBLIC_PAGES.find(one => one.path === `/learn/${id}`)!;
+  return createElement(SectionPreviewStatic, {
+    name: t(page.titleKey).replace(' · devShark', ''), description: t(page.descriptionKey),
+    topics: section.topics.map(topic => ({ name: t(`category.${topic}` as TranslationKey), href: `/learn/${id}?topic=${encodeURIComponent(topic)}` })),
+    paths: section.paths.map(pathId => {
+      if (pathId !== FDE_PATH.id) throw new Error(`No public preview for path ${pathId}`);
+      const path = mergePath(FDE_PATH);
+      return { title: path.title, summary: path.summary, href: `/learn/${id}/path`, inventory: pathInventory(path) };
+    }),
+  });
+};
 const STATIC_PAGE_BODIES = {
+  '/learn/web-developer': sectionBody('web-developer'),
+  '/learn/software-engineer': sectionBody('software-engineer'),
+  '/learn/forward-deployed-engineer': sectionBody('forward-deployed-engineer'),
   '/premium': PremiumStaticArticle,
   '/premium/cancel': PremiumCancelStaticArticle,
   '/daily': DailyStaticArticle,
@@ -187,7 +209,7 @@ function productMetadata(env: Record<string, string>): Plugin {
       // the same public HTML that production serves.
       server.middlewares.use((req, _res, next) => {
         const [pathname, search] = (req.url || '').split('?');
-        if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname) || /^\/premium(?:\/cancel)?\/?$/.test(pathname)) {
+        if (/^\/topics\/[a-z0-9-]+\/?$/.test(pathname) || PUBLIC_PAGES.some(page => page.path === pathname.replace(/\/$/, ''))) {
           req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
         } else if (pathname === HIDDEN_CODING_PATH || pathname.startsWith(`${HIDDEN_CODING_PATH}/`)) {
           // vercel.json: the hidden track and everything under it.

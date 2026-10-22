@@ -1,0 +1,40 @@
+{
+  "kind": "b8-native-review",
+  "issue": "#504",
+  "reviewedAt": "2026-10-22",
+  "reviewedIds": [
+    "fde-v1-m08-l2",
+    "fde-v1-m08-l2-read",
+    "fde-v1-m08-review-checks",
+    "fde-v1-m08-q5",
+    "fde-v1-m08-q6",
+    "fde-v1-m08-q7",
+    "fde-v1-m08-q8",
+    "fde-v1-m08-q9",
+    "fde-v1-m08-q10",
+    "fde-v1-m11-deploy-l1",
+    "fde-v1-m11-deploy-l2",
+    "fde-v1-m11-deploy-l1-read",
+    "fde-v1-m11-deploy-l2-read",
+    "fde-v1-m11-deploy-checks",
+    "fde-v1-m11-deploy-q1",
+    "fde-v1-m11-deploy-q2",
+    "fde-v1-m11-deploy-q3",
+    "fde-v1-m11-deploy-q4",
+    "fde-v1-m11-deploy-q5",
+    "fde-v1-m11-deploy-q6",
+    "fde-v1-m11-deploy-release-gate"
+  ],
+  "revisedInPlace": [
+    "fde-v1-m08-l2",
+    "fde-v1-m08-l2-read"
+  ],
+  "uniqueCoverageAdded": 19,
+  "currentReviewFiles": [
+    "review-2026-10-15-n038.jsonl",
+    "review-2026-10-22-b8.jsonl"
+  ],
+  "history": "docs/audit/wip/native/history/review-2026-10-22-b8-before.json",
+  "proof": null,
+  "note": "Two stale M08 records revised in place and nineteen new M08/M11 items reviewed one by one by a model reviewer separate from the B8 author, in the same session. Scratch listing, grading and variant scripts ran outside the repository and are not committed; their results are quoted in each record's evidence. No independent or human approval is claimed."
+}
