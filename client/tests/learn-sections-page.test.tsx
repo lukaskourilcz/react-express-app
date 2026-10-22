@@ -207,6 +207,19 @@ describe('joining Software Engineer', () => {
     expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
   });
 
+  it('saves once when Add is clicked twice before it re-renders', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    await mountAt('/learn/software-engineer');
+    const add = await screen.findByRole('button', { name: 'Add Software Engineer to your plan' });
+    act(() => {
+      add.click();
+      add.click();
+    });
+    expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
+    expect(saves.calls).toHaveLength(1);
+  });
+
   it('reports a failed save with one Try again, which saves again', async () => {
     signIn({ devquiz_learning_preference_v1: FRONTEND });
     answer();

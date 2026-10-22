@@ -569,23 +569,32 @@ function Roadmap() {
   const fdeEntry = entryFor(pathCatalog.data, 'fde');
   const fdeBarred = isBarred(lockOf({ kind: 'learning-path', pathId: 'fde' }));
   const fdePath = useFdePathSteps();
+  // One join at a time. A ref, not only `join`: a second click can land
+  // before "saving" re-renders, and each saved the plan (and enrolled) again.
+  const joiningRef = useRef(false);
   const runJoin = async (id: LearnSectionId) => {
-    if (!user || !profile || join?.status === 'saving') return;
+    if (!user || !profile || join?.status === 'saving' || joiningRef.current) return;
+    joiningRef.current = true;
     const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
     const started = { section: id, status: 'saving' as const };
     const epoch = accountEpoch();
     setJoin(started);
-    const outcome = id === 'software-engineer'
-      ? await joinSoftwareEngineer(user.id, profile, queryClient)
-      : await joinFde({
-        userId: user.id,
-        profile,
-        entry: fdeEntry,
-        enrollment: enrollments.data?.enrollments.find((one) => one.pathId === 'fde'),
-        barred: fdeBarred,
-        queryClient,
-        skipEnroll: retryAfterSave,
-      });
+    let outcome: Awaited<ReturnType<typeof joinSoftwareEngineer>>;
+    try {
+      outcome = id === 'software-engineer'
+        ? await joinSoftwareEngineer(user.id, profile, queryClient)
+        : await joinFde({
+          userId: user.id,
+          profile,
+          entry: fdeEntry,
+          enrollment: enrollments.data?.enrollments.find((one) => one.pathId === 'fde'),
+          barred: fdeBarred,
+          queryClient,
+          skipEnroll: retryAfterSave,
+        });
+    } finally {
+      joiningRef.current = false;
+    }
     // The account changed during the save: its outcome is not this page's.
     if (accountEpoch() !== epoch) {
       setJoin((current) => (current === started ? null : current));
