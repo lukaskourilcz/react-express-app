@@ -23,7 +23,8 @@ import {
   isTopicInPlan,
   nextEligibleStep as nextFromGraph,
 } from '../../../shared/progression';
-import { missingProfileFields, type RequiredProfileField } from '../../../shared/learning-paths';
+import { missingProfileFields, type LearnerProfile, type RequiredProfileField } from '../../../shared/learning-paths';
+import { learnerSections, type LearnSectionId } from '../../../shared/learn-sections';
 
 export interface EligiblePlan {
   subject: string;
@@ -104,6 +105,24 @@ export function useEligibility(): {
   };
 }
 
+/** A join the account has accepted but the session has not read back yet:
+ * saveLearningPreference refreshes the session after the write, and a failed
+ * refresh still counts as saved. The Learn page plans with it until the
+ * profile on `user` holds it. FDE membership is the specialization, so it is
+ * a flag, not a section id. */
+export type PendingJoin = { sections: readonly LearnSectionId[]; fde: boolean };
+export const NO_PENDING: PendingJoin = { sections: [], fde: false };
+
+/** The account's profile with a pending join applied. */
+export function withPendingJoin(profile: LearnerProfile | null, pending: PendingJoin): LearnerProfile | null {
+  if (!profile || (pending.sections.length === 0 && !pending.fde)) return profile;
+  return {
+    ...profile,
+    sections: [...new Set([...(profile.sections ?? []), ...pending.sections])],
+    specialization: pending.fde ? 'fde' : profile.specialization,
+  };
+}
+
 /**
  * Whether a topic is part of the learner's plan, by the same rule the server
  * applies before it serves a level (403 not_in_plan otherwise) and read from
@@ -112,12 +131,30 @@ export function useEligibility(): {
  *
  * Levels already passed stay open outside the plan, so a surface that draws
  * them should keep a topic with passed levels visible for review.
+ *
+ * `pending` adds a join the session has not read back yet; pass a stable
+ * object (NO_PENDING, or a memoised one).
  */
-export function useInPlan(): (topic: string) => boolean {
+export function useInPlan(pending: PendingJoin = NO_PENDING): (topic: string) => boolean {
   const { user } = useAuth();
   const subject = getSubject();
   return useMemo(() => {
-    const profile = learnerProfileOf(user);
+    const profile = withPendingJoin(learnerProfileOf(user), pending);
     return (topic: string) => isTopicInPlan(profile, subject, topic);
-  }, [user, subject]);
+  }, [user, subject, pending]);
+}
+
+/** The learner's saved profile (with any pending join), whether a plan exists,
+ * and the Learn sections it belongs to. Without a plan `members` is empty: the
+ * page then shows a preview, decided by `hasPlan`, never by `members`. */
+export function useLearnerSections(pending: PendingJoin = NO_PENDING): {
+  profile: LearnerProfile | null;
+  hasPlan: boolean;
+  members: LearnSectionId[];
+} {
+  const { user } = useAuth();
+  return useMemo(() => {
+    const profile = withPendingJoin(learnerProfileOf(user), pending);
+    return { profile, hasPlan: profile !== null, members: learnerSections(profile) };
+  }, [user, pending]);
 }

@@ -17,8 +17,12 @@
 //   * a learner with submits already grading on an activity, or on enough
 //     of them, is told the grader is busy; another activity is not held up
 //   * a submit is limited per activity, beneath a ceiling per learner
+//   * a started check carries its scenario in the activity summary only, with
+//     its questions in authored order, and every off-loop decision in the
+//     handlers and the shared arithmetic goes through isOffLoopModule
 
-import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
+import { readFileSync } from 'node:fs';
+import { LEARNING_PATHS, activitySummary } from '../lib/learning-paths/catalog';
 import {
   handleActivityStart,
   handleActivitySubmit,
@@ -33,11 +37,11 @@ import { requestMemo, withRequestContext } from '../lib/http';
 import { createLearningPathSession as encodeLearningPathSession } from '../lib/learning-paths/session';
 import { enterInFlight, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, gradingItem } from '../lib/coding/grader-capacity';
-import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
+import { LEARNER_PROFILE_META_KEY, isOffLoopModule } from '../shared/learning-paths';
 import { MERCH_ENABLED } from '../shared/rewards';
 import { diagnosticEvidence } from '../lib/learning-paths/competencies';
 import { gradeCheck } from '../lib/learning-paths/grade';
-import type { SubmitActivityResponse } from '../shared/learning-path-api';
+import type { StartActivityResponse, SubmitActivityResponse } from '../shared/learning-path-api';
 
 type Fail = (message: string) => void;
 
@@ -234,6 +238,62 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a scenario reaches the attempt through the activity summary ─── */
+    // No published check carries a scenario yet, so one FDE exercise check
+    // gains one for this case and loses it afterwards. The start response must
+    // carry it in `activity` (activitySummary, the field the workspace reads),
+    // keep the questions in authored order so the scenario reads as one case,
+    // and add no duplicate of it to the check payload.
+    {
+      const fde = LEARNING_PATHS.find((path) => path.id === 'fde')!;
+      const check = fde.modules.filter((one) => !isOffLoopModule(one)).flatMap((one) => one.activities)
+        .find((activity) => activity.kind === 'check' && activity.purpose === 'exercise' && (activity.questions?.length ?? 0) >= 3)!;
+      const id = `FDESTART${stamp}`.padEnd(20, 'a');
+      const row = { ...enrollmentRow('active'), enrollment_id: id, path_id: 'fde', curriculum_version: fde.version };
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      const scenarioBefore = Object.prototype.hasOwnProperty.call(check, 'scenario');
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        check.scenario = 'A support lead says the weekly export is wrong. Answer the questions below in order.';
+        const req = request('POST', `start-scenario-${stamp}`, { user_id: learner, enrollmentId: id, activityId: check.id });
+        const res = response();
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${learner}`, async () => 'premium');
+          await handleActivityStart(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: row },
+            lists: { learning_path_progress: [] },
+            rpc: (name) => name === 'open_learning_path_attempt'
+              ? { data: { ok: true, expiresAt: new Date(Date.now() + 3_600_000).toISOString() } }
+              : (fail(`starting a check called unexpected RPC ${name}`), {}),
+          }));
+        });
+        const body = res.body as StartActivityResponse;
+        if (res.statusCode !== 200) fail(`starting a scenario check answered ${res.statusCode} ${code(res)}`);
+        else {
+          if (JSON.stringify(body.activity) !== JSON.stringify(activitySummary(check))) fail('the start response activity is not the public activity summary');
+          if (body.activity.scenario !== check.scenario) fail('the scenario did not reach the attempt');
+          if (JSON.stringify(body.check?.questions.map((question) => question.id)) !== JSON.stringify(check.questions!.map((question) => question.id))) {
+            fail('a started check changed the authored question order a scenario relies on');
+          }
+          if (body.check && 'scenario' in body.check) fail('the check payload repeats the scenario beside the activity summary');
+        }
+      } finally {
+        if (!scenarioBefore) delete check.scenario;
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
+    /* ── every off-loop decision goes through one helper ──────────────── */
+    // A shelf module is off the loop even if its optional flag slipped. The
+    // validator refuses that, but completion, the next action and the reward's
+    // module count must not depend on the validator alone.
+    for (const file of ['lib/learning-paths/handlers.ts', 'shared/learning-paths.ts']) {
+      if (/\bmodule\.optional\b/.test(readFileSync(file, 'utf8'))) {
+        fail(`${file} reads module.optional directly; use isOffLoopModule so a shelf module is off the loop too`);
+      }
+    }
+
     /* ── a burst is refused before it reaches the grader ──────────────── */
     // The coding section's grader threads take path code too. One learner may
     // have GRADING_PER_TASK submits grading at once on one activity (C1-1;
@@ -296,7 +356,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     // it again with every field empty. The plan check reads Premium here.
     {
       const fde = LEARNING_PATHS.find((path) => path.id === 'fde')!;
-      const module = fde.modules.find((one) => !one.optional
+      const module = fde.modules.find((one) => !isOffLoopModule(one)
         && one.requires.some((requirement) => one.activities.find((activity) => activity.id === requirement.activityId)?.kind === 'artifact'))!;
       const writeUp = module.activities.find((activity) => activity.kind === 'artifact' && module.requires.some((one) => one.activityId === activity.id))!;
       const fdeEnrollment = `FDEENROLL${stamp}`.padEnd(20, 'a');

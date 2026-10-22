@@ -37,7 +37,7 @@ import {
   type StudyTime,
 } from '../../../shared/learning-paths';
 import type { Track } from './tracks';
-import type { LearnSectionId } from '../../../shared/learn-sections';
+import type { LearnSectionId } from '../../../shared/learn-section-ids';
 
 export type { BaseTrack, LearnerProfile, LearningPreference, RequiredProfileField, RoleSpecializationId };
 

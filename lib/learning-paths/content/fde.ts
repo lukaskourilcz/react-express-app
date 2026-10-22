@@ -22,6 +22,7 @@ import { FDE_M02 } from './fde/m02';
 import { FDE_M03 } from './fde/m03';
 import { FDE_M04 } from './fde/m04';
 import { FDE_M05 } from './fde/m05';
+import { FDE_M05_DATA } from './fde/m05-data';
 import { FDE_M06 } from './fde/m06';
 import { FDE_M07 } from './fde/m07';
 import { FDE_M08 } from './fde/m08';
@@ -57,6 +58,7 @@ export const FDE_PATH: PathSource = {
   competencies: [
     { id: 'discovery', title: 'Customer discovery', summary: 'Turn a vague request into a scoped problem with a baseline and acceptance conditions.' },
     { id: 'integration', title: 'Integration and data', summary: 'Consume an external system whose data is incomplete, duplicated, paginated and rate limited.' },
+    { id: 'data-plumbing', title: 'Data plumbing', summary: 'Read the SQL that moves customer data, and load legacy exports and APIs so every row is counted and a replay in either order lands the same result.' },
     { id: 'boundaries', title: 'Enterprise boundaries', summary: 'Keep tenants, identities, permissions and data lifecycles apart under pressure.' },
     { id: 'ai-architecture', title: 'AI system choices', summary: 'Choose between deterministic code, a single model call, a workflow and an agent, under stated constraints.' },
     { id: 'retrieval', title: 'Retrieval and grounding', summary: 'Ground an answer in retrieved material, enforce access filters and refuse when the evidence is not there.' },
@@ -74,6 +76,7 @@ export const FDE_PATH: PathSource = {
     FDE_M01,
     FDE_M02,
     FDE_M03,
+    FDE_M05_DATA,
     FDE_M04,
     FDE_M05,
     FDE_M06,

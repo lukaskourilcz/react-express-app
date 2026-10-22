@@ -35,6 +35,8 @@ describe('the tab title', () => {
   it.each([
     ['/quiz', 'Quiz · devShark'],
     ['/learn', 'Learn · devShark'],
+    ['/learn/software-engineer', 'Learn · devShark'],
+    ['/learn/big-o', 'Big O introduction'],
     ['/curation', 'Page not found · devShark'],
     ['/roadmap/specializations/fde', 'Forward Deployed Engineer · devShark'],
     ['/roadmap/specializations/fde/m03', 'Forward Deployed Engineer · devShark'],

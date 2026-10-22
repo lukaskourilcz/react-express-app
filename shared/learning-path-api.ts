@@ -10,7 +10,7 @@ import type { CallTest, TypeTest } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
 import type { ComplexityGuidance, ComplexityReport } from './coding-complexity';
-import type { LearnSectionId } from './learn-sections';
+import type { LearnSectionId } from './learn-section-ids';
 import type {
   ActivityPurpose,
   ActivitySummary,
@@ -262,6 +262,9 @@ export interface StartActivityResponse {
    * any answer key. Opaque to the browser. */
   session: string;
   expiresAt: string;
+  /** The activity's public summary. A check's `scenario` and a code
+   * activity's `fixtureNote` reach the workspace from here, as `domains` and
+   * `rubricDimensions` do, so neither payload below repeats them. */
   activity: ActivitySummary;
   purpose: ActivityPurpose;
   lesson?: LessonBody;

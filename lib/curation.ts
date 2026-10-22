@@ -124,7 +124,7 @@ export function taskHash(task: CodingTask, solution: CodingSolution | undefined)
     skeleton: task.skeleton ?? null,
     hints: task.hints,
     approach: task.approach ?? null,
-    tests: task.tests?.map((t) => ({ call: t.call, expected: t.expected, label: t.label ?? null, edge: t.edge ?? false, async: t.async ?? false })) ?? null,
+    tests: task.tests?.map((t) => ({ call: t.call, expected: t.expected, label: t.label ?? null, edge: t.edge ?? false, async: t.async ?? false, ...(t.shown ? { shown: t.shown } : {}) })) ?? null,
     typeTests: task.typeTests?.map((t) => ({ code: t.code, label: t.label ?? null, rejects: t.rejects ?? false })) ?? null,
     suite: task.suite ?? null,
     checklist: task.checklist ?? null,
@@ -159,7 +159,8 @@ export function taskHash(task: CodingTask, solution: CodingSolution | undefined)
     pitfall: task.pitfall ?? null,
     solution: solution ? {
       solution: solution.solution, junior: solution.junior ?? null, senior: solution.senior ?? null,
-      hiddenTests: solution.hiddenTests ?? null, hiddenTypeTests: solution.hiddenTypeTests ?? null,
+      // A check's `criterion` tag is contract metadata, not content.
+      hiddenTests: solution.hiddenTests?.map(({ criterion: _criterion, ...test }) => test) ?? null, hiddenTypeTests: solution.hiddenTypeTests ?? null,
       hiddenSuite: solution.hiddenSuite ?? null,
     } : null,
     approaches: approachesFor(task.id).map(approach => ({

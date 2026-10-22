@@ -52,6 +52,8 @@ export function routeTitle(pathname: string, t: Translate): string {
   if (pathname === '/') return CURRENT_PRODUCT.title;
   const titleKey = ROUTE_TITLE_KEYS[pathname];
   if (titleKey) return t(titleKey);
+  // A Learn section (/learn/web-developer, …) carries the Learn title.
+  if (/^\/learn\/[^/]+\/?$/.test(pathname)) return t('title.learn');
   const path = PATH_TITLE_NAMES.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   if (path) return t('title.path', { name: t(path[1]) });
   if (pathname.startsWith('/play/')) return t('title.playMatch');
