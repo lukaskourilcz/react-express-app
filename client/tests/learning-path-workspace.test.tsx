@@ -449,6 +449,28 @@ describe('the draft autosave', () => {
     expect(localStorage.getItem('devshark:path:kept:v1')).toBeNull();
   });
 
+  it('writes and sends nothing for the account a chosen sign-out ended, even when a save was in flight', async () => {
+    const { clearAccountData } = await import('../src/lib/accountData');
+    const key = `devshark:path:draft:${ENROLLMENT}:${A}`;
+    calls.draftDelay = 500;
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await type('saved before');
+    // The debounce has sent it; the save is still on its way.
+    await wait(950);
+    expect(calls.inFlight).toBe(1);
+    await type('typed as they signed out');
+    expect(clearAccountData()).toBe(false);
+    expect(localStorage.getItem(key)).toBeNull();
+    // The save in flight lands after the sign-out: nothing of that account
+    // comes back into this browser, and nothing more goes out for it.
+    await wait(700);
+    expect(localStorage.getItem(key)).toBeNull();
+    await wait(800);
+    expect(localStorage.getItem(key)).toBeNull();
+    expect(calls.drafts.map((one) => one.code)).toEqual(['saved before']);
+  }, 15_000);
+
   it('asks before Reset replaces the learner\'s code, and saves nothing over the draft until they confirm', async () => {
     await mount(A);
     await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));

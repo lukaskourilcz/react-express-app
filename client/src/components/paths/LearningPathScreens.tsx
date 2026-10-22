@@ -55,6 +55,7 @@ import {
   usePathProgress,
 } from '../../lib/learningPaths';
 import { forgetLocalDraft, keepDraftLocally, localDraftOver, withChangedEnrollments } from '../../lib/learningPathWorkspace';
+import { accountEpoch } from '../../lib/accountData';
 import type {
   EnrollmentListResponse,
   PathCatalogEntry,
@@ -569,14 +570,20 @@ interface Attempt {
  * one the server returned last, so a keystroke during a save never sends a
  * revision the server has already moved past; `queued` is the newest content
  * not sent yet. A save that lands after the learner moved on changes nothing
- * on screen, because the next activity has a channel of its own. */
+ * on screen, because the next activity has a channel of its own. `epoch` is
+ * the account it was opened under (lib/accountData.ts accountEpoch): once that
+ * account's data is forgotten or kept, the channel writes and sends nothing,
+ * so a save that lands after a sign-out puts no draft back into the browser. */
 interface DraftChannel {
   enrollmentId: string;
   activityId: string;
   revision: number;
   inFlight: boolean;
   queued: PathDraft['content'] | null;
+  epoch: number;
 }
+
+const channelGone = (channel: DraftChannel) => channel.epoch !== accountEpoch();
 
 /** Refusals that mean the attempt cannot take this submission. */
 const ATTEMPT_USED_UP = new Set(['idempotency_conflict', 'session_expired', 'attempt_expired']);
@@ -661,6 +668,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           revision: started.draft?.revision ?? 0,
           inFlight: false,
           queued: kept?.content ?? null,
+          epoch: accountEpoch(),
         };
         setOpen(started);
         setDraft(kept ?? started.draft);
@@ -690,7 +698,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   }, [activityId, enrollmentId, curriculumVersion, deal, pathId]);
 
   const pushDraft = useCallback(async (channel: DraftChannel | null) => {
-    if (!channel || channel.inFlight || !channel.queued) return;
+    if (!channel || channel.inFlight || !channel.queued || channelGone(channel)) return;
     const live = () => drafts.current === channel;
     channel.inFlight = true;
     try {
@@ -712,6 +720,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             expectedRevision: channel.revision,
             content,
           });
+          if (channelGone(channel)) return;
           channel.revision = saved.draft.revision;
           if (channel.queued) keepDraftLocally(channel.enrollmentId, channel.activityId, channel.revision, channel.queued);
           else forgetLocalDraft(channel.enrollmentId, channel.activityId);
@@ -720,6 +729,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             if (!channel.queued) setDraftStatus('saved');
           }
         } catch (caught) {
+          if (channelGone(channel)) return;
           // The newest unsaved content waits for the next keystroke or the
           // connection coming back.
           channel.queued ??= content;
@@ -735,7 +745,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const saveDraft = useCallback(
     (forActivity: string, content: PathDraft['content']) => {
       const channel = [drafts.current, leftDrafts.current].find((one) => one?.activityId === forActivity);
-      if (!channel) return;
+      if (!channel || channelGone(channel)) return;
       channel.queued = content;
       keepDraftLocally(channel.enrollmentId, channel.activityId, channel.revision, content);
       void pushDraft(channel);
