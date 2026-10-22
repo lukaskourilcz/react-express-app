@@ -1851,56 +1851,6 @@ rows stay, and `delete_user_data` still erases them (SQL test 200).
   Next (and ← →) move through the deck; "Got it" takes the card out with an
   Undo. Empty, signed-out, loading and error states say how to get cards.
 
-## Learning and Challenge updates, 13 October 2026
-
-Coding passes use the shared 25 XP base (15 only for a reliably identified
-solution above its applicable authored time-complexity target). Unknown
-complexity is omitted, with no penalty. Cooldowns, reveals, unverified tasks
-and guest rules still determine the actual award. `/big-o` explains input
-size and common growth rates and links to DSA levels 1–2, available free
-without Skill Check. The E3 Foundations update below opens the first part under ordinary progression.
-
-Learn creates a parent attempt before exposing a coding link. The new tab
-takes its sealed session from a fragment and removes it from the address;
-the server validates owner, task binding, open state and expiry on every
-operation. Missing coding work keeps Learn pending. Focus/status checks read
-the server's state; completion checks it again under the parent's row lock
-(migration 062). Fresh reviewed questions restore ten depleted levels while
-keeping all owner-hidden question overrides in place. Skill Check review
-is returned after each round is accepted and retains the displayed shuffle.
-
-Every Biggest Shark Challenge question allows 90 seconds. Topics are selected
-before starting and sealed in the run; refills cannot change them. Completed
-positive scores save automatically, for signed-in learners and guests, under
-one run ID. Zero scores create neither a score nor a guest name. Historical
-results with no topic evidence remain without it. Known selections show a
-count with the topics in a tooltip, or a gold fin for all available topics.
-
-Migration 063 assigns one global decimal ordinal to each existing/new handle
-and each positively completed guest run. The counter is transactional; numbers
-remain stable across renames and are never recycled. New generated names are
-camelCase plus the ordinal, and API ordinals are strings. The original unchanged
-ten seed handles are converted; custom choices are preserved. Preview rolls
-allocate nothing. The existing 30-day rename cooldown still applies.
-
-Migration 064 makes leaderboard identity mandatory, defaulting to the shark
-nickname. The independent `leaderboard-name` profile operation allows an
-account name obtained from the verified provider profile or confirmed email's
-local part, never a full email or a client-provided name. It changes neither
-the name nor the photo shared with friends. Existing public-photo consent is
-kept; the old visibility flag can no longer hide a leaderboard name.
-
-Verified native-path code now records acceptance and the shared coding award
-in one transaction (migration 065). A reused task keeps its ordinary task ID;
-any other path exercise has a stable scoped ID
-(`lib/learning-paths/coding-task-id.ts`). Until E5 (#496) retired the DSA
-path, its exercises recorded under the `alg-dsa-*` Coding tasks E2 turned them
-into; those tasks and their records stay. This prevents paying the
-same task again just because it was reached on another screen. Type-only,
-unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
-The accepted path response stores the actual award and the same complexity
-analysis used to choose it, so retries replay it without paying again.
-
 ## Marketing source export
 
 `GET /api/quiz/questions?resource=marketing-source` (`lib/marketing/source.ts`)
