@@ -818,6 +818,20 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
       isCorrect, explanation: servedNow.get(item.questionId)!.explanation });
   }
 
+  const history = [...state.history, ...roundOutcomes];
+  const graded = state.items.length - voided;
+  const nextDifficulty = graded > 0 ? stepDifficulty(state.difficulty, roundCorrect, graded) : state.difficulty;
+  // The run ends when the budget is met. A void leaves the budget short, so
+  // one more round is served (bounded: a round always asks at least one
+  // question, and the budget is twenty).
+  const finished = history.length >= PLACEMENT_TOTAL;
+  // The last round names the account its receipt is for. That sign-in is
+  // checked before the round is claimed: an expired or unreadable token is
+  // refused with nothing spent, so the same round can be sent again once the
+  // session is refreshed instead of answering 409 for a round never graded.
+  const userId = finished ? await optionalAuthSub(req, res) : null;
+  if (userId === undefined) return;
+
   // Each round is graded once. The token is sealed but not single-use, and
   // every response reports how the round went (the next difficulty, the
   // round's score, the final total), so a round submitted again with other
@@ -829,17 +843,7 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 409, 'placement_round_used', 'This placement round was already submitted. Start the placement again.');
   }
 
-  const history = [...state.history, ...roundOutcomes];
-  const graded = state.items.length - voided;
-  const nextDifficulty = graded > 0 ? stepDifficulty(state.difficulty, roundCorrect, graded) : state.difficulty;
-  // The run ends when the budget is met. A void leaves the budget short, so
-  // one more round is served (bounded: a round always asks at least one
-  // question, and the budget is twenty).
-  const finished = history.length >= PLACEMENT_TOTAL;
-
   if (finished) {
-    const userId = await optionalAuthSub(req, res);
-    if (userId === undefined) return;
     const correct = history.filter((h) => h.isCorrect).length;
     const total = history.length;
     const breakdown: Record<string, { correct: number; total: number }> = {};

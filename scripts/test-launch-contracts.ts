@@ -503,6 +503,23 @@ async function auditGateContracts() {
   assert.equal((replayRes.body as { error: { code: string } }).error.code, 'placement_round_used');
   assert.equal(JSON.stringify(replayRes.body).includes('lastRoundCorrect'), false, 'the refusal reports no score');
   assert.equal(JSON.stringify(replayRes.body).includes('correctAnswer'), false, 'a replay never receives review keys');
+  // The last round names the account its receipt is for. A sign-in refused on
+  // that round must not spend it: the same round, sent again with a working
+  // sign-in, is graded and mints the receipt instead of answering 409.
+  const finalPool = await getEffectiveQuestions('webdev');
+  const finalToken = encodePlacementRun({
+    subject: 'webdev', attemptId: 'placement-final-auth-contract-1234', round: 4, difficulty: 3,
+    history: finalPool.slice(1, 20).map((q) => ({ questionId: q.id, category: q.category, isCorrect: true })),
+    items: [{ questionId: finalPool[0].id, correctAnswer: 0, category: finalPool[0].category }],
+  });
+  const refusedFinal = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: { authorization: 'Bearer expired-contract-token' }, query: { resource: 'placement' }, body: { placementToken: finalToken, answers: { [finalPool[0].id]: 0 } } } as never, refusedFinal as never);
+  assert.equal(refusedFinal.statusCode, 401, `a broken sign-in on the last round is refused (${JSON.stringify(refusedFinal.body)})`);
+  const retriedFinal = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: { authorization: 'Bearer expired-contract-token' }, query: { resource: 'placement' }, body: { placementToken: finalToken, answers: { [finalPool[0].id]: 0 }, user_id: 'placement-final-contract-user' } } as never, retriedFinal as never);
+  assert.equal(retriedFinal.statusCode, 200, `the refused last round is still unspent (${JSON.stringify(retriedFinal.body)})`);
+  assert.equal((retriedFinal.body as { done?: boolean }).done, true);
+  assert.equal(typeof (retriedFinal.body as { resultReceipt?: unknown }).resultReceipt, 'string', 'and mints the receipt for the account');
 
   // A Learn session lives as long as the attempt the answer routine opens for
   // it (two hours), so a level whose coding tasks run past an hour can still
