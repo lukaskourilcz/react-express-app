@@ -24,7 +24,7 @@ import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
-import { isOffLoopModule, moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
+import { isOffLoopModule, moduleComplete, nextActivityId, pathGuidedComplete, pathInventory, type EvidenceState } from '../shared/learning-paths';
 import { PATH_LIMITS } from '../shared/learning-path-api';
 import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
 import { canonicalCodingTaskId } from '../lib/learning-paths/coding-task-id';
@@ -425,6 +425,14 @@ async function main() {
     if (draftable > PATH_LIMITS.draftsPerEnrollment) {
       fail(`${where}: ${draftable} activities keep drafts, but an enrollment holds at most ${PATH_LIMITS.draftsPerEnrollment}`);
     }
+    // The inventory leaves optional and shelf modules out, but their code and
+    // artifacts autosave into the same enrollment, so the cap must hold for
+    // every draftable activity in the manifest as well (B10's interview shelf).
+    const everyDraftable = path.modules.flatMap((module) => module.activities)
+      .filter((activity) => activity.kind === 'code' || activity.kind === 'artifact').length;
+    if (everyDraftable > PATH_LIMITS.draftsPerEnrollment) {
+      fail(`${where}: ${everyDraftable} activities across the loop, capstone and optional modules keep drafts, but an enrollment holds at most ${PATH_LIMITS.draftsPerEnrollment}`);
+    }
 
     /* ── the database completes a module by moduleComplete's rule ──────── */
     // accept_learning_path_result (migration 054) decides completion from the
@@ -533,6 +541,23 @@ async function main() {
       }
       // Reading changes no completion arithmetic: lessons are never required.
       if (first && moduleComplete(first, states)) fail(`${where}: reading the lessons completed ${first.id}`);
+    }
+
+    /* ── off-loop modules are never the next action nor a gate ─────────── */
+    // Follow the next action through the whole published path, satisfying
+    // each one. It must never name an activity of an optional or shelf module
+    // (B10's interview shelf), and finishing the loop alone completes the path.
+    {
+      const offLoop = new Set(manifest.modules.filter(isOffLoopModule).flatMap((module) => module.activities.map((activity) => activity.id)));
+      const kindOf = new Map(manifest.modules.flatMap((module) => module.activities.map((activity) => [activity.id, activity.verification] as const)));
+      const states = new Map<string, EvidenceState>();
+      for (let step = 0, next = nextActivityId(manifest, states); next !== null; step += 1, next = nextActivityId(manifest, states)) {
+        if (offLoop.has(next)) { fail(`${where}: the next action ${next} belongs to an optional or shelf module`); break; }
+        if (step > kindOf.size) { fail(`${where}: the next action does not converge (stuck on ${next})`); break; }
+        states.set(next, kindOf.get(next) === 'machine_verified' ? 'verified_pass' : 'self_reviewed');
+      }
+      if (!pathGuidedComplete(manifest, states)) fail(`${where}: following every next action did not complete the guided path`);
+      if ([...states.keys()].some((id) => offLoop.has(id))) fail(`${where}: guided completion needed an optional or shelf activity`);
     }
 
     /* ── 3. every reference solution passes its own assertions ─────────── */
