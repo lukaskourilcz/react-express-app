@@ -60936,7 +60936,8 @@
    "evidence": [
     "E3 source: old:7:4; plan section 12.2 authorises the DSA-only re-sequencing.",
     "Read current stem, all options, key, hint and explanation for rm-dsa-54; current key: \"a\"",
-    "The FIFO trace returns the earliest queued value; the notation is pseudocode rather than executable JavaScript."
+    "The FIFO trace returns the earliest queued value; the notation is pseudocode rather than executable JavaScript.",
+    "Final format reading: the enqueue/dequeue fence is pseudocode, with explicit trace metadata; it is not presented as executable JavaScript. Metadata does not change content-hash:v1."
    ],
    "cs": null,
    "verification": {
