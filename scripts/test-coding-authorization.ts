@@ -131,6 +131,24 @@ async function main() {
   const own = await open('account-a');
   assert.equal(own.draft, 'const double = (ns) => ns;');
   assert.equal(own.draftUpdatedAt, '2026-10-09T10:00:00.000Z', 'the draft comes with the time it was saved');
+  // The cleared Learn levels open JavaScript tier 3. A roadmap row that cannot
+  // be read is an error, not "no levels cleared": that answered 200 with the
+  // task locked and no session for a learner who had opened it.
+  {
+    const unreadable = {
+      from: (table: string) => {
+        const chain = {
+          select: () => chain, eq: () => chain,
+          maybeSingle: async () => (table === 'roadmap_progress' ? { data: null, error: { code: '57014', message: 'statement timeout' } } : { data: null, error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+        };
+        return chain;
+      },
+    };
+    const out = response();
+    await handleCodingTask({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: 'js-double-numbers', user_id: 'account-a' } } as never, out as never, unreadable as never);
+    assert.deepEqual([out.statusCode, errorCode(out.body)], [500, 'db_error'], `an unreadable roadmap row is not read as no cleared levels (${JSON.stringify(out.body)})`);
+  }
   const other = await open('account-b');
   assert.equal(other.draft, null);
   assert.equal(other.draftUpdatedAt, null, 'no draft, no time');

@@ -111,10 +111,15 @@ async function loadProgressRow(supabase: SupabaseClient, userId: string, taskId:
 }
 
 /** Highest contiguous cleared `javascript` Learn level, from the roadmap blob.
- * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`). */
+ * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`).
+ * Throws when the row cannot be read, as a timeout already did: read as 0, a
+ * failed read locked tier 3 for a learner who had opened it, and the task
+ * page then sealed no session for it. A caller for which fewer cleared levels
+ * only narrows what it offers catches it. */
 export async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data, error } = await withTimeout(supabase.from('roadmap_progress').select('data').eq('user_id', userId).maybeSingle());
-  if (error || !data?.data) return 0;
+  if (error) throw new Error('db_error');
+  if (!data?.data) return 0;
   const levels = ((data.data as Record<string, { levels?: Record<string, { passed?: boolean }> }>).javascript?.levels) ?? {};
   let cleared = 0;
   while (levels[String(cleared + 1)]?.passed === true) cleared++;

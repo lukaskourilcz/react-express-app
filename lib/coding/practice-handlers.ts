@@ -276,7 +276,7 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   // the Learn levels that open JavaScript tier 3 included. A plan that cannot
   // be read suggests from the free set, which only narrows.
   const [passed, cleared, plan] = await Promise.all([
-    passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId), resolveTier(userId).catch((): Tier => 'free'),
+    passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch((): Tier => 'free'),
   ]);
   const next = nextAfterSkip(task.id, passed, plan, cleared);
 
@@ -472,7 +472,8 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
     // The plan, the passed tasks and the cleared Learn levels are read
     // together; none of them needs another.
     const [passed, cleared, plan] = await Promise.all([
-      passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId), resolveTier(userId).catch(() => null),
+      // Unread Learn levels count as none, which only narrows the run.
+      passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch(() => null),
     ]);
     if (plan === null) return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
     const due = new Set<string>();
