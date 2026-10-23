@@ -179,6 +179,10 @@ export const RATE_LIMITS = {
   codingSubmitAddress: { key: 'coding_submit_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
   githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
   githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
+  // Choosing the garden's repository reads every page of the installation's
+  // repositories from GitHub (up to ten calls), so a script could spend the
+  // installation's GitHub budget through it. A learner picks once or twice.
+  githubRepo: { key: 'github_repo', capacity: 10, refillPerSecond: 10 / 600 },
   // Learning paths: starting an activity is cheap, submitting one runs the
   // sandbox, and a draft autosave fires while the learner types. These four
   // are keyed by the verified account (`user:<id>`), because a class works
@@ -225,6 +229,7 @@ export const RATE_LIMITS = {
   // finish, so five an hour); these hold a class connecting behind one NAT.
   githubConnectAddress: { key: 'github_connect_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
   githubSyncAddress: { key: 'github_sync_address', capacity: SHARED_NETWORK_SEATS * 6, refillPerSecond: (SHARED_NETWORK_SEATS * 6) / 3600 },
+  githubRepoAddress: { key: 'github_repo_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();

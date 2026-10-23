@@ -411,6 +411,7 @@ async function main() {
   const cases = [
     { op: 'github-connect-start', per: RATE_LIMITS.githubConnect, net: 1 },
     { op: 'github-sync', per: RATE_LIMITS.githubSync, net: 2 },
+    { op: 'github-repo', per: RATE_LIMITS.githubRepo, net: 3 },
   ];
   // The development auth fallback logs a warning on every call; a few hundred
   // of them would bury the report.

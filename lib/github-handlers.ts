@@ -183,6 +183,7 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     }
 
     if (op === 'github-repo') {
+      if (!(await withinLimits(req, res, RATE_LIMITS.githubRepoAddress, RATE_LIMITS.githubRepo, userId))) return;
       const body = (req.body || {}) as { repoFullName?: unknown };
       if (typeof body.repoFullName !== 'string' || !/^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/.test(body.repoFullName)) return jsonError(res, 400, 'bad_request', 'repoFullName is required');
       const row = await readConnection(supabase, userId);
