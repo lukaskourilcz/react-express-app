@@ -190,5 +190,8 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
   },
 };
 
-export const puzzleFor = (taskId: string): AuthoredPuzzle | undefined => PUZZLES[taskId];
+// Own keys only: PUZZLES is a plain object, so PUZZLES['constructor'] would
+// answer Object's constructor as if it were an authored puzzle.
+export const puzzleFor = (taskId: string): AuthoredPuzzle | undefined =>
+  Object.hasOwn(PUZZLES, taskId) ? PUZZLES[taskId] : undefined;
 export const puzzleCoverage = (): string[] => Object.keys(PUZZLES);

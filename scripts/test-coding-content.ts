@@ -1243,6 +1243,9 @@ async function main() {
   const puzzlesStarted = Date.now();
   let puzzleOrders = 0;
   assert.ok(puzzleIds.length > 0, 'the puzzle manifest must cover something');
+  for (const inherited of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    assert.equal(puzzleFor(inherited), undefined, `puzzleFor(${inherited}) must not answer an Object prototype member`);
+  }
   for (const id of puzzleIds) {
     const task = CODING_TASKS.find((one) => one.id === id);
     assert.ok(task, `puzzle ${id} must name a real task`);
