@@ -142,7 +142,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   if (!isAuthenticated) {
     return (
       <StatePanel level={heading} icon={<BookmarkIcon size={22} />} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')}>
-        <Button variant="primary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+        <Button variant="primary" label={t('collection.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
       </StatePanel>
     );
   }

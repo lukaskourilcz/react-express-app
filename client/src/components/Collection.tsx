@@ -17,6 +17,7 @@ import LoadingScreen from './LoadingScreen';
 // lazy deck drew the page first, then a loader in its body, then the cards.
 import Flashcards from './Flashcards';
 import { PageHeader } from './ui/PageHeader';
+import { StatePanel } from './ui/StatePanel';
 import '../coding/Coding.css';
 
 function SavedChallenges() {
@@ -27,7 +28,11 @@ function SavedChallenges() {
   // While the session is restored the learner is not known to be signed out:
   // a sign-in prompt here flashed before the saved list, as the deck's did not.
   if (authLoading && !isAuthenticated) return <LoadingScreen label={t('common.loading')} />;
-  if (!isAuthenticated) return <div className="cd-note"><p>{t('coding.signInHint')}</p><Button variant="secondary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} /></div>;
+  // The same gate as the Shark Cards tab: the shared StatePanel under the
+  // page header, with one primary (social-account-16).
+  if (!isAuthenticated) return <StatePanel level={2} title={t('collection.signInTitle')} body={t('collection.signInBody')}>
+    <Button variant="primary" label={t('collection.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+  </StatePanel>;
   if (query.isPending) return <LoadingScreen label={t('common.loading')} />;
   if (query.isError) return <div role="alert"><p>{t('coding.saved.loadFailed')}</p><Button variant="secondary" label={t('coding.retry')} onClick={() => void query.refetch()} /></div>;
   return <section aria-label={t('collection.challenges')}>
