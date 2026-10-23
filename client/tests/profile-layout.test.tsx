@@ -99,7 +99,7 @@ describe('the Profile identity banner (social-account-08)', () => {
 });
 
 describe('the Profile columns (social-account-03)', () => {
-  it('puts the learning cards on the left and the name and account on the right', async () => {
+  it('puts the learning cards on the left and the advisor, name and account on the right', async () => {
     const { container } = await mountProfile();
     const learning = container.querySelector('[data-column="learning"]') as HTMLElement;
     const account = container.querySelector('[data-column="account"]') as HTMLElement;
@@ -108,13 +108,15 @@ describe('the Profile columns (social-account-03)', () => {
     // Both columns are cells of the one grid.
     expect(learning.parentElement).toBe(account.parentElement);
     expect(await within(learning).findByRole('heading', { name: 'Career level' })).toBeInTheDocument();
-    expect(await within(learning).findByRole('heading', { name: 'Study advisor' })).toBeInTheDocument();
+    expect(await within(learning).findByRole('heading', { name: 'Track and sections' })).toBeInTheDocument();
     expect(await within(learning).findByRole('heading', { name: 'GitHub garden' })).toBeInTheDocument();
+    // The advisor opens the right column, so the two columns end level at
+    // 1280 (the right one ended 411px short with the advisor on the left).
+    expect(await within(account).findByRole('heading', { name: 'Study advisor' })).toBeInTheDocument();
     expect(await within(account).findByRole('heading', { name: 'Your name' })).toBeInTheDocument();
     expect(within(account).getByRole('heading', { name: 'Account' })).toBeInTheDocument();
-    // The account column holds only the name panel and the account card.
     expect(within(account).queryByRole('heading', { name: 'GitHub garden' })).toBeNull();
-    expect(within(account).queryByRole('heading', { name: 'Study advisor' })).toBeNull();
+    expect(within(learning).queryByRole('heading', { name: 'Study advisor' })).toBeNull();
   });
 });
 
@@ -130,7 +132,7 @@ describe('the Profile card stock (social-account-17)', () => {
       (card) => !card.parentElement!.closest('.ss-panel'),
     ) as HTMLElement[];
     const titles = cards.map((card) => card.querySelector('h2.ss-kicker')?.textContent);
-    expect(titles).toEqual(['Streaks', 'Career level', 'Track and sections', 'Study advisor', 'GitHub garden', 'Your name', 'Account']);
+    expect(titles).toEqual(['Streaks', 'Career level', 'Track and sections', 'GitHub garden', 'Study advisor', 'Your name', 'Account']);
     for (const card of cards) {
       // Plain surface: no card overrides the panel's background.
       expect(card.style.background).toBe('');

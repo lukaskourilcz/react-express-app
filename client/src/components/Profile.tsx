@@ -307,10 +307,11 @@ function ProfileBody({
 
         {/* On desktop the cards split into two columns so the profile lands close
             to one viewport instead of one long scroll; on mobile they stack.
-            The learning column (career, track, advisor, GitHub garden) is the
-            left one and the account column (saved questions, your name,
-            account) the right one, so both end within about 100px of each
-            other at 1280 (UX audit social-account-03). */}
+            The learning column (career, track, GitHub garden) is the left
+            one; the right one opens with the study advisor, then saved
+            questions, your name and account. With the advisor on the left
+            the right column ended 411px short at 1280; here both end within
+            about 20px of each other (UX audit social-account-03). */}
         <Grid columns={{ minWidth: 360, max: 2 }} gap={2} align="start" width="100%">
           <div className="de-profile-column" data-column="learning">
           <VStack gap={2}>
@@ -322,14 +323,14 @@ function ProfileBody({
                 joined Learn sections, the specialization and the picker. */}
             <LearningPathsCard />
 
-            <AdvisorCard />
-
             <GithubGardenCard />
           </VStack>
           </div>
 
           <div className="de-profile-column" data-column="account">
           <VStack gap={2}>
+            <AdvisorCard />
+
             {bookmarkedQuestions.length > 0 && (
               <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
                 <VStack gap={2}>
