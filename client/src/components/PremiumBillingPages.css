@@ -4,6 +4,9 @@
 /* Every purchase step sits in the 800px page column and its card is the task
    width, the same as the auth cards (UX audit money-10, shell-public-13). */
 .ss-billing-card { display: flex; flex-direction: column; gap: 0.9rem; max-width: var(--ss-width-task); }
+/* The lead above the card wraps at the card's width, so the header and the
+   card share both edges (a 719px lead sat over the 640px card, money-10). */
+.ss-info-page:has(> .ss-billing-card) .ss-info-page__header p { max-width: var(--ss-width-task); text-wrap: pretty; }
 .ss-info-card .ss-billing-card__label {
   margin: 0;
   font: 750 0.72rem/1.4 var(--font-family-body);

@@ -55,6 +55,11 @@ describe('the Page layout', () => {
     // card around them. Astryx draws the banner class one level down.
     expect(billing).toContain('.ss-checkout-card:has(.astryx-banner) { padding: 0; border: 0; background: none; box-shadow: none; }');
   });
+
+  it('wraps the lead over a task card at the card\u2019s width, so header and card share both edges (money-10)', () => {
+    expect(css('../src/components/PremiumBillingPages.css')).toContain('.ss-info-page:has(> .ss-billing-card) .ss-info-page__header p { max-width: var(--ss-width-task); text-wrap: pretty; }');
+    expect(css('../src/components/auth/Auth.css')).toContain('.ss-info-page:has(> .ss-auth-page) .ss-info-page__header p { max-width: var(--ss-width-task); text-wrap: pretty; }');
+  });
 });
 
 describe('the classroom page', () => {

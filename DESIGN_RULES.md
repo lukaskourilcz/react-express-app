@@ -276,7 +276,8 @@ coming back. The tokens and the map are in
   a measure (`68ch`).
 - **Task cards are 640px.** Auth, billing and checkout cards, and the question
   column, use `--ss-width-task` inside the 800px column. Do not add another
-  card width.
+  card width. The page lead above a task card wraps at the same 640px, so the
+  header and the card share both edges.
 - **The chrome does not move.** The header and the footer share
   `--ss-width-chrome` (1168px) on every route.
 - **Every control is 44px on every pointer.** `--ss-control-height` is the
