@@ -322,7 +322,23 @@
 /* Compact footer: the legal links, devShark's own social profiles and the
    appearance and sound controls. It
    stays deliberately quiet so it never interrupts a learning flow. */
+/* The route shell's page column (App.tsx): its max-width is the route's one
+   page width (components/ui/pageWidth.ts). The footer is not in it: it keeps
+   the header's own box, so it never moves with the route width (UX audit
+   shell-public-01). */
+.ss-page-column {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
 .ss-brand-footer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--ss-width-chrome);
+  margin-inline: auto;
   margin-top: 3.5rem;
   padding: 1.25rem 0 1rem;
   border-top: 1px solid var(--ss-header-border);
@@ -360,6 +376,11 @@
 .ss-footer-settings button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
 .ss-brand-footer__meta { justify-content: space-between; }
+/* On a desktop the footer's text lines up with the header's (its toolbar
+   padding); on a phone the page gutter is enough. */
+@media (min-width: 760px) {
+  .ss-brand-footer { padding-inline: 1.25rem; }
+}
 @media (max-width: 599px) {
   .ss-brand-footer { margin-top: 2.5rem; }
   .ss-brand-footer__meta { align-items: flex-start; flex-direction: column; }
@@ -885,7 +906,7 @@
   z-index: 100;
   inset: .875rem 1rem auto;
   width: calc(100% - 2rem);
-  max-width: 1168px;
+  max-width: var(--ss-width-chrome);
   margin-inline: auto;
   border: 1px solid var(--color-border);
   flex-shrink: 0;

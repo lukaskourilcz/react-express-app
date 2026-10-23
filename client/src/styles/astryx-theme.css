@@ -42,6 +42,9 @@
   --ss-width-narrow: 800px;
   --ss-width-standard: 1000px;
   --ss-width-wide: 1200px;
+  /* The chrome box: the floating header and the footer share it, so neither
+     moves when the route width changes. */
+  --ss-width-chrome: 1168px;
   /* Control heights (UX audit U1, #573). Every page action and form control is
      44px tall on every pointer; only controls inside a component's own toolbar
      (an element with class "ss-compact") are 36px, with a 44px hit area. The
