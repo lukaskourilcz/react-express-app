@@ -111,7 +111,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Cache-Control', 'private, no-store');
       return res.json({ due: [], estimatedMinutes: 0 });
     }
-    const states = await loadReviewStates(supabase, dueAuth.sub, scope.subject);
+    const states = (await loadReviewStates(supabase, dueAuth.sub, scope.subject)) ?? [];
     // Eligibility is the deployment scope the request already resolved: a
     // concept whose topic is not being served here is not due here.
     const servedTopics = new Set(selectedCategories as string[]);
@@ -201,7 +201,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           .order('last_missed_at', { ascending: false, nullsFirst: false })
           .limit(500),
       ),
-      loadReviewStates(supabase, auth.sub, scope.subject),
+      loadReviewStates(supabase, auth.sub, scope.subject).then((read) => read ?? []),
     ]);
     if (stats.error || history.error) {
       const migrationMissing = history.error?.message?.includes('user_question_history');

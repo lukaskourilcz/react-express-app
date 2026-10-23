@@ -202,6 +202,7 @@ import { EVOLVING_CHALLENGES, evolvingStage, evolvingUnlocked, isEvolvingCheckpo
 import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
+import { loadReviewStates, recordConceptReviews } from '../lib/concept-review';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
 import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
 import { handleFriends, handleIdentity } from '../lib/friends-handlers';
@@ -5481,6 +5482,27 @@ async function main() {
     assert.equal(dueConcepts(states, () => true, t0, 0).length, 0);
     // Nothing due, nothing owed — a fresh learner gets ordinary practice.
     assert.deepEqual(dueConcepts([], () => true, t0), []);
+
+    // A review state that cannot be read is not an empty one. Each record
+    // sets the stage, so a write built on an empty list after a failed read
+    // sent every practised concept back to its first stage.
+    {
+      const writes: unknown[] = [];
+      const query = { select: () => query, eq: () => query, then: (done: (value: unknown) => unknown) => Promise.resolve({ data: null, error: { message: 'down' } }).then(done) };
+      const database = { from: () => query, rpc: async (_name: string, args: unknown) => { writes.push(args); return { data: null, error: null }; } } as never;
+      const read = await loadReviewStates(database, 'review-reader', 'webdev');
+      assert.equal(read, null, 'an unreadable review state is reported as unreadable');
+      await recordConceptReviews(database, {
+        userId: 'review-reader', subject: 'webdev', eventId: 'event-1',
+        items: [{ itemId: 'map-1', category: 'javascript', tags: ['map'], correct: true, kind: 'independent' }],
+      }, read, t0);
+      assert.deepEqual(writes, [], 'nothing is recorded over states that could not be read');
+      await recordConceptReviews(database, {
+        userId: 'review-reader', subject: 'webdev', eventId: 'event-2',
+        items: [{ itemId: 'map-1', category: 'javascript', tags: ['map'], correct: true, kind: 'independent' }],
+      }, [], t0);
+      assert.equal(writes.length, 1, 'a learner with no states yet still records the first review');
+    }
 
     // A due concept must reach the session, not merely be preferred in a list
     // the ranking is free to re-sort. It was: the handler built a due-first
