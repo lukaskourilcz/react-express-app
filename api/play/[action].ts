@@ -725,9 +725,23 @@ async function answer(req: VercelRequest, res: VercelResponse) {
 
     // Only players who joined the lobby may answer — otherwise anyone with
     // the code could inject rows that count toward the all-answered advance.
-    const { data: participantRows, error: participantError } = await withTimeout(
-      supabase!.from('match_participants').select('user_id').eq('match_id', match.id),
-    );
+    // The caller's recorded answer is read beside the membership: the two
+    // reads are independent, and a non-member's answer is never used.
+    const [
+      { data: participantRows, error: participantError },
+      { data: existing, error: existingError },
+    ] = await Promise.all([
+      withTimeout(supabase!.from('match_participants').select('user_id').eq('match_id', match.id)),
+      withTimeout(
+        supabase!
+          .from('match_answers')
+          .select('is_correct, speed_bonus')
+          .eq('match_id', match.id)
+          .eq('user_id', sub)
+          .eq('question_idx', body.question_idx)
+          .maybeSingle(),
+      ),
+    ]);
     if (participantError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify match membership');
     const participantIds = (participantRows ?? []).map((r: { user_id: string }) => r.user_id);
     if (!participantIds.includes(sub)) {
@@ -748,15 +762,6 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     // An answer is final. A duplicate submit (network retry, double click)
     // replays the recorded result instead of re-grading, so a player can't
     // keep swapping options after seeing is_correct.
-    const { data: existing, error: existingError } = await withTimeout(
-      supabase!
-        .from('match_answers')
-        .select('is_correct, speed_bonus')
-        .eq('match_id', match.id)
-        .eq('user_id', sub)
-        .eq('question_idx', body.question_idx)
-        .maybeSingle(),
-    );
     if (existingError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify existing answer');
     if (existing) return res.json(reply(existing, false));
 
