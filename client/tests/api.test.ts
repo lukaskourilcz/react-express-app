@@ -57,3 +57,16 @@ describe('real API transport with MSW', () => {
     await expect(apiFetch('/api/test', { signal: controller.signal })).rejects.toMatchObject({ code: 'cancelled' });
   });
 });
+
+describe('query retries', () => {
+  it('retries a read once after a dropped connection or a server error, never after a 4xx answer', async () => {
+    const { queryClient } = await import('../src/lib/queryClient');
+    const retry = queryClient.getDefaultOptions().queries?.retry as (failures: number, error: unknown) => boolean;
+    expect(retry(0, new ApiError('offline', 0, 'network'))).toBe(true);
+    expect(retry(0, new ApiError('busy', 503, 'upstream_timeout'))).toBe(true);
+    expect(retry(1, new ApiError('busy', 503, 'upstream_timeout'))).toBe(false);
+    for (const status of [400, 401, 402, 403, 404, 409, 429]) {
+      expect(retry(0, new ApiError('refused', status))).toBe(false);
+    }
+  });
+});

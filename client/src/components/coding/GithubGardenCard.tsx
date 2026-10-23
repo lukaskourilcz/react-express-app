@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Kicker } from '../landing/LandingKit';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@astryxdesign/core/Card';
@@ -10,6 +10,8 @@ import { Banner } from '@astryxdesign/core/Banner';
 import type { GithubConnectionResponse } from '../../../../shared/coding-api';
 import { useAuth } from '../../lib/auth';
 import { friendlyError } from '../../lib/api';
+import { accountEpoch } from '../../lib/accountData';
+import { useClearOnPageRestore } from '../../lib/pageRestore';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { codingKeys, chooseGithubRepo, disconnectGithub, startGithubConnect, syncGithub, useGithubConnection } from '../../coding/api';
 import { RadioCard, RadioCardGroup } from '../ui/RadioCards';
@@ -20,6 +22,7 @@ import { BrandedConfirmDialog, type ConfirmRequest } from '../ui/BrandedConfirmD
 const INSTALLATIONS_URL = 'https://github.com/settings/installations';
 
 type Toast = { message: string; severity: 'success' | 'error' } | null;
+type Action = 'connect' | 'repo' | 'sync' | 'disconnect';
 
 function Raised({ children }: { children: ReactNode }) {
   return (
@@ -40,8 +43,33 @@ export function GithubGardenCard() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const query = useGithubConnection(isAuthenticated);
-  const [busy, setBusy] = useState<'connect' | 'repo' | 'sync' | 'disconnect' | null>(null);
+  const [busy, setBusy] = useState<Action | null>(null);
+  // `busy` reaches the handlers a render later than a second click, so the
+  // ref is what refuses it: one connect, repository, sync or disconnect at a time.
+  const busyRef = useRef<Action | null>(null);
+  const begin = (action: Action): boolean => {
+    if (busyRef.current) return false;
+    busyRef.current = action;
+    setBusy(action);
+    return true;
+  };
+  const end = () => {
+    busyRef.current = null;
+    setBusy(null);
+  };
+  // Connect leaves for GitHub with the button busy; Back restores the page
+  // from the browser's cache exactly so, and the round trip it waited for is over.
+  useClearOnPageRestore(useCallback((stillBusy: boolean) => {
+    if (stillBusy || busyRef.current !== 'connect') return;
+    busyRef.current = null;
+    setBusy(null);
+  }, []));
   const [repoChoice, setRepoChoice] = useState<string | null>(null);
+  // The choice counts only while the list still offers it: a re-read after
+  // the installation changed can drop that repository, and Use would send a
+  // name the server refuses as bad_repo.
+  const offeredRepos = query.data?.status === 'pending_repo' ? query.data.repositories ?? [] : [];
+  const repoPick = repoChoice !== null && offeredRepos.some((repo) => repo.fullName === repoChoice) ? repoChoice : null;
   const [toast, setToast] = useState<Toast>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const anchorRef = useRef<HTMLHeadingElement>(null);
@@ -58,34 +86,44 @@ export function GithubGardenCard() {
 
   const setConnection = (next: GithubConnectionResponse) => queryClient.setQueryData(codingKeys.github(), next);
 
+  // An answer that lands after the learner signed out (or in as someone
+  // else) belongs to the account that left: it neither fills the new
+  // account's cache nor announces anything (lib/accountData.ts).
   const connect = async () => {
-    setBusy('connect');
+    if (!begin('connect')) return;
+    const epoch = accountEpoch();
     try {
       const { url } = await startGithubConnect();
+      if (accountEpoch() !== epoch) return end();
       window.location.assign(url);
     } catch (error) {
-      setToast({ message: friendlyError(error), severity: 'error' });
-      setBusy(null);
+      if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
+      end();
     }
   };
 
   const chooseRepo = async () => {
-    if (!repoChoice) return;
-    setBusy('repo');
+    if (!repoPick || !begin('repo')) return;
+    const chosen = repoPick;
+    const epoch = accountEpoch();
     try {
-      setConnection(await chooseGithubRepo(repoChoice));
-      setToast({ message: t('github.repoSaved', { repo: repoChoice }), severity: 'success' });
+      const next = await chooseGithubRepo(chosen);
+      if (accountEpoch() !== epoch) return;
+      setConnection(next);
+      setToast({ message: t('github.repoSaved', { repo: chosen }), severity: 'success' });
     } catch (error) {
-      setToast({ message: friendlyError(error), severity: 'error' });
+      if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
     } finally {
-      setBusy(null);
+      end();
     }
   };
 
   const sync = async () => {
-    setBusy('sync');
+    if (!begin('sync')) return;
+    const epoch = accountEpoch();
     try {
       const result = await syncGithub();
+      if (accountEpoch() !== epoch) return;
       await queryClient.invalidateQueries({ queryKey: codingKeys.github() });
       setToast({
         message: result.committed > 0
@@ -96,9 +134,9 @@ export function GithubGardenCard() {
         severity: result.failed > 0 && result.committed === 0 ? 'error' : 'success',
       });
     } catch (error) {
-      setToast({ message: friendlyError(error), severity: 'error' });
+      if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
     } finally {
-      setBusy(null);
+      end();
     }
   };
 
@@ -109,15 +147,17 @@ export function GithubGardenCard() {
       actionLabel: t('github.disconnect'),
       destructive: true,
       onConfirm: async () => {
-        setBusy('disconnect');
+        if (!begin('disconnect')) return;
+        const epoch = accountEpoch();
         try {
           await disconnectGithub();
+          if (accountEpoch() !== epoch) return;
           await queryClient.invalidateQueries({ queryKey: codingKeys.github() });
           setToast({ message: t('github.disconnected'), severity: 'success' });
         } catch (error) {
-          setToast({ message: friendlyError(error), severity: 'error' });
+          if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
         } finally {
-          setBusy(null);
+          end();
         }
       },
     });
@@ -170,7 +210,7 @@ export function GithubGardenCard() {
         ) : (
           <>
             <Text type="supporting" size="sm" color="secondary">{t('github.pickRepo')}</Text>
-            <RadioCardGroup value={repoChoice} onChange={(value) => setRepoChoice(String(value))} label={t('github.pickRepoLabel')}>
+            <RadioCardGroup value={repoPick} onChange={(value) => setRepoChoice(String(value))} label={t('github.pickRepoLabel')}>
               {repos.map((repo, index) => (
                 <RadioCard key={repo.fullName} value={repo.fullName} index={index} label={repo.fullName} padding={2}>
                   <VStack gap={0}>
@@ -184,7 +224,7 @@ export function GithubGardenCard() {
             </RadioCardGroup>
             <HStack justify="between" wrap="wrap" gap={1}>
               <Button variant="ghost" size="sm" label={t('github.disconnect')} isDisabled={busy !== null} onClick={requestDisconnect} />
-              <Button variant="primary" size="sm" label={t('github.useRepo')} isDisabled={!repoChoice || busy !== null} onClick={() => void chooseRepo()} />
+              <Button variant="primary" size="sm" label={t('github.useRepo')} isDisabled={!repoPick || busy !== null} onClick={() => void chooseRepo()} />
             </HStack>
           </>
         )}

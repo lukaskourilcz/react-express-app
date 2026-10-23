@@ -16,7 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CodingGardenStatus } from '../shared/coding-api';
 import { gardenPathFor, hasLearnLevel, type CodingTask } from '../shared/coding-catalog';
 import type { GardenPassInput } from './github-garden';
-import { withTimeout } from './http';
+import { UpstreamTimeoutError, withTimeout } from './http';
 
 const API = 'https://api.github.com';
 const USER_AGENT = 'devShark-garden';
@@ -67,10 +67,18 @@ export class GithubError extends Error {
   }
 }
 
+/** How long one GitHub call may take before it counts as GitHub not answering. */
+const GITHUB_TIMEOUT_MS = 8_000;
+
+/** Our own timer aborted the call: GitHub did not answer in time, which is the
+ * service unavailable for a moment (503 `upstream_timeout`), not a fault. */
+const timedOut = (error: unknown): boolean =>
+  error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
+
 /** `bearer` for an app JWT or a user access token, `token` for an installation token. */
 async function gh<T>(path: string, init: { method?: string; token: string; body?: unknown; bearer?: boolean }): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8_000);
+  const timer = setTimeout(() => controller.abort(), GITHUB_TIMEOUT_MS);
   try {
     const response = await fetch(`${API}${path}`, {
       method: init.method ?? 'GET',
@@ -86,12 +94,23 @@ async function gh<T>(path: string, init: { method?: string; token: string; body?
     });
     if (response.status === 204) return undefined as T;
     const text = await response.text();
-    const data = text ? (JSON.parse(text) as unknown) : null;
+    let data: unknown = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // An outage page from a proxy in front of GitHub, not an API answer.
+        throw new GithubError(response.ok ? 502 : response.status, response.ok ? 'GitHub answered with something other than JSON' : response.statusText);
+      }
+    }
     if (!response.ok) {
       const message = data && typeof data === 'object' && 'message' in data ? String((data as { message: unknown }).message) : response.statusText;
       throw new GithubError(response.status, message.slice(0, 200));
     }
     return data as T;
+  } catch (error) {
+    if (timedOut(error)) throw new UpstreamTimeoutError();
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -129,7 +148,7 @@ const MAX_INSTALLATION_PAGES = 10;
  * `error` field, which comes back as `refused`; a transport failure throws. */
 async function exchangeInstallCode(code: string): Promise<{ token: string } | { refused: string }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8_000);
+  const timer = setTimeout(() => controller.abort(), GITHUB_TIMEOUT_MS);
   try {
     const response = await fetch(OAUTH_TOKEN_URL, {
       method: 'POST',
@@ -143,6 +162,9 @@ async function exchangeInstallCode(code: string): Promise<{ token: string } | { 
     // Only GitHub's short error name is kept, for the log: never the body.
     const reason = typeof data?.error === 'string' && /^[a-z_]{1,64}$/.test(data.error) ? data.error : 'no_token';
     return { refused: reason };
+  } catch (error) {
+    if (timedOut(error)) throw new UpstreamTimeoutError();
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -184,9 +206,22 @@ export interface RepoInfo {
   owner: { login: string; id: number };
 }
 
+const REPOS_PER_PAGE = 100;
+/** An installation on every repository of an account can list hundreds. */
+const MAX_REPO_PAGES = 10;
+
+/** Every repository the installation reaches, page by page: an installation
+ * on "All repositories" of an account with more than a hundred would
+ * otherwise hide the rest from the picker and refuse them as `bad_repo`. */
 export async function listInstallationRepos(token: string): Promise<RepoInfo[]> {
-  const data = await gh<{ repositories: RepoInfo[] }>('/installation/repositories?per_page=100', { token });
-  return data.repositories ?? [];
+  const repositories: RepoInfo[] = [];
+  for (let page = 1; page <= MAX_REPO_PAGES; page++) {
+    const data = await gh<{ repositories?: RepoInfo[] }>(`/installation/repositories?per_page=${REPOS_PER_PAGE}&page=${page}`, { token });
+    const batch = data.repositories ?? [];
+    repositories.push(...batch);
+    if (batch.length < REPOS_PER_PAGE) break;
+  }
+  return repositories;
 }
 
 export async function getFile(token: string, repo: string, path: string, branch: string): Promise<{ sha: string; content: string } | null> {
@@ -280,10 +315,13 @@ interface ConnectionRow {
   status: 'pending_repo' | 'active' | 'broken';
 }
 
+/** The learner's connection, or null when there is none. A failed read
+ * throws: read as "none", it told a connected learner to connect GitHub and
+ * dropped the pass from the garden without queueing it. */
 async function loadConnection(supabase: SupabaseClient, userId: string): Promise<ConnectionRow | null> {
   const { data, error } = await withTimeout(supabase.from('github_connections').select('user_id,installation_id,account_login,account_id,repo_full_name,default_branch,status').eq('user_id', userId).maybeSingle());
-  if (error || !data) return null;
-  return data as ConnectionRow;
+  if (error) throw new Error('db_error');
+  return (data as ConnectionRow | null) ?? null;
 }
 
 const authorFor = (connection: ConnectionRow) => ({
@@ -295,8 +333,10 @@ async function markBroken(supabase: SupabaseClient, userId: string, message: str
   await withTimeout(supabase.from('github_connections').update({ status: 'broken', last_error: message.slice(0, 500), updated_at: new Date().toISOString() }).eq('user_id', userId));
 }
 
+interface QueuedRow { id: string; path: string; content: string; message: string; attempts: number }
+
 /** Writes one queued row to the repository. Returns the garden status for the UI. */
-async function deliver(supabase: SupabaseClient, connection: ConnectionRow, row: { id: string; path: string; content: string; message: string; attempts: number }): Promise<CodingGardenStatus> {
+async function deliver(supabase: SupabaseClient, connection: ConnectionRow, row: QueuedRow): Promise<CodingGardenStatus> {
   if (connection.status !== 'active' || !connection.repo_full_name || !connection.default_branch) return { status: 'queued' };
   const now = new Date().toISOString();
   try {
@@ -304,11 +344,11 @@ async function deliver(supabase: SupabaseClient, connection: ConnectionRow, row:
     const repo = connection.repo_full_name;
     const branch = connection.default_branch;
     const author = authorFor(connection);
-    const readme = await getFile(token, repo, 'README.md', branch);
+    // Two reads that do not wait for each other: a pass is answered after them.
+    const [readme, existing] = await Promise.all([getFile(token, repo, 'README.md', branch), getFile(token, repo, row.path, branch)]);
     if (!readme) {
       await putFile(token, repo, 'README.md', { content: readmeFor(connection.account_login), message: 'Start the devShark garden', branch, author });
     }
-    const existing = await getFile(token, repo, row.path, branch);
     if (existing && existing.content === row.content) {
       await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: now }).eq('id', row.id));
       return { status: 'skipped', url: `https://github.com/${repo}/blob/${branch}/${row.path}` };
@@ -341,24 +381,44 @@ export async function commitPassedTask(supabase: SupabaseClient, input: GardenPa
   const message = commitMessageFor(input.task);
   const inserted = await withTimeout(supabase.from('github_commits').insert({ user_id: input.userId, task_id: input.task.id, path, content, message }).select('id,path,content,message,attempts').single());
   if (inserted.error || !inserted.data) return { status: 'failed' };
-  const status = await deliver(supabase, connection, inserted.data as { id: string; path: string; content: string; message: string; attempts: number });
+  const row = inserted.data as QueuedRow;
+  // This pass supersedes any copy of the same file still waiting: delivered
+  // after this one, an older copy would put the older code back.
+  await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: new Date().toISOString() }).eq('user_id', input.userId).eq('path', path).eq('status', 'queued').neq('id', row.id));
+  const status = await deliver(supabase, connection, row);
   if (status.status === 'committed') await retryQueued(supabase, input.userId, 5).catch(() => undefined);
   return status;
 }
 
-/** Retries queued rows for one learner, oldest first. */
+/** Retries queued rows for one learner, oldest first. Of several queued
+ * copies of one file only the newest is written; the older ones are skipped,
+ * so a retry neither writes old code over new nor makes one commit per copy. */
 export async function retryQueued(supabase: SupabaseClient, userId: string, limit = 20): Promise<{ committed: number; failed: number; remaining: number }> {
-  const connection = await loadConnection(supabase, userId);
-  const rows = await withTimeout(supabase.from('github_commits').select('id,path,content,message,attempts').eq('user_id', userId).eq('status', 'queued').order('created_at', { ascending: true }).limit(limit));
-  if (!connection || rows.error) return { committed: 0, failed: 0, remaining: rows.data?.length ?? 0 };
+  const [connection, rows] = await Promise.all([
+    loadConnection(supabase, userId),
+    withTimeout(supabase.from('github_commits').select('id,path,content,message,attempts').eq('user_id', userId).eq('status', 'queued').order('created_at', { ascending: true }).limit(limit)),
+  ]);
+  // A queue the database would not read is not an empty queue: read as one,
+  // Sync told the learner nothing was waiting while their files were.
+  if (rows.error) throw new Error('db_error');
+  if (!connection) return { committed: 0, failed: 0, remaining: rows.data?.length ?? 0 };
+  const queued = (rows.data ?? []) as QueuedRow[];
+  const newest = new Map<string, QueuedRow>();
+  for (const row of queued) newest.set(row.path, row);
+  const superseded = queued.filter((row) => newest.get(row.path) !== row).map((row) => row.id);
+  if (superseded.length > 0) {
+    await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: new Date().toISOString() }).in('id', superseded));
+  }
   let committed = 0;
   let failed = 0;
-  for (const row of (rows.data ?? []) as { id: string; path: string; content: string; message: string; attempts: number }[]) {
+  for (const row of queued) {
+    if (newest.get(row.path) !== row) continue;
     const status = await deliver(supabase, connection, row);
     if (status.status === 'committed' || status.status === 'skipped') committed++;
     else if (status.status === 'failed') failed++;
     else break; // still queued: the connection is broken or GitHub is down, stop hammering
   }
   const left = await withTimeout(supabase.from('github_commits').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'queued'));
+  if (left.error) throw new Error('db_error');
   return { committed, failed, remaining: left.count ?? 0 };
 }

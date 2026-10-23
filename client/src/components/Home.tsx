@@ -21,6 +21,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { openSignIn } from '../lib/signInDialog';
 import { useActiveSubject } from '../lib/subjects';
+import { useReducedMotion } from '../lib/motion';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
@@ -47,6 +48,10 @@ function TopicCard({
 }) {
   const [hover, setHover] = useState(false);
   const t = useT();
+  // Under reduced motion the school fades in where it rests instead of
+  // swimming 140px across the card (the CTAs in LandingKit do the same).
+  const reduce = useReducedMotion();
+  const swim = hover && !reduce;
   return (
     <button
       type="button"
@@ -76,7 +81,7 @@ function TopicCard({
       {topic.fins.map((f: FinSpec, i) => {
         // The V9 fin faces right: mirror it only when it travels left.
         const flip = f.dir;
-        const rock = f.rock && hover ? ` rotate(${f.dir * -4}deg)` : '';
+        const rock = f.rock && swim ? ` rotate(${f.dir * -4}deg)` : '';
         return (
           <span
             key={i}
@@ -84,8 +89,8 @@ function TopicCard({
             style={{
               position: 'absolute', left: f.left, bottom: Math.round(5 - f.size * 0.25) + 'px', lineHeight: 0,
               opacity: hover ? 1 : 0,
-              transform: `translateX(${hover ? f.dir * 140 : 0}px) scaleX(${flip})${rock}`,
-              transition: `transform ${f.dur}s ease-in-out ${f.delay}s, opacity 0.3s ease`,
+              transform: `translateX(${swim ? f.dir * 140 : 0}px) scaleX(${flip})${rock}`,
+              transition: reduce ? 'opacity 0.3s ease' : `transform ${f.dur}s ease-in-out ${f.delay}s, opacity 0.3s ease`,
               pointerEvents: 'none',
             }}
           >
@@ -167,6 +172,7 @@ export default function Home() {
   const subject = useActiveSubject();
   const { isAuthenticated } = useAuth();
   const topicsRef = useRef<HTMLElement>(null);
+  const topicsHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const featured = LANDING_TOPICS[subject.id] ?? [];
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
@@ -180,14 +186,20 @@ export default function Home() {
 
   // Public inventory counts from the subject registry, checked against the
   // server's deliverable question bank and active coding catalogue at release.
+  // English digits whatever the browser's locale ("2,134", never "2.134").
   const stats: StatSpec[] = [
     { value: String(subject.topics.length), label: t('home.statTracks') },
-    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions') },
-    { value: SUBJECT_SCOPE_CATALOG[subject.id].codingChallengeCount.toLocaleString(), label: t('home.statCodingChallenges') },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString('en-GB'), label: t('home.statQuestions') },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].codingChallengeCount.toLocaleString('en-GB'), label: t('home.statCodingChallenges') },
   ];
 
 
-  const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+  // Scrolling alone left keyboard focus on the hero button, so the next Tab
+  // went back to the hero links instead of the topics. Focus follows.
+  const scrollToTopics = () => {
+    topicsRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+    topicsHeadingRef.current?.focus({ preventScroll: true });
+  };
 
   const strip: StripItem[] = [
     { titleKey: 'today.title', textKey: 'today.subtitle', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
@@ -240,7 +252,7 @@ export default function Home() {
       <section id="topics" ref={topicsRef} aria-label={t('home.topicsTitle')} style={{ display: 'flex', flexDirection: 'column', gap: 20, scrollMarginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Kicker>{t('home.topicsKicker')}</Kicker>
-          <h2 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
+          <h2 ref={topicsHeadingRef} tabIndex={-1} style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
             {t('home.topicsTitle')}
           </h2>
         </div>

@@ -133,6 +133,10 @@ let viewSent = false;
 let firstPageview = true;
 /** The signed-in learner, kept in memory until analytics may run. */
 let identity: { id: string; properties?: Record<string, unknown> } | null = null;
+/** The id PostHog was last told about under the current yes. Auth hands the
+ * same learner over again on every token refresh; telling PostHog again
+ * would send the campaign as a fresh `$set` each time. */
+let identifiedId: string | null = null;
 
 const posthogKey = () => import.meta.env.VITE_PUBLIC_POSTHOG_KEY as string | undefined;
 
@@ -211,6 +215,7 @@ function sendPageview(path: string): void {
 }
 
 function sendIdentity(id: string, properties?: Record<string, unknown>): void {
+  identifiedId = id;
   const campaign = firstTouchCampaign();
   void ready().then((ph) => ph?.identify(id, properties, Object.keys(campaign).length > 0 ? campaign : undefined));
 }
@@ -235,6 +240,7 @@ function stop(): void {
   active = false;
   optedIn = false;
   viewSent = false;
+  identifiedId = null;
   if (wasRunning && client) {
     client.reset();
     client.opt_out_capturing();
@@ -279,8 +285,9 @@ export function capturePageview(path: string): void {
  * first campaign becomes the person's initial one: set once, never replaced.
  * Before consent the id waits in memory and is sent after a yes. */
 export function identifyUser(id: string, properties?: Record<string, unknown>): void {
+  const again = identity?.id === id && properties === undefined && identity.properties === undefined;
   identity = { id, properties };
-  if (active) sendIdentity(id, properties);
+  if (active && !(again && identifiedId === id)) sendIdentity(id, properties);
 }
 
 /** Clear the identity + start a fresh anonymous session (call on sign-out).
@@ -288,6 +295,7 @@ export function identifyUser(id: string, properties?: Record<string, unknown>): 
  * (opt_out_capturing_by_default), so it is opted in again straight after. */
 export function resetAnalytics(): void {
   identity = null;
+  identifiedId = null;
   if (!active) return;
   void ready().then((ph) => {
     if (!ph) return;

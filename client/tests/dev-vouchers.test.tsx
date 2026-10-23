@@ -1,6 +1,6 @@
 // /dev → Vouchers (migration 045): create a code, see it once, list and revoke.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -120,6 +120,28 @@ describe('/dev → Vouchers', () => {
     expect(screen.queryByDisplayValue('ABCD-EFGH-JKMN')).toBeNull();
     // The form is ready for the next one.
     expect(screen.getByRole('textbox', { name: /^Note/ })).toHaveValue('');
+  });
+
+  it('creates one voucher however fast the form is sent twice', async () => {
+    let created = 0;
+    server.use(
+      http.get('*/api/admin/vouchers', () => HttpResponse.json({ vouchers: [] })),
+      http.post('*/api/admin/vouchers', async () => {
+        created += 1;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return HttpResponse.json({ voucher: OPEN, code: `K7Q2-ABCD-000${created}` });
+      }),
+    );
+    renderConsole();
+    fireEvent.change(await screen.findByRole('textbox', { name: /^Note/ }), { target: { value: 'For Pavel' } });
+    const form = screen.getByRole('button', { name: 'Create voucher' }).closest('form')!;
+    // Two submits before React renders the busy state: a double click.
+    act(() => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    expect(await screen.findByRole('textbox', { name: 'Voucher code' })).toHaveValue('K7Q2-ABCD-0001');
+    expect(created).toBe(1);
   });
 
   it('selects the code for copying by hand when the clipboard refuses', async () => {

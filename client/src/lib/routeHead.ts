@@ -45,6 +45,11 @@ const PATH_TITLE_NAMES: readonly (readonly [string, TranslationKey])[] = [
   ['/learn/forward-deployed-engineer/path', 'paths.picker.fdeLabel'],
 ];
 
+/** A guide address the topic route serves but no guide answers: the route
+ * says "not found" in place, so the head keeps it out of search results. A
+ * deeper /topics/… path is the not-found page's, which adds its own line. */
+const UNKNOWN_TOPIC_PATH = /^\/topics\/[^/]+$/;
+
 /** The path without a trailing slash ("/" stays "/"). React Router renders
  * /quiz/ as /quiz, so the head must read it the same way. */
 const trimSlash = (pathname: string) => pathname.replace(/(.)\/$/, '$1');
@@ -160,7 +165,7 @@ export function applyRouteHead(rawPath: string, t: Translate, shareHead: ShareHe
   } else if (page?.schema === 'premium' && canonical) {
     const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
     schema.textContent = JSON.stringify(premiumSchema(document.title, description, canonical)); document.head.append(schema);
-  } else if (pathname.includes('/topics/') || NOINDEX_PATHS.includes(pathname)) {
+  } else if (UNKNOWN_TOPIC_PATH.test(pathname) || NOINDEX_PATHS.includes(pathname)) {
     const robots = document.createElement('meta'); robots.name = 'robots'; robots.content = 'noindex'; document.head.append(robots);
   }
 }

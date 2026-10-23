@@ -167,6 +167,24 @@ describe('the not-found page', () => {
   });
 });
 
+describe('a guide address', () => {
+  it('keeps an unknown guide out of search results with one robots line', () => {
+    visit('/topics/no-such-guide');
+    expect(robots()).toEqual(['noindex']);
+    visit('/topics/no-such-guide/');
+    expect(robots()).toEqual(['noindex']);
+  });
+
+  it('leaves a deeper missing guide path to the not-found page’s own line', () => {
+    visit('/topics/react/extra');
+    const page = render(<MemoryRouter><LanguageProvider><NotFoundPage /></LanguageProvider></MemoryRouter>);
+    visit('/topics/react/extra');
+    expect(robots()).toEqual(['noindex']);
+    page.unmount();
+    expect(robots()).toEqual([]);
+  });
+});
+
 describe('the missing page’s Go back', () => {
   it('goes home from a missing page opened in a new tab, where there is nothing to go back to', () => {
     render(

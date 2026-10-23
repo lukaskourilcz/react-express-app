@@ -5,9 +5,12 @@ export const topicLabels = { home: 'Home', kicker: 'Quick guide', example: 'How 
 export function topicPath(slug: string) { return `/topics/${slug}`; }
 /** Identical, escaped React markup for build-time HTML and the live route.
  * Only the public teaching catalogue enters this view; never scored answers. */
-export function TopicArticle({ topic, brand, related, onPractice }: {
+export function TopicArticle({ topic, brand, related, onPractice, onNavigate }: {
   topic: TopicLandingDefinition; brand: string;
   related: TopicLandingDefinition[]; onPractice?: MouseEventHandler<HTMLAnchorElement>;
+  /** The live route follows the home and related-guide links inside the app;
+   * the build-time HTML passes nothing and keeps plain links. */
+  onNavigate?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   const copy = topicLabels;
   const articleRef = useRef<HTMLElement>(null);
@@ -25,13 +28,13 @@ export function TopicArticle({ topic, brand, related, onPractice }: {
   }, [topic.slug]);
   return <article ref={articleRef} data-topic-guide={topic.slug} className="ss-info-page ss-topic-article" lang="en">
     <nav className="ss-topic-nav" aria-label={copy.home}>
-      <a href="/">{brand} · {copy.home}</a>
+      <a href="/" onClick={onNavigate}>{brand} · {copy.home}</a>
     </nav>
     <header className="ss-info-page__header"><span className="ss-info-page__kicker"><span className="ss-brand-name">{brand}</span> · {copy.kicker}</span><h1>{topic.title}</h1><p>{topic.description}</p></header>
     {topic.explanation && <section><h2>{copy.example}</h2><p>{topic.explanation}</p>{topic.example && <pre tabIndex={0} aria-label={copy.example}><code>{topic.example}</code></pre>}{topic.reference && <a href={topic.reference}>{copy.reference}</a>}</section>}
     <section><h2>{copy.misconception}</h2><p>{topic.misconception}</p></section>
     <section><h2>{copy.practice}</h2>{topic.practice.map(([question, answer], index) => <details key={question} className="topic-practice"><summary>{index + 1}. {question}</summary><p>{answer}</p></details>)}</section>
     <div><a className="ss-topic-cta" href={`/quiz?category=${encodeURIComponent(topic.category)}`} onClick={onPractice}>{copy.cta}</a></div>
-    <section><h2>{copy.related}</h2><ul className="ss-topic-links">{related.filter(item => item.slug !== topic.slug).map(item => <li key={item.slug}><a href={topicPath(item.slug)}>{item.title}</a></li>)}</ul></section>
+    <section><h2>{copy.related}</h2><ul className="ss-topic-links">{related.filter(item => item.slug !== topic.slug).map(item => <li key={item.slug}><a href={topicPath(item.slug)} onClick={onNavigate}>{item.title}</a></li>)}</ul></section>
   </article>;
 }

@@ -22,12 +22,15 @@
 // Callers should prefer `await enforceRateLimit(...)`; `checkRateLimit()` stays
 // exported for the fallback path and any sync call site.
 
+import { isIP } from 'node:net';
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { jsonError, ServiceUnavailableError, verifiedCallerId } from './http';
 
 interface Bucket {
   tokens: number;
   updatedAt: number;
+  /** When the bucket is full again if nothing takes from it. */
+  fullAt: number;
 }
 
 /** Per-endpoint bucket configuration. */
@@ -176,6 +179,10 @@ export const RATE_LIMITS = {
   codingSubmitAddress: { key: 'coding_submit_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
   githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
   githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
+  // Choosing the garden's repository reads every page of the installation's
+  // repositories from GitHub (up to ten calls), so a script could spend the
+  // installation's GitHub budget through it. A learner picks once or twice.
+  githubRepo: { key: 'github_repo', capacity: 10, refillPerSecond: 10 / 600 },
   // Learning paths: starting an activity is cheap, submitting one runs the
   // sandbox, and a draft autosave fires while the learner types. These four
   // are keyed by the verified account (`user:<id>`), because a class works
@@ -222,20 +229,28 @@ export const RATE_LIMITS = {
   // finish, so five an hour); these hold a class connecting behind one NAT.
   githubConnectAddress: { key: 'github_connect_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
   githubSyncAddress: { key: 'github_sync_address', capacity: SHARED_NETWORK_SEATS * 6, refillPerSecond: (SHARED_NETWORK_SEATS * 6) / 3600 },
+  githubRepoAddress: { key: 'github_repo_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
 
-// Trim any buckets that are effectively "full again" and haven't been touched
-// recently, so a long-running instance can't slowly leak memory.
+// Trim the buckets that have refilled completely, so a long-running instance
+// can't slowly leak memory. Only a full bucket may go: a missing one starts
+// full, so dropping one still refilling would hand its caller the rest of the
+// budget early. Dropping any bucket idle ten minutes with a token left gave a
+// voucher guesser four tries every ten minutes instead of five an hour.
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 let lastCleanup = Date.now();
 function maybeCleanup(now: number): void {
   if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
   lastCleanup = now;
   for (const [k, b] of buckets) {
-    if (now - b.updatedAt > CLEANUP_INTERVAL_MS && b.tokens >= 1) buckets.delete(k);
+    if (b.fullAt <= now) buckets.delete(k);
   }
+}
+
+function storeBucket(key: string, config: RateLimitConfig, tokens: number, now: number): void {
+  buckets.set(key, { tokens, updatedAt: now, fullAt: now + ((config.capacity - tokens) / config.refillPerSecond) * 1000 });
 }
 
 /**
@@ -245,12 +260,38 @@ function maybeCleanup(now: number): void {
  * for legit users behind a shared proxy.
  */
 function clientIp(req: VercelRequest): string {
-  const address = forwardedAddress(req);
+  const address = addressKey(forwardedAddress(req));
   // An account's bucket is `user:<id>`. No address starts that way, but the
   // header is whatever the client sent where no proxy overwrites it, so such
   // a value is moved out of that namespace rather than reach an account's
   // bucket.
   return address.startsWith('user:') ? `ip:${address}` : address;
+}
+
+/**
+ * The bucket key for an address. One IPv6 subscriber holds a whole /64 and can
+ * pick any address in it, so keyed per address every request could come from
+ * a fresh bucket: the admin gate, a guest's grading budget and every address
+ * backstop would hold nothing. An IPv6 address counts as its /64, the way an
+ * IPv4 household counts as its one public address, and an IPv4 address written
+ * as IPv6 (`::ffff:192.0.2.1`) as that IPv4 address. Anything else is kept.
+ */
+export function addressKey(address: string): string {
+  const bare = address.split('%')[0];
+  if (isIP(bare) !== 6) return address;
+  const lower = bare.toLowerCase();
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(lower);
+  if (mapped) return mapped[1];
+  const [head, tail] = lower.split('::');
+  const headGroups = head ? head.split(':') : [];
+  let groups = headGroups;
+  if (tail !== undefined) {
+    const tailGroups = tail ? tail.split(':') : [];
+    // An embedded IPv4 address fills the last two groups.
+    const tailWidth = tailGroups.length + (tailGroups.at(-1)?.includes('.') ? 1 : 0);
+    groups = [...headGroups, ...Array<string>(8 - headGroups.length - tailWidth).fill('0'), ...tailGroups];
+  }
+  return `${groups.slice(0, 4).map((group) => parseInt(group, 16).toString(16)).join(':')}::/64`;
 }
 
 function forwardedAddress(req: VercelRequest): string {
@@ -282,19 +323,19 @@ export function checkRateLimit(
   maybeCleanup(now);
 
   const key = `${config.key}:${config.scope === 'shared' ? 'shared' : identity ?? clientIp(req)}`;
-  const b = buckets.get(key) ?? { tokens: config.capacity, updatedAt: now };
+  const b = buckets.get(key) ?? { tokens: config.capacity, updatedAt: now, fullAt: now };
   const elapsedSeconds = (now - b.updatedAt) / 1000;
   const refilled = Math.min(config.capacity, b.tokens + elapsedSeconds * config.refillPerSecond);
 
   if (refilled < 1) {
     const retryAfter = Math.ceil((1 - refilled) / config.refillPerSecond);
-    buckets.set(key, { tokens: refilled, updatedAt: now });
+    storeBucket(key, config, refilled, now);
     res.setHeader('Retry-After', String(Math.max(1, retryAfter)));
     jsonError(res, 429, 'rate_limited', 'Too many requests. Try again shortly.');
     return false;
   }
 
-  buckets.set(key, { tokens: refilled - 1, updatedAt: now });
+  storeBucket(key, config, refilled - 1, now);
   return true;
 }
 
@@ -372,6 +413,14 @@ async function withLimiterDeadline<T>(promise: Promise<T>, timeoutMs = 500): Pro
   }
 }
 
+// After Upstash fails, this instance keeps to its in-memory buckets for a
+// while instead of asking again. A hung Upstash otherwise held every request
+// for the whole deadline once per bucket it takes (two or three per request),
+// and a Redis that refuses every call cost each bucket a round trip for
+// nothing.
+const LIMITER_PAUSE_MS = 15_000;
+let limiterPausedUntil = 0;
+
 /**
  * Enforce a rate limit, preferring the distributed Upstash backend and falling
  * back to the in-memory token bucket. Returns true if the request may proceed,
@@ -386,6 +435,7 @@ export async function enforceRateLimit(
   /** Who the bucket belongs to, such as `user:<id>`; the client IP when omitted. */
   identity?: string,
 ): Promise<boolean> {
+  if (Date.now() < limiterPausedUntil) return checkRateLimit(req, res, config, identity);
   const limiter = await getUpstashLimiter(config);
   if (!limiter) return checkRateLimit(req, res, config, identity);
 
@@ -401,6 +451,7 @@ export async function enforceRateLimit(
   } catch {
     // Redis unreachable mid-request — never hard-fail on the limiter; fall back
     // to the in-memory bucket so the endpoint stays available.
+    limiterPausedUntil = Date.now() + LIMITER_PAUSE_MS;
     return checkRateLimit(req, res, config, identity);
   }
 }

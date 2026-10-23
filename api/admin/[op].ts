@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { isRetiredTopic } from '../../shared/retired-content';
-import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
-import { requireAdmin } from '../../lib/admin-auth';
+import { createServiceClient, jsonError, createLogger, ServiceUnavailableError, withTimeout, withRequestContext } from '../../lib/http';
+import { adminSubject, requireAdmin } from '../../lib/admin-auth';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
   listAdminQuestions,
@@ -11,6 +11,9 @@ import {
   bulkHideByImportance,
   KNOWN_CATEGORIES,
 } from '../../lib/questions-store';
+import { loadSubjectQuestionBank } from '../../lib/question-bank-loader';
+import { deploymentSubjectIds } from '../../lib/product-scope';
+import type { Question } from '../../lib/quiz-data';
 import { listReports, dismissReport, reportCounts } from '../../lib/reports-store';
 import { listAuthEvents } from '../../lib/auth-events-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
@@ -29,8 +32,30 @@ const MAX_TAGS = 20;
 const MAX_OPTIONS = 8;
 const MIN_OPTIONS = 2;
 
+/** Who made a change, for the audit trail every console write leaves in the
+ * logs: the verified admin account, or the legacy password, which names
+ * nobody. */
+const actor = (req: VercelRequest): string => adminSubject(req) ?? 'legacy-password';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const boundedString = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
+
+/** At most `max` characters, cut by code point: a cut by UTF-16 unit could
+ * split an emoji and store half of it. */
+const cutText = (text: string, max: number): string =>
+  text.length <= max ? text : Array.from(text).slice(0, max).join('');
+
+/** Postgres text and JSONB refuse U+0000 (22P05), so a question, a setting, a
+ * voucher note or an id holding it failed the write and answered 500. The
+ * values are walked, not the JSON text, so a question about escapes that
+ * spells `\u0000` out still saves. */
+function holdsNul(value: unknown, depth = 0): boolean {
+  if (typeof value === 'string') return value.includes('\u0000');
+  if (depth > 8 || value === null || typeof value !== 'object') return false;
+  return Object.values(value as Record<string, unknown>).some((one) => holdsNul(one, depth + 1));
+}
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // Anti-brute-force: at most ~1 auth attempt per second per IP, small burst.
@@ -41,6 +66,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!(await requireAdmin(req, res))) return;
 
   const op = String(req.query.op || '').toLowerCase();
+  if (holdsNul(req.body)) {
+    return jsonError(res, 400, 'bad_request', 'Text cannot contain a NUL (U+0000) character');
+  }
   try {
     switch (op) {
       case 'questions':
@@ -72,10 +100,18 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
-    log({ op, status: 500, error: message });
+    // A Supabase call that timed out (lib/http.ts `UpstreamTimeoutError`) is
+    // the database busy for a moment, which the console may retry: 503 with
+    // its code, as every handler answers it, never 500.
+    if (err instanceof ServiceUnavailableError) {
+      log({ op, status: 503, error: message });
+      return jsonError(res, 503, err.code, err.message);
+    }
     if (message === 'not_configured') {
+      log({ op, status: 503, error: message });
       return jsonError(res, 503, 'not_configured', 'Admin backend (Supabase) is not configured');
     }
+    log({ op, level: 'error', status: 500, error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }
@@ -116,6 +152,11 @@ async function qualityOp(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET, POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  // `?categories=a&categories=b` arrives as an array, which was read as no
+  // filter at all and scanned (or, on POST, stored) the whole bank.
+  if (req.query.categories !== undefined && typeof req.query.categories !== 'string') {
+    return jsonError(res, 400, 'bad_request', 'categories must be one comma-separated list');
+  }
   const rawCategories = typeof req.query.categories === 'string'
     ? req.query.categories.split(',').map((value) => value.trim()).filter(Boolean)
     : [];
@@ -149,7 +190,7 @@ async function qualityOp(req: VercelRequest, res: VercelResponse) {
       if (result.error) return jsonError(res, 500, 'db_error', 'Could not store quality suggestions');
       stored += batch.length;
     }
-    log({ op: 'quality', status: 200, scanned: questions.length, issues: issues.length, stored });
+    log({ op: 'quality', status: 200, by: actor(req), scanned: questions.length, issues: issues.length, stored });
     return res.json({ enabled, scanned: questions.length, issues, stored });
   }
 
@@ -174,6 +215,30 @@ async function listQuestions(req: VercelRequest, res: VercelResponse) {
   });
 }
 
+const bankIds = new WeakMap<readonly Question[], ReadonlySet<string>>();
+
+/** Whether a save or delete may name this id: a custom question's own
+ * (`dev-…`) or one of the bank's. Any other id wrote an override row for a
+ * question that does not exist, which no listing shows and nothing removes. */
+async function knownQuestionId(id: string): Promise<boolean> {
+  if (id.startsWith('dev-')) return true;
+  // Keyed by each subject's bank, the array the loader keeps for the life of
+  // the process (the deployment bank is a new flat() copy on every call).
+  const banks = await Promise.all(deploymentSubjectIds().map((subject) => loadSubjectQuestionBank(subject)));
+  return banks.some((bank) => {
+    let ids = bankIds.get(bank);
+    if (!ids) {
+      ids = new Set(bank.map((question) => question.id));
+      bankIds.set(bank, ids);
+    }
+    return ids.has(id);
+  });
+}
+
+function unknownQuestion(res: VercelResponse) {
+  return jsonError(res, 404, 'unknown_question', 'No question in the bank has this id');
+}
+
 async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -184,11 +249,15 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
   const question = boundedString(b.question, MAX_TEXT);
   if (!question) return jsonError(res, 400, 'bad_request', 'question is required');
 
-  const options = Array.isArray(b.options)
-    ? b.options.filter((o): o is string => typeof o === 'string' && o.length > 0 && o.length <= MAX_OPTION)
-    : [];
+  // Every option is checked, none dropped: `correctIndex` points into the list
+  // as sent, so leaving out one invalid option before the correct one would
+  // store a different option as the answer.
+  const options = Array.isArray(b.options) ? b.options : [];
   if (options.length < MIN_OPTIONS || options.length > MAX_OPTIONS) {
     return jsonError(res, 400, 'bad_request', `Provide ${MIN_OPTIONS}–${MAX_OPTIONS} non-empty options`);
+  }
+  if (!options.every((o): o is string => typeof o === 'string' && o.length > 0 && o.length <= MAX_OPTION)) {
+    return jsonError(res, 400, 'bad_request', `Every option must be text of 1–${MAX_OPTION} characters`);
   }
 
   const correctIndex =
@@ -214,9 +283,10 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
     ? b.tags.filter((t): t is string => typeof t === 'string' && t.length > 0 && t.length <= MAX_TAG).slice(0, MAX_TAGS)
     : [];
 
-  const explanation = typeof b.explanation === 'string' ? b.explanation.slice(0, MAX_TEXT) : '';
-  const introduction = typeof b.introduction === 'string' ? b.introduction.slice(0, MAX_TEXT) : '';
+  const explanation = typeof b.explanation === 'string' ? cutText(b.explanation, MAX_TEXT) : '';
+  const introduction = typeof b.introduction === 'string' ? cutText(b.introduction, MAX_TEXT) : '';
   const id = boundedString(b.id, 64) ?? undefined;
+  if (id !== undefined && !(await knownQuestionId(id))) return unknownQuestion(res);
 
   const saved = await saveQuestion({
     id,
@@ -230,7 +300,7 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
     difficulty,
     importance,
   });
-  log({ op: 'save', status: 200, id: saved.id });
+  log({ op: 'save', status: 200, by: actor(req), id: saved.id, created: !id });
   return res.json({ ok: true, id: saved.id });
 }
 
@@ -242,10 +312,11 @@ async function deleteQuestionOp(req: VercelRequest, res: VercelResponse) {
   const b = (req.body || {}) as { id?: unknown; deleted?: unknown };
   const id = boundedString(b.id, 64);
   if (!id) return jsonError(res, 400, 'bad_request', 'id is required');
+  if (!(await knownQuestionId(id))) return unknownQuestion(res);
   // `deleted: false` restores a soft-deleted base question; default is delete.
   const deleted = b.deleted === false ? false : true;
   await setQuestionDeleted(id, deleted);
-  log({ op: 'delete', status: 200, id, deleted });
+  log({ op: 'delete', status: 200, by: actor(req), id, deleted });
   return res.json({ ok: true });
 }
 
@@ -261,7 +332,7 @@ async function bulkHideOp(req: VercelRequest, res: VercelResponse) {
       : null;
   if (max === null) return jsonError(res, 400, 'bad_request', 'maxImportance must be an integer 1–10');
   const hidden = await bulkHideByImportance(max);
-  log({ op: 'bulkhide', status: 200, max, hidden });
+  log({ op: 'bulkhide', status: 200, by: actor(req), max, hidden });
   return res.json({ ok: true, hidden });
 }
 
@@ -274,7 +345,7 @@ async function resetQuestionOp(req: VercelRequest, res: VercelResponse) {
   const id = boundedString(b.id, 64);
   if (!id) return jsonError(res, 400, 'bad_request', 'id is required');
   await resetQuestion(id);
-  log({ op: 'reset', status: 200, id });
+  log({ op: 'reset', status: 200, by: actor(req), id });
   return res.json({ ok: true });
 }
 
@@ -286,10 +357,12 @@ async function reportsOp(req: VercelRequest, res: VercelResponse) {
   }
   if (req.method === 'POST') {
     const b = (req.body || {}) as { id?: unknown };
-    const id = boundedString(b.id, 64);
-    if (!id) return jsonError(res, 400, 'bad_request', 'id is required');
+    // A report's id is a UUID column: anything else failed the cast (22P02)
+    // and answered 500.
+    const id = typeof b.id === 'string' && UUID.test(b.id) ? b.id : null;
+    if (!id) return jsonError(res, 400, 'bad_request', 'id must be a report id');
     await dismissReport(id);
-    log({ op: 'reports', status: 200, dismissed: id });
+    log({ op: 'reports', status: 200, by: actor(req), dismissed: id });
     return res.json({ ok: true });
   }
   res.setHeader('Allow', 'GET, POST');
@@ -316,7 +389,7 @@ async function settingsOp(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     const b = (req.body || {}) as { settings?: unknown };
     const settings = await saveGameSettings(b.settings ?? b);
-    log({ op: 'settings', status: 200 });
+    log({ op: 'settings', status: 200, by: actor(req) });
     return res.json({ settings });
   }
   res.setHeader('Allow', 'GET, POST');

@@ -122,15 +122,22 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const baselineRef = useRef('');
+  // `saving` reaches handleSave only after a render, so a double click on
+  // Save for a new question created it twice. The ref holds from the first.
+  const savingRef = useRef(false);
 
-  // Re-seed the form whenever the dialog opens for a different question.
+  // Re-seed the form whenever the dialog opens for a different question. The
+  // category list is read, not watched: the bank re-read builds a new array,
+  // and re-seeding on it wiped what the admin was typing.
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
   useEffect(() => {
     if (!open) return;
     setError(null);
-    const seeded = initial ? seedForm(initial) : blankForm(categories);
+    const seeded = initial ? seedForm(initial) : blankForm(categoriesRef.current);
     setForm(seeded);
     baselineRef.current = JSON.stringify(seeded);
-  }, [open, initial, categories]);
+  }, [open, initial]);
 
   const setOption = (index: number, value: string) =>
     setForm((f) => ({ ...f, options: f.options.map((o, i) => (i === index ? value : o)) }));
@@ -158,11 +165,13 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return;
     const validationError = validate();
     if (validationError) {
       setError(validationError);
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     const payload: QuestionPayload = {
@@ -187,6 +196,7 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
     } catch (err) {
       setError(friendlyError(err));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

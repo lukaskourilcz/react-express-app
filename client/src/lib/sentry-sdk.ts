@@ -1,4 +1,127 @@
 // A closed export boundary lets Rollup remove Replay/profiling and unused SDK
 // APIs. Keeping the entire dynamic-import namespace alive retained them even
 // though devShark only initializes monitoring and reports exceptions.
-export { init, browserTracingIntegration, captureException } from '@sentry/react';
+//
+// The scrubber below travels in this lazy chunk with the SDK, so the shell
+// carries none of it.
+import type { Breadcrumb, Event } from '@sentry/react';
+import { init, browserTracingIntegration } from '@sentry/react';
+
+export { captureException } from '@sentry/react';
+
+/** Start monitoring. The options live here, in the lazy chunk, so the shell
+ * carries only the DSN check and the import (lib/sentry.ts). */
+export function start(dsn: string, environment: string): void {
+  init({
+    dsn,
+    environment,
+    // Performance tracing (Web Vitals + transactions) at a low sample rate,
+    // without the cost of full sampling or Session Replay.
+    // `linkPreviousTrace: 'in-memory'` is the SDK's default, pinned: the
+    // other setting keeps the last trace in sessionStorage.
+    integrations: [browserTracingIntegration({ linkPreviousTrace: 'in-memory' })],
+    tracesSampleRate: 0.1,
+    // No IP address, cookies or user context. Error monitoring runs for
+    // every visitor without asking (lib/consent.ts, "necessary") only
+    // because it stores nothing in the browser and carries no identifier
+    // of the person: no cookie, no storage key, no Session Replay, no
+    // setUser. Keep it that way, or put it under analytics consent.
+    sendDefaultPii: false,
+    // sendDefaultPii leaves addresses whole: every event, breadcrumb and
+    // span loses its query strings, fragments, e-mail addresses and tokens
+    // here (scrubEvent and scrubBreadcrumb below).
+    beforeSend: (event) => scrubEvent(event),
+    beforeSendTransaction: (event) => scrubEvent(event),
+    beforeBreadcrumb: (crumb) => scrubBreadcrumb(crumb),
+  });
+}
+
+/* ── what an event may carry ─────────────────────────────────────────────
+ * Error monitoring runs without asking only while it sends no personal data
+ * (lib/sentry.ts). The SDK copies the full address into every event, every
+ * navigation and request breadcrumb and every request span, and an address
+ * here can hold a sign-in code (`?code=`), a Supabase session in the fragment
+ * (`#access_token=`), a Stripe `session_id`, a voucher or a GitHub
+ * installation's `state`. Every address keeps its origin and path only, every
+ * free text loses e-mail addresses, tokens and the query strings of the
+ * addresses inside it, and nothing names the person. */
+
+/** An address without its query string or fragment; absolute or relative. */
+export function scrubAddress(value: string): string {
+  const cut = value.search(/[?#]/);
+  return cut === -1 ? value : value.slice(0, cut);
+}
+
+const ABSOLUTE_URL_TAIL = /(\b[a-z][a-z0-9+.-]*:\/\/[^\s?#"'<>`]*)[?#][^\s"'<>`]*/gi;
+const RELATIVE_URL_TAIL = /(^|[\s("'`])(\/[^\s?#"'<>`]*)[?#][^\s"'<>`)]*/g;
+const EMAIL = /[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/gi;
+const JWT = /\beyJ[\w-]+\.[\w-]+\.[\w-]+/g;
+const BEARER = /\bBearer\s+[\w.~+/-]{8,}=*/gi;
+
+/** Free text (a message, an error's value, a breadcrumb) without the parts
+ * that could identify a person or open their account. */
+export function scrubText(value: string): string {
+  return value
+    .replace(ABSOLUTE_URL_TAIL, '$1')
+    .replace(RELATIVE_URL_TAIL, '$1$2')
+    .replace(JWT, '[token]')
+    .replace(BEARER, 'Bearer [token]')
+    .replace(EMAIL, '[email]');
+}
+
+/** Keys whose value is an address, absolute or relative (navigation `from`
+ * and `to`, request `url`, span `http.url` and `url.full`). */
+const ADDRESS_KEY = /^(?:url|from|to)$|(?:^|\.)(?:url|full|target)$/;
+/** Keys that hold an address's query string or fragment on their own. */
+const QUERY_KEY = /(?:^|[._])(?:query|fragment|query_string)$/;
+
+function scrubBag(bag: Record<string, unknown> | undefined): void {
+  if (!bag || typeof bag !== 'object') return;
+  for (const key of Object.keys(bag)) {
+    if (QUERY_KEY.test(key)) {
+      delete bag[key];
+      continue;
+    }
+    const value = bag[key];
+    if (typeof value === 'string') bag[key] = scrubText(ADDRESS_KEY.test(key) ? scrubAddress(value) : value);
+  }
+}
+
+/** One breadcrumb as monitoring may keep it. */
+export function scrubBreadcrumb(crumb: Breadcrumb): Breadcrumb {
+  if (typeof crumb.message === 'string') crumb.message = scrubText(crumb.message);
+  // A console breadcrumb keeps the logged values raw beside its message,
+  // objects and all; the message already says them, scrubbed.
+  if (crumb.data && 'arguments' in crumb.data) delete crumb.data.arguments;
+  scrubBag(crumb.data);
+  return crumb;
+}
+
+/** An error or a transaction as monitoring may send it. */
+export function scrubEvent<T extends Event>(event: T): T {
+  delete event.user;
+  if (event.request) {
+    if (typeof event.request.url === 'string') event.request.url = scrubAddress(event.request.url);
+    delete event.request.query_string;
+    delete event.request.cookies;
+    delete event.request.data;
+    // The Referer is the previous address with its query string; the browser
+    // name is all the request headers need to say.
+    const agent = event.request.headers?.['User-Agent'];
+    if (agent) event.request.headers = { 'User-Agent': agent };
+    else delete event.request.headers;
+  }
+  if (typeof event.message === 'string') event.message = scrubText(event.message);
+  if (typeof event.transaction === 'string') event.transaction = scrubAddress(event.transaction);
+  for (const exception of event.exception?.values ?? []) {
+    if (typeof exception.value === 'string') exception.value = scrubText(exception.value);
+  }
+  for (const crumb of event.breadcrumbs ?? []) scrubBreadcrumb(crumb);
+  // An error thrown in a wrapped handler carries that handler's raw
+  // arguments here, out of reach of the text scrubber.
+  if (event.extra && 'arguments' in event.extra) delete event.extra.arguments;
+  scrubBag(event.extra);
+  scrubBag(event.contexts?.trace?.data as Record<string, unknown> | undefined);
+  for (const span of event.spans ?? []) scrubBag(span.data as Record<string, unknown> | undefined);
+  return event;
+}

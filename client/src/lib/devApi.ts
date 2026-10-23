@@ -117,13 +117,15 @@ export interface GameSettings {
   coins: CoinSettings;
 }
 
-/** Check a password against the server. Returns false on 401, throws on network errors. */
+/** Check admin access (the session, or a legacy password) against the
+ * server. False when it refuses the caller: 401 for a wrong password, 403 for
+ * an account without the admin role. Throws on network and server errors. */
 export async function verifyPassword(pw: string): Promise<boolean> {
   try {
     await adminFetch('settings', { password: pw });
     return true;
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) return false;
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return false;
     throw err;
   }
 }
@@ -136,6 +138,29 @@ export const saveQuestion = (payload: QuestionPayload) =>
 
 export const setQuestionDeleted = (id: string, deleted: boolean) =>
   adminFetch<{ ok: true }>('delete', { method: 'POST', body: { id, deleted } });
+
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Delete several questions, one request each: there is no bulk-by-id op.
+ * Every admin request takes a token from the admin bucket (lib/rate-limit.ts:
+ * five at once, then one a second), so a bulk delete met 429 after its fifth
+ * question and stopped. A 429 now waits for the next token and sends the same
+ * question again; any other failure stops the run. `onDeleted` hears each one
+ * that went, so a caller that stops knows which. */
+export async function deleteQuestions(ids: readonly string[], onDeleted: (id: string) => void, wait = pause): Promise<void> {
+  for (const id of ids) {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        await setQuestionDeleted(id, true);
+        break;
+      } catch (err) {
+        if (!(err instanceof ApiError && err.status === 429) || attempt >= 5) throw err;
+        await wait(1_100);
+      }
+    }
+    onDeleted(id);
+  }
+}
 
 /** Soft-hide all (non-custom) questions scoring ≤ maxImportance. Returns count. */
 export const bulkHideByImportance = (maxImportance: number) =>

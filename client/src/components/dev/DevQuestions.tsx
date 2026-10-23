@@ -14,6 +14,7 @@ import { importanceBand, IMPORTANCE_BAND_LABEL, type ImportanceBand } from '../.
 import {
   listQuestions,
   setQuestionDeleted,
+  deleteQuestions,
   resetQuestion,
   bulkHideByImportance,
   type AdminQuestion,
@@ -260,6 +261,18 @@ export default function DevQuestions() {
     setPage(0);
   }, [activeSubject.id]);
 
+  // A question deleted any way (its row, the filler delete, Quality triage)
+  // leaves the selection when the bank is read again, so 'Delete selected (n)'
+  // never counts or resends one that is already gone.
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const live = new Set(questions.filter((q) => !q.deleted).map((q) => q.id));
+      const kept = [...prev].filter((id) => live.has(id));
+      return kept.length === prev.size ? prev : new Set(kept);
+    });
+  }, [questions]);
+
   const stats = useMemo(() => {
     let edited = 0;
     let custom = 0;
@@ -351,9 +364,11 @@ export default function DevQuestions() {
     setConfirm({ title: 'Revert question?', description: 'Your edits will be discarded and the original question restored.', actionLabel: 'Revert', destructive: false, onConfirm: () => runAction('Reverted to original', () => resetQuestion(q.id)) });
   };
 
-  // How many currently-visible, non-custom questions the bulk action would hide.
+  // How many questions the bulk action would delete: the server takes only the
+  // served, non-custom ones (lib/questions-store.ts bulkHideByImportance reads
+  // the eligible set), so an unreviewed or retired question is not counted.
   const bulkHideCount = useMemo(
-    () => questions.filter((q) => !q.deleted && q.source !== 'custom' && q.importance <= bulkThreshold).length,
+    () => questions.filter((q) => !q.deleted && q.review.active && q.source !== 'custom' && q.importance <= bulkThreshold).length,
     [questions, bulkThreshold],
   );
   const handleBulkHide = async () => {
@@ -398,17 +413,20 @@ export default function DevQuestions() {
     const ids = [...selected];
     if (ids.length === 0) return;
     setConfirm({ title: `Delete ${ids.length} selected question${ids.length === 1 ? '' : 's'}?`, description: 'This permanently removes the selected questions and cannot be undone.', actionLabel: 'Delete permanently', onConfirm: async () => {
+    let n = 0;
     try {
-      let n = 0;
-      for (const id of ids) {
-        await setQuestionDeleted(id, true);
-        n += 1;
-      }
+      await deleteQuestions(ids, () => { n += 1; });
       setSnack(`Removed ${n} question${n === 1 ? '' : 's'}`);
-      setSelected(new Set());
-      reload();
     } catch (err) {
-      setSnack(friendlyError(err));
+      setSnack(`${friendlyError(err)} (removed ${n} of ${ids.length} before stopping)`);
+    } finally {
+      // Those deleted before a failure are gone too: unselect them and
+      // re-read the bank, or they stayed listed and selected as if kept.
+      if (n > 0) {
+        const gone = new Set(ids.slice(0, n));
+        setSelected((prev) => new Set([...prev].filter((id) => !gone.has(id))));
+        reload();
+      }
     }
     }});
   };

@@ -4,7 +4,7 @@
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { jsonError, requireAuthSub, withTimeout, createLogger } from './http';
+import { jsonError, requireAuthSub, withTimeout, createLogger, ServiceUnavailableError } from './http';
 import { enforceRateLimit, RATE_LIMITS, type RateLimitConfig } from './rate-limit';
 import { deploymentSubjectIds } from './product-scope';
 import { decodeGithubConnectState, encodeGithubConnectState } from './quiz-tokens';
@@ -46,7 +46,9 @@ async function readConnection(supabase: SupabaseClient, userId: string): Promise
 }
 
 async function queuedCount(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { count } = await withTimeout(supabase.from('github_commits').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'queued'));
+  const { count, error } = await withTimeout(supabase.from('github_commits').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'queued'));
+  // Unread is not "nothing waiting": the card would hide files still queued.
+  if (error) throw new Error('db_error');
   return count ?? 0;
 }
 
@@ -104,13 +106,16 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     if (op === 'github-connection') {
       if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return jsonError(res, 405, 'method_not_allowed', 'Method not allowed'); }
       const row = await readConnection(supabase, userId);
-      const queued = row ? await queuedCount(supabase, userId) : 0;
-      let repositories: RepoInfo[] | undefined;
-      if (row && row.status === 'pending_repo') {
-        try {
-          repositories = (await listInstallationRepos(await installationToken(row.installation_id))).filter((repo) => !repo.fork && repo.owner.id === row.account_id);
-        } catch { repositories = []; }
-      }
+      // The queue count and the repository picker do not wait for each other.
+      const [queued, repositories] = await Promise.all([
+        row ? queuedCount(supabase, userId) : 0,
+        row && row.status === 'pending_repo'
+          ? installationToken(row.installation_id)
+            .then(listInstallationRepos)
+            .then((repos) => repos.filter((repo) => !repo.fork && repo.owner.id === row.account_id))
+            .catch((): RepoInfo[] => [])
+          : undefined,
+      ]);
       res.setHeader('Cache-Control', 'private, no-store');
       return res.json(describe(row, queued, repositories));
     }
@@ -178,6 +183,7 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     }
 
     if (op === 'github-repo') {
+      if (!(await withinLimits(req, res, RATE_LIMITS.githubRepoAddress, RATE_LIMITS.githubRepo, userId))) return;
       const body = (req.body || {}) as { repoFullName?: unknown };
       if (typeof body.repoFullName !== 'string' || !/^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/.test(body.repoFullName)) return jsonError(res, 400, 'bad_request', 'repoFullName is required');
       const row = await readConnection(supabase, userId);
@@ -209,15 +215,29 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     }
 
     if (op === 'github-disconnect') {
+      // The connection first: a disconnect that failed leaves the learner
+      // connected, and must leave their queued files with them. The queue
+      // goes after it, and a failure there answers 500 so the retry removes it
+      // before a later connection could write those files to another repository.
       const deleted = await withTimeout(supabase.from('github_connections').delete().eq('user_id', userId));
-      await withTimeout(supabase.from('github_commits').delete().eq('user_id', userId));
       if (deleted.error) return jsonError(res, 500, 'db_error', 'Could not disconnect');
+      const dropped = await withTimeout(supabase.from('github_commits').delete().eq('user_id', userId));
+      if (dropped.error) return jsonError(res, 500, 'db_error', 'Could not disconnect');
       logEvent({ status: 200, kind: 'disconnected' });
       return res.json({ ok: true });
     }
 
     return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
   } catch (error) {
+    // A Supabase or GitHub call that did not answer in time (lib/http.ts
+    // `UpstreamTimeoutError`) is the service busy for a moment: 503, which the
+    // client may retry. Not on connect-finish: by then GitHub may have spent
+    // the one-time code, and the callback page sends the same code again
+    // after a 503, so that op keeps answering a failure the code cannot fix.
+    if (error instanceof ServiceUnavailableError && op !== 'github-connect-finish') {
+      logEvent({ status: 503, kind: 'unavailable', op, code: error.code });
+      return jsonError(res, 503, error.code, error.message);
+    }
     if (error instanceof GithubError) {
       logEvent({ status: error.status, kind: 'github_error', op });
       return jsonError(res, 502, 'github_error', 'GitHub did not accept the request. Try again in a moment.');

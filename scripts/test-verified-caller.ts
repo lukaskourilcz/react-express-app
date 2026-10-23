@@ -83,12 +83,15 @@ const seen: Seen[] = [];
 const RETIRED_REPORTED = 'rm-js-21';
 /** While true, the one-time quiz claim fails as an unreachable database would. */
 let claimFails = false;
+let healthReadFails = false;
 /** Token checks Supabase Auth answered, so a test can count a request's. */
 let authChecks = 0;
 /** How a read of the auth event log answers: normally, failing, or as a
  * table the migration has not created yet. */
 let authEventsRead: 'ok' | 'down' | 'missing' = 'ok';
 const SLOW_REPORT = 'stand-in: answer after the timeout';
+// An admin question save with this text answers after the timeout too.
+const SLOW_QUESTION = 'stand-in: save after the timeout';
 // A topic board asked with this minimum answers after the timeout too.
 const SLOW_BOARD_MIN_ATTEMPTS = 97;
 const upstashCommands: string[] = [];
@@ -149,6 +152,10 @@ async function startStandIns() {
       setTimeout(() => send(201, [body]), 5_500);
       return;
     }
+    if (url.pathname === '/rest/v1/question_edits' && (body as Row | undefined)?.question === SLOW_QUESTION) {
+      setTimeout(() => send(201, [body]), 5_500);
+      return;
+    }
     if (url.pathname === '/rest/v1/rpc/allocate_shark_name' && (body as Row | undefined)?.p_user_id === SLOW.id) {
       setTimeout(() => send(200, { handle: 'slowSharkie1', ordinal: '1', base: 'slowSharkie' }), 5_500);
       return;
@@ -169,6 +176,7 @@ async function startStandIns() {
     if (url.pathname === '/rest/v1/auth_events' && req.method === 'GET' && authEventsRead === 'missing') return send(404, { code: 'PGRST205', message: "Could not find the table 'public.auth_events' in the schema cache" });
     const filters = Object.fromEntries([...url.searchParams.entries()].filter(([, value]) => value.startsWith('eq.')).map(([key, value]) => [key, value.slice(3)]));
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
+    if (healthReadFails && url.pathname === '/rest/v1/quiz_submissions' && url.searchParams.get('select') === 'grade_key') return send(500, { code: '42501', message: 'permission denied for table quiz_submissions' });
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname)?.[1];
     if (rpc) {
       if (rpc === 'claim_quiz_submission' && claimFails) return send(500, { code: '08006', message: 'stand-in: connection failure' });
@@ -265,6 +273,7 @@ async function main() {
       { default: questions },
       reportsStore,
       questionsStore,
+      { default: adminOps },
     ] = await Promise.all([
       import('../api/user/[op]'),
       import('../api/quiz/roadmap'),
@@ -281,6 +290,7 @@ async function main() {
       import('../api/quiz/questions'),
       import('../lib/reports-store'),
       import('../lib/questions-store'),
+      import('../api/admin/[op]'),
     ]);
 
     type Handler = (req: never, res: never) => unknown;
@@ -434,6 +444,107 @@ async function main() {
     assert.equal(gate.at(-1), 429, 'and the admin bucket runs out before the gate is asked again');
     console.log('PASS verified caller: the fulfilment op is rate-limited before its admin gate');
 
+    // ── the admin console's API ──────────────────────────────────────────
+    const admin = (op: string, input: Omit<Parameters<typeof call>[1], 'query'> & { query?: Record<string, string> }) =>
+      call(adminOps as Handler, { account: ROLE_ADMIN, ...input, query: { op, ...(input.query ?? {}) } });
+    const question = { question: 'Which hook keeps state?', options: ['useState', 'useRef'], correctIndex: 0, category: 'react', tags: ['hooks'], difficulty: 2 };
+    // A save the database is too slow to take is the database busy, which the
+    // console may retry: 503 upstream_timeout, not 500.
+    const slowSave = await admin('save', { method: 'POST', body: { ...question, question: SLOW_QUESTION } });
+    assert.equal(slowSave.statusCode, 503, `a timed-out admin save answers 503 (${JSON.stringify(slowSave.body)})`);
+    assert.equal(errorCode(slowSave), 'upstream_timeout');
+    console.log('PASS verified caller: an admin op whose database call times out answers 503');
+
+    // An option the save cannot take is refused, never dropped: the correct
+    // index points into the list as sent, and dropping the first of these
+    // stored useRef as the answer to a question whose answer is useState.
+    seen.length = 0;
+    const shifted = await admin('save', { method: 'POST', body: { ...question, options: ['x'.repeat(2001), 'useState', 'useRef'], correctIndex: 1 } });
+    assert.equal(shifted.statusCode, 400, `a save with an option too long is refused (${JSON.stringify(shifted.body)})`);
+    assert.deepEqual(reads('/rest/v1/question_edits'), [], 'and nothing is written');
+    for (const options of [['useState', 7], ['useState', '']]) {
+      const refused = await admin('save', { method: 'POST', body: { ...question, options } });
+      assert.equal(refused.statusCode, 400, `a save with the options ${JSON.stringify(options)} is refused`);
+    }
+    console.log('PASS verified caller: an admin save refuses an invalid option instead of dropping it and moving the answer');
+
+    // Postgres refuses U+0000 in text and JSONB, which answered 500: the
+    // console's writes holding one are refused before the database, and a
+    // question that spells the escape out as text still saves.
+    seen.length = 0;
+    for (const [op, body] of [
+      ['save', { ...question, explanation: 'NUL \u0000 here' }],
+      ['save', { ...question, options: ['useState', 'use\u0000Ref'] }],
+      ['settings', { settings: { devTips: ['tip \u0000'] } }],
+      ['delete', { id: 'rm-js-\u00001' }],
+    ] as const) {
+      const refused = await admin(op, { method: 'POST', body });
+      assert.equal(refused.statusCode, 400, `op=${op} holding U+0000 is refused (${JSON.stringify(refused.body)})`);
+    }
+    assert.deepEqual(seen.filter((one) => one.method !== 'GET'), [], 'and nothing is written');
+    const spelled = await admin('save', { method: 'POST', body: { ...question, question: 'What does "\\u0000" print?' } });
+    assert.equal(spelled.statusCode, 200, `a question that spells the escape out saves (${JSON.stringify(spelled.body)})`);
+    console.log('PASS verified caller: an admin write holding U+0000 is refused with 400');
+
+    // A report id is a UUID column: one that is not is refused before the
+    // cast fails in Postgres, and a real one is dismissed.
+    seen.length = 0;
+    const notReport = await admin('reports', { method: 'POST', body: { id: 'report-1' } });
+    assert.equal(notReport.statusCode, 400, `dismissing a report by a non-UUID id is refused (${JSON.stringify(notReport.body)})`);
+    assert.deepEqual(reads('/rest/v1/question_reports'), [], 'before the database is asked');
+    const dismissed = await admin('reports', { method: 'POST', body: { id: '5d6a8a4e-1f59-4d6a-9f56-0f7b6c1e2a3b' } });
+    assert.equal(dismissed.statusCode, 200, JSON.stringify(dismissed.body));
+    assert.equal(reads('/rest/v1/question_reports').filter((one) => one.method === 'DELETE').length, 1, 'a report id is dismissed');
+    console.log('PASS verified caller: dismissing a report refuses an id that is not a UUID');
+
+    // A save or delete naming an id that is neither the bank's nor a custom
+    // question's wrote an override row no listing shows: refused with 404.
+    seen.length = 0;
+    for (const [op, body] of [
+      ['delete', { id: 'rm-js-no-such-question' }],
+      ['save', { ...question, id: 'rm-js-no-such-question' }],
+    ] as const) {
+      const refused = await admin(op, { method: 'POST', body });
+      assert.equal(refused.statusCode, 404, `op=${op} for an id the bank lacks is refused (${JSON.stringify(refused.body)})`);
+      assert.equal(errorCode(refused), 'unknown_question');
+    }
+    assert.deepEqual(reads('/rest/v1/question_edits'), [], 'and nothing is written');
+    console.log('PASS verified caller: an admin save or delete refuses an id that is not a question');
+
+    // Every write the console makes leaves an audit line naming the admin.
+    const realLog = console.log;
+    const audit: string[] = [];
+    console.log = (line: unknown) => { audit.push(String(line)); };
+    try {
+      assert.equal((await admin('delete', { method: 'POST', body: { id: 'rm-js-1' } })).statusCode, 200);
+      assert.equal((await admin('reset', { method: 'POST', body: { id: 'rm-js-1' } })).statusCode, 200);
+      assert.equal((await admin('bulkhide', { method: 'POST', body: { maxImportance: 1 } })).statusCode, 200);
+    } finally {
+      console.log = realLog;
+    }
+    for (const op of ['delete', 'reset', 'bulkhide']) {
+      const line = audit.map((one) => JSON.parse(one) as Row).find((one) => one.route === 'admin' && one.op === op);
+      assert.equal(line?.by, ROLE_ADMIN.id, `op=${op} logs the admin who made it (${JSON.stringify(line)})`);
+    }
+    console.log('PASS verified caller: an admin write logs the admin account that made it');
+
+    // A quality scan names its categories once: a repeated parameter arrives
+    // as an array, which read as no filter and scanned the whole bank.
+    const repeated = await admin('quality', { query: { categories: ['react', 'css'] as unknown as string } });
+    assert.equal(repeated.statusCode, 400, 'a repeated categories parameter is refused');
+    const scoped = await admin('quality', { query: { categories: 'react,css' } });
+    assert.equal(scoped.statusCode, 200, `a quality scan of two categories answers (${errorCode(scoped)})`);
+    console.log('PASS verified caller: a quality scan refuses a repeated categories parameter');
+
+    // A long explanation is cut to 4,000 characters by code point, so an
+    // emoji at the cut is kept whole rather than stored as half a pair.
+    seen.length = 0;
+    const long = await admin('save', { method: 'POST', body: { ...question, explanation: `${'a'.repeat(3_999)}🦈 and more` } });
+    assert.equal(long.statusCode, 200, JSON.stringify(long.body));
+    const stored = (reads('/rest/v1/question_edits').find((one) => one.method === 'POST')?.body as Row | undefined)?.explanation as string;
+    assert.equal(stored, `${'a'.repeat(3_999)}🦈`, 'the cut keeps the emoji whole');
+    console.log('PASS verified caller: an admin save cuts long text by code point');
+
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
       ['stats', await user('stats', { account: A })],
@@ -457,6 +568,46 @@ async function main() {
       assert.match(res.headers['cache-control'] ?? '', expected, `${label} keeps its own header`);
     }
     console.log('PASS verified caller: personal answers are private, no-store; public ones keep their headers');
+
+    // A health check the database answers with an error is logged with the
+    // reason, as a check that throws is: a 503 with no line saying why sent
+    // the owner to guess which dependency failed.
+    {
+      const lines: Row[] = [];
+      const original = console.log;
+      healthReadFails = true;
+      console.log = (line: unknown) => {
+        try { lines.push(JSON.parse(String(line)) as Row); } catch { original(line); }
+      };
+      let down: Response;
+      try {
+        down = await call(health as Handler, {});
+      } finally {
+        console.log = original;
+        healthReadFails = false;
+      }
+      assert.equal(down.statusCode, 503, `a failing service-role read is degraded (${JSON.stringify(down.body)})`);
+      const logged = lines.find((line) => line.route === 'health' && line.dependency === 'service_role');
+      assert.deepEqual({ level: logged?.level, reason: logged?.reason }, { level: 'error', reason: '42501' }, 'and logged with its reason');
+    }
+    console.log('PASS verified caller: a failed health check is logged with its reason');
+
+    // The probe is public and not rate limited: probes that arrive together
+    // share one check, so a flood of them is not a flood of database reads.
+    // Each answer is still fresh: the next probe checks again.
+    {
+      const before = { database: reads('/rest/v1/user_stats').length, serviceRole: reads('/rest/v1/quiz_submissions').length };
+      const together = await Promise.all([call(health as Handler, {}), call(health as Handler, {}), call(health as Handler, {})]);
+      for (const res of together) assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      assert.deepEqual(
+        { database: reads('/rest/v1/user_stats').length - before.database, serviceRole: reads('/rest/v1/quiz_submissions').length - before.serviceRole },
+        { database: 1, serviceRole: 1 },
+        'three probes at once read each dependency once',
+      );
+      await call(health as Handler, {});
+      assert.equal(reads('/rest/v1/user_stats').length - before.database, 2, 'a later probe checks again');
+    }
+    console.log('PASS verified caller: health probes that arrive together share one check');
 
     // ── the retired progress PUT ─────────────────────────────────────────
     // It answered with the progress read and wrote nothing; the server writes
@@ -601,6 +752,29 @@ async function main() {
     assert.equal(timedOut.statusCode, 503, `a handler whose Supabase call timed out answers 503, not 500 (${JSON.stringify(timedOut.body)})`);
     assert.equal(errorCode(timedOut), 'upstream_timeout');
     console.log('PASS verified caller: a Supabase timeout answers 503 upstream_timeout');
+
+    // ── the distributed limiter down ─────────────────────────────────────
+    // Every Upstash command fails here. A request still passes on the
+    // in-memory bucket, and right after a failure the next one does not ask
+    // Upstash again: a hung Upstash held each bucket for the whole deadline.
+    {
+      const clock = Date.now;
+      const later = clock() + 3_600_000;
+      Date.now = () => later;
+      try {
+        const bucket = { key: `limiter-pause-${later}`, capacity: 5, refillPerSecond: 1 };
+        const req = { headers: { 'x-forwarded-for': nextAddress() }, socket: {} } as never;
+        upstashCommands.length = 0;
+        assert.equal(await rateLimit.enforceRateLimit(req, mockResponse() as never, bucket), true, 'a limiter outage lets the request through');
+        const asked = upstashCommands.length;
+        assert.ok(asked > 0, 'the first request asks Upstash');
+        assert.equal(await rateLimit.enforceRateLimit(req, mockResponse() as never, bucket), true);
+        assert.equal(upstashCommands.length, asked, 'the next one, just after the failure, keeps to the in-memory bucket');
+      } finally {
+        Date.now = clock;
+      }
+    }
+    console.log('PASS verified caller: a failing distributed limiter is not asked again straight away');
 
     // ── what an escaped error logs ───────────────────────────────────────
     const { AuthError } = await import('../lib/auth');
