@@ -57,11 +57,19 @@ export function AppToast({
         padding: '0 1rem',
       }}
     >
+      {/* The live region stays on the page and the card is inserted into it:
+          a region drawn together with its words, as the card was, is not
+          read. It takes its role only while it has words, so a page with
+          closed toasts holds no empty alerts. Empty, it has no width, so the
+          card centres as before. */}
+      <div
+        role={open ? (severity === 'error' ? 'alert' : 'status') : undefined}
+        aria-live={severity === 'error' ? 'assertive' : 'polite'}
+        style={{ display: 'flex', justifyContent: 'center', minWidth: 0 }}
+      >
       <AnimatePresence>
         {open && (
           <m.div
-            role={severity === 'error' ? 'alert' : 'status'}
-            aria-live={severity === 'error' ? 'assertive' : 'polite'}
             initial={stillIfReduced(reduce, { opacity: 0, y: 16, scale: 0.96 })}
             animate={stillIfReduced(reduce, { opacity: 1, y: 0, scale: 1 })}
             exit={stillIfReduced(reduce, { opacity: 0, y: 12, scale: 0.98 })}
@@ -110,6 +118,7 @@ export function AppToast({
           </m.div>
         )}
       </AnimatePresence>
+      </div>
     </div>,
     document.body,
   );
