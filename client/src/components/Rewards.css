@@ -226,8 +226,21 @@
 .rw-checkout__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 @media (max-width: 599px) {
-  .rw-earn__row { flex-direction: column; align-items: flex-start; }
-  .rw-earn__meta { justify-content: flex-start; }
+  /* How to earn on a phone (UX audit money-13): the label and its figure
+     share the first line, the figure right-aligned, and the detail spans the
+     row under them. A row with no figure leaves the cell empty. Stacked, each
+     figure was a bold line of its own that read like the next row's title. */
+  .rw-earn__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'label figure' 'detail detail';
+    align-items: baseline;
+    gap: 0.15rem 1rem;
+  }
+  .rw-earn__main { display: contents; }
+  .rw-earn__label { grid-area: label; }
+  .rw-earn__detail { grid-area: detail; }
+  .rw-earn__meta { grid-area: figure; }
   .rw-spend__row {
     grid-template-columns: 44px minmax(0, 1fr);
     grid-template-areas: 'icon name' 'icon blurb' '. action';
