@@ -64,11 +64,20 @@ export interface EditorProps {
   /** The id of text that describes the editor to a screen reader. */
   describedBy?: string;
   readOnly?: boolean;
+  /** A fixed floor in px. Without one the editor takes the shared token
+   * --cd-editor-min (Coding.css): 280px stacked, and the frame's floor
+   * beside the results (UX audit coding-03). */
   minHeight?: number;
   maxHeight?: number;
+  /** Fill the height its container gives it and scroll inside, as the
+   * coding frame needs (coding-01). Outside a frame of fixed height it still
+   * grows with the code, from its minimum. */
+  fill?: boolean;
 }
 
-export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnly, minHeight = 240, maxHeight }: EditorProps) {
+const EDITOR_MIN = 'var(--cd-editor-min, 280px)';
+
+export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnly, minHeight, maxHeight, fill = false }: EditorProps) {
   const extensions = useMemo<Extension[]>(() => [
     javascript({ jsx: track === 'react', typescript: track === 'typescript' || track === 'react' }),
     syntaxHighlighting(highlight),
@@ -80,12 +89,16 @@ export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnl
     // keys and does nothing with them; the event still reaches the workbench.
     Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => true }, { key: 'Shift-Mod-Enter', run: () => true }])),
     EditorView.lineWrapping,
-    EditorView.contentAttributes.of({ 'aria-label': ariaLabel, 'aria-multiline': 'true', role: 'textbox', ...(describedBy ? { 'aria-describedby': describedBy } : {}) }),
+    // tabindex="0" names what contenteditable already does: the code is a tab
+    // stop. In the coding frame the editor scrolls inside (coding-01), and a
+    // scrolling region has to hold something focusable that says so.
+    EditorView.contentAttributes.of({ 'aria-label': ariaLabel, 'aria-multiline': 'true', role: 'textbox', tabindex: '0', ...(describedBy ? { 'aria-describedby': describedBy } : {}) }),
   ], [track, ariaLabel, describedBy]);
 
   return (
-    <div className="cd-editor" style={{ minHeight, maxHeight }}>
+    <div className={fill ? 'cd-editor cd-editor--fill' : 'cd-editor'} style={{ minHeight: minHeight ?? EDITOR_MIN, maxHeight }}>
       <CodeMirror
+        className="cd-editor__cm"
         value={value}
         onChange={onChange}
         extensions={extensions}
@@ -105,8 +118,10 @@ export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnl
         }}
         theme="none"
         indentWithTab={false}
-        height="auto"
-        minHeight={`${minHeight}px`}
+        // Filling is done by Coding.css (a flex column down to .cm-editor),
+        // which also lets the editor grow with the code where nothing caps it.
+        height={fill ? undefined : 'auto'}
+        minHeight={minHeight === undefined ? (fill ? undefined : EDITOR_MIN) : `${minHeight}px`}
         maxHeight={maxHeight ? `${maxHeight}px` : undefined}
       />
     </div>

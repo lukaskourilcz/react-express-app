@@ -38,7 +38,7 @@ for (const theme of ['light', 'dark']) {
     await page.screenshot({path:info.outputPath('mobile-pending.png')});
     // Waiting is the default, never a dead end: the editor, Run and Submit
     // work at phone width without the page scrolling sideways.
-    await page.getByRole('button',{name:'Use the editor on this screen'}).click();
+    await page.getByRole('button',{name:'Use the editor here'}).click();
     await expect(page.locator('.cd-editor')).toBeVisible();
     await expect(page.getByRole('button',{name:'Run',exact:true})).toBeVisible();
     await expect(page.getByRole('button',{name:'Submit',exact:true})).toBeVisible();

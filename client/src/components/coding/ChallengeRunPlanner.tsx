@@ -9,7 +9,7 @@ import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
-import { Kicker, SwimCta } from '../landing/LandingKit';
+import { codingListCopy } from '../../i18n/translations.codingLists';
 import { useAdvanceSession, usePracticeSession, useStartSession } from '../../coding/practice';
 import { ApiError } from '../../lib/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
@@ -110,8 +110,9 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
         </p>
       )}
       <div className="cd-actions">
-        {scheduled && <SwimCta size="sm" label={t('coding.run.startNow')} disabled={advance.isPending} onClick={begin} />}
-        {!scheduled && current && <Button variant="primary" as={Link} href={taskHref(current)} label={t('coding.run.continue')} />}
+        {/* Secondary: the Coding home's one SwimCta is its next challenge. */}
+        {scheduled && <Button variant="secondary" isDisabled={advance.isPending} onClick={begin} label={t('coding.run.startNow')} />}
+        {!scheduled && current && <Button variant="secondary" as={Link} href={taskHref(current)} label={t('coding.run.continue')} />}
         {scheduled && (
           <span className="ss-text-links" style={{ margin: 0 }}>
             <a href={calendarHref(session, t('coding.run.calendarTitle'))} download="devshark-challenge-run.ics">{t('coding.run.calendar')}</a>
@@ -125,8 +126,10 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
 }
 
 /** `collapsible` renders the planner as one row that opens on click (design
- * audit P1.6). A run already open or scheduled keeps the planner open, so its
- * card is never hidden behind the toggle. */
+ * audit P1.6): a hairline disclosure, not a card (UX audit coding-08), with
+ * the title, one line on what a run is, and "Plan a run" at its end. A run
+ * already open or scheduled keeps the planner open, so its card is never
+ * hidden behind the toggle. */
 export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedIn: boolean; collapsible?: boolean }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(!collapsible);
@@ -170,25 +173,21 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
 
   const showBody = expanded || !!open;
   return (
-    <section className={`cd-run cd-pane${showBody ? '' : ' cd-run--collapsed'}`} aria-labelledby="cd-run-title">
+    <section className={`cd-run${showBody ? '' : ' cd-run--collapsed'}`} aria-labelledby="cd-run-title">
       <div className="cd-run__head">
-        {collapsible && !open ? (
-          <h2 id="cd-run-title" className="cd-run__toggle-heading">
-            <button
-              type="button"
-              className="cd-run__toggle"
-              aria-expanded={showBody}
-              aria-controls={bodyId}
-              onClick={() => setExpanded((value) => !value)}
-            >
-              <span>{t('coding.run.title')}</span>
-              <span className="cd-run__chevron" aria-hidden>{showBody ? '−' : '+'}</span>
-            </button>
-          </h2>
-        ) : (
-          <>
-            <Kicker as="h2" id="cd-run-title">{t('coding.run.title')}</Kicker>
-          </>
+        <div className="cd-run__intro">
+          <h2 id="cd-run-title" className="cd-run__title">{t('coding.run.title')}</h2>
+          {!open && <p className="cd-run__lead">{codingListCopy('coding.run.lead')}</p>}
+        </div>
+        {collapsible && !open && (
+          <Button
+            variant="secondary"
+            className="cd-run__toggle"
+            aria-expanded={showBody}
+            aria-controls={bodyId}
+            onClick={() => setExpanded((value) => !value)}
+            label={codingListCopy(showBody ? 'coding.run.hide' : 'coding.run.open')}
+          />
         )}
       </div>
       {showBody && (<div id={bodyId} className="cd-run__body">
@@ -248,7 +247,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
             )}
           </fieldset>
           <div className="cd-actions">
-            <SwimCta type="submit" size="sm" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} disabled={start.isPending} />
+            <Button type="submit" variant="secondary" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} isDisabled={start.isPending} />
           </div>
           {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
         </form>

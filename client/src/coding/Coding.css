@@ -34,6 +34,7 @@
 .cd-page h1 { margin: 0; font-family: var(--font-family-heading); letter-spacing: -0.015em; }
 .cd-page h2 { margin: 0; font-family: var(--font-family-heading); }
 .cd-lead { margin: 6px 0 0; color: var(--color-text-secondary); max-width: 62ch; }
+.cd-signin-line { margin: 6px 0 0; max-width: 68ch; font-size: 0.9rem; color: var(--color-text-secondary); }
 .cd-page a.cd-link { color: var(--color-text-accent); font-weight: 600; }
 
 /* ── section lists ─────────────────────────────────────────────────────── */
@@ -52,7 +53,9 @@
   .cd-home-head { grid-template-columns: minmax(0, 1fr); }
   .cd-next { width: 100%; }
 }
-.cd-track-directory { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--ss-card-line); }
+/* Four tracks, one row of four from 1051px, 2x2 down to 701px and one column
+   below (UX audit coding-07): never one track alone on a row. */
+.cd-track-directory { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--ss-card-line); }
 .cd-track-entry { display: flex; gap: 14px; padding: 24px 18px; color: inherit; text-decoration: none; min-width: 0; }
 .cd-track-entry + .cd-track-entry { border-left: 1px solid var(--ss-card-line); }
 .cd-track-entry__body { flex: 1; min-width: 0; display: grid; gap: 12px; }
@@ -63,8 +66,10 @@
 .cd-projects { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr); gap: 32px; align-items: start; }
 .cd-projects__intro .cd-lead { margin-top: 14px; line-height: 1.7; }
 .cd-project-list { min-width: 0; border-top: 1px solid var(--ss-card-line); }
-.cd-project-list--scroll { max-height: var(--cd-project-list-height, 460px); overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior-y: contain; }
-.cd-project-list--scroll:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 3px; }
+.cd-projects__body { min-width: 0; display: grid; justify-items: start; gap: 8px; }
+.cd-projects__body > .cd-project-list { justify-self: stretch; }
+/* The first row "Show all" reveals takes focus: it shows where the list went on. */
+.cd-project:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: -3px; }
 .cd-project { display: grid; grid-template-columns: 26px minmax(0, 1fr) minmax(110px, .65fr) auto; align-items: center; gap: 16px; padding: 22px 8px; border-bottom: 1px solid var(--ss-card-line); }
 .cd-project__number { color: var(--color-text-secondary); font: .8rem var(--cd-mono); }
 .cd-project__name { min-width: 0; }
@@ -74,7 +79,8 @@
 .cd-stage-meter { display: flex; gap: 4px; }
 .cd-stage-meter span { flex: 1; height: 5px; border-radius: 2px; background: var(--color-border-strong); }
 .cd-stage-meter span[data-complete="true"] { background: var(--brand-accent); }
-.cd-project .ss-swim-cta { min-width: 112px; }
+.cd-project .ss-fin-button { min-width: 112px; }
+.cd-projects__rule { margin: 14px 0 0; max-width: 40ch; }
 .cd-fullstack-feature { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; padding: clamp(24px, 4vw, 44px); background: var(--color-background-muted); color: inherit; text-decoration: none; border-radius: var(--radius-container); }
 .cd-fullstack-feature h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-top: 12px; }
 .cd-fullstack-feature p { color: var(--color-text-secondary); line-height: 1.7; max-width: 50ch; }
@@ -83,18 +89,23 @@
 .cd-stack-path i { font-style: normal; color: var(--color-text-secondary); }
 .cd-track-entry:focus-visible, .cd-fullstack-feature:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 3px; }
 .cd-discovery .cd-techniques { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+/* Nine technique groups fill a 3x3 grid from 1051px, with no orphan row. */
+@media (min-width: 1051px) { .cd-discovery .cd-techniques { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .cd-discovery .cd-technique { border: 0; border-bottom: 1px solid var(--ss-card-line); border-radius: 0; padding: 20px 0; background: transparent; }
 .cd-discovery .cd-technique:hover { background: var(--color-background-muted); }
 @media (max-width: 1050px) {
   .cd-projects { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .cd-track-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cd-track-entry { padding-inline: 12px; gap: 8px; }
+  .cd-track-entry:nth-child(odd) { border-left: 0; }
+  .cd-track-entry:nth-child(n + 3) { border-top: 1px solid var(--ss-card-line); }
 }
 @media (max-width: 700px) {
   .cd-track-directory, .cd-fullstack-feature, .cd-discovery .cd-techniques { grid-template-columns: minmax(0, 1fr); }
   .cd-track-entry + .cd-track-entry { border-left: 0; border-top: 1px solid var(--ss-card-line); }
   .cd-project { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; padding-block: 18px; }
   .cd-project__progress { grid-column: 2; grid-row: 2; }
-  .cd-project .ss-swim-cta { grid-column: 3; grid-row: 1 / 3; min-width: 0; padding-inline: 12px !important; }
+  .cd-project .ss-fin-button { grid-column: 3; grid-row: 1 / 3; min-width: 0; padding-inline: 14px !important; }
   .cd-stack-path { justify-content: flex-start; }
 }
 
@@ -154,12 +165,6 @@
 }
 
 .cd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-/* Technique filter: chips from 760px up, one select in the filter row below. */
-.cd-search .cd-technique-select { display: none; }
-@media (max-width: 759px) {
-  .cd-technique-chips { display: none; }
-  .cd-search .cd-technique-select { display: block; }
-}
 .cd-chip {
   min-height: 44px;
   padding: 8px 14px;
@@ -183,35 +188,64 @@
 .cd-tier__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; }
 .cd-tier__head h3 { margin: 0; font-size: 0.95rem; font-weight: 650; color: var(--color-text-secondary); }
 .cd-tier__lock { margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; }
-.cd-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cd-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--ss-card-line); }
+/* Two columns of one-line rows from 1024px (UX audit coding-06): a title
+   and its status sit within one 584px column, and the hairline rows are the
+   panel's rows, not a card each. */
+@media (min-width: 1024px) {
+  .cd-tier .cd-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
+}
 .cd-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 14px;
+  display: flex;
   align-items: center;
-  min-height: 56px;
-  padding: 10px 14px;
-  border-radius: var(--radius-element);
-  background: var(--color-background-surface);
-  border: 1px solid var(--ss-card-line);
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: inherit;
   text-decoration: none;
 }
-.cd-row:hover { border-color: var(--color-border-strong); }
-.cd-row:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.cd-row:hover { background: var(--color-background-muted); }
+.cd-row:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: -3px; }
 .cd-row[aria-disabled='true'] { opacity: 0.6; cursor: not-allowed; }
 /* A Premium row is a button: it stays in the tab order and opens the upgrade
-   sheet, so it reads as available to press, with the "Premium" badge saying why. */
-.cd-row--premium { font: inherit; text-align: start; width: 100%; }
+   sheet, so it reads as available to press, with the "Premium" status saying why. */
+.cd-row--premium { font: inherit; text-align: start; width: 100%; cursor: pointer; }
 .cd-row--premium[aria-disabled='true'] { opacity: 0.85; cursor: pointer; }
-.cd-row__title { font-weight: 650; }
-.cd-row__meta { grid-column: 1; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 0.82rem; color: var(--color-text-secondary); }
-.cd-row__status { grid-column: 2; grid-row: 1 / span 2; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+.cd-row__main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.cd-row__title { font-weight: 650; overflow-wrap: anywhere; }
+.cd-row__meta { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--color-text-secondary); white-space: nowrap; }
+/* On a phone the meta often wraps under the title, and a second line that
+   opens with the separator reads as a stray mark. There the separator is
+   dropped: the meta's smaller, quieter type sets it apart on either line. */
+@media (max-width: 599px) {
+  .cd-row__meta > [aria-hidden] { display: none; }
+}
+.cd-row__main .cd-tag { align-self: center; }
+.cd-row__status { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
 .cd-status--passed { color: var(--ss-success-strong, var(--ss-success)); }
 .cd-status--revealed, .cd-status--locked { color: var(--color-text-secondary); }
 .cd-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--color-background-muted); font-family: var(--cd-mono); font-size: 0.78rem; }
 
 /* ── workbench ─────────────────────────────────────────────────────────── */
+/* One frame for every task (UX audit coding-01, coding-03). From 1024px the
+   workbench is one viewport-tall frame: the page's header clearance (7rem)
+   and 48px under it are left out, within 600–900px. The audit asked for a
+   560px floor; 600px leaves the editor its own floor beside a capped brief
+   and the action bar. The editor's minimum is one token for every place a
+   task opens: 280px stacked, where it grows with the code, and 200px inside
+   the frame (what a 600px frame leaves under a capped brief, the editor's
+   toolbar and the action bar), which a taller viewport gives far more. */
+:root {
+  --cd-frame-h: clamp(600px, calc(100dvh - 7rem - 48px), 900px);
+  --cd-editor-min: 280px;
+  --cd-brief-cap: 120px;
+}
+@media (min-width: 1024px) {
+  :root { --cd-editor-min: 200px; }
+}
 .cd-workbench { display: flex; flex-direction: column; gap: 16px; }
 .cd-complexity { display: flex; align-items: center; gap: .25rem; font-size: var(--ss-type-label); font-weight: 600; line-height: 1.5; }
 .cd-complexity__info { width: 44px; min-width: 44px; min-height: 44px; padding: 0; }
@@ -243,15 +277,50 @@
 @media (min-width: 1024px) {
   /* The split is the learner's, kept between sessions. It is bounded so
      neither pane can be dragged away entirely. */
+  /* The separator's column is 12px with 2px on each side, a 16px gutter like
+     every other gap (UX audit coding-18). */
   .cd-workbench__grid {
-    grid-template-columns: minmax(0, var(--cd-split, 58%)) 10px minmax(0, 1fr);
+    grid-template-columns: minmax(0, var(--cd-split, 58%)) 12px minmax(0, 1fr);
+    column-gap: 2px;
     align-items: stretch;
   }
-  /* The output pane takes the editor's height and no more. Size containment
-     stops its content from growing the row, so the row is as tall as the
-     editor, the pane stretches to fill it, and Run and Submit below stay where
-     the editor ends however many checks a task has. As the code grows the
-     editor grows, and the pane shows more checks with it. Scoped to this
+  /* The frame: the first row is --cd-frame-h on every task, so the editor
+     starts and Run and Submit sit at the same place whatever the brief says.
+     Hints, confirmations and errors take an implicit row under it, which
+     exists (with its gap) only while they do. */
+  .cd-workbench--section .cd-workbench__grid,
+  .cd-workbench--lesson .cd-workbench__grid,
+  .cd-workbench--activity .cd-workbench__grid { grid-template-rows: var(--cd-frame-h); }
+  /* A path's code activity has no separator: its second pane takes the
+     workbench's third column, so the code pane is the same width. */
+  .cd-workbench--activity .cd-pane--editor { grid-column: 1; grid-row: 1; }
+  .cd-workbench--activity .cd-pane--output { grid-column: 3; grid-row: 1; }
+  /* Inside the frame the code pane is brief, editor, action bar: the brief
+     and the bar keep their size and the editor takes the rest. */
+  /* When what sits above the editor outgrows its share (a lock or fixture
+     note under a long brief on a 600px frame), the editor keeps its floor and
+     the pane scrolls, so the action bar is never drawn over or cut off. */
+  .cd-workbench--section .cd-pane--editor,
+  .cd-workbench--lesson .cd-pane--editor,
+  .cd-workbench--activity .cd-pane--editor { min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  .cd-workbench--section .cd-pane--editor > *,
+  .cd-workbench--lesson .cd-pane--editor > *,
+  .cd-workbench--activity .cd-pane--editor > * { flex: none; }
+  /* The slot's own minimum is its toolbar plus the editor's floor: CodeMirror
+     starts from a zero basis here, so long code scrolls inside the editor and
+     never grows the slot. */
+  .cd-workbench--section .cd-pane--editor > .cd-editor-slot,
+  .cd-workbench--lesson .cd-pane--editor > .cd-editor-slot,
+  .cd-workbench--activity .cd-pane--editor > .cd-editor-slot { flex: 1 1 0; }
+  .cd-workbench--section .cd-editor--fill > .cd-editor__cm,
+  .cd-workbench--lesson .cd-editor--fill > .cd-editor__cm,
+  .cd-workbench--activity .cd-editor--fill > .cd-editor__cm { flex-basis: 0; }
+  /* The full brief still leaves the editor its floor and the bar its row. */
+  .cd-workbench--section .cd-brief__body[data-capped='false'],
+  .cd-workbench--lesson .cd-brief__body[data-capped='false'],
+  .cd-workbench--activity .cd-brief__body[data-capped='false'] { max-height: calc(var(--cd-frame-h) - var(--cd-editor-min) - 270px); overflow-y: auto; }
+  /* The output pane fills the same frame and scrolls inside. Size
+     containment stops its content from growing the row. Scoped to this
      layout: stacked, the pane has a row of its own and would collapse. */
   .cd-pane--output { position: static; contain: size; }
   .cd-output-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -260,17 +329,19 @@
      verdict under it stays in view — it never has to be scrolled to. The outer
      scroll is only the fallback for a verdict and hint taller than the pane. */
   .cd-output-scroll > .cd-panel { flex: 1 1 auto; min-height: 160px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  /* Quiet at rest: a 1px card-line down the middle of the 12px column, which
+     stays the pointer's target. Hover and keyboard focus draw it 3px in the
+     accent; focus keeps its ring as well. */
   .cd-splitter {
     align-self: stretch;
-    min-height: 120px;
-    width: 10px;
-    border-radius: 999px;
-    background: var(--color-border);
+    width: 12px;
+    background: linear-gradient(to right, transparent calc(50% - 0.5px), var(--ss-card-line) calc(50% - 0.5px), var(--ss-card-line) calc(50% + 0.5px), transparent calc(50% + 0.5px));
     cursor: col-resize;
     touch-action: none;
   }
-  .cd-splitter:hover { background: var(--brand-accent); }
-  .cd-splitter:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+  .cd-splitter:hover,
+  .cd-splitter:focus-visible { background: linear-gradient(to right, transparent calc(50% - 1.5px), var(--brand-accent) calc(50% - 1.5px), var(--brand-accent) calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+  .cd-splitter:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 }
 /* Below the two-column breakpoint there is nothing to split, and a stray
    focusable element would be one more thing to tab past. */
@@ -294,15 +365,33 @@
 .cd-pane[hidden] { display: none; }
 /* The code pane holds the whole task: the brief on top, the editor growing in
    the middle, and the actions at its foot. */
-.cd-brief { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
-.cd-brief__line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 9px; color: var(--color-text-accent); font-family: var(--font-family-heading); font-size: 1.05rem; font-weight: 650; line-height: 1.35; }
-/* The rule before the name is the separator: it wraps with the name, so a
-   narrow screen never leaves a stray bar at the end of the line above. */
-.cd-page .cd-brief__title { margin: 0; padding-left: 9px; border-left: 2px solid color-mix(in srgb, currentColor 50%, transparent); font: inherit; font-weight: 800; color: inherit; overflow-wrap: anywhere; }
-.cd-brief__line .cd-tag,
-.cd-brief__line .cd-difficulty { align-self: center; }
+.cd-brief { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; min-width: 0; }
+/* The capped body (BriefZone): about five lines of prompt, then it scrolls
+   inside with a 24px fade at its foot; "Show full brief" lifts the cap. */
+.cd-brief__body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cd-brief__body[data-capped='true'] { max-height: var(--cd-brief-cap); overflow-y: auto; overscroll-behavior: contain; }
+/* The fade is the body's last 24px: pinned to the visible foot while there
+   is more to read, and over empty space once the end is reached. */
+.cd-brief__body[data-fade='true']::after { content: ''; position: sticky; bottom: 0; flex: none; height: 24px; margin-top: -10px; background: linear-gradient(to bottom, transparent, var(--color-background-surface)); pointer-events: none; }
+.cd-brief__body:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+/* A text toggle: the ghost button's inline padding is pulled back so its
+   label lines up with the prompt above it. */
+.cd-brief__toggle { align-self: flex-start; margin-inline-start: -12px; }
+/* Two fixed lines (UX audit coding-11): where the task sits as a quiet
+   eyebrow, then the task's name as the page heading with its difficulty
+   beside it. The name is no longer the size and green of its breadcrumb. */
+.cd-brief__head { display: grid; gap: 2px; }
+.cd-page .cd-brief__meta { margin: 0; font-family: var(--font-family-body); font-size: 0.8rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.cd-brief__line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.cd-page .cd-brief__title { margin: 0; font-family: var(--font-family-heading); font-size: 1.35rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; color: var(--color-text-primary); overflow-wrap: anywhere; }
 .cd-editor-slot { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
 .cd-pane--editor .cd-editor { flex: 1; background: var(--cd-editor-bg); }
+/* An editor that fills its box (Editor fill): a flex column down to
+   CodeMirror, so it takes a fixed frame's height and scrolls inside, and
+   grows with the code where nothing fixes its height. */
+.cd-editor--fill { display: flex; flex-direction: column; min-height: 0; }
+.cd-editor--fill > .cd-editor__cm { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.cd-editor--fill .cm-editor { flex: 1 1 auto; min-height: 0; }
 .cd-workbench .cd-panel pre, .cd-workbench .cd-console { max-height: none; }
 .cd-pane__head h1 { font-size: 1.5em; }
 .cd-pane__head { display: flex; flex-direction: column; gap: 6px; }
@@ -340,7 +429,7 @@
 @media (max-width: 1023px) and (pointer: coarse) {
   .cd-pane--editor .cd-editor .cm-editor { font-size: 16px; }
 }
-/* The pane takes focus when "Use the editor on this screen" replaces the
+/* The pane takes focus when "Use the editor here" replaces the
    waiting note, and shows it the way the verdict card does. */
 .cd-pane--editor:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; }
 .cd-editor-label { font-weight: 650; font-size: 0.92rem; }
@@ -348,6 +437,17 @@
 .cd-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .cd-actions--end { justify-content: flex-end; }
 .cd-editor-actions { min-width: 0; margin-top: 4px; }
+/* The editor's own toolbar, above the code: Format and Reset as 36px icon
+   buttons with a 44px hit area on a mouse (.ss-compact), 44px on touch. */
+.cd-editor-bar { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 6px; }
+/* A brief long enough to be capped ends with "Show full brief" at the start
+   of its own row, and the toolbar's two icons sit at the end of the next one.
+   They share one 44px row instead (UX audit coding-01): the toolbar is pulled
+   up past the toggle (44px), the brief's 4px margin and the pane's 12px gap,
+   so the editor starts 56px higher. The toolbar keeps its own width, so it
+   never covers the toggle, and the keyboard order stays toggle, Format,
+   Reset. */
+.cd-pane--editor > .cd-brief:has(> .cd-brief__toggle:last-child) + .cd-editor-slot > .cd-editor-bar { align-self: flex-end; align-items: center; min-height: 44px; margin-top: -60px; }
 .cd-actions--commands { gap: 8px 12px; }
 .cd-actions--commands button[aria-label] { min-width: 44px; min-height: 44px; }
 /* Save and report sit at the far end of the row, apart from the task's own actions. */
@@ -362,20 +462,34 @@
 @media (min-width: 1024px) {
   .cd-pane--controls { grid-row: 2; }
 }
-/* Submit and Continue are the workbench's one filled primary. They sit in the
-   row with Run, Format and Hint, which are 44px on every pointer (U1), so they
-   take the same height and the page-action type rather than SwimCta sm's 32px
-   with 12.5px text (the inline style needs !important). */
-.cd-workbench .ss-swim-cta--sm { padding: 10px 18px !important; font-size: 0.95rem !important; }
+/* Submit (and a lesson's Continue) is the workbench's one filled primary:
+   SwimCta md, 44px with 0.95rem text, beside Run in the page-action type
+   (UX audit coding-02). Nothing in the row is smaller than 44px. */
 .cd-shortcuts { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary); }
 
 .cd-note { margin: 0; padding: 10px 12px; border-radius: var(--radius-inner); background: var(--ss-info-soft); font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
 .cd-note--warn { background: var(--ss-warning-soft); }
+/* The waiting state below 1024px: one note with its one button inline. */
+.cd-wait { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.cd-wait p { margin: 0; flex: 1 1 14rem; }
 .cd-note--error { background: var(--ss-error-soft); }
 
 /* tabs */
-.cd-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--ss-card-line); overflow-x: auto; }
+/* The strip scrolls rather than squeezing its tabs (UX audit coding-12): a
+   tab keeps its natural width, so no label is clipped. The far edge fades
+   over 16px, and the strip ends with 16px of room, so the last tab clears
+   the fade once scrolled to. */
+.cd-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--ss-card-line);
+  overflow-x: auto;
+  padding-inline-end: 16px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
 .cd-tab {
+  flex: none;
   min-height: 44px;
   padding: 8px 12px;
   border: 0;
@@ -395,6 +509,21 @@
 .cd-tab__badge { font-size: 0.78rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--color-background-muted); color: var(--color-text-primary); }
 .cd-tab__badge--good { background: var(--ss-success-soft); }
 .cd-tab__badge--bad { background: var(--ss-error-soft); }
+/* From 600px the tabs sit a little closer, so a TypeScript or React strip
+   with its run badges (Results 0/5, Console, Types 1/5, Resources 2: 486px at
+   the old spacing) fits the 454px results pane of a 1280px frame instead of
+   scrolling its last tab out of view. */
+@media (min-width: 600px) {
+  .cd-tabs { gap: 2px; }
+  .cd-tab { gap: 6px; padding-inline: 10px; font-size: 0.95rem; }
+  .cd-tab__badge { padding-inline: 6px; }
+}
+/* A phone: tighter tabs, and Resources drops its count (its label says
+   enough), so four plain tabs fit a 328px strip. */
+@media (max-width: 599px) {
+  .cd-tab { padding: 8px; font-size: 0.9rem; }
+  .cd-tab[data-tab='resources'] .cd-tab__badge { display: none; }
+}
 .cd-output-scroll { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cd-panel { display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
 .cd-panel[hidden] { display: none; }
@@ -405,28 +534,31 @@
 .cd-panel--parked { position: fixed; top: 0; left: -10000px; width: 640px; height: 480px; overflow: hidden; pointer-events: none; }
 
 /* results */
-.cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-/* Eight rows show; the rest scroll inside this box, never the page. The cap is
-   measured from the rendered rows (see ResultList). */
+/* One divided list, not a card per check (UX audit coding-15): rows split by
+   hairlines, a fixed status column that says Pass or Fail in words as well
+   as colour, the call in mono with the expected value after it, and the
+   description, when there is one, as a quiet second line. */
+.cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--ss-card-line); }
 .cd-result {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: baseline;
   gap: 2px 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-inner);
-  border: 1px solid var(--ss-card-line);
+  min-height: 48px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--ss-card-line);
   font-size: 0.88rem;
 }
-.cd-result--pass { border-left: 3px solid var(--ss-success); }
-.cd-result--fail { border-left: 3px solid var(--ss-error); }
-.cd-result--idle { border-left: 3px solid var(--color-border-strong); }
 .cd-result--idle .cd-result__status { color: var(--color-text-secondary); }
-.cd-result__status { grid-row: 1 / span 3; font-weight: 700; padding-top: 2px; white-space: nowrap; }
+.cd-result__status { grid-row: 1 / span 3; font-weight: 700; white-space: nowrap; }
 .cd-result--pass .cd-result__status { color: var(--ss-success-strong, var(--ss-success)); }
 .cd-result--fail .cd-result__status { color: var(--ss-error); }
-.cd-result__call { font-family: var(--cd-mono); overflow-wrap: anywhere; }
-.cd-result__label { color: var(--color-text-secondary); }
-.cd-result__detail { font-family: var(--cd-mono); font-size: 0.82rem; overflow-wrap: anywhere; color: var(--color-text-secondary); }
+.cd-result__call,
+.cd-result__line { font-family: var(--cd-mono); overflow-wrap: anywhere; }
+.cd-result__expect { color: var(--color-text-secondary); }
+.cd-result__edge { margin-inline-start: 8px; font-size: 0.72rem; vertical-align: 1px; }
+.cd-result__label { grid-column: 2; color: var(--color-text-secondary); font-size: 0.82rem; }
+.cd-result__detail { grid-column: 2; font-family: var(--cd-mono); font-size: 0.82rem; overflow-wrap: anywhere; color: var(--color-text-secondary); }
 .cd-result__detail b { color: var(--color-text-primary); font-weight: 600; }
 .cd-summary { margin: 0; font-weight: 650; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
 .cd-summary small { font-weight: 500; color: var(--color-text-secondary); }
@@ -435,6 +567,9 @@
 .cd-console__empty { color: var(--color-text-secondary); font-size: 0.9rem; margin: 0; }
 
 .cd-frame { width: 100%; min-height: 320px; border: 1px solid var(--ss-card-line); border-radius: var(--radius-inner); background: var(--color-background-body); }
+/* Nothing rendered yet: the frame is there for the sandbox to load, and takes
+   no room until a run draws into it. */
+.cd-frame--idle { min-height: 0; height: 0; border: 0; }
 
 /* hints */
 .cd-hints { display: flex; flex-direction: column; gap: 8px; }
@@ -471,6 +606,8 @@
 .cd-verdict__title { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
 .cd-verdict__xp { font-family: var(--cd-mono); font-weight: 700; }
 .cd-verdict__row { margin: 0; font-size: 0.9rem; }
+/* Signed out: the pass's one line on the account, then its 44px Sign in. */
+.cd-verdict__signin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .cd-verdict__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
 /* design runner */
@@ -535,7 +672,7 @@
 .cd-hint--failure p { margin: 0; }
 
 /* Saved challenges, collections, filters and short sessions. */
-.cd-row-item { display: flex; align-items: stretch; gap: 6px; }
+.cd-row-item { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--ss-card-line); }
 .cd-row-item .cd-row { flex: 1 1 auto; }
 .cd-save {
   flex: none;
@@ -554,21 +691,32 @@
 .cd-save:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 /* The same star in the workbench toolbar, sized like the report flag beside it. */
 .cd-save--toolbar { min-width: 44px; width: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-element); font-size: 1.15rem; }
-@media (min-width: 1024px) { .cd-workbench .cd-save--toolbar { width: 32px; min-width: 32px; min-height: 32px; font-size: 1rem; } }
 .cd-save:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* The challenge-run planner on the Coding home: a form the learner shapes a
    run with, or the one open run and its actions. Same paper as the panes. */
-.cd-run { gap: 16px; }
-.cd-run__body { display: contents; }
+/* A hairline disclosure, not a card (UX audit coding-08): one 64px row with
+   the title and what a run is on the left and "Plan a run" on the right; the
+   form opens under it, between the same two lines. */
+.cd-run { display: flex; flex-direction: column; gap: 16px; padding-block: 9px; border-block: 1px solid var(--ss-card-line); }
 .cd-run--collapsed { gap: 0; }
-.cd-run__toggle-heading { margin: 0; font: inherit; }
-.cd-run__toggle { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; width: 100%; min-height: 44px; padding: 8px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.cd-run__toggle > span:first-child { font-family: var(--font-family-heading); font-weight: 700; font-size: 1.05rem; color: var(--color-text-primary); }
-.cd-run__chevron { display: grid; place-items: center; width: 44px; height: 44px; font-size: 1.75rem; line-height: 1; font-weight: 600; color: var(--color-text-accent); }
-.cd-run__toggle:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
-.cd-run__head { display: grid; gap: 4px; text-align: center; }
-.cd-run__head .cd-lead { margin-top: 0; }
+.cd-run:not(.cd-run--collapsed) { padding-bottom: 20px; }
+.cd-run__body { display: contents; }
+.cd-run__head { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 44px; }
+.cd-run__intro { display: grid; gap: 0; min-width: 0; }
+.cd-page .cd-run__title { margin: 0; font-family: var(--font-family-heading); font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
+.cd-run__lead { margin: 0; font-size: 0.9rem; line-height: 1.4; color: var(--color-text-secondary); }
+.cd-run__toggle { flex: none; }
+/* A phone: the title and "Plan a run" share the first line and the lead
+   runs under both, so the collapsed row is 84px at 390px rather than 114px
+   with the button on a line of its own. */
+@media (max-width: 560px) {
+  .cd-run__head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; }
+  .cd-run__intro { display: contents; }
+  .cd-page .cd-run__title { grid-row: 1; grid-column: 1; overflow-wrap: anywhere; }
+  .cd-run__lead { grid-row: 2; grid-column: 1 / -1; }
+  .cd-run__toggle { grid-row: 1; grid-column: 2; }
+}
 .cd-run__form { display: grid; gap: 16px; }
 .cd-run__field { display: grid; gap: 8px; }
 .cd-run__label { font-size: 0.88rem; font-weight: 650; color: var(--color-text-secondary); }
@@ -588,8 +736,25 @@
 .cd-run__when { margin: 0; color: var(--color-text-secondary); }
 @media (max-width: 560px) { .cd-run__options { grid-template-columns: minmax(0, 1fr); } }
 
-.cd-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
-.cd-search input[type="search"] { flex: 1 1 220px; min-width: 0; }
+/* One filter row (UX audit coding-16): the search grows, the selects share
+   what is left at up to 160px each, all 44px tall. From 1024px it never
+   wraps; under 760px it is a 2-column grid, the search across both. */
+.cd-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cd-search input[type="search"] { flex: 1 1 240px; min-width: 0; }
+.cd-search select { flex: 0 1 160px; min-width: 0; text-overflow: ellipsis; }
+.cd-search > .astryx-button { flex: none; }
+@media (min-width: 1024px) {
+  .cd-search { flex-wrap: nowrap; }
+  .cd-search input[type="search"] { flex-basis: 320px; min-width: 200px; }
+  .cd-search select { min-width: 110px; }
+}
+@media (max-width: 759px) {
+  .cd-search { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cd-search input[type="search"], .cd-search > .astryx-button { grid-column: 1 / -1; }
+}
+.cd-filter-count { margin: 0; font-size: 0.85rem; color: var(--color-text-secondary); }
+/* Empty, it stays a live region but takes no room in the page's column. */
+.cd-filter-count:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .cd-search input, .cd-search select {
   min-height: 44px;
   padding: 0 10px;
@@ -696,7 +861,7 @@
 
 
 /* Compact samples keep every output tab readable instead of clipping labels. */
-.cd-workbench--landing .cd-tabs { flex-wrap: wrap; overflow-x: visible; }
+.cd-workbench--landing .cd-tabs { flex-wrap: wrap; overflow-x: visible; padding-inline-end: 0; -webkit-mask-image: none; mask-image: none; }
 .cd-workbench--landing .cd-tab { flex: 0 0 auto; min-height: 44px; padding: .5rem; font-size: .75rem; }
 
 .cd-complete { width: 100%; max-width: 640px; margin-inline: auto; }

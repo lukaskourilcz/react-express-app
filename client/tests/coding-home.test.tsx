@@ -6,6 +6,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingHome, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import type { CodingProgressResponse } from '../../shared/coding-api';
 import { CODING_INDEX } from '../../shared/coding-index';
+import { listedChallenges } from '../../shared/evolving';
 import type { Tier } from '../../shared/tiers';
 
 // The Coding home's next-challenge card, in each state a reload goes through.
@@ -83,7 +84,11 @@ it('waits for the account before choosing, and offers the first challenge to a v
   view.rerender(tree());
   expect(within(card()).getByText('Digit sum')).toBeInTheDocument();
   expect(within(card()).getByRole('button', { name: 'Continue' })).toBeEnabled();
-  expect(screen.getByText(/Sign in to keep your progress/)).toBeInTheDocument();
+  // UX audit coding-10: once, as a line under the subtitle, not a tinted bar.
+  const hints = screen.getAllByText(/Sign in/);
+  expect(hints).toHaveLength(1);
+  expect(hints[0]).toHaveClass('cd-signin-line');
+  expect(hints[0].closest('header')).toContainElement(screen.getByRole('heading', { level: 1 }));
 });
 
 it('says when progress did not load and retries on request, instead of guessing', () => {
@@ -149,4 +154,47 @@ it('counts each technique the way the list it opens does', () => {
     expect(count, href).toBe(`${shown} challenges in ${heading}`);
     list.unmount();
   }
+});
+
+// UX audit coding-05: one SwimCta on the page (the next challenge), and every
+// project or path row says where the learner stands with the quieter fin.
+it('keeps one SwimCta and labels each row Start, Continue or Review by its progress', () => {
+  const [untouched, partial, complete] = listedChallenges({ category: 'debugging' });
+  const tasks = Object.fromEntries([
+    [partial.stages[0], { status: 'passed' }],
+    ...complete.stages.map((id) => [id, { status: 'passed' }]),
+  ]);
+  state.progress = { data: { tasks, due: [], javascriptLevelsCleared: 0 } as unknown as CodingProgressResponse, isLoading: false, isError: false, refetch: () => {} };
+  const { container } = mount();
+  expect(container.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+  expect(card().querySelector('.ss-swim-cta')).not.toBeNull();
+  const row = (title: string) => screen.getByRole('heading', { level: 3, name: title }).closest('article')!;
+  expect(within(row(untouched.title)).getByRole('button', { name: 'Start' })).not.toHaveClass('ss-swim-cta');
+  expect(within(row(partial.title)).getByRole('button', { name: 'Continue' })).not.toHaveClass('ss-swim-cta');
+  expect(within(row(complete.title)).getByRole('button', { name: 'Review' })).not.toHaveClass('ss-swim-cta');
+  // A Premium account sees no Premium rule anywhere on the page.
+  expect(screen.queryByText(/come with the free plan/)).toBeNull();
+});
+
+// UX audit coding-09: a long list is not a scroll box inside the page. It
+// shows five rows and a button for the rest, which moves focus to row six.
+it('folds a long project list to five rows and opens the rest in place', () => {
+  state.progress = { data: passedDigitSum, isLoading: false, isError: false, refetch: () => {} };
+  mount();
+  const section = screen.getByRole('region', { name: 'Evolving challenges' });
+  const projects = listedChallenges({});
+  expect(projects.length).toBeGreaterThan(5);
+  expect(within(section).getAllByRole('article')).toHaveLength(5);
+  expect(section.querySelector('[tabindex="0"]')).toBeNull();
+  const more = within(section).getByRole('button', { name: `Show all ${projects.length} challenges` });
+  expect(more).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(more);
+  const rows = within(section).getAllByRole('article');
+  expect(rows).toHaveLength(projects.length);
+  expect(rows[5]).toHaveFocus();
+  expect(rows[5]).toHaveAccessibleName(projects[5].title);
+  const fewer = within(section).getByRole('button', { name: 'Show fewer' });
+  expect(fewer).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(fewer);
+  expect(within(section).getAllByRole('article')).toHaveLength(5);
 });

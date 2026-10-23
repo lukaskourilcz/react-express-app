@@ -255,6 +255,13 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 /* ── workspace ─────────────────────────────────────────────────────────── */
 
 .lp-workspace { display: flex; flex-direction: column; gap: 20px; }
+/* While a code activity is open the route box is the wide page (UX audit
+   coding-03), but only the coding frame needs it. The module's head, its
+   activity list and the activity's own heading keep the narrow column,
+   centred where they sat before it opened, so opening an activity moves and
+   rewraps nothing above the editor, and their lines keep a reading measure. */
+.lp-page:has(.ss-wide-page) > :not(.lp-workspace),
+.lp-workspace:has(> .ss-wide-page) > :not(.ss-wide-page) { width: 100%; max-width: var(--ss-width-narrow); margin-inline: auto; }
 
 .lp-split { display: flex; flex-direction: column; gap: 16px; }
 @media (min-width: 60rem) {

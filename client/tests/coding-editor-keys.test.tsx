@@ -22,3 +22,11 @@ for (const shift of [false, true]) {
     expect(heard).toHaveBeenCalledWith(shift);
   });
 }
+
+it('marks the code as a tab stop, so the editor that scrolls inside the coding frame holds focusable content (coding-01)', () => {
+  const { container } = render(<Editor value={'const one = () => 1;\n'} onChange={() => {}} track="javascript" ariaLabel="Code" fill />);
+  const content = container.querySelector<HTMLElement>('.cm-content')!;
+  expect(content).toHaveAttribute('tabindex', '0');
+  expect(content).toHaveAttribute('role', 'textbox');
+  expect(container.querySelector('.cd-editor')).toHaveClass('cd-editor--fill');
+});
