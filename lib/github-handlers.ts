@@ -104,13 +104,16 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     if (op === 'github-connection') {
       if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return jsonError(res, 405, 'method_not_allowed', 'Method not allowed'); }
       const row = await readConnection(supabase, userId);
-      const queued = row ? await queuedCount(supabase, userId) : 0;
-      let repositories: RepoInfo[] | undefined;
-      if (row && row.status === 'pending_repo') {
-        try {
-          repositories = (await listInstallationRepos(await installationToken(row.installation_id))).filter((repo) => !repo.fork && repo.owner.id === row.account_id);
-        } catch { repositories = []; }
-      }
+      // The queue count and the repository picker do not wait for each other.
+      const [queued, repositories] = await Promise.all([
+        row ? queuedCount(supabase, userId) : 0,
+        row && row.status === 'pending_repo'
+          ? installationToken(row.installation_id)
+            .then(listInstallationRepos)
+            .then((repos) => repos.filter((repo) => !repo.fork && repo.owner.id === row.account_id))
+            .catch((): RepoInfo[] => [])
+          : undefined,
+      ]);
       res.setHeader('Cache-Control', 'private, no-store');
       return res.json(describe(row, queued, repositories));
     }
