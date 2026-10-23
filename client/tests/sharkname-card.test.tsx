@@ -333,6 +333,10 @@ describe('what friends see', () => {
     expect(rule(board, ".lb-photo input[role='switch']")).toMatch(square);
   });
 
+  it('keeps each radio and photo switch on its label line, in both columns', () => {
+    expect(readSheet()).toContain('.sn-card .astryx-radio-list-item,\n.sn-card .astryx-radio-list-item > .astryx-item,\n.sn-card .astryx-switch-field > div { align-items: flex-start; }');
+  });
+
   it('puts a switch back and says so when the save fails', async () => {
     const { identityPuts } = serve({ identityFails: true });
     renderCard();

@@ -581,7 +581,7 @@ export const en = {
   'sharkname.friendsSee': 'Friends see',
   'sharkname.seeName': 'Account name',
   'sharkname.noName': 'Your account has no Google name.',
-  'sharkname.seeHelp': 'Also anyone you send a friend request to.',
+  'sharkname.seeHelp': 'And anyone you send a request to.',
   'sharkname.photo': 'Show my photo to friends',
   'sharkname.photoHelp': 'When off, friends see your initials.',
   'sharkname.noPhoto': 'Your account has no photo, so friends see your initials.',

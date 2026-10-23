@@ -94,6 +94,12 @@
    beside it (.lb-photo), so both photo switches are the same target. */
 .sn-see input[role='switch'] { top: -10px !important; left: -2px !important; width: 44px !important; height: 44px !important; }
 .sn-column__title { margin: 0; font-weight: 650; }
+/* An option with a description, and a photo switch with its hint, keep the
+   control on the label's first line; Astryx centres it on the whole block,
+   which left the radio and the switch floating between two or three lines. */
+.sn-card .astryx-radio-list-item,
+.sn-card .astryx-radio-list-item > .astryx-item,
+.sn-card .astryx-switch-field > div { align-items: flex-start; }
 
 .sn-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .sn-preview__who { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
