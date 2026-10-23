@@ -14,45 +14,34 @@
 
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
-import { getGameConfig, type GameConfig } from './gameConfig';
 import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
 
-export type ProductKind = 'ring' | 'flair';
+type ProductKind = 'ring' | 'flair';
 
-export interface Product {
+interface Product {
   id: string;
   kind: ProductKind;
-  price: number;
-  /** Compact typographic marker shown on the product card and equipped flair. */
+  /** Compact typographic marker shown on the equipped flair. */
   marker: string;
   /** Ring colour (rings only). */
   color?: string;
 }
 
-// Default token prices (the configurable defaults live in lib/settings-store.ts
-// and client/src/lib/gameConfig.ts; these are the static fallbacks). The live
-// price is resolved per purchase/display via priceOf() from the game config.
-const STATIC_CATALOGUE: Product[] = [
-  { id: 'ring-emerald', kind: 'ring', price: 200, marker: '⬤', color: '#10b981' },
-  { id: 'ring-gold', kind: 'ring', price: 250, marker: '⬤', color: '#d4af37' },
-  { id: 'ring-violet', kind: 'ring', price: 375, marker: '⬤', color: '#8b5cf6' },
+// The ring and flair ids stay so saved inventories still resolve; no screen
+// sells or names them any more, so they carry no price and no display copy.
+// (Their old prices were read from the game config by a priceOf() that
+// nothing called once the shop stopped selling them.)
+const STATIC_CATALOGUE: readonly Product[] = [
+  { id: 'ring-emerald', kind: 'ring', marker: '⬤', color: '#10b981' },
+  { id: 'ring-gold', kind: 'ring', marker: '⬤', color: '#d4af37' },
+  { id: 'ring-violet', kind: 'ring', marker: '⬤', color: '#8b5cf6' },
 
-  { id: 'flair-rocket', kind: 'flair', price: 150, marker: '↑' },
-  { id: 'flair-flame', kind: 'flair', price: 300, marker: '◆' },
-  { id: 'flair-crown', kind: 'flair', price: 500, marker: 'Ⅰ' },
+  { id: 'flair-rocket', kind: 'flair', marker: '↑' },
+  { id: 'flair-flame', kind: 'flair', marker: '◆' },
+  { id: 'flair-crown', kind: 'flair', marker: 'Ⅰ' },
 ];
 
-// The ring and flair ids stay so saved inventories still resolve; no screen
-// sells or names them any more, so they carry no display copy.
-export const CATALOGUE: readonly Product[] = STATIC_CATALOGUE;
-
-const byId = new Map(CATALOGUE.map((p) => [p.id, p]));
-export const productById = (id: string): Product | undefined => byId.get(id);
-
-/** The live token price of a cosmetic, resolved from the game config. */
-export function priceOf(product: Product, config: GameConfig = getGameConfig()): number {
-  return config.shop.prices[product.id] ?? product.price;
-}
+const byId = new Map(STATIC_CATALOGUE.map((p) => [p.id, p]));
 
 interface Inventory {
   /** Cosmetic product ids the learner owns permanently. */

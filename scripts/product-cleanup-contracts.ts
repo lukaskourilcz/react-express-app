@@ -166,6 +166,42 @@ async function merchPausedContracts() {
       assert.ok(body.items.some((item) => item.sku === 'mug'), 'with the switch on the catalogue comes back');
       assert.equal(merchRedemptionOpen(SHOP_ALL_ON, true), true);
     }
+    // With the switch on, an order that names the same item and size twice is
+    // refused before the database: merch_order_items keys on (order, sku,
+    // variant), so the second line failed the insert with 23505, a 500.
+    {
+      const { db, touched } = recordingDatabase();
+      const res = mockResponse();
+      await handleOrders(request('POST', { items: [{ sku: 'mug', quantity: 5 }, { sku: 'mug', quantity: 5 }], address: ADDRESS, paymentKind: 'tokens' }), res as never, db, true);
+      assert.equal(res.statusCode, 400, 'a repeated line is a bad request');
+      assert.deepEqual(touched, [], 'and reaches no table or routine');
+    }
+    // With the switch on, a failed read of an order's items is an error, not
+    // an order with nothing in it.
+    {
+      const order = { order_id: 'order-0123456789abcdef', payment_kind: 'tokens', state: 'paid', total_minor: 1999, currency: 'EUR', token_total: 900, ship_country: 'CZ', carrier: null, tracking_ref: null, test_mode: false, created_at: '2026-10-01T10:00:00Z' };
+      const answers: Record<string, { data: unknown; error: unknown }> = {
+        merch_orders: { data: [order], error: null },
+        merch_order_items: { data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } },
+        path_reward_claims: { data: [], error: null },
+      };
+      const db = {
+        from: (table: string) => {
+          const link = {
+            select: () => link, eq: () => link, in: () => link, order: () => link, limit: () => link,
+            then: <A>(resolve: (value: { data: unknown; error: unknown }) => A) => resolve(answers[table]),
+          };
+          return link;
+        },
+      } as never;
+      const res = mockResponse();
+      await handleOrders(request('GET'), res as never, db, true);
+      assert.equal(res.statusCode, 500, 'a failed items read is not an empty order');
+      answers.merch_order_items = { data: [{ order_id: order.order_id, sku: 'mug', variant: '', quantity: 1 }], error: null };
+      const listed = mockResponse();
+      await handleOrders(request('GET'), listed as never, db, true);
+      assert.deepEqual((listed.body as { orders: { items: unknown[] }[] }).orders[0].items, [{ sku: 'mug', variant: '', quantity: 1 }]);
+    }
     // Redemption is closed whatever the owner saved, and Spreadshop is not
     // asked for its promotion.
     assert.equal(merchRedemptionOpen(SHOP_ALL_ON), false, 'redemption stays closed while merchandise is paused');

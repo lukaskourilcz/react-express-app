@@ -46,6 +46,7 @@ import { ReferralInvite } from './ReferralInvite';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { friendlyError } from '../lib/api';
 import { entitlementQuery, useEntitlement } from '../lib/entitlement';
 import { useGameConfig } from '../lib/gameConfig';
@@ -53,6 +54,13 @@ import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { categoryLabelKey } from '../lib/categories';
 import { referralQuery } from '../lib/referral';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
+import {
+  useWallet,
+  walletQuery,
+  type EarnSummary,
+  type ShopItem,
+  type WalletEntry,
+} from '../lib/rewards';
 import {
   formatMoney,
   ordersQuery,
@@ -62,12 +70,7 @@ import {
   useOrders,
   useShop,
   useProtectionMutation,
-  useWallet,
-  walletQuery,
-  type EarnSummary,
-  type ShopItem,
-  type WalletEntry,
-} from '../lib/rewards';
+} from '../lib/rewardsShop';
 import { MERCH_IMAGES } from '../lib/merchImages';
 import { MERCH_SHOP } from '../../product-catalog';
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
@@ -134,13 +137,15 @@ export function ledgerLabel(entry: Pick<WalletEntry, 'reason' | 'reference'>, t:
 
 /* ── the wallet ────────────────────────────────────────────────────────── */
 
-function Wallet({ signedIn }: { signedIn: boolean }) {
+/** `restoring`: a stored session is still being restored, so the learner is
+ * not known to be signed out yet and is shown loading, not asked to sign in. */
+function Wallet({ signedIn, restoring = false }: { signedIn: boolean; restoring?: boolean }) {
   const t = useT();
-  const wallet = useWallet(signedIn);
+  const wallet = useWallet(signedIn, { held: true });
   const [showAll, setShowAll] = useState(false);
   const entries = wallet.data?.entries ?? [];
   const visible = showAll ? entries : entries.slice(0, LEDGER_PREVIEW);
-  const loading = signedIn && wallet.isPending;
+  const loading = restoring || (signedIn && wallet.isPending);
 
   return (
     <section className="rw-wallet ss-raised" aria-labelledby="rw-wallet-title" aria-busy={loading || undefined}>
@@ -155,7 +160,7 @@ function Wallet({ signedIn }: { signedIn: boolean }) {
         </div>
       </div>
 
-      {!signedIn && <p className="rw-muted">{t('shop.signInForWallet')}</p>}
+      {!signedIn && !restoring && <p className="rw-muted">{t('shop.signInForWallet')}</p>}
       {loading && <p className="rw-muted" role="status">{t('common.loading')}</p>}
       {signedIn && wallet.isError && !wallet.data && (
         <div className="rw-inline-error" role="alert">
@@ -453,17 +458,38 @@ function useRewardsFirstData() {
 function Shop() {
   useRewardsFirstData();
   const t = useT();
-  const { isAuthenticated } = useAuth();
-  const { tier } = useEntitlement();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  // On a direct load the session is restored after the page mounts: until
+  // then the wallet and the invite say loading, not "Sign in", which flashed
+  // at a signed-in learner (the saved challenges on /collection wait too).
+  const restoring = authLoading && !isAuthenticated;
+  // Every read below is one the first-data hold made (useRewardsFirstData).
+  const { tier } = useEntitlement({ held: true });
   const config = useGameConfig();
-  const shop = useShop();
-  const wallet = useWallet(isAuthenticated);
-  const orders = useOrders(isAuthenticated && MERCH_ENABLED);
+  const shop = useShop(true, { held: true });
+  const wallet = useWallet(isAuthenticated, { held: true });
+  const orders = useOrders(isAuthenticated && MERCH_ENABLED, { held: true });
   const cosmetic = useCosmeticMutation();
   const protection = useProtectionMutation();
   const order = useOrderMutation();
 
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  // Set at the press, not from isPending: the mutation's state reaches React a
+  // task after the click, so a double click on Buy sent two purchases and a
+  // streak protection charged its coins twice. Held until the wallet re-read
+  // lands, so the row stays busy while it still shows the old balance.
+  // `say` reports the outcome only while the account that spent is still the
+  // one here: a purchase answered after a sign-out is not news for the next
+  // person (lib/accountData.ts).
+  const spending = useRef(false);
+  type Say = (msg: string, ok: boolean) => void;
+  const spend = (run: (say: Say) => Promise<unknown>) => {
+    if (spending.current) return;
+    spending.current = true;
+    const epoch = accountEpoch();
+    const say: Say = (msg, ok) => { if (accountEpoch() === epoch) setToast({ msg, ok }); };
+    void run(say).finally(() => { spending.current = false; });
+  };
   const [checkout, setCheckout] = useState<{ sku: MerchSku; variant: string } | null>(null);
   const [address, setAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
   const checkoutHeading = useRef<HTMLHeadingElement>(null);
@@ -509,21 +535,50 @@ function Shop() {
 
   const submitOrder = (paymentKind: 'tokens' | 'cash') => {
     if (!checkout) return;
-    order.mutate(
-      { items: [{ ...checkout, quantity: 1 }], address, paymentKind },
-      {
-        onSuccess: (result) => {
-          closeCheckout();
-          setAddress(EMPTY_ADDRESS);
-          setToast({
-            msg: result.state === 'paid' ? t('shop.orderPlaced') : t('shop.orderAwaitingPayment'),
-            ok: true,
-          });
-        },
-        onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
-      },
-    );
+    const items = [{ ...checkout, quantity: 1 }];
+    spend(async (say) => {
+      try {
+        const result = await order.mutateAsync({ items, address, paymentKind });
+        closeCheckout();
+        setAddress(EMPTY_ADDRESS);
+        say(result.state === 'paid' ? t('shop.orderPlaced') : t('shop.orderAwaitingPayment'), true);
+      } catch (error) {
+        say(friendlyError(error), false);
+      }
+    });
   };
+
+  const buyCrown = () => spend(async (say) => {
+    try {
+      await cosmetic.mutateAsync({ op: 'buy' });
+      say(t('shop.crownBought'), true);
+    } catch (error) {
+      say(friendlyError(error), false);
+    }
+  });
+
+  // A refused Wear or Take it off used to say nothing: the button came back
+  // and the crown stayed where it was.
+  const wearCrown = (op: 'equip' | 'unequip') => spend(async (say) => {
+    try {
+      await cosmetic.mutateAsync({ op });
+    } catch (error) {
+      say(friendlyError(error), false);
+    }
+  });
+
+  const buyProtection = () => spend(async (say) => {
+    try {
+      const result = await protection.mutateAsync();
+      // At the cap nothing was charged, and saying "bought" would be a lie
+      // about a balance that did not move.
+      say(result.bought
+        ? t('shop.protectionBought', { n: result.remaining })
+        : t('shop.protectionAtCap', { n: result.remaining }), true);
+    } catch (error) {
+      say(friendlyError(error), false);
+    }
+  });
 
   return (
     <VStack gap={5} width="100%" maxWidth={1080}>
@@ -539,7 +594,7 @@ function Shop() {
 
       {/* The wallet. The recent movements sit beside the balance because a
           balance nobody can account for is what this replaced. */}
-      <Wallet signedIn={isAuthenticated} />
+      <Wallet signedIn={isAuthenticated} restoring={restoring} />
 
       <HowToEarn earn={earn} welcomeReceived={welcomeReceived} premium={premium} />
 
@@ -564,17 +619,14 @@ function Shop() {
                           variant="secondary"
                           label={t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
                           isDisabled={cosmetic.isPending}
-                          onClick={() => cosmetic.mutate({ op: wearingCrown ? 'unequip' : 'equip' })}
+                          onClick={() => wearCrown(wearingCrown ? 'unequip' : 'equip')}
                         />
                       ) : (
                         <Button
                           variant="primary"
                           label={t('shop.buy')}
                           isDisabled={!isAuthenticated || cosmetic.isPending || balance < shop.data.crown.tokenPrice}
-                          onClick={() => cosmetic.mutate({ op: 'buy' }, {
-                            onSuccess: () => setToast({ msg: t('shop.crownBought'), ok: true }),
-                            onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
-                          })}
+                          onClick={buyCrown}
                         />
                       )}
                     </HStack>
@@ -607,17 +659,7 @@ function Shop() {
                         variant="primary"
                         label={t('shop.buy')}
                         isDisabled={!isAuthenticated || protection.isPending || balance < shop.data.protection.tokenPrice}
-                        onClick={() => protection.mutate(undefined, {
-                          onSuccess: (result) => setToast({
-                            // At the cap nothing was charged, and saying "bought"
-                            // would be a lie about a balance that did not move.
-                            msg: result.bought
-                              ? t('shop.protectionBought', { n: result.remaining })
-                              : t('shop.protectionAtCap', { n: result.remaining }),
-                            ok: true,
-                          }),
-                          onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
-                        })}
+                        onClick={buyProtection}
                       />
                     </HStack>
                   </div>
@@ -628,10 +670,12 @@ function Shop() {
         </section>
       )}
 
-      <ReferralInvite signedIn={isAuthenticated} />
+      <ReferralInvite signedIn={isAuthenticated} restoring={restoring} />
 
       {shop.isLoading && <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>}
-      {shop.isError && (
+      {/* A failed background re-read keeps the catalogue it had: the crown and
+          streak protection above still show it, so no error goes with them. */}
+      {shop.isError && !shop.data && (
         <div className="rw-inline-error" role="alert">
           <span>{t('shop.loadError')}</span>
           <Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={() => void shop.refetch()} />
@@ -766,7 +810,7 @@ function Shop() {
       <AppToast
         open={!!toast}
         onClose={() => setToast(null)}
-        severity={toast?.ok ? 'success' : 'info'}
+        severity={toast?.ok ? 'success' : 'error'}
         autoHideDuration={4000}
         message={toast?.msg ?? ''}
       />

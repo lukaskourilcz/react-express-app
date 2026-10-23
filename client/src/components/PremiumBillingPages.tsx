@@ -50,6 +50,7 @@ import { planText } from './PlanLine';
 import './PremiumBillingPages.css';
 import { CHECKOUT_APPEARANCE, loadCheckoutStripe, type CheckoutView } from '../lib/stripeCheckoutForm';
 import { isOnline } from '../lib/routeRecovery';
+import { accountEpoch } from '../lib/accountData';
 
 const SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{8,240}$/;
 /** How often, and how many times, the page asks again while a payment is
@@ -75,6 +76,20 @@ export function PremiumCheckoutPage() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const runtime = useRef<CheckoutRuntime | null>(null);
+  const card = useRef<HTMLElement>(null);
+  const formHost = useRef<HTMLDivElement>(null);
+  // Where focus goes once the form opens or closes: the button that opened it
+  // leaves the page, and an expired form takes its fields with it. Each
+  // request is a new object, applied after the render it came with, since a
+  // form can open and expire before either renders.
+  const [focusRequest, moveFocus] = useState<{ to: 'form' | 'consent' } | null>(null);
+  useEffect(() => {
+    if (!focusRequest) return;
+    const target = focusRequest.to === 'form'
+      ? formHost.current
+      : card.current?.querySelector<HTMLElement>('input[type="checkbox"]');
+    target?.focus();
+  }, [focusRequest]);
   const loading = !billing.known || isLoading || (isAuthenticated && entitlement.loading);
   const paying = entitlement.data?.subscriptionLive === true || (entitlement.tier === 'premium' && entitlement.data?.source === 'provider');
 
@@ -131,12 +146,12 @@ export function PremiumCheckoutPage() {
       }
       current.form = form;
       form.mount('#checkout-form');
-      setReady(true); setBusy(false);
+      setReady(true); setBusy(false); moveFocus({ to: 'form' });
       clearTimeout(current.timer);
       current.timer = window.setTimeout(() => {
         if (runtime.current !== current) return;
         current.controller.abort(); form.destroy(); runtime.current = null;
-        setReady(false); setBusy(false); setConsent(false);
+        setReady(false); setBusy(false); setConsent(false); moveFocus({ to: 'consent' });
         setError(t('billing.success.expiredBody'));
       }, Math.max(0, session.expires_at * 1000 - Date.now()));
     } catch (err) {
@@ -148,7 +163,7 @@ export function PremiumCheckoutPage() {
   };
 
   return <Page title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
-    <section className="ss-info-card ss-billing-card ss-checkout-card">
+    <section className="ss-info-card ss-billing-card ss-checkout-card" ref={card}>
       {billing.failed ? <><Banner status="error" title={t('premium.page.unreachable')} /><Button label={t('profile.plan.retry')} onClick={billing.retry} /></>
         : loading ? <p role="status">{t('billing.checkout.loading')}</p> : !validPlan ? <Banner status="error" title={t('billing.checkout.choosePlan')} />
         : !billing.enabled ? <p>{t('billing.checkout.soon')}</p>
@@ -158,13 +173,16 @@ export function PremiumCheckoutPage() {
               <p className="ss-checkout-price">{offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{PREMIUM_PRICE.symbol}{PREMIUM_PRICE[plan]}</strong>}</p>
               {offer && <LaunchOfferNote offer={offer} compact />}
               <p>{t(plan === 'annual' ? 'premium.page.annualRenews' : 'premium.page.monthlyRenews')}</p>
-              <p><Link to="/terms">{t('legal.link.terms')}</Link> · <Link to="/privacy">{t('legal.link.privacy')}</Link></p>
+              <p className="ss-text-links"><Link to="/terms">{t('legal.link.terms')}</Link><Link to="/privacy">{t('legal.link.privacy')}</Link></p>
               <CheckboxInput value={consent} onChange={setConsent} label={t('billing.checkout.consent')} isRequired isDisabled={busy || ready} />
               {!ready && <Button label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
-              {busy && <p role="status">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
+              {busy && <p aria-hidden="true">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
+              {/* A live region mounted with its words is not announced, so this
+                  one stays on the page and only its text changes. */}
+              <p className="ss-sr-only" role="status">{busy ? t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading') : ''}</p>
             </>}
       {error && <p role="alert">{error}</p>}
-      <div id="checkout-form" className="ss-checkout-form" data-ready={ready} />
+      <div id="checkout-form" className="ss-checkout-form" data-ready={ready} ref={formHost} tabIndex={-1} />
       <div className="ss-info-actions"><Button variant="secondary" label={t('billing.checkout.back')} onClick={() => navigate('/premium')} /></div>
     </section>
   </Page>;
@@ -192,30 +210,60 @@ export function PremiumSuccessPage() {
   const offer = useLaunchOffer();
   const rechecks = useRef(0);
   const started = useRef(false);
+  const userId = user?.id ?? null;
+  // The lookup on its way, so a newer one, another account or leaving the
+  // page drops its answer.
+  const lookup = useRef<AbortController | null>(null);
 
   const check = useCallback(async () => {
+    lookup.current?.abort();
+    const controller = new AbortController();
+    lookup.current = controller;
+    const epoch = accountEpoch();
+    const stale = () => controller.signal.aborted || accountEpoch() !== epoch;
     setState({ kind: 'checking' });
     try {
-      const result = await lookupCheckout(sessionId);
-      if (result.entitlement.tier === 'premium') {
-        if (user) queryClient.setQueryData(entitlementKeys.user(user.id), result.entitlement);
+      const result = await lookupCheckout(sessionId, controller.signal);
+      if (stale()) return;
+      // Only a completed checkout is a purchase. A voucher or complimentary
+      // grant already reads Premium while this payment is still processing.
+      if (result.status === 'complete' && result.entitlement.tier === 'premium') {
+        if (userId) queryClient.setQueryData(entitlementKeys.user(userId), result.entitlement);
         void queryClient.invalidateQueries({ queryKey: entitlementKeys.all });
         setState({ kind: 'done', plan: result.entitlement });
         return;
       }
       setState(result.status === 'expired' ? { kind: 'expired' } : { kind: 'pending' });
     } catch (error) {
+      if (stale()) return;
       if (error instanceof ApiError && error.status === 404) setState({ kind: 'missing' });
       else setState({ kind: 'error', message: friendlyError(error) });
+    } finally {
+      if (lookup.current === controller) lookup.current = null;
     }
-  }, [sessionId, queryClient, user]);
+  }, [sessionId, queryClient, userId]);
 
-  // Once the account and its plan are known: a plan that is already Premium
-  // (the webhook came first) needs no lookup; otherwise ask the server.
+  // Another account (or none) starts over: what this page learnt belongs to
+  // the account that asked. Leaving drops the answer still on its way.
+  useEffect(() => {
+    started.current = false;
+    rechecks.current = 0;
+    setState((current) => (current.kind === 'checking' ? current : { kind: 'checking' }));
+    return () => {
+      lookup.current?.abort();
+      lookup.current = null;
+    };
+  }, [userId]);
+
+  // Once the account and its plan are known: a subscription that is already
+  // live (the webhook came first) needs no lookup; otherwise ask the server.
+  // Premium from a voucher or a complimentary grant says nothing about this
+  // checkout, so it is asked about like a free plan.
   useEffect(() => {
     if (started.current || !validSession || authLoading || !isAuthenticated || plan.loading) return;
     started.current = true;
-    if (plan.tier === 'premium' && plan.data) setState({ kind: 'done', plan: plan.data });
+    const subscribed = plan.data?.subscriptionLive === true || plan.data?.source === 'provider';
+    if (plan.tier === 'premium' && plan.data && subscribed) setState({ kind: 'done', plan: plan.data });
     else void check();
   }, [validSession, authLoading, isAuthenticated, plan.loading, plan.tier, plan.data, check]);
 
@@ -330,6 +378,21 @@ export function PremiumCancelPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // One request at a time: a second press can land before `busy` disables the
+  // button, and a second confirmation would act or email twice.
+  const sending = useRef(false);
+  const send = async (request: () => Promise<void>) => {
+    if (sending.current) return;
+    sending.current = true;
+    setError(null);
+    setBusy(true);
+    try {
+      await request();
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
+  };
   // The emailed link lands here with #confirm=<token>. It is read once.
   const [token] = useState(() => cancelLinkToken(location.hash));
   const [step, setStep] = useState<CancelStep>(token ? { kind: 'link-loading' } : { kind: 'form' });
@@ -352,6 +415,9 @@ export function PremiumCancelPage() {
 
   // Take the token out of the address bar at once, so it stays out of the
   // history, a screenshot and every analytics event, then ask what it is for.
+  // Try again asks once more with the token held here: a reload would find
+  // the address without it.
+  const [reviews, setReviews] = useState(0);
   useEffect(() => {
     if (!token) return;
     navigate({ pathname: location.pathname, search: location.search }, { replace: true });
@@ -370,35 +436,34 @@ export function PremiumCancelPage() {
           : { kind: 'link-error', message: friendlyError(err) });
       });
     return () => { live = false; };
-    // Once per token: the navigation above changes the location, not the token.
+    // Once per token and Try again: the navigation above changes the
+    // location, not the token.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, reviews]);
 
   const withdraw = action === 'withdraw';
   const owner = isAuthenticated && typeof user?.email === 'string' && user.email.toLowerCase() === email.trim().toLowerCase();
 
   const submitForm = async () => {
+    if (sending.current) return;
     setError(null);
     if (!looksLikeEmail(email)) {
       setEmailError(t('error.badEmail'));
       return;
     }
     setEmailError(null);
-    setBusy(true);
-    try {
-      await requestCancellation(email.trim(), action, 'request');
-      setStep({ kind: 'confirm' });
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'bad_email') setEmailError(t('error.badEmail'));
-      else setError(friendlyError(err));
-    } finally {
-      setBusy(false);
-    }
+    await send(async () => {
+      try {
+        await requestCancellation(email.trim(), action, 'request');
+        setStep({ kind: 'confirm' });
+      } catch (err) {
+        if (err instanceof ApiError && err.code === 'bad_email') setEmailError(t('error.badEmail'));
+        else setError(friendlyError(err));
+      }
+    });
   };
 
-  const confirm = async () => {
-    setError(null);
-    setBusy(true);
+  const confirm = () => send(async () => {
     try {
       const answer = await requestCancellation(email.trim(), action, 'confirm');
       if (isCancelReceipt(answer)) setStep({ kind: 'done', receipt: answer });
@@ -406,23 +471,19 @@ export function PremiumCancelPage() {
       else setStep({ kind: 'signin' });
     } catch (err) {
       setError(friendlyError(err));
-    } finally {
-      setBusy(false);
     }
-  };
+  });
 
   const confirmLink = async () => {
     if (!token) return;
-    setError(null);
-    setBusy(true);
-    try {
-      setStep({ kind: 'done', receipt: await confirmCancelLink(token) });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 410) setStep({ kind: 'link-expired' });
-      else setError(friendlyError(err));
-    } finally {
-      setBusy(false);
-    }
+    await send(async () => {
+      try {
+        setStep({ kind: 'done', receipt: await confirmCancelLink(token) });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 410) setStep({ kind: 'link-expired' });
+        else setError(friendlyError(err));
+      }
+    });
   };
 
   const startAgain = () => { setError(null); setStep({ kind: 'form' }); };
@@ -568,7 +629,7 @@ export function PremiumCancelPage() {
             <h2 tabIndex={-1}>{t('billing.cancel.linkErrorTitle')}</h2>
             <Banner status="error" title={step.message} />
             <div className="ss-info-actions">
-              <Button variant="primary" label={t('billing.cancel.tryAgain')} onClick={() => window.location.reload()} />
+              <Button variant="primary" label={t('billing.cancel.tryAgain')} onClick={() => { setStep({ kind: 'link-loading' }); setReviews((count) => count + 1); }} />
               <Button variant="secondary" label={t('billing.cancel.startAgain')} onClick={startAgain} />
             </div>
           </div>

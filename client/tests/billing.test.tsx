@@ -112,6 +112,8 @@ describe('the embedded checkout', () => {
     expect(document.body.textContent).not.toContain(secret);
     expect(screen.getByTestId('location')).not.toHaveTextContent(secret);
     expect(checkbox).toBeDisabled();
+    // The button that opened the form left the page: focus waits on the form.
+    expect(document.getElementById('checkout-form')).toHaveFocus();
     view.unmount(); expect(ui.destroy).toHaveBeenCalledOnce();
   });
 
@@ -128,6 +130,28 @@ describe('the embedded checkout', () => {
     expect(screen.queryByText('Everything is open now.')).not.toBeInTheDocument();
   });
 
+  it('announces loading and checking in a status line that is on the page before it speaks', async () => {
+    signIn(); serve({ billing: { enabled: true, cancellable: true, seller: 'trader' } }); const ui = stripeUi('form');
+    renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
+    await screen.findByRole('checkbox');
+    // Mounted empty: a region inserted with its words is not read out.
+    const statusLine = () => document.querySelector<HTMLElement>('.ss-checkout-card p[role="status"]');
+    const status = statusLine()!;
+    expect(status).not.toBeNull();
+    expect(status).toHaveTextContent('');
+    await acceptAndOpen();
+    expect(status).toHaveTextContent('Opening secure payment');
+    await waitFor(() => expect(ui.on).toHaveBeenCalled());
+    await waitFor(() => expect(status).toHaveTextContent(''));
+    let settle!: (value: { type: string }) => void;
+    ui.confirm.mockReturnValue(new Promise((done) => { settle = done; }));
+    act(() => { void ui.on.mock.calls[0][1]({ type: 'confirm' }); });
+    expect(statusLine()).toBe(status);
+    expect(status).toHaveTextContent('Checking with Stripe');
+    await act(async () => { settle({ type: 'success' }); });
+    expect(status).toHaveTextContent('');
+  });
+
   it('handles expiry with a new consent step and destroys the expired form', async () => {
     signIn(); serve(); const ui = stripeUi('embedded_page', Math.floor(Date.now() / 1000) - 1);
     renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
@@ -136,6 +160,8 @@ describe('the embedded checkout', () => {
     expect(ui.destroy).toHaveBeenCalledOnce();
     expect(screen.getByRole('checkbox')).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Continue to secure payment' })).toBeDisabled();
+    // The form and its fields are gone: focus goes back to the consent.
+    await waitFor(() => expect(screen.getByRole('checkbox')).toHaveFocus());
   });
 
   it('shows the server refusal and lets the learner retry', async () => {
@@ -179,6 +205,53 @@ describe('/premium/success', () => {
     server.use(http.get('*/api/user/billing-checkout', () => { throw new Error('no lookup expected'); }));
     renderAt(`/premium/success?session_id=${SESSION}`, <PremiumSuccessPage />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Everything is open now.' })).toBeInTheDocument();
+  });
+
+  it('waits for this checkout when a voucher already opened Premium', async () => {
+    signIn();
+    const VOUCHER = { ...PREMIUM, source: 'promo', currentPeriodEnd: null, validUntil: '2026-12-01T00:00:00.000Z' };
+    serve({ plan: VOUCHER });
+    let looked = 0;
+    server.use(http.get('*/api/user/billing-checkout', () => {
+      looked += 1;
+      return HttpResponse.json({ status: 'pending', entitlement: VOUCHER });
+    }));
+    renderAt(`/premium/success?session_id=${SESSION}`, <PremiumSuccessPage />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your payment is still processing' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Everything is open now.' })).toBeNull();
+    expect(looked).toBe(1);
+  });
+
+  it('drops a lookup answered after the account changed, and asks again for the new one', async () => {
+    signIn();
+    serve();
+    const asked: string[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((done) => { releaseFirst = done; });
+    server.use(http.get('*/api/user/billing-checkout', async () => {
+      asked.push(auth.value.user?.id ?? 'none');
+      if (asked.length === 1) {
+        await firstGate;
+        return HttpResponse.json({ status: 'complete', entitlement: PREMIUM });
+      }
+      return HttpResponse.json({ error: { code: 'not_found', message: 'No such checkout' } }, { status: 404 });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const tree = () => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[`/premium/success?session_id=${SESSION}`]}>
+          <LanguageProvider><PremiumSuccessPage /></LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const view = render(tree());
+    await waitFor(() => expect(asked).toEqual(['user-1']));
+    auth.value = { ...auth.value, user: { id: 'user-2' }, isAuthenticated: true };
+    view.rerender(tree());
+    expect(await screen.findByRole('heading', { level: 1, name: 'We could not find this checkout' })).toBeInTheDocument();
+    await act(async () => { releaseFirst(); await new Promise((done) => setTimeout(done, 50)); });
+    expect(screen.queryByRole('heading', { level: 1, name: 'Everything is open now.' })).toBeNull();
+    expect(asked).toEqual(['user-1', 'user-2']);
   });
 
   it('says a payment is still processing and offers to check again', async () => {
@@ -282,6 +355,24 @@ describe('/premium/cancel', () => {
     expect(bodies.every((body) => body.action === 'cancel')).toBe(true);
   });
 
+  it('sends one request and one confirmation for double presses', async () => {
+    serve({ billing: { enabled: true, cancellable: true, cancelByEmail: true } });
+    const bodies = cancelApi(async (body) => {
+      await delay(20);
+      return body.step === 'request'
+        ? HttpResponse.json({ step: 'confirm' })
+        : HttpResponse.json({ received: true, confirmBy: 'email', action: body.action, email: body.email, receivedAt: '2026-09-25T14:32:00.000Z', expiresInMinutes: 60 });
+    });
+    renderAt('/premium/cancel', <PremiumCancelPage />);
+    fireEvent.change(await screen.findByLabelText(/Email address of your subscription/), { target: { value: 'payer@example.com' } });
+    const next = screen.getByRole('button', { name: 'Continue' });
+    act(() => { next.click(); next.click(); });
+    const confirm = await screen.findByRole('button', { name: 'Cancel my subscription now' });
+    act(() => { confirm.click(); confirm.click(); });
+    await screen.findByRole('heading', { level: 2, name: 'Check your email' });
+    expect(bodies.map((body) => body.step)).toEqual(['request', 'confirm']);
+  });
+
   it('takes focus back to the email field when the address changes', async () => {
     serve();
     cancelApi((body) => HttpResponse.json({ step: 'confirm', action: body.action, email: body.email }));
@@ -342,6 +433,22 @@ describe('/premium/cancel', () => {
     expect(bodies).toEqual([{ step: 'review', token: TOKEN }, { step: 'execute', token: TOKEN }]);
   });
 
+  it('asks about the emailed link again on Try again, though the address no longer holds it', async () => {
+    serve();
+    let reviews = 0;
+    const bodies = cancelApi(() => {
+      reviews += 1;
+      return reviews === 1
+        ? HttpResponse.json({ error: { code: 'upstream_timeout', message: 'busy' } }, { status: 503 })
+        : HttpResponse.json({ action: 'cancel', email: 'payer@example.com', requestedAt: '2026-09-25T14:32:00.000Z', expiresAt: '2026-09-25T15:32:00.000Z' });
+    });
+    renderAt(`/premium/cancel#confirm=${TOKEN}`, <PremiumCancelPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Confirm your cancellation' })).toBeInTheDocument();
+    expect(screen.getByTestId('hash')).toHaveTextContent('');
+    expect(bodies).toEqual([{ step: 'review', token: TOKEN }, { step: 'review', token: TOKEN }]);
+  });
+
   it('says so when a link has expired, and starts again', async () => {
     serve();
     cancelApi(() => HttpResponse.json({ error: { code: 'link_expired', message: 'This link has expired or was used already.' } }, { status: 410 }));
@@ -373,6 +480,41 @@ describe('the plan line and the footer', () => {
     } finally {
       Object.defineProperty(window, 'location', { configurable: true, value: original });
     }
+  });
+
+  it('opens one portal session for a double press, on the plan line and on the checkout button', async () => {
+    signIn();
+    serve({ plan: PREMIUM });
+    let portals = 0;
+    server.use(http.post('*/api/user/billing-portal', async () => {
+      portals += 1;
+      await delay('infinite');
+      return HttpResponse.json({ url: 'https://billing.stripe.com/p/session/test' });
+    }));
+    const line = renderAt('/profile', <PlanLine />);
+    const manage = await screen.findByRole('button', { name: 'Manage billing' });
+    act(() => { manage.click(); manage.click(); });
+    await waitFor(() => expect(portals).toBe(1));
+    line.unmount();
+    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
+    const button = await screen.findByRole('button', { name: 'Manage billing' });
+    await waitFor(() => expect(button).toBeEnabled());
+    act(() => { button.click(); button.click(); });
+    await waitFor(() => expect(portals).toBe(2));
+    await new Promise((done) => setTimeout(done, 50));
+    expect(portals).toBe(2);
+  });
+
+  it('makes Manage billing pressable again when Back restores the Profile from the browser cache', async () => {
+    signIn();
+    serve({ plan: PREMIUM });
+    server.use(http.post('*/api/user/billing-portal', async () => { await delay('infinite'); return HttpResponse.json({ url: 'https://billing.stripe.com/p/session/test' }); }));
+    renderAt('/profile', <PlanLine />);
+    const manage = await screen.findByRole('button', { name: 'Manage billing' });
+    fireEvent.click(manage);
+    await waitFor(() => expect(manage).toBeDisabled());
+    act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+    await waitFor(() => expect(manage).toBeEnabled());
   });
 
   it('keeps Manage billing away from a complimentary grant without billing', async () => {

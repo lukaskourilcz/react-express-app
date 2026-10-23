@@ -77,15 +77,20 @@ export async function startAuthStandIn(): Promise<Server> {
 }
 
 export async function loadLib() {
-  const [stripe, handlers, config, cancel, sync, entitlements] = await Promise.all([
+  const [stripe, handlers, config, cancel, sync, entitlements, http] = await Promise.all([
     import('../lib/billing/stripe'),
     import('../lib/billing/handlers'),
     import('../lib/billing/config'),
     import('../lib/billing/cancel'),
     import('../lib/billing/sync'),
     import('../lib/entitlements'),
+    import('../lib/http'),
   ]);
-  return { ...stripe, ...handlers, ...config, ...cancel, ...sync, toEntitlementResponse: entitlements.toEntitlementResponse };
+  return {
+    ...stripe, ...handlers, ...config, ...cancel, ...sync,
+    toEntitlementResponse: entitlements.toEntitlementResponse,
+    UpstreamTimeoutError: http.UpstreamTimeoutError,
+  };
 }
 type Lib = Awaited<ReturnType<typeof loadLib>>;
 
@@ -270,6 +275,18 @@ export function memoryBackend(): Backend {
     rpc: async (name: string, args: Record<string, unknown>) =>
       // A routine that is not installed answers the way PostgREST 12 does.
       routines[name] ? routines[name](args) : missing(name),
+    // The one table read the billing code makes: an event row's state.
+    from: (table: string) => ({
+      select: () => ({
+        eq: (_column: string, id: string) => ({
+          maybeSingle: async () => {
+            if (table !== 'billing_events') return fail(`no table ${table}`);
+            const row = events.get(id);
+            return ok(row ? { processed_at: row.processed_at === null ? null : new Date(row.processed_at).toISOString() } : null);
+          },
+        }),
+      }),
+    }),
     auth: {
       admin: {
         getUserById: async (id: string) => users.has(id)
@@ -504,9 +521,14 @@ export class FakeStripe {
           sub.status = 'canceled'; sub.canceled_at = nowSeconds(); sub.ended_at = nowSeconds();
           return structuredClone(sub);
         },
-        list: async (params: { customer: string }) => {
+        list: async (params: { customer: string; limit?: number; starting_after?: string }) => {
           this.call('subscriptions.list');
-          return { object: 'list', data: [...this.subs.values()].filter((s) => s.customer === params.customer).map((s) => structuredClone(s)), has_more: false };
+          // Pages the way Stripe does: `limit` per page (10 by default),
+          // continued after `starting_after`.
+          const all = [...this.subs.values()].filter((s) => s.customer === params.customer);
+          const from = params.starting_after ? all.findIndex((s) => s.id === params.starting_after) + 1 : 0;
+          const page = all.slice(from, from + (params.limit ?? 10));
+          return { object: 'list', data: page.map((s) => structuredClone(s)), has_more: from + page.length < all.length };
         },
       },
       invoices: {
@@ -682,6 +704,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     process.env.STRIPE_WEBHOOK_SECRET = old;
   });
 
+  await check('a hung Stripe call and its retry fit inside the function budget', async () => {
+    // Seven seconds and a retry was 14.5 s against a 10 s function: the
+    // platform cut the request off before the handler could answer.
+    const vercel = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as { functions: Record<string, { maxDuration?: number }> };
+    const budget = (vercel.functions['api/**/*.ts']?.maxDuration ?? 10) * 1000;
+    const worst = lib.STRIPE_TIMEOUT_MS * (lib.STRIPE_NETWORK_RETRIES + 1) + lib.STRIPE_RETRY_DELAY_MS * lib.STRIPE_NETWORK_RETRIES;
+    assert.ok(worst <= budget - 1000, `${worst} ms leaves the handler no time to answer within ${budget} ms`);
+  });
+
   await check('the raw body verifies however the runtime hands it over', async () => {
     for (const mode of ['stream', 'string', 'buffer', 'parsed'] as const) {
       const a = await account(`Raw${mode}`);
@@ -692,6 +723,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const raw = eventText('invoice.paid', idsFor('RawX', newUserId()), 'rawx');
     const candidates = await lib.rawBodyCandidates(webhookReq(raw, 'x', 'stream') as never);
     assert.equal(candidates[0], raw, 'the replayed bytes come first');
+    // A runtime that read the stream already (a body parser) hands over an
+    // ended stream: the body is used at once, without waiting for events
+    // that never come.
+    const consumed = webhookReq(raw, 'x', 'stream') as unknown as Readable;
+    for await (const chunk of consumed) void chunk;
+    const started = Date.now();
+    const fallback = await lib.rawBodyCandidates(consumed as never);
+    assert.ok(Date.now() - started < 500, `an ended stream waited ${Date.now() - started} ms`);
+    assert.equal(JSON.parse(fallback[0]).id, JSON.parse(raw).id);
   });
 
   /* The subscription lifecycle, including a local billing simulation ------ */
@@ -819,6 +859,31 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(grants[0].status, 'canceled');
   });
 
+  await check('a delivery that read the state before a payment went through does not leave it unpaid', async () => {
+    // Two deliveries of one change run at once: this one read "incomplete",
+    // the payment went through, another delivery wrote "active", and only
+    // then did this one write what it had read.
+    const a = await account('Race2', { status: 'incomplete' });
+    let moved = false;
+    const racing = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === 'upsert_provider_entitlement' && !moved) {
+          moved = true;
+          stripe.setSub(a.ids, { status: 'active' });
+        }
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const raw = eventText('customer.subscription.created', a.ids, 'race2');
+    const res = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, res as never, racing);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.outcome, 'applied');
+    assert.equal((await providerGrant(a.userId))?.status, 'active', 'the last write follows a read made after it');
+    assert.equal(await premium(a.userId), true);
+  });
+
   await check('an unknown user is recorded and answered 200', async () => {
     const ghost = newUserId();
     const ids = idsFor('Ghost1', ghost);
@@ -835,6 +900,50 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const nobody = idsFor('Ghost2', newUserId());
     stripe.seed(nobody, 'nobody@example.com', { metadataUser: null });
     assert.equal((await deliver(eventText('customer.subscription.updated', nobody, 'ghost2'))).body.reason, 'unknown_user');
+  });
+
+  await check('a delivery that arrives while another still processes the event asks Stripe to retry', async () => {
+    const a = await account('Inflight1');
+    const raw = eventText('customer.subscription.created', a.ids, 'inflight1');
+    // The first delivery is still working on the event when the second lands.
+    let second: ReturnType<typeof mockRes> | null = null;
+    const busy = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === 'upsert_provider_entitlement' && !second) {
+          second = await deliver(raw);
+          throw new Error('the first delivery fails after all');
+        }
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const first = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, first as never, busy);
+    assert.equal(first.statusCode, 500);
+    assert.ok(second);
+    const overlapping = second as ReturnType<typeof mockRes>;
+    assert.deepEqual([overlapping.statusCode, overlapping.body.error?.code], [409, 'event_in_progress'], 'not a 200 that ends Stripe’s retries');
+    // Stripe's retry then applies it.
+    const retried = await deliver(raw);
+    assert.deepEqual([retried.statusCode, retried.body.outcome], [200, 'applied']);
+    assert.equal(await premium(a.userId), true);
+    assert.equal((await deliver(raw)).body.duplicate, true, 'a processed event stays a 200 duplicate');
+  });
+
+  await check('an event applied but not closed says so in the log', async () => {
+    const a = await account('Finish1');
+    const unclosed = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => name === 'finish_billing_event'
+        ? { data: null, error: { code: 'XX000', message: 'boom' } }
+        : supabase.rpc(name, args),
+    } as unknown as SupabaseClient;
+    const raw = eventText('customer.subscription.created', a.ids, 'finish1');
+    const res = mockRes();
+    const lines = await logged(() => lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, res as never, unclosed));
+    assert.equal(res.statusCode, 200);
+    assert.equal(await premium(a.userId), true);
+    assert.ok(lines.some((line) => line.reason === 'finish_failed' && line.level === 'warn'), 'the open row is logged');
   });
 
   await check('a failure part-way is retried by the next delivery', async () => {
@@ -1185,6 +1294,25 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(stripe.createdSessions.length, sessions);
   });
 
+  await check('a live subscription behind many abandoned attempts still blocks checkout and ends with the account', async () => {
+    const a = await account('Crowded');
+    await supabase.rpc('link_billing_customer', { p_user_id: a.userId, p_provider_customer_id: a.ids.cus });
+    // 120 abandoned attempts listed before the live one: more than one page.
+    const live = stripe.subs.get(a.ids.sub);
+    stripe.subs.delete(a.ids.sub);
+    for (let i = 0; i < 120; i += 1) {
+      stripe.subs.set(`sub_CrowdedExpired${i}`, { ...structuredClone(live), id: `sub_CrowdedExpired${i}`, status: 'incomplete_expired' });
+    }
+    stripe.subs.set(a.ids.sub, live);
+    const sessions = stripe.createdSessions.length;
+    const refused = await checkout(a.token, { plan: 'monthly' });
+    assert.equal(refused.statusCode, 409, 'the live subscription past the first page blocks a second checkout');
+    assert.equal(stripe.createdSessions.length, sessions);
+    const { ended } = await lib.cancelForDeletedAccount({ stripe: stripe.api(), supabase } as never, lib.billingConfig(), a.ids.cus);
+    assert.equal(ended, 1, 'account deletion ends the live subscription past the first page');
+    assert.equal(stripe.subs.get(a.ids.sub).status, 'canceled');
+  });
+
   await check('only the newest Checkout Session can be paid, and one paid a moment ago blocks another', async () => {
     const userId = newUserId();
     await db.addUser(userId, 'twotabs@example.com');
@@ -1304,6 +1432,24 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.deepEqual(stripe.portalSessions.at(-1), { customer: payer.ids.cus, return_url: 'https://devshark.app/profile' });
   });
 
+  await check('a database timeout answers 503 upstream_timeout, not the payment provider’s 502', async () => {
+    const payer = await account('Timeout1');
+    await deliver(eventText('checkout.session.completed', payer.ids, 'timeout1'));
+    const slow = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === 'billing_account' || name === 'entitlement_summary') throw new lib.UpstreamTimeoutError();
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const portal = mockRes();
+    await lib.handleBillingPortal(apiReq('POST', 'billing-portal', { token: payer.token }) as never, portal as never, slow);
+    assert.deepEqual([portal.statusCode, portal.body.error.code], [503, 'upstream_timeout']);
+    const lookup = mockRes();
+    await lib.handleBillingCheckout(apiReq('GET', 'billing-checkout', { token: payer.token, query: { session_id: payer.ids.cs } }) as never, lookup as never, slow);
+    assert.deepEqual([lookup.statusCode, lookup.body.error.code], [503, 'upstream_timeout']);
+  });
+
   /* The public cancellation page ------------------------------------------- */
 
   const cancel = async (body: Record<string, unknown>, options: { token?: string; ip?: string } = {}) => {
@@ -1328,6 +1474,11 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
 
   await check('an anonymous request changes nothing and asks nothing of Stripe', async () => {
     assert.equal((await cancel({ email: 'not-an-email', action: 'cancel', step: 'request' })).body.error.code, 'bad_email');
+    // Postgres text refuses U+0000: the recorded request answered 500.
+    for (const email of ['some\u0000one@example.com', 'some\u0007one@example.com']) {
+      const refused = await cancel({ email, action: 'cancel', step: 'request' });
+      assert.deepEqual([refused.statusCode, refused.body.error?.code], [400, 'bad_email'], JSON.stringify(email));
+    }
     const calls = stripe.calls;
     const first = await cancel({ email: 'someone@example.com', action: 'cancel', step: 'request' });
     assert.deepEqual(first.body, { step: 'confirm', action: 'cancel', email: 'someone@example.com' });
@@ -1413,6 +1564,30 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     for (let i = 0; i < 4; i++) answers.push(await cancel({ email: 'flood@example.com', action: 'cancel', step: 'confirm' }));
     assert.deepEqual(answers.map((res) => [res.statusCode, res.body.confirmBy]), Array(4).fill([200, 'email']));
     assert.equal(mail.length - sent, 3, 'the fourth request sends nothing');
+    applyEnv({ RESEND_API_KEY: undefined, RESEND_FROM: undefined });
+  });
+
+  await check('a database timeout on the cancel link answers 503 upstream_timeout, not 500', async () => {
+    applyEnv(withResend);
+    const slow = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name.endsWith('billing_cancel_request')) throw new lib.UpstreamTimeoutError();
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const post = async (body: Record<string, unknown>) => {
+      const res = mockRes();
+      await lib.handleBillingCancel(apiReq('POST', 'billing-cancel', { body }) as never, res as never, slow);
+      return res;
+    };
+    for (const res of [
+      await post({ email: 'slowdb@example.com', action: 'cancel', step: 'confirm' }),
+      await post({ step: 'review', token: 'B'.repeat(43) }),
+      await post({ step: 'execute', token: 'B'.repeat(43) }),
+    ]) {
+      assert.deepEqual([res.statusCode, res.body.error.code], [503, 'upstream_timeout']);
+    }
     applyEnv({ RESEND_API_KEY: undefined, RESEND_FROM: undefined });
   });
 
@@ -1556,6 +1731,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     await deliver(eventText('checkout.session.completed', e.ids, 'delete2'));
     stripe.failNext.set('subscriptions.list', stripeError(500, 'api_error'));
     assert.equal(await lib.endBillingForDeletedAccount(supabase, e.userId), false, 'an outage stops the deletion');
+    // One subscription gone at Stripe between the list and its cancel does
+    // not leave the next one charging the deleted account.
+    const f = await account('Delete5');
+    await deliver(eventText('checkout.session.completed', f.ids, 'delete5'));
+    const second = { ...f.ids, sub: `${f.ids.sub}b` };
+    stripe.setSub(second);
+    stripe.failNext.set('subscriptions.cancel', stripeError(404, 'resource_missing'));
+    assert.equal(await lib.endBillingForDeletedAccount(supabase, f.userId), true);
+    assert.equal(stripe.subs.get(second.sub).status, 'canceled', 'the other subscription is ended too');
   });
 
   await check('deleting an account expires its open Checkout, so nothing can be paid for it later', async () => {

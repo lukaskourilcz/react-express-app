@@ -159,6 +159,8 @@ export function parseVoucherForm(body: Record<string, unknown>, now: number = Da
   if (note.length === 0 || note.length > MAX_NOTE) {
     return { ok: false, message: 'A note of up to 500 characters is required: who the code is for and why' };
   }
+  // Postgres text cannot hold U+0000: the routine call answered 500.
+  if (note.includes('\u0000')) return { ok: false, message: 'The note cannot contain a null character' };
   const days = body.premiumDays;
   if (days !== undefined && days !== null && !(Number.isInteger(days) && (days as number) >= 1 && (days as number) <= MAX_PREMIUM_DAYS)) {
     return { ok: false, message: 'premiumDays is a whole number of days up to five years, or null for no end' };
@@ -222,6 +224,12 @@ export async function handleAdminVouchers(req: VercelRequest, res: VercelRespons
         }));
         if (created.error) {
           if (isRpcMissing(created.error)) return migrationRequired(res);
+          // The form checked the end date against this server's clock; the
+          // database checks it again against its own, and a date a moment
+          // ahead can pass the first and fail the second.
+          if (/premium_voucher_in_past/.test(created.error.message ?? '')) {
+            return jsonError(res, 400, 'bad_request', 'redeemableUntil must be a future date within five years, or empty');
+          }
           logEvent({ status: 500, kind: 'voucher_create', reason: 'db_error' });
           return jsonError(res, 500, 'db_error', 'Could not create the voucher');
         }

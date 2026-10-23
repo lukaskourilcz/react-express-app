@@ -20,6 +20,7 @@ import type Stripe from 'stripe';
 import { isRpcMissing, logEvent, withTimeout } from '../http';
 import type { BillingConfig } from './config';
 import {
+  allSubscriptionsOf,
   BillingMigrationError,
   BillingPermanentError,
   customerOwner,
@@ -84,8 +85,9 @@ async function cancelAtPeriodEnd(deps: BillingDeps, sub: Stripe.Subscription, em
  * (finding integrity-2). Milliseconds, or null before any payment. */
 async function firstPaymentAt(deps: BillingDeps, customerIds: readonly string[]): Promise<number | null> {
   let first: number | null = null;
-  for (const customer of new Set(customerIds)) {
-    const invoices = await deps.stripe.invoices.list({ customer, status: 'paid', limit: 100 });
+  const lists = await Promise.all([...new Set(customerIds)].map((customer) =>
+    deps.stripe.invoices.list({ customer, status: 'paid', limit: 100 })));
+  for (const invoices of lists) {
     for (const invoice of invoices.data) {
       const paidAt = invoice.status_transitions?.paid_at;
       if (typeof paidAt === 'number' && (first === null || paidAt < first)) first = paidAt;
@@ -122,10 +124,11 @@ async function withdraw(
   sub: Stripe.Subscription,
   email: string | null,
   customers: readonly Stripe.Customer[],
+  firstPaidOf: (customerIds: readonly string[]) => Promise<number | null>,
 ): Promise<CancelEffect> {
   const now = deps.now?.() ?? Date.now();
   const customerIds = [...customers.map((customer) => customer.id), idOf(sub.customer)].filter((id): id is string => Boolean(id));
-  const firstPaid = await firstPaymentAt(deps, customerIds);
+  const firstPaid = await firstPaidOf(customerIds);
   if (firstPaid !== null && now - firstPaid > WITHDRAWAL_DAYS * 86_400_000) {
     // The withdrawal period is over: the request still ends the subscription.
     return cancelAtPeriodEnd(deps, sub, email);
@@ -182,19 +185,30 @@ export async function cancelByEmail(
 ): Promise<CancelEffect[]> {
   const addresses = [...new Set([email, email.toLowerCase()])];
   const customers = new Map<string, Stripe.Customer>();
-  for (const address of addresses) {
-    const found = await deps.stripe.customers.list({ email: address, limit: 10 });
-    for (const customer of found.data) customers.set(customer.id, customer);
-  }
+  // The reads run together; the changes below stay one after another.
+  const found = await Promise.all(addresses.map((address) => deps.stripe.customers.list({ email: address, limit: 10 })));
+  for (const list of found) for (const customer of list.data) customers.set(customer.id, customer);
   const effects: CancelEffect[] = [];
   const all = [...customers.values()];
-  for (const customer of all) {
-    const subs = await deps.stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 20 });
-    for (const sub of subs.data) {
+  const subsOf = await Promise.all(all.map((customer) => allSubscriptionsOf(deps, customer.id)));
+  // Every subscription here belongs to one of these customers, so the first
+  // payment is the same answer for each: read the invoices once.
+  const firstPaid = new Map<string, Promise<number | null>>();
+  const firstPaidOf = (customerIds: readonly string[]) => {
+    const key = [...new Set(customerIds)].sort().join(',');
+    let found = firstPaid.get(key);
+    if (!found) {
+      found = firstPaymentAt(deps, customerIds);
+      firstPaid.set(key, found);
+    }
+    return found;
+  };
+  for (const [index, customer] of all.entries()) {
+    for (const sub of subsOf[index]) {
       if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status) || !isOurs(sub, config)) continue;
       effects.push(
         action === 'withdraw'
-          ? await withdraw(deps, sub, customer.email ?? null, all)
+          ? await withdraw(deps, sub, customer.email ?? null, all, firstPaidOf)
           : await cancelAtPeriodEnd(deps, sub, customer.email ?? null),
       );
     }
@@ -214,11 +228,19 @@ export async function cancelForDeletedAccount(
   customerId: string,
 ): Promise<{ ended: number; expired: number }> {
   const { expired } = await expireOpenCheckouts(deps, customerId);
-  const subs = await deps.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
+  const subs = await allSubscriptionsOf(deps, customerId);
   let ended = 0;
-  for (const sub of subs.data) {
+  for (const sub of subs) {
     if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status) || !isOurs(sub, config)) continue;
-    await deps.stripe.subscriptions.cancel(sub.id, { invoice_now: false, prorate: false });
+    try {
+      await deps.stripe.subscriptions.cancel(sub.id, { invoice_now: false, prorate: false });
+    } catch (error) {
+      // Ended between the list and the cancel: nothing left to stop. Thrown on,
+      // it would read as "no customer" and leave the rest of the list charging
+      // an account that is about to be deleted.
+      if (stripeErrorCode(error).code !== 'resource_missing') throw error;
+      continue;
+    }
     ended += 1;
   }
   return { ended, expired };

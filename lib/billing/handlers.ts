@@ -16,7 +16,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
-import { createLogger, isRpcMissing, jsonError, requireAuthResult, withTimeout } from '../http';
+import { createLogger, isRpcMissing, jsonError, requireAuthResult, ServiceUnavailableError, withTimeout } from '../http';
 import { tryAuth } from '../auth';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { toEntitlementResponse } from '../entitlements';
@@ -52,6 +52,9 @@ const log = createLogger('user/billing');
 const SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{8,240}$/;
 const EVENT_ID = /^evt_[A-Za-z0-9_]{6,120}$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,63}$/;
+/** `\s` lets U+0000 and the other control characters through, and Postgres
+ * text refuses U+0000: the recorded request answered 500. No address holds one. */
+const CONTROL = /\p{Cc}/u;
 
 function allow(res: VercelResponse, methods: string) {
   res.setHeader('Allow', methods);
@@ -61,6 +64,13 @@ function allow(res: VercelResponse, methods: string) {
 function unavailable(res: VercelResponse, error: unknown, route: string) {
   if (error instanceof BillingMigrationError) {
     return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
+  }
+  // A database call that timed out (`withTimeout`) is the database busy for a
+  // moment, not Stripe: 503 with its code, and a log line that does not send
+  // the operator to Stripe's status page.
+  if (error instanceof ServiceUnavailableError) {
+    log({ status: 503, kind: route, reason: error.code });
+    return jsonError(res, 503, error.code, error.message);
   }
   const { status, code, type } = stripeErrorCode(error);
   log({ status: 502, kind: route, reason: 'stripe_error', stripe_status: status, stripe_code: code, stripe_type: type });
@@ -206,9 +216,11 @@ async function startCheckout(req: VercelRequest, res: VercelResponse, supabase: 
     let customerId = account.customerId ?? (await createCustomer(deps, userId, email, false));
     // Stripe may know before the webhook arrives: a subscription just created,
     // or a session paid in another tab a moment ago. Every session still open
-    // is expired, so only the one made now can be paid.
-    if ((await liveDevsharkSubscriptions(deps, customerId)).length > 0) return subscribed('subscription_live_at_stripe');
-    const open = await expireOpenCheckouts(deps, customerId);
+    // is expired, so only the one made now can be paid. The two run together:
+    // an open session of a customer who already subscribes must not be paid
+    // either, so expiring it on the way to a 409 changes nothing that matters.
+    const [live, open] = await Promise.all([liveDevsharkSubscriptions(deps, customerId), expireOpenCheckouts(deps, customerId)]);
+    if (live.length > 0) return subscribed('subscription_live_at_stripe');
     if (open.completed) return subscribed('session_completed');
     // One instant decides the offer for both attempts and the log line.
     const now = Date.now();
@@ -310,6 +322,19 @@ export async function handleBillingPortal(req: VercelRequest, res: VercelRespons
 
 /* ── Webhook ────────────────────────────────────────────────────────────── */
 
+/** Whether a recorded event is still open: taken by a delivery that has not
+ * finished it. False when it was processed, or when the row cannot be read. */
+async function eventInFlight(supabase: SupabaseClient, eventId: string): Promise<boolean> {
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from('billing_events').select('processed_at').eq('id', eventId).maybeSingle(),
+    );
+    return !error && data !== null && typeof data === 'object' && (data as { processed_at?: unknown }).processed_at === null;
+  } catch {
+    return false;
+  }
+}
+
 export async function handleBillingWebhook(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
   if (req.method !== 'POST') return allow(res, 'POST');
   const config = billingConfig();
@@ -337,13 +362,26 @@ export async function handleBillingWebhook(req: VercelRequest, res: VercelRespon
     return jsonError(res, 500, 'db_error', 'Could not record the event');
   }
   if (recorded.data !== true) {
+    // Processed already: done. Still being processed by a delivery that holds
+    // the lease: a 200 here would tell Stripe the event arrived, and if that
+    // other delivery then fails, nothing ever delivers it again. Answer 409 so
+    // Stripe retries after the lease. A failed read keeps the 200.
+    if (await eventInFlight(supabase, event.id)) {
+      log({ status: 409, kind: 'webhook', type: event.type, reason: 'in_progress' });
+      res.setHeader('Retry-After', '60');
+      return jsonError(res, 409, 'event_in_progress', 'Another delivery of this event is being processed');
+    }
     log({ status: 200, kind: 'webhook', type: event.type, duplicate: true });
     return res.json({ received: true, duplicate: true });
   }
 
   try {
     const result = await processBillingEvent(deps, event);
-    await withTimeout(supabase.rpc('finish_billing_event', { p_event_id: event.id, p_error: result.note ?? null }));
+    const finished = await withTimeout(supabase.rpc('finish_billing_event', { p_event_id: event.id, p_error: result.note ?? null }));
+    // Applied, but the row stays open: a later delivery of the event would
+    // apply it again (harmless, every step is idempotent). Say so instead of
+    // leaving an unfinished row nobody can explain.
+    if (finished.error) log({ level: 'warn', status: 200, kind: 'webhook', type: event.type, reason: 'finish_failed' });
     log({ status: 200, kind: 'webhook', type: event.type, outcome: result.outcome, note: result.note, status_after: result.sync?.status });
     return res.json({ received: true, outcome: result.outcome });
   } catch (error) {
@@ -424,7 +462,7 @@ export async function handleBillingCancel(req: VercelRequest, res: VercelRespons
 
   const email = typeof body.email === 'string' ? body.email.trim() : '';
   const action = body.action as CancelAction;
-  if (!EMAIL.test(email) || email.length > 254) return jsonError(res, 400, 'bad_email', 'Enter the email address of your subscription');
+  if (!EMAIL.test(email) || CONTROL.test(email) || email.length > 254) return jsonError(res, 400, 'bad_email', 'Enter the email address of your subscription');
   if (!ACTIONS.includes(action)) return jsonError(res, 400, 'bad_request', "action must be 'cancel' or 'withdraw'");
 
   // Step one only checks the form; nothing is looked up.
@@ -445,7 +483,8 @@ export async function handleBillingCancel(req: VercelRequest, res: VercelRespons
     } catch (error) {
       return unavailable(res, error, 'cancel');
     }
-    for (const effect of effects) await sendCancellationEmail(config, effect, receivedAt);
+    // Each receipt may wait up to 4 s on the mail provider; send them together.
+    await Promise.all(effects.map((effect) => sendCancellationEmail(config, effect, receivedAt)));
     return res.json(receipt(action, email, receivedAt, config, effects));
   }
 
@@ -457,13 +496,20 @@ export async function handleBillingCancel(req: VercelRequest, res: VercelRespons
     return res.json({ received: false, confirmBy: 'sign-in', action, email });
   }
   const token = randomBytes(32).toString('base64url');
-  const created = await withTimeout(supabase.rpc('create_billing_cancel_request', {
-    p_token_hash: tokenHash(token),
-    p_email: email,
-    p_action: action,
-    p_ttl_minutes: CANCEL_LINK_MINUTES,
-    p_requested_at: receivedAt,
-  })).catch(() => ({ data: null, error: { message: 'timeout' } }));
+  let created: { data: unknown; error: { code?: string; message?: string } | null };
+  try {
+    created = await withTimeout(supabase.rpc('create_billing_cancel_request', {
+      p_token_hash: tokenHash(token),
+      p_email: email,
+      p_action: action,
+      p_ttl_minutes: CANCEL_LINK_MINUTES,
+      p_requested_at: receivedAt,
+    }));
+  } catch (error) {
+    // The database busy for a moment answers 503, which the page may retry.
+    if (error instanceof ServiceUnavailableError) return unavailable(res, error, 'cancel_request');
+    created = { data: null, error: { message: 'db_error' } };
+  }
   if (created.error) {
     if (isRpcMissing(created.error)) return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
     log({ status: 500, kind: 'cancel_request', reason: 'db_error' });
@@ -501,7 +547,7 @@ async function handleCancelLink(req: VercelRequest, res: VercelResponse, supabas
   try {
     request = await read(step === 'review' ? 'review_billing_cancel_request' : 'consume_billing_cancel_request');
   } catch (error) {
-    if (error instanceof BillingMigrationError) return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
+    if (error instanceof BillingMigrationError || error instanceof ServiceUnavailableError) return unavailable(res, error, `cancel_${step}`);
     log({ status: 500, kind: `cancel_${step}`, reason: 'db_error' });
     return jsonError(res, 500, 'db_error', 'Could not read this link. Try again in a minute.');
   }
@@ -518,7 +564,7 @@ async function handleCancelLink(req: VercelRequest, res: VercelResponse, supabas
     await withTimeout(supabase.rpc('release_billing_cancel_request', { p_token_hash: hash })).catch(() => undefined);
     return unavailable(res, error, 'cancel');
   }
-  for (const effect of effects) await sendCancellationEmail(config, effect, request.requestedAt);
+  await Promise.all(effects.map((effect) => sendCancellationEmail(config, effect, request.requestedAt)));
   return res.json(receipt(request.action, request.email, request.requestedAt, config, effects));
 }
 
