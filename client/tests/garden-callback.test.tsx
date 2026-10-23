@@ -185,6 +185,29 @@ describe('GitHub garden callback', () => {
     }
   });
 
+  it('leaves a learner who moved on where they are when the finish answers late', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    finishAnswers(() => HttpResponse.json(CONNECTED));
+    server.use(http.post('*/api/user/*', async () => { await held; return HttpResponse.json(CONNECTED); }));
+    await mount(`${CALLBACK}&code=one-time-code`);
+    await act(async () => { screen.getByRole('link', { name: 'Leave' }).click(); });
+    expect(screen.getByTestId('where')).toHaveTextContent('/learn');
+    await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(screen.getByTestId('where')).toHaveTextContent('/learn');
+  });
+
+  it('keeps a finish that answers after a sign-out out of the next account', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    server.use(http.post('*/api/user/*', async () => { await held; return HttpResponse.json(CONNECTED); }));
+    await mount(`${CALLBACK}&code=one-time-code`);
+    act(() => { clearAccountData(); });
+    await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(lastClient?.getQueryData(['coding', 'github'])).toBeUndefined();
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/github');
+  });
+
   it('sends a learner who changed the installation on GitHub back to the profile', async () => {
     await mount('?installation_id=555001&setup_action=update&code=one-time-code');
     expect(await screen.findByText('/profile#github-garden')).toBeInTheDocument();
