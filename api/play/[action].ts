@@ -8,7 +8,7 @@ import {
   generateMatchCode,
   withTimeout,
 } from '../../lib/play-helpers';
-import { requireAuthResult, requireAuthSub, isRpcMissing, withRequestContext } from '../../lib/http';
+import { requireAuthResult, requireAuthSub, isRpcMissing, withRequestContext, ServiceUnavailableError } from '../../lib/http';
 import { roomDisplayName } from '../../lib/public-identity';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
@@ -135,6 +135,20 @@ async function tryAdvance(match: {
       .select(STATE_COLUMNS),
   );
   return data && data.length > 0 ? (data[0] as Record<string, unknown>) : null;
+}
+
+/** The answer for an exception an action caught. A Supabase call that timed
+ * out (lib/http.ts `UpstreamTimeoutError`) is the database busy for a moment,
+ * which a client may retry: 503 with its code, as every handler answers it.
+ * Anything else is a fault here, logged as one, and no timeout. */
+function caughtError(route: string, res: VercelResponse, err: unknown) {
+  const message = err instanceof Error ? err.message : 'unknown';
+  if (err instanceof ServiceUnavailableError) {
+    logEvent(route, { status: 503, error: message });
+    return jsonError(res, 503, err.code, err.message);
+  }
+  logEvent(route, { level: 'error', status: 500, error: message });
+  return jsonError(res, 500, 'internal_error', 'Internal error');
 }
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
@@ -326,9 +340,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
       status: data.status,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/create', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/create', res, err);
   }
 }
 
@@ -406,9 +418,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
       server_now: new Date().toISOString(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/join', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/join', res, err);
   }
 }
 
@@ -549,9 +559,7 @@ async function state(req: VercelRequest, res: VercelResponse) {
       server_now: new Date().toISOString(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/state', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/state', res, err);
   }
 }
 
@@ -666,9 +674,7 @@ async function control(req: VercelRequest, res: VercelResponse) {
     logEvent('play/control', { status: 200, code, action: ctrl });
     return res.json({ ok: true, ...patch });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/control', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/control', res, err);
   }
 }
 
@@ -882,9 +888,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     });
     return res.json(reply({ is_correct: isCorrect, speed_bonus: speedBonus }, advanced));
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/answer', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/answer', res, err);
   }
 }
 
@@ -936,9 +940,7 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ buckets: data ?? [] });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/distribution', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/distribution', res, err);
   }
 }
 
@@ -980,8 +982,6 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
 
     return res.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/heartbeat', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/heartbeat', res, err);
   }
 }

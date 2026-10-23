@@ -57,7 +57,7 @@ let clock = 0;
 /** Errors the database answers once each: the next request with this method
  * and path gets the status and body instead of its rows. A 500, because
  * supabase-js retries a read that met a 503. */
-const faults: Array<{ method: string; path: string; status: number; body: Row }> = [];
+const faults: Array<{ method: string; path: string; status: number; body: Row; delayMs?: number }> = [];
 const DB_DOWN = { code: 'XX000', details: null, hint: null, message: 'the database could not answer' };
 /** The arguments of every match_scoreboard call, in order. */
 const scoreboardCalls: Row[] = [];
@@ -159,8 +159,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   const fault = faults.findIndex((one) => one.method === req.method && one.path === url.pathname);
   if (fault >= 0) {
     const [one] = faults.splice(fault, 1);
-    res.statusCode = one.status;
-    res.end(JSON.stringify(one.body));
+    setTimeout(() => {
+      res.statusCode = one.status;
+      res.end(JSON.stringify(one.body));
+    }, one.delayMs ?? 0);
     return;
   }
 
@@ -575,6 +577,13 @@ async function main() {
       }
       assert.equal(faults.length, 0, 'every injected failure was met');
       assert.equal((await call('three', 'POST', 'heartbeat', { code })).statusCode, 200, 'the room is still there');
+
+      // A read that does not answer within lib/http.ts's five seconds is the
+      // database busy: 503 upstream_timeout, as every handler answers it.
+      faults.push({ method: 'GET', path: '/rest/v1/matches', status: 200, body: {}, delayMs: 5_500 });
+      const slow = await call('one', 'GET', 'state', { code });
+      assert.equal(slow.statusCode, 503, `a room read that timed out answers 503 (${JSON.stringify(slow.body)})`);
+      assert.equal(slow.body.error.code, 'upstream_timeout');
     }
 
     // 10. An answer names one of the options the question showed: an index
