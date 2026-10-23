@@ -6141,3 +6141,66 @@ This is the third audit run with `.claude/skills/section-code-audit/SKILL.md`, a
 - whether a placement score of 18 or more should also open DSA Advanced;
 - seven DSA Advanced level intros that repeat the one before (content);
 - `/roadmap` has no DSA Advanced area (copy).
+
+## Quiz, Play, Profile and Leaderboard code review — 23 October 2026
+
+This is the fourth audit run with `.claude/skills/section-code-audit/SKILL.md`, after FDE (#563), Web Developer (#564) and Software Engineer (#565). It covered:
+- **Quiz:** `api/quiz/submit.ts`, `questions.ts`, `challenge.ts`, `daily.ts`, `api/flashcards.ts`, `lib/http.ts`, `lib/reports-store.ts`, and in the client `Quiz.tsx`, `Challenge.tsx`, the daily question, `Today.tsx`, `TypingRacer.tsx`, Shark Cards, pending receipts and `xp.ts`.
+- **Play:** `api/play/[action].ts`, `Play.tsx`, `realtime.ts`.
+- **Profile:** `api/user/[op].ts`, friends, sharkname, settings, `Profile.tsx`, `FriendsPanel.tsx`.
+- **Leaderboard:** `api/leaderboard.ts` and `Leaderboard.tsx`.
+
+A last round fixed the cross-area leftovers the four section audits could not reach. Branch `claude/quiz-play-profile-review`. It makes no SQL migration, no reviewed-content edit and no tier, XP or grading change; there are still twelve handlers.
+
+**Fixed (server)**
+- **Timeouts:** every Supabase timeout now answers 503 `upstream_timeout` (`UpstreamTimeoutError` in `withTimeout`). Handlers' own catch-alls no longer turn it into 500, and an Auth outage no longer answers 401.
+- **Input validation, 400 instead of 500:**
+  - Query parameters repeated as arrays (categories, room codes).
+  - U+0000 in Shark Cards and reports.
+  - Over-long ids.
+  - An answer index past the options.
+  - Topic lists that are not string arrays.
+  - Calendar dates that do not exist.
+  - Non-boolean friend actions.
+- **Play:**
+  - Room creation inserts and retries on the unique key.
+  - Room read failures answer 503, not 404.
+  - Reads run in parallel.
+  - Caught errors are handled in one place.
+- **Quiz submit:**
+  - Loads the bank while the one-time claim runs, without grading before it.
+  - A claim error answers 503.
+  - The unused sealed `answerProof` (up to 50 AES-GCM seals per submit) is removed.
+- **Concept reviews:** a failed review-state read no longer resets every practised concept to its first stage.
+- **Rate limits:** question reports are limited per account plus a class-sized address bucket, so a class behind one address can report.
+- **Challenge:** a run saved twice with a different score answers 409.
+- **Settings:** a failed settings read serves the last good copy.
+- **Admin reports:** the report list keeps summaries of retired questions.
+- **Progress PUT:** retired. It wrote nothing; it now answers 405, and the client no longer sends it after shop changes.
+
+**Fixed (client)**
+- **Ref guards:** on room host controls, create and join, quiz submit, Challenge grading and Next, the sharkname save, friend actions and the confirm dialog.
+- **Account changes (`accountEpoch()`):** for quiz grades, XP syncs, pending receipt replays, Challenge rewards, quiz progress, the typing racer best and the leaderboard visibility save.
+- **Realtime:** listener sets that unsubscribe properly, one presenter poll in flight, and rooms keyed by code and account.
+- **Late and stale results:**
+  - Late friend reads and lookups are dropped.
+  - The `/quiz?mode=review` render loop is fixed.
+  - Today and the Today board move to the new UTC day at midnight.
+  - An offline leaderboard tab no longer shows the previous board.
+- **Confirmation:** Remove friend asks first.
+- **Focus and live regions:** focus moves to each question and verdict, and the live regions are always on the page. The profile tabs use a roving tabindex, and targets are 44px.
+- **Reads and preloads:**
+  - Profile reads run in parallel.
+  - The daily challenge load can be aborted.
+  - Route preloads match only real routes.
+  - Pending-result replay and board readers left the main chunk.
+
+**Checks** (local, Node 24, `npm run ci:parity -- --only …` at `60611967`)
+- **Passed:** typecheck:api, typecheck:scripts, typecheck:tooling, check:unused, check:security, build, check:public, check:bundle (initial load 235,638 gzip bytes, 1,844 below the Software Engineer branch), test:launch, test:coding-auth, test:grading-integrity, test:path-authority, test:paths, test:billing, test:fallbacks, test:client. `git diff --check` is clean, and `api/` holds 12 handlers.
+- **Not run:** browser, responsive and SQL; CI covers them.
+
+**Left open (NEEDED.md)**
+- **Challenge scoring:** a Challenge score sums the answers the player chooses to send. Enforcing the order needs per-run server state.
+- **Rooms:** abandoned rooms have no cleanup job, and rooms have no participant cap.
+- **Account data export:** there is no export of a learner's own data.
+- **Brittle matching:** two conflicts are matched by message text, and the friend "register" step has no unique key.
