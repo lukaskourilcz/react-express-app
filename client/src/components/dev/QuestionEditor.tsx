@@ -126,14 +126,18 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   // Save for a new question created it twice. The ref holds from the first.
   const savingRef = useRef(false);
 
-  // Re-seed the form whenever the dialog opens for a different question.
+  // Re-seed the form whenever the dialog opens for a different question. The
+  // category list is read, not watched: the bank re-read builds a new array,
+  // and re-seeding on it wiped what the admin was typing.
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
   useEffect(() => {
     if (!open) return;
     setError(null);
-    const seeded = initial ? seedForm(initial) : blankForm(categories);
+    const seeded = initial ? seedForm(initial) : blankForm(categoriesRef.current);
     setForm(seeded);
     baselineRef.current = JSON.stringify(seeded);
-  }, [open, initial, categories]);
+  }, [open, initial]);
 
   const setOption = (index: number, value: string) =>
     setForm((f) => ({ ...f, options: f.options.map((o, i) => (i === index ? value : o)) }));

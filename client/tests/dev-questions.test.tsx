@@ -48,4 +48,17 @@ describe('/dev → the question editor', () => {
     expect(sent).toHaveLength(1);
     expect(onSaved).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the text being typed when the bank re-read hands it a new category list', () => {
+    const { rerender } = renderEditor();
+    fillNewQuestion();
+    // The same categories in a new array, as every re-read of the bank builds.
+    rerender(
+      <LanguageProvider>
+        <QuestionEditor open initial={null} categories={['react', 'css']} onClose={() => {}} onSaved={() => {}} />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole('textbox', { name: 'Question' })).toHaveValue('Which hook keeps state?');
+    expect(screen.getByRole('textbox', { name: 'Option 1' })).toHaveValue('useState');
+  });
 });
