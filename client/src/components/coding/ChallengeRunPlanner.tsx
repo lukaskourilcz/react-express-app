@@ -9,7 +9,6 @@ import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
-import { SwimCta } from '../landing/LandingKit';
 import { useAdvanceSession, usePracticeSession, useStartSession } from '../../coding/practice';
 import { ApiError } from '../../lib/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
@@ -110,8 +109,9 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
         </p>
       )}
       <div className="cd-actions">
-        {scheduled && <SwimCta size="sm" label={t('coding.run.startNow')} disabled={advance.isPending} onClick={begin} />}
-        {!scheduled && current && <Button variant="primary" as={Link} href={taskHref(current)} label={t('coding.run.continue')} />}
+        {/* Secondary: the Coding home's one SwimCta is its next challenge. */}
+        {scheduled && <Button variant="secondary" isDisabled={advance.isPending} onClick={begin} label={t('coding.run.startNow')} />}
+        {!scheduled && current && <Button variant="secondary" as={Link} href={taskHref(current)} label={t('coding.run.continue')} />}
         {scheduled && (
           <span className="ss-text-links" style={{ margin: 0 }}>
             <a href={calendarHref(session, t('coding.run.calendarTitle'))} download="devshark-challenge-run.ics">{t('coding.run.calendar')}</a>
@@ -246,7 +246,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
             )}
           </fieldset>
           <div className="cd-actions">
-            <SwimCta type="submit" size="sm" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} disabled={start.isPending} />
+            <Button type="submit" variant="secondary" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} isDisabled={start.isPending} />
           </div>
           {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
         </form>

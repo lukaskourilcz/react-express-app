@@ -87,3 +87,11 @@ it('offers no Start while the open run is loading', () => {
   expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
   expect(screen.getByRole('status')).toHaveTextContent('Loading');
 });
+
+// One filled primary per screen: the planner sits on the Coding home, whose
+// SwimCta is the next challenge, so its own actions are secondary.
+it('draws no SwimCta of its own', () => {
+  const { container } = mount(false);
+  expect(screen.getByRole('button', { name: 'Start' })).not.toHaveClass('ss-swim-cta');
+  expect(container.querySelector('.ss-swim-cta')).toBeNull();
+});
