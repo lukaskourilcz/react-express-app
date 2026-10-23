@@ -79,11 +79,11 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     const stem = page.locator('#placement-question');
     await expect(stem.locator('pre')).toBeVisible();
     const codingWidth = (await stem.boundingBox())!.width;
-    await page.getByRole('radio', { name: '2 string', exact: true }).click();
+    await page.getByRole('radio', { name: 'string', exact: true }).click();
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(stem).toContainText('Which value is a number?');
     expect(Math.abs((await stem.boundingBox())!.width - codingWidth)).toBeLessThan(2);
-    await page.getByRole('radio', { name: '1 42', exact: true }).click();
+    await page.getByRole('radio', { name: '42', exact: true }).click();
     await page.getByRole('button', { name: 'Finish', exact: true }).click();
     const review = page.locator('.rm-placement-review');
     await expect(review.locator('article')).toHaveCount(2);
@@ -96,12 +96,12 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 
-  test(`${theme} ${width}px: Challenge has a full-width code block, opaque feedback and positive-only automatic completion`, async ({ page }, info) => {
+  test(`${theme} ${width}px: Challenge has a full-width code block, feedback under the answers and positive-only automatic completion`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await prepare(page, theme);
     const completions = await challenge(page);
     await page.goto('/challenge');
-    await expect(page.getByText('90 s', { exact: true })).toBeVisible();
+    await expect(page.getByText(/each question has 90 seconds/)).toBeVisible();
     await expect(page.getByText('Relaxed pace')).toHaveCount(0);
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await expect(page.getByRole('timer')).toContainText('1:30');
@@ -115,14 +115,19 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     expect(await code.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
     await page.getByRole('radio', { name: '42', exact: true }).click();
     await page.getByRole('button', { name: 'Submit', exact: true }).click();
-    const feedback = page.locator('[aria-live="assertive"]').filter({ hasText: '42 has no quotation marks' });
-    await expect(feedback).toBeVisible();
-    const appearance = await feedback.evaluate(el => {
+    // UX audit questions-01: the verdict sits in normal flow under the
+    // answers, inside the panel, so it never covers them; it is drawn at full
+    // opacity on its own tinted surface.
+    const feedback = page.locator('.ss-question-feedback').filter({ hasText: '42 has no quotation marks' });
+    await expect(feedback.getByRole('status')).toBeVisible();
+    const appearance = await feedback.locator('.astryx-banner').evaluate(el => {
       const style = getComputedStyle(el);
       return { background: style.backgroundColor, opacity: style.opacity };
     });
     expect(appearance.opacity).toBe('1');
-    expect(appearance.background).toMatch(/^rgb\(/);
+    expect(appearance.background).not.toBe('rgba(0, 0, 0, 0)');
+    const gradedAnswers = await answers.boundingBox();
+    expect((await feedback.boundingBox())!.y).toBeGreaterThanOrEqual(gradedAnswers!.y + gradedAnswers!.height);
     await page.screenshot({ path: info.outputPath(`challenge-feedback-${theme}-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'Next question', exact: true }).click();
     await expect(page.getByRole('timer')).toContainText('1:30');
