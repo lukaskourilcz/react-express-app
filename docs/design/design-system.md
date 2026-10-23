@@ -64,7 +64,7 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 - Choice: `RadioCardGroup`/`RadioCard` or `CheckCard`, not checkbox-emitting cards for radio jobs.
 - Feedback: shared semantic tokens plus text/icon, never color alone.
 - Empty/error/loading: one cause, one next action, stable layout.
-- Destructive confirmation: product-localized title, body, cancel and confirm; focus and restoration owned by Astryx dialog.
+- Destructive confirmation: `BrandedConfirmDialog` (Astryx `AlertDialog`) with a product-specific title, body, cancel and confirm; the Astryx dialog owns focus and restoration. It runs the confirmed action once, even when a second press lands before it re-renders. Removing a friend and deleting an account ask through it. Reset in the coding workbench and in a path's code activity asks in an inline `role="alertdialog"` note under the action bar instead; keeping the code returns focus to Reset, and in a path activity a confirmed Reset does too.
 
 ## Motion
 
