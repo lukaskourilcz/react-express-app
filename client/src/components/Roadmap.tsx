@@ -911,6 +911,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   // `joinable`); a gate under it then keeps its own action secondary.
   const headerJoins = section !== 'web-developer' && !authLoading && isAuthenticated && hasPlan && !isMember;
   const topicDone = passedLevelCount(progress, topic);
+  const continueBarred = !!continueLevel && isBarred(lockOf({ kind: 'learn-level', topic, level: continueLevel.level }));
   const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
   return (
@@ -1055,12 +1056,17 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
               says only what the tile does not, the next level, with the
               topic's progress as a 4px bar under it and Continue on the
               right. */}
+          {/* A next level Premium opens says so once, here, and its button
+              says what it does (UX audit learn-22): it opens the upgrade
+              sheet, not a level. */}
           <div className="rm-overview-card">
             <span className="rm-overview-fin" aria-hidden="true" />
             <div className="rm-overview-copy">
               <p id="rm-overview-step" className="rm-overview-step">
                 {continueLevel
-                  ? learnText('learn.overview.next', { n: continueLevel.level, total: levels.length, title: continueLevel.title })
+                  ? continueBarred
+                    ? learnText('learn.overview.premium', { topic: t(categoryLabelKey(topic)) })
+                    : learnText('learn.overview.next', { n: continueLevel.level, total: levels.length, title: continueLevel.title })
                   : t('roadmap.progress', { done: topicDone, total: levels.length })}
               </p>
               <div
@@ -1075,7 +1081,12 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
               </div>
             </div>
             {continueLevel && (
-              <SwimCta label={t('roadmap.continue')} describedBy="rm-overview-step" dir={-1} onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })} />
+              <SwimCta
+                label={continueBarred ? learnText('learn.overview.seePremium') : t('roadmap.continue')}
+                describedBy="rm-overview-step"
+                dir={-1}
+                onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })}
+              />
             )}
           </div>
 
@@ -1394,8 +1405,11 @@ function PartTestNode({
 /* ──── Premium node ─────────────────────────────────────────────────────── */
 
 /** A level or part test that Premium opens, on a free account. It keeps its
- * place and title on the map, reads "Premium" as text rather than colour,
- * stays in the tab order with `aria-disabled`, and opens the upgrade sheet. */
+ * place and title on the map, stays in the tab order with `aria-disabled`,
+ * and opens the upgrade sheet. Premium is said once for the topic, on its
+ * tile and in the next-step card (UX audit learn-22), so the node shows no
+ * label of its own: the lock and the dashed edge mark it, and "Premium" is
+ * in its accessible name ("Level 7: Union Types, Premium"). */
 function PremiumNode({ shape, label, title, cellW, onClick, t }: {
   shape: 'level' | 'test'; label: string; title: string; cellW: number; onClick: () => void; t: TFn;
 }) {
@@ -1430,16 +1444,15 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
           maxWidth: Math.min(cellW - 4, Math.max(72, Math.min(150, cellW - 10))),
           textAlign: 'center',
           lineHeight: 1.15,
-          // One line of title, so the "Premium" line fits the row's label band.
+          // Two lines, as every other node's title.
           display: '-webkit-box',
-          WebkitLineClamp: 1,
+          WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
         }}
       >
         {title}
       </div>
-      <span className="ss-premium-label rm-premium-label" aria-hidden="true" style={{ maxWidth: Math.max(40, cellW - 4) }}>{t('premium.badge')}</span>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 // The Learn page's sections (#488): a level stays open while the address
 // moves to another section, and a section's single action joins it, asks a
 // visitor to sign in, or sends an account with no plan to choose one.
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -32,6 +32,12 @@ vi.mock('../src/lib/signInDialog', async (importOriginal) => ({
   openSignIn: (detail: unknown) => { signIns.calls.push(detail); },
 }));
 
+const sheets = vi.hoisted(() => ({ calls: [] as unknown[] }));
+vi.mock('../src/lib/upgradeSheet', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/upgradeSheet')>()),
+  openUpgradeSheet: (detail: unknown) => { sheets.calls.push(detail); },
+}));
+
 const FRONTEND = { schemaVersion: 1, baseTrack: 'frontend', specialization: null };
 const signIn = (metadata: Record<string, unknown>) => {
   auth.value = { ...auth.value, user: { id: 'user-1', user_metadata: metadata }, isAuthenticated: true };
@@ -42,6 +48,7 @@ afterEach(() => {
   saves.calls = [];
   saves.results = [];
   signIns.calls = [];
+  sheets.calls = [];
   localStorage.clear();
   window.history.replaceState({}, '', '/');
 });
@@ -375,6 +382,27 @@ describe('the next-step card (UX audit learn-06)', () => {
     expect(card.textContent).not.toContain(tile.getAttribute('aria-label')!);
     expect(card.textContent).not.toContain('/ 10 levels');
     expect(within(card).queryByRole('heading')).toBeNull();
+  });
+});
+
+describe('a topic Premium opens, on a free account (UX audit learn-22)', () => {
+  it('says Premium once, in the card, whose button says it opens Premium; the map nodes carry no label', async () => {
+    // The map measures its column; jsdom lays nothing out.
+    const measure = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ width: 800, height: 0, top: 0, left: 0, right: 800, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect);
+    onTestFinished(() => measure.mockRestore());
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer({ javascript: { levels: Object.fromEntries(levels(5).map(({ level: n }) => [String(n), { passed: true }])), checkpoints: {} } });
+    await mountAt('/learn/web-developer');
+    fireEvent.click(await screen.findByRole('radio', { name: /^Git, Premium$/ }));
+    const see = await screen.findByRole('button', { name: 'See Premium', description: 'Git is part of Premium' });
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
+    // Each node keeps "Premium" in its name, and shows the lock alone.
+    const nodes = await screen.findAllByRole('button', { name: /^Level \d+: .*, Premium$/ });
+    expect(nodes.length).toBeGreaterThan(0);
+    const canvas = document.querySelector('.rm-path-canvas') as HTMLElement;
+    expect(within(canvas).queryAllByText('Premium')).toHaveLength(0);
+    fireEvent.click(see);
+    expect(sheets.calls).toEqual([{ kind: 'learn-level', ref: expect.anything() }]);
   });
 });
 
