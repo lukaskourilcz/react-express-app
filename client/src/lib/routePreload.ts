@@ -64,6 +64,10 @@ function pathOf(target: EventTarget | null): string | null {
   return element.dataset.route ?? null;
 }
 
+/** A left-button mouse press, which a click on the same link follows. */
+const isPrimaryMousePress = (event: Event): boolean =>
+  event.type === 'pointerdown' && (event as PointerEvent).pointerType === 'mouse' && (event as PointerEvent).button === 0;
+
 /** Whether the visitor asked the browser to save data. Read per event: the
  * setting can change while the page is open. */
 const savesData = (): boolean =>
@@ -72,11 +76,13 @@ const savesData = (): boolean =>
 /** Preload on intent anywhere in the document. Returns the uninstaller. A
  * visitor who asked the browser to save data gets a page's code when they open
  * it, not for every link they rest on, tab through or touch while scrolling
- * (as useWarmWorkbench in coding/loadWorkbench.ts skips its idle warm-up). */
+ * (as useWarmWorkbench in coding/loadWorkbench.ts skips its idle warm-up). A
+ * primary mouse press still starts at once: the click that follows loads the
+ * same code, so starting it on the press costs no extra data. */
 export function installIntentPreloading(): () => void {
   let hover = 0;
   const now = (event: Event) => {
-    if (savesData()) return;
+    if (savesData() && !isPrimaryMousePress(event)) return;
     const path = pathOf(event.target);
     if (path && path !== window.location.pathname) void preloadPath(path);
   };

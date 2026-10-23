@@ -139,6 +139,30 @@ describe('intent preloading', () => {
     }
   });
 
+  // The click after a left press loads the page anyway, so skipping the press
+  // saved no data and only made the page arrive later.
+  it('still loads on a left mouse press for a visitor who asked the browser to save data', () => {
+    const load = vi.fn(async () => ({}));
+    routeChunk((path) => path === '/intent-save-data-press', load);
+    uninstall = installIntentPreloading();
+    Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true });
+    try {
+      const anchor = link('/intent-save-data-press');
+      const press = (button: number) => {
+        const down = new Event('pointerdown', { bubbles: true });
+        Object.defineProperty(down, 'pointerType', { value: 'mouse' });
+        Object.defineProperty(down, 'button', { value: button });
+        anchor.dispatchEvent(down);
+      };
+      press(2);
+      expect(load).not.toHaveBeenCalled();
+      press(0);
+      expect(load).toHaveBeenCalledTimes(1);
+    } finally {
+      delete (navigator as { connection?: unknown }).connection;
+    }
+  });
+
   it('reads a chrome button’s data-route, and ignores new tabs, other sites and the current page', () => {
     const button = vi.fn(async () => ({}));
     const elsewhere = vi.fn(async () => ({}));
