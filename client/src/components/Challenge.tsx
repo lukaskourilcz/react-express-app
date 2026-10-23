@@ -218,6 +218,11 @@ export default function Challenge() {
   // 12): each can be saved as a Shark Card with its answer and explanation.
   const [missed, setMissed] = useState<AnsweredQ[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  // One grade at a time, for a pick or the timeout. `submitting` reaches the
+  // handlers only after a render, and a second Enter or press in that gap
+  // sent the pick again: the server replays a pick's grade, so the point or
+  // the strike counted twice.
+  const gradingRef = useRef(false);
   const [snack, setSnack] = useState<string | null>(null);
   // The question's deadline, set when it is shown. The clock counts down to
   // it rather than counting ticks, so time the page spends in the background
@@ -522,7 +527,8 @@ export default function Challenge() {
   }, []);
 
   const submitAnswer = useCallback(async () => {
-    if (selected == null || !current || submitting || timeLeft <= 0) return;
+    if (selected == null || !current || gradingRef.current || timeLeft <= 0) return;
+    gradingRef.current = true;
     const question = current;
     const sessionId = currentSessionRef.current;
     setSubmitting(true);
@@ -534,9 +540,10 @@ export default function Challenge() {
       if (isSessionRefusal(err)) expireQuestion(question, selected, sessionId);
       else setSnack(friendlyError(err));
     } finally {
+      gradingRef.current = false;
       setSubmitting(false);
     }
-  }, [selected, current, submitting, timeLeft, applyGrade, expireQuestion, gradeOrReplay]);
+  }, [selected, current, timeLeft, applyGrade, expireQuestion, gradeOrReplay]);
 
   const onContinue = useCallback(() => {
     const willGameOver = lastResult ? !lastResult.notCounted && !lastResult.isCorrect && livesLost >= MAX_LIVES : false;
@@ -547,7 +554,8 @@ export default function Challenge() {
   // fin, exactly like a wrong answer; the graded feedback card then lets the
   // learner continue (or ends the run if it was the third strike).
   const handleTimeout = useCallback(async () => {
-    if (!current || lastResult || submitting || strikeSentFor.current === current.id) return;
+    if (!current || lastResult || submitting || gradingRef.current || strikeSentFor.current === current.id) return;
+    gradingRef.current = true;
     strikeSentFor.current = current.id;
     const question = current;
     const sessionId = currentSessionRef.current;
@@ -584,6 +592,7 @@ export default function Challenge() {
         setLastResult({ questionId: question.id, selectedIndex: -1, correctAnswer: -1, isCorrect: false, explanation: '', question, timedOut: true });
       }
     } finally {
+      gradingRef.current = false;
       setSubmitting(false);
     }
   }, [current, lastResult, submitting, applyGrade, expireQuestion, gradeOrReplay]);

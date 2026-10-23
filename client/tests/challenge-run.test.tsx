@@ -533,6 +533,23 @@ describe('a grade whose response was lost', () => {
   });
 });
 
+describe('a double press', () => {
+  // Both presses land before React renders the busy button.
+  it('grades the pick once, so its point counts once', async () => {
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('radio', { name: 'right' }));
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+      fireEvent.keyDown(document.body, { key: 'Enter' });
+    });
+    await screen.findByRole('button', { name: /Next question|See result/ });
+    await settle();
+    expect(api.submits).toHaveLength(1);
+    expect(screen.getByText('Score').nextElementSibling).toHaveTextContent('1');
+  });
+});
+
 describe('the ranked clock', () => {
   it('counts the time the page spent in the background', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
