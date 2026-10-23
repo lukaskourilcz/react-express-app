@@ -44,9 +44,16 @@ export function FdeHub({ manifest, progress, pending, error, retry, reachable, a
         {DELIVERY_PHASES.map(phase => {
           const members = modules.filter(module => module.deliveryPhase === phase);
           const current = nextModule?.deliveryPhase === phase;
+          const done = members.filter(module => completed.has(module.id)).length;
+          // The bar's label says 'completed' once; each phase shows its count
+          // as '0 / 3' on one line, and the full sentence stays for a screen
+          // reader (UX audit learn-23).
           return <li key={phase} aria-current={current ? 'step' : undefined}>
             <h3>{copy[`paths.phase.${phase}`]}</h3>
-            <span>{copy['paths.hub.moduleCount'].replace('{done}', String(members.filter(module => completed.has(module.id)).length)).replace('{total}', String(members.length))}</span>
+            <span className="lp-loop__count">
+              <span aria-hidden="true">{done} / {members.length}</span>
+              <span className="ss-sr-only">{copy['paths.hub.moduleCount'].replace('{done}', String(done)).replace('{total}', String(members.length))}</span>
+            </span>
             {current && <Badge variant="cyan" label={copy['paths.hub.current']} />}
           </li>;
         })}

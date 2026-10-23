@@ -50,6 +50,18 @@ describe('the FDE competency hub', () => {
     expect(within(states).getByText('Self-reviewed').parentElement).toHaveTextContent('1');
     expect(screen.queryByRole('button', { name: 'Download card' })).toBeNull();
   });
+  // UX audit learn-23: 'completed' is said once, as the bar's label; each
+  // phase shows a bare '0 / 1' count, with the sentence kept for a screen reader.
+  it('labels the bar once and counts each phase as done / total', () => {
+    mount({ progress: progress([]) });
+    expect(screen.getByRole('progressbar', { name: 'Required modules completed' })).toBeInTheDocument();
+    const phase = document.querySelector('[aria-current="step"]') as HTMLElement;
+    const count = phase.querySelector('.lp-loop__count') as HTMLElement;
+    expect(count.querySelector('[aria-hidden="true"]')).toHaveTextContent(/^0 \/ 1$/);
+    expect(within(count).getByText('0 of 1 modules completed')).toHaveClass('ss-sr-only');
+    const visible = [...document.querySelectorAll('.lp-loop [aria-hidden="true"]')].map(one => one.textContent);
+    expect(visible.join(' ')).not.toMatch(/completed/);
+  });
   it('keeps an optional shelf completion out of required-module progress', () => {
     const data = progress([]);
     data.modules.push({ moduleId: 'optional-interview', completed: true, completedAt: null, activities: [] });
