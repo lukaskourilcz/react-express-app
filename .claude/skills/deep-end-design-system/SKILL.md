@@ -15,6 +15,7 @@ Build on Astryx and the existing Shark primitives. Read `DESIGN_RULES.md`, `docs
 - Keep fin bases on their container waterline. Fin-school cards do not also lift or tilt. Repeated roadmap waves vary. Non-essential motion respects `prefers-reduced-motion`.
 - Use semantic tokens for shared meaning: backgrounds, text, borders, focus, selected, success, warning, error, info, overlays, and the accent.
 - Avoid glass, generic gradients, glows, fake dashboards, excessive pills/cards, mixed icon libraries, decorative heading icons, and filler imagery.
+- Sizes come from the shared system, never from the page (`DESIGN_RULES.md` §10, UX audit U1): the route shell picks the page width (`--ss-width-narrow` 800px by default, `--ss-width-standard` 1000px, `--ss-width-wide` 1200px) from the map in `client/src/components/ui/pageWidth.ts`, so a page sets no page `max-width`; task cards and the question column are `--ss-width-task` (640px); every button and form control is `--ss-control-height` (44px) on every pointer, and only controls inside `.ss-compact` (a component's own toolbar) are 36px with a 44px hit area; page actions use `.ss-action` or sit in `.ss-info-actions`; one filled primary per screen, `SwimCta` md; icon buttons are 44×44 with 20px glyphs; the sign-in verb is "Sign in", and each fact is said once per screen.
 - Keep public pages medium density, learning pages medium-to-high density, and `/dev` high density and low decoration.
 
 ## Implementation workflow

@@ -41,7 +41,7 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 
 ## Page widths
 
-Four tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573). The route shell in `client/src/App.tsx` picks one route width per route from the one map in `client/src/components/ui/pageWidth.ts` (`pageMaxWidth`), writes it to `--ss-page-width`, and the keyed route box (`.ss-route`) takes it as its `max-width`. A page never sets its own page `max-width`: it fills the column and sizes only what sits inside it.
+Five tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573): four page widths and the chrome box. The route shell in `client/src/App.tsx` picks one route width per route from the one map in `client/src/components/ui/pageWidth.ts` (`pageMaxWidth`), writes it to `--ss-page-width`, and the keyed route box (`.ss-route`) takes it as its `max-width`. A page never sets its own page `max-width`: it fills the column and sizes only what sits inside it.
 
 | Token | Width | Used by |
 |---|---|---|

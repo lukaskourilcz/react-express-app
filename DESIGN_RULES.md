@@ -262,7 +262,7 @@ coming back. The tokens and the map are in
 [the design system](docs/design/design-system.md#page-widths).
 
 - **The shell picks the page width.** One route width per route, from
-  `routePageWidth` in `client/src/components/ui/pageWidth.ts`: 1000px
+  `pageMaxWidth` in `client/src/components/ui/pageWidth.ts`: 1000px
   (`--ss-width-standard`) for home, `/profile` and `/play`; 1200px
   (`--ss-width-wide`) for `/coding/*`; 800px (`--ss-width-narrow`) for every
   other route; `/dev` uncapped. A page never sets its own page `max-width`. A

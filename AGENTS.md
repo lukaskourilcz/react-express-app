@@ -10,6 +10,8 @@ The server remains authoritative for answers, grading, scores, XP, entitlements,
 
 Extend Astryx and Deep End v2 through `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`, `DESIGN_RULES.md`, `client/src/components/ui/`, and existing Shark/landing primitives. Do not add another UI, icon, dialog, toast, localization, state, product, or subject system. Use `.claude/skills/generated-media-production/SKILL.md` for meaningful media; keep authentic UI and factual visuals deterministic, review three directions, and record provenance. Before recommending or using a generator, research at least three current cheap or free services from official pricing, licensing, privacy, and model documentation. Never alter billing without explicit owner authorization.
 
+Page widths and control heights are shared tokens chosen once (`DESIGN_RULES.md` §10): the route shell picks each route's width from `client/src/components/ui/pageWidth.ts`, every control is 44px on every pointer (36px only inside `.ss-compact` toolbars), and a page never sets its own page `max-width` or button size.
+
 Every screen change covers relevant loading, empty, error, offline, auth/permission, disabled, success, destructive, stale/expired, long-content, and narrow states. Validate focus/keyboard, names/errors/status, non-color cues, reduced motion, touch targets, zoom/reflow, light/dark, and widths 360 through 1440.
 
 Authoritative references:
