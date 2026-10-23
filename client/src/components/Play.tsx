@@ -265,7 +265,7 @@ export function PlayLanding() {
       <VStack gap={3}>
         {/* The operational header the social pages share: kicker, an ink
             h1 at display-3 and one lead (UX audit social-account-11). */}
-        <PageHeader kicker={t('play.kicker')} title={t('play.heading')} lead={t('play.subtitle')} />
+        <PageHeader kicker={t('play.title')} title={t('play.heading')} lead={t('play.subtitle')} />
 
         {error && (
           <Banner
@@ -880,7 +880,7 @@ function PlayRoom() {
             one compact action on the right (social-account-11, -15). */}
         <div className="play-room__head">
           <PageHeader
-            kicker={t('play.kicker')}
+            kicker={t('play.title')}
             title={match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
             lead={t('play.hostedBy', { name: match.host_name })}
           />

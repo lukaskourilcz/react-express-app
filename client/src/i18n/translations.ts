@@ -644,7 +644,6 @@ export const en = {
   'play.signInBody': 'Multiplayer and classroom games need an account so we can show your name on the scoreboard.',
   'play.enterCode': 'Enter a match code',
   'play.title': 'Play live',
-  'play.kicker': 'Play live',
   'play.heading': 'Race or teach live',
   'play.modeFfaBlurb': 'Everyone races to answer.',
   'play.modeClassroomBlurb': 'Host advances each question and sees the live answer distribution.',
