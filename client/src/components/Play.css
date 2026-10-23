@@ -115,6 +115,10 @@
 }
 
 /* A room's header: the shared PageHeader on the left, the code badge (44px)
-   on the right, bottom-aligned; it wraps under the title on a phone. */
-.play-room__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; }
-.play-room__head > .ss-page-header { flex: 1 1 14rem; min-width: 0; }
+   on the right, bottom-aligned. It stays beside the title on a phone too: at
+   390 the badge (about 125px) and 'Multiplayer' fit one row, and a badge
+   wrapped onto its own line left that row about 65% empty. The title and lead
+   wrap inside their own column instead. */
+.play-room__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.play-room__head > .ss-page-header { flex: 1 1 auto; min-width: 0; }
+.play-room__head > :last-child { flex: none; }

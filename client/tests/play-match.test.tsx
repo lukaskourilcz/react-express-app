@@ -976,6 +976,13 @@ describe('the lobby (social-account-14, -15)', () => {
     expect(header.querySelector('.ss-page-header__lead')).toHaveTextContent('Hosted by Hana');
     expect(header.parentElement).toHaveClass('play-room__head');
     expect(within(header.parentElement as HTMLElement).getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
+    // The badge stays beside the title on a phone: the row does not wrap and
+    // the badge keeps its size, so the title column wraps instead.
+    const css = readFileSync(new URL('../src/components/Play.css', import.meta.url), 'utf8');
+    const head = css.match(/\.play-room__head \{[^}]*\}/)?.[0] ?? '';
+    expect(head).toContain('display: flex');
+    expect(head).not.toContain('flex-wrap: wrap');
+    expect(css).toMatch(/\.play-room__head > :last-child \{ flex: none; \}/);
   });
 
   it('tells a guest to wait, with no Start', async () => {
