@@ -258,6 +258,8 @@ describe('/collection', () => {
     const signIn = within(panel as HTMLElement).getByRole('button', { name: 'Sign in' });
     expect(signIn).toHaveAttribute('aria-haspopup', 'dialog');
     expect(panel.querySelector('.ss-state-panel__actions')?.firstElementChild).toBe(signIn);
+    // The body does not name the shelf a fourth time (social-account-10).
+    expect(within(panel as HTMLElement).getByText('Your list stays with your account on every device.')).toBeInTheDocument();
   });
 });
 

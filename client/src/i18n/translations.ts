@@ -55,7 +55,7 @@ export const en = {
   'collection.unavailable': 'This saved challenge is no longer available.',
   'collection.signIn': 'Sign in',
   'collection.signInTitle': 'Sign in to save challenges',
-  'collection.signInBody': 'Your saved challenges stay with your account on every device.',
+  'collection.signInBody': 'Your list stays with your account on every device.',
   'nav.today': 'Today',
   'title.today': 'Today · devShark',
   'title.collection': 'Shark Cards · devShark',
