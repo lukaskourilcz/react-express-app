@@ -100,6 +100,21 @@ export function complexityContracts() {
   // An identifier is matched as a name, never as a pattern: `$` once read as
   // an end-of-text anchor, so a `$`-named input never bounded its own loop.
   assert.equal(check('function solve($xs) { let t=0; for (let i=0;i<$xs.length;i++) t+=$xs[i]; return t; }').time, 'O(n)', '$ in an input name is part of the name');
+  // A counter that starts at a literal is fixed, and a bound that names it is
+  // not thereby fixed: these walked whole inputs and were labelled O(1).
+  for (const code of [
+    'function solve({ items }) { let t=0; for (let i=0;i<items.length;i++) for (let j=0;j<items.length;j++) t+=items[j]; return t; }',
+    'function solve(xs) { const half = Math.floor(xs.length / 2); for (let i=0;i<half;i++) xs[i]=xs[xs.length-1-i]; return xs; }',
+    'function solve(xs) { let t=0; for (let i=0;i<$xs.length;i++) t+=xs[i]; return t; }',
+    'function solve(xs) { let i=0; while (i<ys.length) i++; return xs; }',
+  ]) {
+    assert.equal(check(code).time, null, code);
+    assert.equal(check(code).assessment, 'unknown', code);
+  }
+  for (const code of [
+    'function solve(xs) { let t=0; for (let i=0;i<3;i++) t+=i; return xs.length + t; }',
+    'function solve(xs) { const fixed=[1,2,3]; let t=0; for (let i=0;i<fixed.length-1;i++) t+=fixed[i]; return xs.length + t; }',
+  ]) assert.equal(check(code).time, 'O(1)', code + ': a literal or fixed-collection bound stays constant work');
   assert.equal(check('const solve = xs => xs.length ? solve(xs.slice(1)) : 0;').assessment, 'unknown');
   assert.equal(check('const solve = xs => mystery(xs);').time, null);
   assert.equal(check('const solve = xs => { while(xs.length) xs = mystery(xs); return 1; };').assessment, 'unknown');

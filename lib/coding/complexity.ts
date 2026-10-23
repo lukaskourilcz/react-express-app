@@ -284,6 +284,14 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       indices(fn.body);
     }
     const inputBound = (node: ts.Node): boolean => inputNames(node.getText(file), bounds);
+    const fixedBound = (operand: ts.Expression): boolean => {
+      if (ts.isParenthesizedExpression(operand)) return fixedBound(operand.expression);
+      if (numericLiteral(operand) !== null) return true;
+      if (ts.isIdentifier(operand)) return fixedCollections.has(operand.text);
+      if (ts.isPropertyAccessExpression(operand) && operand.name.text === 'length') return collectionKind(operand.expression) === 'fixed';
+      return ts.isBinaryExpression(operand) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken].includes(operand.operatorToken.kind)
+        && numericLiteral(operand.right) !== null && fixedBound(operand.left);
+    };
     const walk = (node: ts.Node): Cost => {
       visited += 1;
       if (visited > 12_000 || budget.left < 0) { uncertainty = ANALYSIS_LIMIT_MESSAGE; return constant; }
@@ -348,7 +356,11 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
         if (inputBound(condition)) {
           loop = /\/=\s*2|\*=\s*2|>>=\s*1/.test(increment) ? { power: 0, log: 1 } : linear;
           evidence.add(loop.log ? 'Halving or doubling loop' : 'Input-bounded loop');
-        } else if (!inputNames(condition.getText(file), fixedCollections) && (!/^[\w\s<>=!+\-\d.]+$/.test(condition.getText(file)) || !/\b\d+\b/.test(condition.getText(file)))) {
+        } else if (!(ts.isBinaryExpression(condition) && fixedBound(condition.left) && fixedBound(condition.right))) {
+          // Both sides must be fixed. A counter started at a literal is fixed
+          // itself, so mentioning one fixed name let i < unknown.length pass as
+          // constant work, and a quadratic walk over a destructured input read
+          // as O(1).
           uncertainty = 'A loop bound cannot be related to the input size.';
         }
         // Conditions and increment expressions run on every iteration; the
