@@ -607,6 +607,18 @@ describe('saving a result to the account', () => {
     await waitFor(() => expect(Object.values(pendingStore()).map((pending) => pending.receipt).sort()).toEqual(['receipt-1', 'receipt-2']));
   });
 
+  it('does not write a quiz on screen back to the tab once the account signed out', async () => {
+    signIn();
+    await startQuiz([Q('a'), Q('b')]);
+    await waitFor(() => expect(sessionStorage.getItem(PROGRESS_KEY)).not.toBeNull());
+    act(() => { clearAccountData(); });
+    expect(sessionStorage.getItem(PROGRESS_KEY)).toBeNull();
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    await act(async () => {});
+    expect(sessionStorage.getItem(PROGRESS_KEY)).toBeNull();
+  });
+
   it('keeps nothing on the device when the account signed out while the grade was on its way', async () => {
     signIn();
     let answer: (() => void) | undefined;

@@ -359,9 +359,18 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The account epoch the quiz on screen was dealt or restored under. A sign-
+  // out clears the saved progress (clearAccountData); the quiz stays on
+  // screen, but its next answer must not write it back for the next account.
+  const progressEpochRef = useRef(accountEpoch());
+  useEffect(() => {
+    progressEpochRef.current = accountEpoch();
+  }, [sessionId]);
+
   // Persist in-progress state
   useEffect(() => {
     if (state !== 'in-progress' || questions.length === 0) return;
+    if (accountEpoch() !== progressEpochRef.current) return;
     try {
       const payload: PersistedProgress = {
         sessionId, questions, answers, currentIndex, mode,
