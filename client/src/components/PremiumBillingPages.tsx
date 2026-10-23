@@ -412,6 +412,9 @@ export function PremiumCancelPage() {
 
   // Take the token out of the address bar at once, so it stays out of the
   // history, a screenshot and every analytics event, then ask what it is for.
+  // Try again asks once more with the token held here: a reload would find
+  // the address without it.
+  const [reviews, setReviews] = useState(0);
   useEffect(() => {
     if (!token) return;
     navigate({ pathname: location.pathname, search: location.search }, { replace: true });
@@ -430,9 +433,10 @@ export function PremiumCancelPage() {
           : { kind: 'link-error', message: friendlyError(err) });
       });
     return () => { live = false; };
-    // Once per token: the navigation above changes the location, not the token.
+    // Once per token and Try again: the navigation above changes the
+    // location, not the token.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, reviews]);
 
   const withdraw = action === 'withdraw';
   const owner = isAuthenticated && typeof user?.email === 'string' && user.email.toLowerCase() === email.trim().toLowerCase();
@@ -622,7 +626,7 @@ export function PremiumCancelPage() {
             <h2 tabIndex={-1}>{t('billing.cancel.linkErrorTitle')}</h2>
             <Banner status="error" title={step.message} />
             <div className="ss-info-actions">
-              <Button variant="primary" label={t('billing.cancel.tryAgain')} onClick={() => window.location.reload()} />
+              <Button variant="primary" label={t('billing.cancel.tryAgain')} onClick={() => { setStep({ kind: 'link-loading' }); setReviews((count) => count + 1); }} />
               <Button variant="secondary" label={t('billing.cancel.startAgain')} onClick={startAgain} />
             </div>
           </div>

@@ -411,6 +411,22 @@ describe('/premium/cancel', () => {
     expect(bodies).toEqual([{ step: 'review', token: TOKEN }, { step: 'execute', token: TOKEN }]);
   });
 
+  it('asks about the emailed link again on Try again, though the address no longer holds it', async () => {
+    serve();
+    let reviews = 0;
+    const bodies = cancelApi(() => {
+      reviews += 1;
+      return reviews === 1
+        ? HttpResponse.json({ error: { code: 'upstream_timeout', message: 'busy' } }, { status: 503 })
+        : HttpResponse.json({ action: 'cancel', email: 'payer@example.com', requestedAt: '2026-09-25T14:32:00.000Z', expiresAt: '2026-09-25T15:32:00.000Z' });
+    });
+    renderAt(`/premium/cancel#confirm=${TOKEN}`, <PremiumCancelPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Confirm your cancellation' })).toBeInTheDocument();
+    expect(screen.getByTestId('hash')).toHaveTextContent('');
+    expect(bodies).toEqual([{ step: 'review', token: TOKEN }, { step: 'review', token: TOKEN }]);
+  });
+
   it('says so when a link has expired, and starts again', async () => {
     serve();
     cancelApi(() => HttpResponse.json({ error: { code: 'link_expired', message: 'This link has expired or was used already.' } }, { status: 410 }));
