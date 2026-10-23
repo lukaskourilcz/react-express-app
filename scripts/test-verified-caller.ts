@@ -71,6 +71,8 @@ const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
 const seen: Seen[] = [];
+/** Token checks Supabase Auth answered, so a test can count a request's. */
+let authChecks = 0;
 const SLOW_REPORT = 'stand-in: answer after the timeout';
 // A topic board asked with this minimum answers after the timeout too.
 const SLOW_BOARD_MIN_ATTEMPTS = 97;
@@ -97,6 +99,7 @@ async function startStandIns() {
     res.setHeader('content-type', 'application/json');
     const send = (status: number, body: unknown) => { res.statusCode = status; res.end(JSON.stringify(body)); };
     if (url.pathname === '/auth/v1/user') {
+      authChecks += 1;
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
       // Supabase Auth itself failing, for any token.
       if (token === AUTH_DOWN.token) return send(500, { message: 'stand-in auth is down' });
@@ -273,6 +276,14 @@ async function main() {
     assert.equal(unavailable.statusCode, 409);
     assert.equal(errorCode(unavailable), 'account_name_unavailable');
     console.log('PASS verified caller: leaderboard names use the verified profile or confirmed email prefix, independently of friends');
+
+    // A signed-in Challenge batch verifies its token once, for the rate limit
+    // and the run alike.
+    authChecks = 0;
+    const signedInBatch = await call(challenge as Handler, { account: A, query: { categories: 'javascript' } });
+    assert.equal(signedInBatch.statusCode, 200, JSON.stringify(signedInBatch.body));
+    assert.equal(tokens.decodeChallengeRun((signedInBatch.body as { runToken: string }).runToken)?.userId, A.id, 'the run is the token\'s account\'s');
+    assert.equal(authChecks, 1, 'a Challenge batch asks Supabase Auth once');
 
     // Completion writes positive scores automatically; zero allocates nothing.
     const completedRun = tokens.createChallengeRun(true, 'webdev', { topics: ['javascript'], allTopics: false, userId: null });

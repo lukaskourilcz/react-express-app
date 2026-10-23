@@ -8,7 +8,7 @@ import {
   type Question,
 } from '../../lib/quiz-runtime';
 import { encodeSession, createChallengeRun, decodeChallengeRun, decodeScoreProof } from '../../lib/quiz-tokens';
-import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing, withRequestContext } from '../../lib/http';
+import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing, withRequestContext, tryAuthOnce } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions, getEffectiveQuestionsById } from '../../lib/questions-store';
 import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
@@ -113,7 +113,9 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   const topics = scope.categories.filter(topic => available.includes(topic)).sort();
   if (topics.length === 0) return jsonError(res, 404, 'no_questions', 'No challenge questions available');
   let auth;
-  try { auth = assessment ? null : await tryAuth(req); }
+  // The class rate limit above already verified the token; read that result
+  // rather than asking Supabase Auth a second time.
+  try { auth = assessment ? null : await tryAuthOnce(req); }
   catch (error) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
