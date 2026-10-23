@@ -220,12 +220,11 @@ export default function PremiumVoucher({ billingClosed, inline = false }: { bill
               <span className="ss-premium-voucher__sr">{t('premium.voucher.loading')}</span>
             </span>
           ) : !isAuthenticated ? (
-            <>
-              <p className="ss-premium-note">{t('premium.voucher.signedOut')}</p>
-              <div className="ss-info-actions">
-                <Button variant={inline ? 'secondary' : 'primary'} label={t('premium.voucher.signIn')} aria-haspopup="dialog" onClick={signIn} />
-              </div>
-            </>
+            // One prompt: the button says what signing in is for (UX audit
+            // money-15), with no 'Sign in first' sentence above it.
+            <div className="ss-info-actions">
+              <Button variant={inline ? 'secondary' : 'primary'} label={t('premium.voucher.signIn')} aria-haspopup="dialog" onClick={signIn} />
+            </div>
           ) : (
             <form className="ss-premium-voucher__form" noValidate onSubmit={(event) => void submit(event)}>
               <div className="ss-premium-voucher__field">

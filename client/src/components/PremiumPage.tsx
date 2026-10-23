@@ -1,8 +1,9 @@
 // /premium (#222): what Premium costs, what it opens, and how to buy, cancel
 // or withdraw.
 //
-//   signed out           the plan buttons sign in with Google and come back here
-//   signed in, free      the plan buttons open Stripe Checkout
+//   signed out           the plan buttons keep their plan label, open sign-in
+//                        and come back to that plan's checkout
+//   signed in, free      the plan buttons open checkout
 //   paying subscriber    "Your plan" with the plan line and Manage billing; no
 //                        second checkout
 //   complimentary grant  "Your plan" says so; buying stays possible
@@ -107,7 +108,6 @@ function usePremiumFirstData() {
 export default function PremiumPage() {
   usePremiumFirstData();
   const { t } = useLanguage();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const billing = useBilling();
   const plan = useEntitlement();
   const vars = premiumVars();
@@ -156,7 +156,6 @@ export default function PremiumPage() {
               <Button variant="secondary" size="sm" label={t('profile.plan.retry')} onClick={billing.retry} />
             </div>
           )}
-          {!closed && !unreachable && !authLoading && !isAuthenticated && <p className="ss-premium-note">{t('premium.page.signedOut')}</p>}
           <PremiumSmallPrint t={t} link={routerLink} headingId={ids.smallPrint} />
         </section>
 

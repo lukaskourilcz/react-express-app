@@ -1451,7 +1451,6 @@ export const en = {
   'premium.page.annualSaving': 'Save {saving} {currency} a year',
   'premium.page.monthlyRenews': 'before VAT. Renews every month until you cancel.',
   'premium.page.annualRenews': 'before VAT. Renews every year until you cancel.',
-  'premium.page.signedOut': 'Sign in first. You come back here to choose a plan.',
   'premium.page.unreachable': 'We could not reach devShark to check whether checkout is open. Check your connection and try again.',
   'premium.page.yourPlan': 'Your plan',
   'premium.page.smallPrintTitle': 'Before you pay',
@@ -1481,7 +1480,6 @@ export const en = {
   // Premium vouchers on /premium (migration 045).
   'premium.voucher.title': 'Have a voucher?',
   'premium.voucher.leadClosed': 'Premium is not on sale yet. If someone gave you a voucher, enter it here and Premium opens on your account.',
-  'premium.voucher.signedOut': 'Sign in first. The voucher opens Premium on the account you sign in with.',
   'premium.voucher.signIn': 'Sign in to redeem',
   'premium.voucher.loading': 'Checking whether you are signed in',
   'premium.voucher.label': 'Voucher code',

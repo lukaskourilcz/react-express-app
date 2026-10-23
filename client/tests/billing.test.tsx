@@ -591,20 +591,22 @@ describe('the checkout button', () => {
   it('asks a visitor to sign in and a subscriber to manage billing', async () => {
     serve();
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
-    expect(await screen.findByRole('button', { name: 'Sign in to continue' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Continue with monthly' })).toHaveAttribute('aria-haspopup', 'dialog');
     signIn();
     serve({ plan: PREMIUM });
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
     expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
   });
 
-  it('opens the sign-in dialog for a visitor, which comes back to this page, and stays pressable', async () => {
+  // UX audit money-15: the plan label stays, and signing in goes on to this
+  // plan's checkout rather than back to the page the button sits on.
+  it('opens the sign-in dialog for a visitor, which goes on to this plan\'s checkout, and stays pressable', async () => {
     serve();
     renderAt('/premium?plan=annual', <PremiumCheckoutButton plan="monthly" />);
-    const button = await screen.findByRole('button', { name: 'Sign in to continue' });
+    const button = await screen.findByRole('button', { name: 'Continue with monthly' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
-    expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium?plan=annual' });
+    expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium/checkout?plan=monthly' });
     // Nothing left the page, so nothing waits for it to.
     expect(button).toBeEnabled();
   });

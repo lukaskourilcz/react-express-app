@@ -79,16 +79,20 @@ describe('/premium', () => {
     expect(within(plans).getByRole('link', { name: 'Cancel or withdraw' })).toHaveAttribute('href', '/premium/cancel');
   });
 
-  it('signs a visitor in and comes back to /premium', async () => {
+  // UX audit money-15 and shell-public-06: the plan buttons keep their plan
+  // name signed out, and the page asks to sign in once, on those buttons.
+  it('signs a visitor in from the plan button and goes on to that plan\'s checkout', async () => {
     serve();
     renderAt('/premium', <PremiumPage />);
-    const buttons = await screen.findAllByRole('button', { name: 'Sign in to continue' });
-    expect(buttons).toHaveLength(2);
-    expect(screen.getByText('Sign in first. You come back here to choose a plan.')).toBeInTheDocument();
+    const monthly = await screen.findByRole('button', { name: 'Continue with monthly' });
+    expect(screen.getByRole('button', { name: 'Continue with yearly' })).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(monthly).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(screen.queryByRole('button', { name: 'Sign in to continue' })).toBeNull();
+    expect(screen.queryByText(/Sign in first/)).toBeNull();
     // The button waits for the billing settings before it acts.
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]).toBeEnabled());
-    fireEvent.click(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]);
-    await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Continue with monthly' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with monthly' }));
+    await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium/checkout?plan=monthly' }));
   });
 
   it('offers both checkouts to a free account', async () => {
@@ -144,7 +148,7 @@ describe('/premium', () => {
     renderAt('/premium', <PremiumPage />);
     expect(await screen.findByText('Premium opens soon')).toBeInTheDocument();
     expect(screen.getAllByText('Premium opens soon')).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: /Continue with|Sign in to continue/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
   });
 
   it('says so when the settings cannot be read, and tries again', async () => {
@@ -158,9 +162,9 @@ describe('/premium', () => {
     renderAt('/premium', <PremiumPage />);
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('We could not reach devShark to check whether checkout is open.');
-    expect(screen.queryByRole('button', { name: 'Sign in to continue' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
     fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
-    expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
+    expect(await screen.findAllByRole('button', { name: /Continue with/ })).toHaveLength(2);
   });
 
   // UX audit money-03 and shell-public-06: what Premium opens is said once,
@@ -287,7 +291,7 @@ describe('the launch price (4 Oct to 30 Nov 2026, Prague)', () => {
   afterEach(() => { vi.useRealTimers(); });
 
   const expectRegularPage = async () => {
-    expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
+    expect(await screen.findAllByRole('button', { name: /Continue with/ })).toHaveLength(2);
     expect(screen.getByRole('heading', { level: 1, name: 'Everything in devShark for €4.99 a month' })).toBeInTheDocument();
     const plans = screen.getByRole('region', { name: 'Choose a plan' });
     expect(within(plans).getByText('€4.99')).toBeInTheDocument();
