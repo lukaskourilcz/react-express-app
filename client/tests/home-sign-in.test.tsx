@@ -126,3 +126,17 @@ it.each([
   for (const option of within(sample).getAllByRole('button')) expect(option).toBeDisabled();
   expect(screen.queryByRole('region', { name: 'devShark product video' })).toBeNull();
 });
+
+// Answering disables every option, the pressed one too, so keyboard focus
+// would fall to the page body: the verdict takes it instead.
+it('moves focus to the sample verdict once an answer disables the options', () => {
+  server.use(settingsHandler, freeEntitlementHandler);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+  const sample = screen.getByRole('group', { name: 'What does this return?' });
+  const option = within(sample).getByRole('button', { name: 'B 8' });
+  option.focus();
+  fireEvent.click(option);
+  expect(option).toBeDisabled();
+  expect(within(sample.parentElement!).getByRole('status')).toHaveFocus();
+});
