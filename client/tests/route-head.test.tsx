@@ -45,6 +45,10 @@ describe('the tab title', () => {
     ['/daily', 'Question of the day · devShark'],
     ['/no-such-page', 'Page not found · devShark'],
     ['/roadmap/paths/not-a-path', 'Page not found · devShark'],
+    // React Router renders a trailing slash as the page itself.
+    ['/quiz/', 'Quiz · devShark'],
+    ['/learn/big-o/', 'Big O introduction'],
+    ['/learn/software-engineer/', 'Software Engineer · devShark'],
   ])('%s reads "%s"', (pathname, title) => {
     visit(pathname);
     expect(document.title).toBe(title);
@@ -135,6 +139,15 @@ describe('a share page opened directly', () => {
     // A canonical for another address is not this page's head either.
     document.head.insertAdjacentHTML('beforeend', '<link rel="canonical" href="https://devshark.app/" />');
     expect(readShareHead()).toBeNull();
+  });
+});
+
+describe('a trailing slash', () => {
+  it('keeps a Stripe return and an email link out of search results', () => {
+    visit('/premium/success/');
+    expect(robots()).toEqual(['noindex']);
+    visit('/reset-password/');
+    expect(robots()).toEqual(['noindex']);
   });
 });
 

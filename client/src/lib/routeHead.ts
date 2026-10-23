@@ -45,7 +45,12 @@ const PATH_TITLE_NAMES: readonly (readonly [string, TranslationKey])[] = [
   ['/learn/forward-deployed-engineer/path', 'paths.picker.fdeLabel'],
 ];
 
-export function routeTitle(pathname: string, t: Translate): string {
+/** The path without a trailing slash ("/" stays "/"). React Router renders
+ * /quiz/ as /quiz, so the head must read it the same way. */
+const trimSlash = (pathname: string) => pathname.replace(/(.)\/$/, '$1');
+
+export function routeTitle(rawPath: string, t: Translate): string {
+  const pathname = trimSlash(rawPath);
   const publicTopic = topicFromPath(pathname);
   if (publicTopic) return `${publicTopic.topic.title} · ${CURRENT_PRODUCT.brand}`;
   if (pathname === '/') return CURRENT_PRODUCT.title;
@@ -88,8 +93,6 @@ export interface ShareHead {
   url: string;
 }
 
-const trimSlash = (pathname: string) => pathname.replace(/(.)\/$/, '$1');
-
 /** The head this document arrived with, when it is a share page's own: its
  * canonical URL names this path. Null for the plain app shell. Read it before
  * the first route writes a head. */
@@ -108,7 +111,8 @@ export function readShareHead(): ShareHead | null {
  * belongs to the not-found page, which adds it while it shows and removes it
  * when it goes (PublicInfoPages.tsx), so it is left alone here.
  */
-export function applyRouteHead(pathname: string, t: Translate, shareHead: ShareHead | null = null): void {
+export function applyRouteHead(rawPath: string, t: Translate, shareHead: ShareHead | null = null): void {
+  const pathname = trimSlash(rawPath);
   const setMeta = (selector: string, value: string) => {
     document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
   };
@@ -116,7 +120,7 @@ export function applyRouteHead(pathname: string, t: Translate, shareHead: ShareH
     .querySelectorAll('link[rel="canonical"], link[hreflang], #public-schema, meta[property="og:url"], meta[name="robots"]:not([data-not-found])')
     .forEach((node) => node.remove());
 
-  if (shareHead && shareHead.path === trimSlash(pathname)) {
+  if (shareHead && shareHead.path === pathname) {
     document.title = shareHead.title;
     SHARED_META.forEach((selector, index) => setMeta(selector, shareHead.content[index]));
     clear();
@@ -141,7 +145,7 @@ export function applyRouteHead(pathname: string, t: Translate, shareHead: ShareH
   setMeta('meta[name="twitter:description"]', description);
   clear();
   const canonical = publicTopic
-    ? PUBLIC_ORIGIN + pathname.replace(/\/$/, '')
+    ? PUBLIC_ORIGIN + pathname
     : pathname === '/' ? PUBLIC_ORIGIN + '/' : page ? PUBLIC_ORIGIN + page.path : null;
   // The build writes og:url beside every canonical it writes (vite.config.ts),
   // so the head a page arrived with and the one the app writes agree.
