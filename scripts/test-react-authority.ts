@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { guestResultLine, readGuestResult, serializeGuestResult } from '../lib/coding/react-guest';
+import { LOG_LINE_CUT, MAX_LOG_LINE_CHARS } from '../shared/coding-evaluate';
 import { reactSpreadContracts } from './react-spread-contract';
 import { reactRecordContracts } from './react-record-contract';
 
@@ -70,4 +72,21 @@ const prematureComposition=await runReactSuite({suite:compositionSuite,appSource
 assert.equal(prematureComposition.compileError,null,JSON.stringify(prematureComposition));
 assert.deepEqual(prematureComposition.cases.map(one=>one.status),['fail','pass'],JSON.stringify(prematureComposition));
 
-console.log('PASS React authority: DOM, intrinsics, modules, elements, synchronous/async assertions and detached rejections');
+// Error text a component produces is cut before it reaches the verdict. A
+// failed `toBe` on 300 000 rendered characters, or a message thrown that
+// long, made the verdict line too long for the API to read, and the learner's
+// own mistake was answered as a grader outage.
+const longSuite=`import React from 'react';import {render} from '@testing-library/react';import App from './App';test('shows the word',()=>{const {container}=render(<App/>);expect(container.textContent).toBe('word');});`;
+for(const appSource of [
+  `export default function App(){return <p>{'w'.repeat(300000)}</p>;}`,
+  `throw new Error('q'.repeat(300000));export default function App(){return null;}`,
+  `export default function App(){throw new Error('r'.repeat(300000));}`,
+]) {
+  const result=await runReactSuite({suite:longSuite,appSource});
+  assert.equal(result.failed,1,appSource);
+  for(const text of [result.compileError,...result.cases.map(one=>one.error)]) assert.ok((text??'').length<=MAX_LOG_LINE_CHARS+LOG_LINE_CUT.length,`${appSource}: ${(text??'').length} characters`);
+  const nonce='a'.repeat(48);
+  assert.equal(readGuestResult(guestResultLine(nonce,serializeGuestResult(result)),nonce,longSuite).failed,1,appSource);
+}
+
+console.log('PASS React authority: DOM, intrinsics, modules, elements, synchronous/async assertions, detached rejections and long error text');
