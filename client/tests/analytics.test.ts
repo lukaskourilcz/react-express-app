@@ -170,6 +170,27 @@ it('signs out without leaving PostHog opted out', async () => {
   expect(optIns[optIns.length - 1]).toBeGreaterThan(client.reset.mock.invocationCallOrder[0]);
 });
 
+it('tells PostHog about a signed-in learner once, not again on every token refresh', async () => {
+  window.history.replaceState(null, '', '/?utm_source=threads&utm_medium=post');
+  vi.stubEnv('VITE_PUBLIC_POSTHOG_KEY', 'test-key');
+  const { consent, analytics } = await load();
+  consent.acceptAllConsent();
+  analytics.initAnalytics();
+  analytics.identifyUser('user-1');
+  await vi.waitFor(() => expect(client.identify).toHaveBeenCalledTimes(1));
+  // Auth hands the same learner over again (a refreshed token).
+  analytics.identifyUser('user-1');
+  analytics.identifyUser('user-1');
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(client.identify).toHaveBeenCalledTimes(1);
+  // Another learner, or the same one after a sign-out, is told again.
+  analytics.identifyUser('user-2');
+  await vi.waitFor(() => expect(client.identify).toHaveBeenCalledTimes(2));
+  analytics.resetAnalytics();
+  analytics.identifyUser('user-2');
+  await vi.waitFor(() => expect(client.identify).toHaveBeenCalledTimes(3));
+});
+
 it('captures activation without allowing raw learner data into its properties', async () => {
   vi.stubEnv('VITE_PUBLIC_POSTHOG_KEY', 'test-key');
   const { consent, analytics } = await load();
