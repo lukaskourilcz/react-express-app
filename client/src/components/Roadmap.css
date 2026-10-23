@@ -502,18 +502,34 @@
 .rm-section-line { font-size: var(--ss-type-compact); }
 .rm-section-action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; }
 .rm-section-action__slot { display: block; height: 44px; }
-/* A long action ("Sign in to add Forward Deployed Engineer to your plan")
-   wraps at 360px instead of pushing the page sideways. !important for the
-   reason app-shell.css gives at its touch-target floor: Astryx's StyleX rules
-   sit at a specificity no class selector reaches. */
+/* An action wraps at 360px instead of pushing the page sideways. !important
+   for the reason app-shell.css gives at its touch-target floor: Astryx's
+   StyleX rules sit at a specificity no class selector reaches. The floor
+   there keeps it 44px tall. */
 .rm-section-action .astryx-button {
   white-space: normal !important;
   height: auto !important;
-  min-height: 36px;
   max-width: 100%;
   text-align: start;
 }
 .rm-section-error { width: 100%; max-width: 620px; }
+/* From 768px the line and its action are one row (UX audit learn-08): the
+   line takes the rest of the column on the left, the action sits on the
+   right, and the note, an error or the saved status run under both. The
+   shorter copy of learn-01 keeps the line on one line at 800px. */
+@media (min-width: 768px) {
+  .rm-section-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 24px;
+    align-items: center;
+  }
+  .rm-section-line { grid-column: 1; max-width: none; }
+  .rm-section-action { grid-column: 2; justify-self: end; }
+  .rm-section-action .astryx-button { white-space: nowrap !important; }
+  .rm-section-note,
+  .rm-section-error,
+  .rm-section-status { grid-column: 1 / -1; }
+}
 .rm-section-status:empty { display: none; }
 .rm-section-status { font-size: var(--ss-type-meta); color: var(--color-text-primary); }
 
