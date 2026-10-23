@@ -200,7 +200,7 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
 }
 
 export function LessonRunner({
-  playable, firstLevelPass = false, topicCompleted = false, skipIntro = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t,
+  playable, firstLevelPass = false, topicCompleted = false, skipIntro = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, onActiveChange, t,
 }: {
   playable: RoadmapPlayable;
   /** No Learn level was passed before this one opened (#239). */
@@ -210,7 +210,12 @@ export function LessonRunner({
   skipIntro?: boolean;
   topicColor: string; hasNext: boolean; nextLabel: string;
   onExit: () => void; onFinished: (pct: number, repeatXp?: LearnRepeatXp) => void; onNext: () => void;
-  onReplay: () => void; t: TFn;
+  onReplay: () => void;
+  /** True while a question is on screen: the app shell then hides its header
+   * and footer, as for a Quiz or a Challenge run (UX audit questions-07). The
+   * header's Exit is the way out. */
+  onActiveChange?: (active: boolean) => void;
+  t: TFn;
 }) {
   const { user } = useAuth();
   // Fixed when the level opens: the pass itself updates the progress the
@@ -458,6 +463,8 @@ export function LessonRunner({
   useEffect(() => {
     if (showingQuestion) openAtTop(questionRef.current);
   }, [showingQuestion, qIndex]);
+  useEffect(() => { onActiveChange?.(showingQuestion); }, [showingQuestion, onActiveChange]);
+  useEffect(() => () => onActiveChange?.(false), [onActiveChange]);
   // The intro opens from the map, wherever it was scrolled; its h1 takes
   // focus, as a result's does, so a screen reader starts at the level's name.
   const introTitleRef = useRef<HTMLHeadingElement>(null);

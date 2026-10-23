@@ -828,6 +828,24 @@ describe('a level on the shared question parts', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 
+  it('reports only its live questions, so the app shell hides its header and footer then (questions-07)', async () => {
+    const seen: boolean[] = [];
+    const onActiveChange = (active: boolean) => { seen.push(active); };
+    answer({ playable: PLAYABLE });
+    await mountAt('/learn', <Roadmap onActiveChange={onActiveChange} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    const start = await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 });
+    // The intro keeps the chrome: nothing is live yet.
+    expect(seen.at(-1) ?? false).toBe(false);
+    fireEvent.click(start);
+    await waitFor(() => expect(seen.at(-1)).toBe(true));
+    fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    await screen.findByRole('heading', { name: 'Level complete' });
+    // The result brings the chrome back.
+    expect(seen.at(-1)).toBe(false);
+  });
+
   it('ends on a result with one primary in the shared action row', async () => {
     fireEvent.click(await openLevel());
     fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));

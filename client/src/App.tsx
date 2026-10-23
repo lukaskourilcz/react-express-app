@@ -489,6 +489,8 @@ function App() {
   // A live Challenge run takes the same focus mode as an active quiz (UX
   // audit U2, questions-07).
   const isChallenge = location.pathname === '/challenge';
+  // A Learn level's questions (on a Learn section or Big O) take it too.
+  const isLearn = location.pathname.startsWith('/learn');
 
   // One page width per route (UX audit U1, #573), from the one map in
   // components/ui/pageWidth.ts: home, /profile and /play 1000px, /coding/*
@@ -522,7 +524,7 @@ function App() {
     }
     return out;
   }, []);
-  const showChrome = !isDev && !(quizActive && (isQuiz || isChallenge));
+  const showChrome = !isDev && !(quizActive && (isQuiz || isChallenge || isLearn));
 
   return (
     // One-screen shell: the app is exactly one viewport tall. Pages scroll
@@ -730,14 +732,14 @@ function App() {
           display: 'flex',
           justifyContent: 'center',
           // Every route keeps the contract's 16px gutter on phones; the
-          // Quiz and the Challenge only trim their desktop top padding, where
+          // Quiz, the Challenge and a live Learn level only trim their desktop top padding, where
           // their focus mode hides the header (UX audit U2, questions-18 and
           // questions-07), so a question starts at one y in both.
           padding: isDev
             ? (mobile ? '0.5rem' : '0.5rem 1rem')
             : mobile
               ? '1rem'
-              : (isQuiz || isChallenge ? '1rem 1.5rem' : '1.5rem'),
+              : (isQuiz || isChallenge || (isLearn && quizActive) ? '1rem 1.5rem' : '1.5rem'),
           boxSizing: 'border-box',
         }}
       >
@@ -817,9 +819,9 @@ function App() {
                 <Routes location={location}>
                   <Route path="/" element={<Home />} />
                   <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
-                  <Route path="/learn/:section?" element={<Roadmap />} />
+                  <Route path="/learn/:section?" element={<Roadmap onActiveChange={setQuizActive} />} />
                   <Route path="/big-o" element={<BigOPage />} />
-                  <Route path="/learn/big-o" element={<BigOIntroduction />} />
+                  <Route path="/learn/big-o" element={<BigOIntroduction onActiveChange={setQuizActive} />} />
                   <Route path="/today" element={<Today />} />
                   <Route path="/collection" element={<Collection />} />
                   <Route path="/typing" element={<TypingRacer />} />

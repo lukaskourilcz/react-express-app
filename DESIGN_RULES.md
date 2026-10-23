@@ -353,10 +353,11 @@ their props), never drawn again by hand.
   verdict and explanation in normal flow below the list, inside the panel,
   and it takes focus when it appears. Nothing on a question screen is
   absolutely positioned over the answers.
-- **A live run hides the site chrome.** An active Quiz and a live Challenge
-  run report it through `onActiveChange`, and `App.tsx` hides the header and
-  footer on that route; their setup, result and error screens bring them
-  back, and so does a page that fails. With no nav on screen, the run's
+- **A live run hides the site chrome.** An active Quiz, a live Challenge
+  run and a Learn level's questions (on a Learn section or Big O) report it
+  through `onActiveChange`, and `App.tsx` hides the header and footer on that
+  route; their setup, intro, result and error screens bring them back, and
+  so does a page that fails. With no nav on screen, the run's
   `QuestionHeader` carries its own way out: an Exit icon button that asks
   first in an `AlertDialog`.
 - **A setup screen is laid out like the Quiz setup.** One `--ss-width-task`

@@ -294,7 +294,10 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
   return null;
 }
 
-function Roadmap() {
+/** `onActiveChange` reports a level's live questions, so the app shell hides
+ * its header and footer as it does for a Quiz or a Challenge run (UX audit
+ * questions-07). */
+function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
   useRoadmapStructureFirst({ plan: true });
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
@@ -870,6 +873,7 @@ function Roadmap() {
         onFinished={handleFinished}
         onNext={() => next && openNext(next)}
         onReplay={() => open(active)}
+        onActiveChange={onActiveChange}
         t={t}
       />
       </LessonStage>
@@ -1814,7 +1818,7 @@ function SkillCheckRunner({
 }
 
 /** The same reviewed DSA lessons, with an entry point open before placement. */
-export function BigOIntroduction() {
+export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
   const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
   const [level, setLevel] = useState<1 | 2 | null>(null);
@@ -1842,7 +1846,7 @@ export function BigOIntroduction() {
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
     return <LessonStage onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
       topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
-      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} t={t}
+      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} onActiveChange={onActiveChange} t={t}
       onFinished={(pct, repeatXp) => {
         recordLevelResult('dsa', level, pct, lesson.data!.passPct);
         awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before.current, isAuthenticated);
