@@ -18,6 +18,7 @@ import { createStore, useStore } from '../lib/store';
 import { FlagIcon } from './ui/icons';
 import './TypingRacer.css';
 import BrandCase from './BrandCase';
+import { visuallyHidden } from '../theme/MuiTheme';
 
 const GATE = 95; // accuracy % required to score (the gate)
 const STAR_T2 = 35; // WPM that earns a 2nd star
@@ -336,9 +337,22 @@ export default function TypingRacer() {
         </div>
       )}
 
-      {/* Result. role=status announces the outcome when it renders. */}
+      {/* The outcome, read out from a status that is always on the page: the
+          result card below was the status, and one drawn together with its
+          words is not read. Focus goes to Race again, which says nothing of
+          the race. */}
+      <span role="status" style={visuallyHidden}>
+        {phase === 'finished' && result
+          ? [
+              t('typing.finished'),
+              result.passed ? t('typing.result', { wpm: result.wpm, pct: result.accuracy }) : t('typing.accuracyGateFail', { pct: GATE }),
+              result.isBest ? t('typing.newBest') : '',
+            ].filter(Boolean).join('. ')
+          : ''}
+      </span>
+
       {phase === 'finished' && result && (
-        <div className="ss-typing__result ss-pop" role="status" aria-live="polite">
+        <div className="ss-typing__result ss-pop">
           <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-secondary)' }}>
             {t('typing.finished')}
           </span>

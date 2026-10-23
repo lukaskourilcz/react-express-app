@@ -154,6 +154,17 @@ describe('the typing best', () => {
     expect((JSON.parse(localStorage.getItem('devshark:typing:v1')!) as { bestWpm: unknown }).bestWpm).toEqual(expect.any(Number));
   });
 
+  it('reads the outcome from a status that was on the page before the race ended', async () => {
+    render(<TypingRacer />, { wrapper });
+    await screen.findByRole('textbox', { name: 'Type this' });
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('');
+    await race(6_000);
+    await screen.findByRole('button', { name: 'Race again' });
+    expect(status).toBeInTheDocument();
+    expect(status).toHaveTextContent(/^Race finished\. \d+ WPM at 100% accuracy\. New personal best$/);
+  });
+
   it('leaves with the account that signs out', async () => {
     localStorage.setItem('devshark:typing:v1', JSON.stringify({ bestWpm: 40 }));
     render(<TypingRacer />, { wrapper });
