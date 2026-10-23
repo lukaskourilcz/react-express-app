@@ -118,17 +118,30 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
     }
   }, [session, submitting, sessionUsed, design, answers, answered, steps.length, drillAnswer, onVerdict, t]);
 
+  // Each press is its own event, rendered before the next, so `order` is the
+  // arrangement on screen.
+  const moveButtons = useRef<Record<string, HTMLButtonElement | null>>({});
+  const focusAfterMove = useRef<string | null>(null);
   const move = (from: number, direction: -1 | 1) => {
-    setOrder((prev) => {
-      const to = from + direction;
-      if (to < 0 || to >= prev.length) return prev;
-      const next = [...prev];
-      [next[from], next[to]] = [next[to], next[from]];
-      // Reordering is silent otherwise: say what moved and where it landed.
-      setMoved(t('coding.design.moved', { step: drill!.steps![next[to]], n: to + 1, total: next.length }));
-      return next;
-    });
+    const to = from + direction;
+    if (!drill?.steps || to < 0 || to >= order.length) return;
+    const next = [...order];
+    [next[from], next[to]] = [next[to], next[from]];
+    setOrder(next);
+    // Reordering is silent otherwise: say what moved and where it landed.
+    setMoved(t('coding.design.moved', { step: drill.steps[next[to]], n: to + 1, total: next.length }));
+    // A step moved down is re-inserted, which drops focus, and one that
+    // reaches either end turns its own button off. Focus stays with the step:
+    // on the same button while it still moves, on the other one at an end.
+    const atEnd = direction === -1 ? to === 0 : to === next.length - 1;
+    const way = (direction === -1) === atEnd ? 'down' : 'up';
+    focusAfterMove.current = `${next[to]}:${way}`;
   };
+  useEffect(() => {
+    const key = focusAfterMove.current;
+    focusAfterMove.current = null;
+    if (key) moveButtons.current[key]?.focus();
+  }, [order]);
 
   const header = (
     <div className="cd-pane__head">
@@ -295,8 +308,8 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
                     <li key={original}>
                       <span className="cd-sequence__n">{position + 1}</span>
                       <span>{drill.steps![original]}</span>
-                      <Button variant="ghost" onClick={() => move(position, -1)} isDisabled={position === 0} label={`${t('coding.design.moveUp')}: ${drill.steps![original]}`}>↑</Button>
-                      <Button variant="ghost" onClick={() => move(position, 1)} isDisabled={position === order.length - 1} label={`${t('coding.design.moveDown')}: ${drill.steps![original]}`}>↓</Button>
+                      <Button ref={(node) => { moveButtons.current[`${original}:up`] = node; }} variant="ghost" onClick={() => move(position, -1)} isDisabled={position === 0} label={`${t('coding.design.moveUp')}: ${drill.steps![original]}`}>↑</Button>
+                      <Button ref={(node) => { moveButtons.current[`${original}:down`] = node; }} variant="ghost" onClick={() => move(position, 1)} isDisabled={position === order.length - 1} label={`${t('coding.design.moveDown')}: ${drill.steps![original]}`}>↓</Button>
                     </li>
                   ))}
                 </ol>

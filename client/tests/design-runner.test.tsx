@@ -225,3 +225,21 @@ it('moves focus to the verdict when it arrives', async () => {
   const heading = await answerAndSubmit();
   expect(document.activeElement).toBe(heading.closest('.cd-verdict'));
 });
+
+// A sequence step moved down is re-inserted, which drops focus, and one moved
+// to either end turned its own button off: focus fell to the page.
+it('keeps focus with a sequence step as it moves', () => {
+  const drill: PlayableCodingTask = {
+    ...task, id: 'dd-test-sequence', verify: 'drill', design: undefined,
+    drill: { format: 'sequence', scenario: 'A deploy.', prompt: 'In what order?', steps: ['Build', 'Test', 'Ship'] },
+  };
+  render(<MemoryRouter><LanguageProvider><DesignRunner task={drill} session="drill-session" locked={null} signedIn mode="section" /></LanguageProvider></MemoryRouter>);
+  const down = screen.getByRole('button', { name: 'Move down: Build' });
+  down.focus();
+  fireEvent.click(down);
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move down: Build' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Move down: Build' }));
+  expect(screen.getByRole('button', { name: 'Move down: Build' })).toBeDisabled();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move up: Build' }));
+  expect(screen.getByText('Build moved to position 3 of 3')).toBeInTheDocument();
+});
