@@ -107,6 +107,8 @@ Every question screen draws through the shared parts in `client/src/components/q
 
 A run's composition, top to bottom: `QuestionShell` › `QuestionHeader` › question block › `AnswerOptionList` › `QuestionHint` › `QuestionFeedback` (once graded), then `QuestionActions` under the panel. Quiz (`client/src/components/Quiz.tsx`) is the reference.
 
+**The Shark Cards deck** (`client/src/components/Flashcards.tsx`, `SharkCards.css`) takes the parts that fit a card. It keeps the route's 800px column instead of the 640px shell, so on `/collection` the page header, the tabs and the card share one left edge (social-account-05). On `/cards` its header is `QuestionPageHeader` with no kicker and one lead line. The card's meta row holds the topic and "Card 1 of 4" (the deck's live region and its name); no side label repeats "Question". The card has no height floor: the question keeps three lines (`min-height: calc(3 * 1.55em)`), so a short question leaves the turn button and the action row at one y. Under it is one `QuestionActions` row with Previous and Next together on the left. One filled primary per side: face down it is the card's "Show the answer" (accent fill), and Got it is an Astryx secondary at the primary's place (the right end, or the full-width last row under 560px); turned, Got it is the `SwimCta` and "Hide the answer" is a quiet outline (questions-14, social-account-19).
+
 ## Layout and density
 
 - Mobile gutter: 16px; tablet: 24px; desktop: 24–32px.

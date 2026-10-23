@@ -350,3 +350,8 @@ their props), never drawn again by hand.
   verdict and explanation in normal flow below the list, inside the panel,
   and it takes focus when it appears. Nothing on a question screen is
   absolutely positioned over the answers.
+- **A card deck is a question screen too.** Shark Cards keep the route
+  column but use the shared Page header and the one `QuestionActions` row
+  (Previous and Next together on the left). Their one filled primary is the
+  next step: "Show the answer" face down, Got it once the card is turned. Got
+  it stays in one place and only its fill changes.
