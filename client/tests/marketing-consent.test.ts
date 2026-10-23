@@ -132,6 +132,22 @@ it('sends no code, token, e-mail address or query string with an error, a breadc
   const crumb = options.beforeBreadcrumb!({ category: 'xhr', message: 'GET /api/user?op=stats&email=ada%40example.com', data: { url: '/api/user?op=stats' } });
   expect(crumb).toEqual({ category: 'xhr', message: 'GET /api/user', data: { url: '/api/user' } });
 
+  // A console line and a wrapped handler's error keep the raw values they
+  // were given beside the scrubbed text: those go too.
+  const logged = options.beforeBreadcrumb!({
+    category: 'console',
+    message: 'signed in ada@example.com',
+    data: { arguments: ['signed in', { email: 'ada@example.com', next: '/auth/callback?code=oauth-code-123' }], logger: 'console' },
+  });
+  expect(logged).toEqual({ category: 'console', message: 'signed in [email]', data: { logger: 'console' } });
+  const thrown = options.beforeSend!({
+    exception: { values: [{ type: 'Error', value: 'boom' }] },
+    breadcrumbs: [{ category: 'console', message: 'x', data: { arguments: [{ email: 'ada@example.com' }], logger: 'console' } }],
+    extra: { arguments: [{ href: 'https://devshark.app/auth/callback?code=oauth-code-123' }] },
+  });
+  expect(JSON.stringify(thrown)).not.toContain('ada@example.com');
+  expect(JSON.stringify(thrown)).not.toContain('oauth-code-123');
+
   const trace = options.beforeSendTransaction!({
     transaction: '/settings/github',
     request: { url: 'https://devshark.app/settings/github?code=gh-code' },

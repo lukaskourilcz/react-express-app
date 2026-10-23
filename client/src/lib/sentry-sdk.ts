@@ -62,6 +62,9 @@ function scrubBag(bag: Record<string, unknown> | undefined): void {
 /** One breadcrumb as monitoring may keep it. */
 export function scrubBreadcrumb(crumb: Breadcrumb): Breadcrumb {
   if (typeof crumb.message === 'string') crumb.message = scrubText(crumb.message);
+  // A console breadcrumb keeps the logged values raw beside its message,
+  // objects and all; the message already says them, scrubbed.
+  if (crumb.data && 'arguments' in crumb.data) delete crumb.data.arguments;
   scrubBag(crumb.data);
   return crumb;
 }
@@ -86,6 +89,9 @@ export function scrubEvent<T extends Event>(event: T): T {
     if (typeof exception.value === 'string') exception.value = scrubText(exception.value);
   }
   for (const crumb of event.breadcrumbs ?? []) scrubBreadcrumb(crumb);
+  // An error thrown in a wrapped handler carries that handler's raw
+  // arguments here, out of reach of the text scrubber.
+  if (event.extra && 'arguments' in event.extra) delete event.extra.arguments;
   scrubBag(event.extra);
   scrubBag(event.contexts?.trace?.data as Record<string, unknown> | undefined);
   for (const span of event.spans ?? []) scrubBag(span.data as Record<string, unknown> | undefined);
