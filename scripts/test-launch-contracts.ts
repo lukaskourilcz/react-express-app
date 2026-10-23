@@ -109,7 +109,7 @@ import {
   MARKER_MAX,
   type ReviewRecord,
 } from '../shared/curation';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   CONCEPT_IDS,
   areContrastable,
@@ -5946,6 +5946,16 @@ async function main() {
       const wide = await deliver({ type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'ref' }, 'é'.repeat(64));
       assert.equal(wide.statusCode, 401, 'a signature with the digest length in characters but not in bytes is refused, not a 500');
       assert.deepEqual(touched, [], 'and nothing is read');
+      // A body the provider signed but that is not a JSON object is a bad
+      // event (400), not a parse error answered 500 and retried forever.
+      const sign = (raw: string) => createHmac('sha256', 'contract-webhook-secret').update(raw).digest('hex');
+      for (const raw of ['not json', 'null', '[1]', '7']) {
+        const res = await deliver(raw, sign(raw));
+        assert.equal(res.statusCode, 400, `a signed body of ${raw} answers 400`);
+      }
+      const nul = { type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'ref\u0000' };
+      assert.equal((await deliver(nul, sign(JSON.stringify(nul)))).statusCode, 400, 'a provider reference with U+0000 is refused before Postgres sees it');
+      assert.deepEqual(touched, [], 'none of them reads the order');
     } finally {
       if (realEnv.secret === undefined) delete process.env.PAYMENT_WEBHOOK_SECRET; else process.env.PAYMENT_WEBHOOK_SECRET = realEnv.secret;
       if (realEnv.provider === undefined) delete process.env.PAYMENT_PROVIDER; else process.env.PAYMENT_PROVIDER = realEnv.provider;

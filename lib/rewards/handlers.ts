@@ -663,10 +663,26 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     return jsonError(res, 401, 'bad_signature', 'Signature did not verify');
   }
 
-  const event = (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}) as Record<string, unknown>;
+  // A signed body that is not a JSON object (text, `null`, an array) is a
+  // malformed event: 400, never the TypeError or SyntaxError a 500 would
+  // send back for the provider to retry forever.
+  let parsed: unknown = req.body ?? {};
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed || '{}');
+    } catch {
+      parsed = null;
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return jsonError(res, 400, 'bad_request', 'The event is not a JSON object');
+  }
+  const event = parsed as Record<string, unknown>;
   const orderId = typeof event.orderId === 'string' ? event.orderId : '';
-  const providerRef = typeof event.providerRef === 'string' ? event.providerRef.slice(0, 200) : '';
-  if (!/^[A-Za-z0-9_-]{16,64}$/.test(orderId) || providerRef.length === 0) {
+  // Cut by code points so an emoji is not split, and refuse U+0000, which a
+  // Postgres text column cannot hold.
+  const providerRef = typeof event.providerRef === 'string' ? Array.from(event.providerRef).slice(0, 200).join('') : '';
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(orderId) || providerRef.length === 0 || providerRef.includes('\u0000')) {
     return jsonError(res, 400, 'bad_request', 'The event names no order');
   }
 
