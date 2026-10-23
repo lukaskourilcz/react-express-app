@@ -16,7 +16,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
-import { createLogger, isRpcMissing, jsonError, requireAuthResult, withTimeout } from '../http';
+import { createLogger, isRpcMissing, jsonError, requireAuthResult, ServiceUnavailableError, withTimeout } from '../http';
 import { tryAuth } from '../auth';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { toEntitlementResponse } from '../entitlements';
@@ -61,6 +61,13 @@ function allow(res: VercelResponse, methods: string) {
 function unavailable(res: VercelResponse, error: unknown, route: string) {
   if (error instanceof BillingMigrationError) {
     return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
+  }
+  // A database call that timed out (`withTimeout`) is the database busy for a
+  // moment, not Stripe: 503 with its code, and a log line that does not send
+  // the operator to Stripe's status page.
+  if (error instanceof ServiceUnavailableError) {
+    log({ status: 503, kind: route, reason: error.code });
+    return jsonError(res, 503, error.code, error.message);
   }
   const { status, code, type } = stripeErrorCode(error);
   log({ status: 502, kind: route, reason: 'stripe_error', stripe_status: status, stripe_code: code, stripe_type: type });

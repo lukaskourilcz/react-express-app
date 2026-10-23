@@ -77,15 +77,20 @@ export async function startAuthStandIn(): Promise<Server> {
 }
 
 export async function loadLib() {
-  const [stripe, handlers, config, cancel, sync, entitlements] = await Promise.all([
+  const [stripe, handlers, config, cancel, sync, entitlements, http] = await Promise.all([
     import('../lib/billing/stripe'),
     import('../lib/billing/handlers'),
     import('../lib/billing/config'),
     import('../lib/billing/cancel'),
     import('../lib/billing/sync'),
     import('../lib/entitlements'),
+    import('../lib/http'),
   ]);
-  return { ...stripe, ...handlers, ...config, ...cancel, ...sync, toEntitlementResponse: entitlements.toEntitlementResponse };
+  return {
+    ...stripe, ...handlers, ...config, ...cancel, ...sync,
+    toEntitlementResponse: entitlements.toEntitlementResponse,
+    UpstreamTimeoutError: http.UpstreamTimeoutError,
+  };
 }
 type Lib = Awaited<ReturnType<typeof loadLib>>;
 
@@ -1302,6 +1307,24 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(res.statusCode, 200);
     assert.match(res.body.url, /^https:\/\/billing\.stripe\.com\//);
     assert.deepEqual(stripe.portalSessions.at(-1), { customer: payer.ids.cus, return_url: 'https://devshark.app/profile' });
+  });
+
+  await check('a database timeout answers 503 upstream_timeout, not the payment provider’s 502', async () => {
+    const payer = await account('Timeout1');
+    await deliver(eventText('checkout.session.completed', payer.ids, 'timeout1'));
+    const slow = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === 'billing_account' || name === 'entitlement_summary') throw new lib.UpstreamTimeoutError();
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const portal = mockRes();
+    await lib.handleBillingPortal(apiReq('POST', 'billing-portal', { token: payer.token }) as never, portal as never, slow);
+    assert.deepEqual([portal.statusCode, portal.body.error.code], [503, 'upstream_timeout']);
+    const lookup = mockRes();
+    await lib.handleBillingCheckout(apiReq('GET', 'billing-checkout', { token: payer.token, query: { session_id: payer.ids.cs } }) as never, lookup as never, slow);
+    assert.deepEqual([lookup.statusCode, lookup.body.error.code], [503, 'upstream_timeout']);
   });
 
   /* The public cancellation page ------------------------------------------- */
