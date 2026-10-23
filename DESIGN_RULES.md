@@ -297,7 +297,9 @@ coming back. The tokens and the map are in
   44px either: in the coding workbench it takes the page-action type, so
   Submit matches Run beside it. A second task's button turns
   primary only once its own input is complete (Join on `/play` with a whole
-  code).
+  code). A row of buttons that switches the view is never filled: the open
+  one is secondary with `aria-current`, the rest ghost (the `/collection`
+  shelf tabs).
 - **Card actions are the default size.** No `size="sm"` on a card's actions;
   a Retry inside a banner or a Remove on a list row is the only small
   button.

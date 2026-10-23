@@ -83,7 +83,11 @@ export default function Collection() {
     {/* The shared operational header (social-account-11). No kicker: the
         tabs under it already say which shelf is open (social-account-10). */}
     <PageHeader title={t(cards ? 'sharkCards.title' : 'collection.challengesTitle')} lead={t(cards ? 'sharkCards.lead' : 'collection.subtitle')} />
-    <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <Button key={tab} variant={selected === tab ? 'primary' : 'secondary'} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })} label={t(`collection.${tab}`)} />)}</nav>
+    {/* The open shelf is secondary with aria-current and the other ghost:
+        a filled tab would be a second primary beside the shelf's own action,
+        the gate's Sign in or the empty shelf's Take a quiz (one primary per
+        screen). */}
+    <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <Button key={tab} variant={selected === tab ? 'secondary' : 'ghost'} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })} label={t(`collection.${tab}`)} />)}</nav>
     {selected === 'questions' ? <Flashcards embedded /> : <SavedChallenges />}
   </div>;
 }

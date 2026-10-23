@@ -229,6 +229,19 @@ describe('/collection', () => {
     expect(screen.getAllByText(/Shark Cards/)).toHaveLength(2);
   });
 
+  it('keeps one filled primary: the open tab is secondary with aria-current, the other ghost, and the gate owns the primary', async () => {
+    const { container } = render(<Collection />, { wrapper });
+    const open = screen.getByRole('button', { name: 'Shark Cards' });
+    expect(open).toHaveAttribute('aria-current', 'page');
+    expect(open).toHaveAttribute('data-variant', 'secondary');
+    const other = screen.getByRole('button', { name: 'Coding challenges' });
+    expect(other).not.toHaveAttribute('aria-current');
+    expect(other).toHaveAttribute('data-variant', 'ghost');
+    const primaries = container.querySelectorAll('button[data-variant="primary"]');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveTextContent('Sign in');
+  });
+
   it('gives both tabs the same sign-in panel under the page header, with one primary Sign in (social-account-16)', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     const { container } = render(
