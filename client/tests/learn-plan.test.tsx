@@ -109,6 +109,7 @@ interface Answers {
   complete?: () => Response;
   placement?: unknown;
   skillCheck?: () => Response;
+  structure?: unknown;
 }
 /** Every read and write the Learn screens make; counts the level fetches. */
 function answer(options: Answers = {}) {
@@ -124,7 +125,7 @@ function answer(options: Answers = {}) {
         seen.levelFetches += 1;
         return HttpResponse.json((options.playable ?? PLAYABLE) as never);
       }
-      return HttpResponse.json(STRUCTURE as never);
+      return HttpResponse.json((options.structure ?? STRUCTURE) as never);
     }),
     http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: options.progress ?? {}, extra: { unlocked: options.unlocked ?? [] } })),
     http.post('*/api/quiz/roadmap', ({ request }) => {
@@ -233,6 +234,20 @@ describe('the plan', () => {
     answer();
     await mountAt('/roadmap', <CareerRoadmap />);
     expect(await screen.findByText('0 / 52 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+  });
+
+  // Math.round drew 199 of 200 levels as a finished, green 100%.
+  it('shows 100% on /roadmap only once every level is passed', async () => {
+    signInAs(BACKEND);
+    const passed = Object.fromEntries(Array.from({ length: 199 }, (_, i) => [String(i + 1), MASTERED]));
+    answer({
+      structure: { topics: ['javascript'], structure: { javascript: { levels: levels(200), checkpoints: [] } } },
+      progress: { javascript: { levels: passed, checkpoints: {} } },
+    });
+    await mountAt('/roadmap', <CareerRoadmap />);
+    expect(await screen.findByText('199 / 200 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+    expect(screen.getAllByText('99%').length).toBeGreaterThan(0);
+    expect(screen.queryByText('100%')).toBeNull();
   });
 
   it('only changes the view for a visitor', async () => {

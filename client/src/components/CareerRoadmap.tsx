@@ -122,8 +122,13 @@ const BEYOND: { id: string; labelKey: TranslationKey; detailKey: TranslationKey 
 
 const SENIOR_RANK_TITLE = 'Senior Developer';
 
+/** A whole percent, rounded as the section figures are (sectionProgress in
+ * learn/sections.ts): 100 only once every level is passed, and at least 1 once
+ * one is. Math.round showed 199 of 200 levels as a finished 100%. */
 function pct(passed: number, total: number): number {
-  return total > 0 ? Math.round((passed / total) * 100) : 0;
+  if (total <= 0) return 0;
+  const percent = Math.floor((100 * passed) / total);
+  return percent === 0 && passed > 0 ? 1 : percent;
 }
 
 export default function CareerRoadmap() {
