@@ -52,6 +52,9 @@ const log = createLogger('user/billing');
 const SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{8,240}$/;
 const EVENT_ID = /^evt_[A-Za-z0-9_]{6,120}$/;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,63}$/;
+/** `\s` lets U+0000 and the other control characters through, and Postgres
+ * text refuses U+0000: the recorded request answered 500. No address holds one. */
+const CONTROL = /\p{Cc}/u;
 
 function allow(res: VercelResponse, methods: string) {
   res.setHeader('Allow', methods);
@@ -459,7 +462,7 @@ export async function handleBillingCancel(req: VercelRequest, res: VercelRespons
 
   const email = typeof body.email === 'string' ? body.email.trim() : '';
   const action = body.action as CancelAction;
-  if (!EMAIL.test(email) || email.length > 254) return jsonError(res, 400, 'bad_email', 'Enter the email address of your subscription');
+  if (!EMAIL.test(email) || CONTROL.test(email) || email.length > 254) return jsonError(res, 400, 'bad_email', 'Enter the email address of your subscription');
   if (!ACTIONS.includes(action)) return jsonError(res, 400, 'bad_request', "action must be 'cancel' or 'withdraw'");
 
   // Step one only checks the form; nothing is looked up.

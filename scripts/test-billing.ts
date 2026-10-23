@@ -1450,6 +1450,11 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
 
   await check('an anonymous request changes nothing and asks nothing of Stripe', async () => {
     assert.equal((await cancel({ email: 'not-an-email', action: 'cancel', step: 'request' })).body.error.code, 'bad_email');
+    // Postgres text refuses U+0000: the recorded request answered 500.
+    for (const email of ['some\u0000one@example.com', 'some\u0007one@example.com']) {
+      const refused = await cancel({ email, action: 'cancel', step: 'request' });
+      assert.deepEqual([refused.statusCode, refused.body.error?.code], [400, 'bad_email'], JSON.stringify(email));
+    }
     const calls = stripe.calls;
     const first = await cancel({ email: 'someone@example.com', action: 'cancel', step: 'request' });
     assert.deepEqual(first.body, { step: 'confirm', action: 'cancel', email: 'someone@example.com' });
