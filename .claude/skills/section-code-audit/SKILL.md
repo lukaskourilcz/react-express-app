@@ -1,6 +1,6 @@
 ---
 name: section-code-audit
-description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE audit of 22–23 October 2026 (PR "FDE code review").
+description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563) and Web Developer audits of 22–23 October 2026.
 ---
 
 # Section code audit
@@ -39,13 +39,19 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Validator gaps that only show on a live submission: fractional answer indexes, `NaN`/`Infinity` thresholds and weights, empty traces, blank captions. `NaN` passes every range test, so check `Number.isFinite` and `Number.isInteger` explicitly.
 - Hardcoded copies of shared constants (a `0.8` threshold): import the constant.
 - Never let a response, log or projection carry answer keys, hidden tests or reference solutions.
+- One-time claims spent before auth: a placement round was claimed before the token was checked, so a refused token used the round up. Check auth before `claimOnce`.
+- Values the database cannot store: Postgres text and JSONB refuse U+0000, so a draft holding it answered 500. Walk the values (not the JSON text, which would also catch code that spells `\u0000` out) and answer 400. Cut user text by code points (`Array.from`), not UTF-16 units, so an emoji is not split.
+- Reads that a later RPC already returns under its lock: take the value from the RPC instead of a separate read (first pass from `complete_verified_roadmap_attempt_v2`).
+- Read errors treated as "nothing there": a failed passed-tasks read re-offered finished work; a failed draft read looked like no draft. Answer 503 or log and flag it.
+- Public responses the same for every caller: `max-age` alone keeps them out of the CDN. Add `s-maxage` and `stale-while-revalidate` when no caller data is in them.
+- Sorting with an expensive comparator: compute each key once before the sort.
 
 **Client**
 - Lost keystrokes: debounced autosaves dropped on unmount, or routed to the activity just opened instead of the one left. Flush on unmount through a latest-callback ref, and route by the id the view was opened with.
 - Account changes: drafts kept across a voluntary sign-out leak to the next account; drafts wiped on an *involuntary* sign-out lose work. Keep per-account copies on session expiry only, check `accountEpoch()` before any late write or send, and register the flush with `beforeAccountChange`.
 - Device copies trusted blindly: validate the stored shape before use, and never delete a device copy because the server answered "unknown".
 - Late responses: a result that arrives after the learner moved on must not change the new screen. Use a token or ref per request, and abort fetches in effect cleanup.
-- Double submits: guard Start, Pause, Claim and Submit with a ref, not only a disabled state.
+- Double submits: guard Start, Pause, Claim, Submit, Reveal, level completion (focus and visibilitychange can fire together) and answer keys with a ref, not only a disabled state. `isPending` reaches React a task later than the second click.
 - Loading versus "not started": do not offer "Start" while the enrollment list is loading or failed.
 - Expiry: a sealed attempt that expired must say so, not silently re-deal and wipe answers.
 - Re-render cost: memoise heavy, pure children (`LessonView`, rich-text parsing) only where they re-render per keystroke; check the memo's inputs are stable.
@@ -54,7 +60,11 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Destructive buttons: Reset needs the workbench's inline confirmation, and focus must return to the opener.
 - Accessibility: no page-wide `aria-live` (screen readers re-read everything); move focus to the opened item and to each revealed hint; long code tokens must wrap at 200 % text and 360 px.
 - Canvas and downloads: `roundRect` is missing before Safari 16 and Firefox 112, so fall back to `arcTo`; zero the canvas after export (iOS caps canvas memory); attach the anchor before `click()` and revoke the object URL later.
-- Empty data: a trace with no frames threw and replaced the lesson with the error boundary.
+- Empty data: a trace with no frames threw and replaced the lesson with the error boundary. Stored progress read without a shape check (`new Set(object)`) crashed the Learn page.
+- Controlled inputs bound to the URL: React Router updates the URL in a transition, so a search box controlled by it dropped keystrokes. Keep local state and write the URL after.
+- Keyboard shortcuts must ignore keys from forms and dialogs inside the screen, and must not act on a hidden editor.
+- Workers and heavy idle warm-ups: stop a browser run when the learner leaves; skip idle preloads when `navigator.connection.saveData` is set.
+- `ShellPartBoundary` goes inside `Suspense`, as its doc comment says.
 
 ## 3. How to work
 
