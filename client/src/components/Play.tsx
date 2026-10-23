@@ -357,7 +357,7 @@ export function PlayLanding() {
                 </VStack>
 
                 <VStack gap={1}>
-                  <label htmlFor={timeLimitId}>
+                  <label htmlFor={timeLimitId} className="play-field-label">
                     <Text type="label" weight="bold" color="secondary">
                       {t('play.timeLimit')}
                     </Text>

@@ -51,7 +51,10 @@
 .play-topics__body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
 
 /* The time limit is one select at the shared 44px height, as wide as its
-   longest option rather than the whole card. */
+   longest option rather than the whole card. Its <label> is a flex box, so
+   the label text sits on the line "Questions" does beside it instead of on
+   a taller body-text line 4px lower. */
+.play-field-label { display: flex; }
 .ss-select.play-time-select { width: auto; min-width: 11rem; }
 
 /* The lobby (social-account-14): one panel, rows inside it. The share block

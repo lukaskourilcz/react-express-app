@@ -1038,4 +1038,16 @@ describe('narrow screens and headings', () => {
     expect(getComputedStyle(select).minHeight).toBe('44px');
     sheet.ownerNode?.remove();
   });
+
+  it('creates the room with the time limit the select holds', async () => {
+    api.createMatch.mockResolvedValue({ id: 'm1', code: 'ABC123', mode: 'multiplayer', status: 'lobby' });
+    await mount('/play');
+    const create = await screen.findByRole('button', { name: 'Create multiplayer match' });
+    const select = screen.getByLabelText('Time limit');
+    expect(select).toHaveValue(String(DEFAULT_CONFIG.play.defaultDurationS));
+    expect(document.querySelector(`label[for="${select.id}"]`)).toHaveClass('play-field-label');
+    fireEvent.change(select, { target: { value: '300' } });
+    await act(async () => { fireEvent.click(create); });
+    expect(api.createMatch).toHaveBeenCalledWith(expect.objectContaining({ duration_s: 300 }));
+  });
 });
