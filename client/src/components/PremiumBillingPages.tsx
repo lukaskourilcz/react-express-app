@@ -197,7 +197,9 @@ export function PremiumSuccessPage() {
     setState({ kind: 'checking' });
     try {
       const result = await lookupCheckout(sessionId);
-      if (result.entitlement.tier === 'premium') {
+      // Only a completed checkout is a purchase. A voucher or complimentary
+      // grant already reads Premium while this payment is still processing.
+      if (result.status === 'complete' && result.entitlement.tier === 'premium') {
         if (user) queryClient.setQueryData(entitlementKeys.user(user.id), result.entitlement);
         void queryClient.invalidateQueries({ queryKey: entitlementKeys.all });
         setState({ kind: 'done', plan: result.entitlement });
@@ -210,12 +212,15 @@ export function PremiumSuccessPage() {
     }
   }, [sessionId, queryClient, user]);
 
-  // Once the account and its plan are known: a plan that is already Premium
-  // (the webhook came first) needs no lookup; otherwise ask the server.
+  // Once the account and its plan are known: a subscription that is already
+  // live (the webhook came first) needs no lookup; otherwise ask the server.
+  // Premium from a voucher or a complimentary grant says nothing about this
+  // checkout, so it is asked about like a free plan.
   useEffect(() => {
     if (started.current || !validSession || authLoading || !isAuthenticated || plan.loading) return;
     started.current = true;
-    if (plan.tier === 'premium' && plan.data) setState({ kind: 'done', plan: plan.data });
+    const subscribed = plan.data?.subscriptionLive === true || plan.data?.source === 'provider';
+    if (plan.tier === 'premium' && plan.data && subscribed) setState({ kind: 'done', plan: plan.data });
     else void check();
   }, [validSession, authLoading, isAuthenticated, plan.loading, plan.tier, plan.data, check]);
 

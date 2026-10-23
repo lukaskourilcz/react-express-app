@@ -181,6 +181,21 @@ describe('/premium/success', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Everything is open now.' })).toBeInTheDocument();
   });
 
+  it('waits for this checkout when a voucher already opened Premium', async () => {
+    signIn();
+    const VOUCHER = { ...PREMIUM, source: 'promo', currentPeriodEnd: null, validUntil: '2026-12-01T00:00:00.000Z' };
+    serve({ plan: VOUCHER });
+    let looked = 0;
+    server.use(http.get('*/api/user/billing-checkout', () => {
+      looked += 1;
+      return HttpResponse.json({ status: 'pending', entitlement: VOUCHER });
+    }));
+    renderAt(`/premium/success?session_id=${SESSION}`, <PremiumSuccessPage />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your payment is still processing' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Everything is open now.' })).toBeNull();
+    expect(looked).toBe(1);
+  });
+
   it('says a payment is still processing and offers to check again', async () => {
     signIn();
     serve();
