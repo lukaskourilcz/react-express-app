@@ -2184,8 +2184,7 @@ export const en = {
   // links open (components/auth/).
   'home.signIn': 'Sign in',
   'auth.signedIn': 'You’re signed in.',
-  'auth.dialog.signInTitle': 'Sign in to devShark',
-  'auth.dialog.signUpTitle': 'Create your devShark account',
+  'auth.dialog.accountTitle': 'Your devShark account',
   'auth.dialog.forgotTitle': 'Reset your password',
   'auth.dialog.sentTitle': 'Check your inbox',
   'auth.dialog.subtitle': 'Your XP, streak and progress are saved to your account.',

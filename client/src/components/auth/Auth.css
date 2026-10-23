@@ -19,6 +19,44 @@
 .ss-auth__submit > * { flex: 1 1 auto; justify-content: center; }
 .ss-auth__row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; margin: -6px 0 0; }
 .ss-auth__row.ss-text-links { margin-top: -6px; }
+/* The password field and the 44px row reserved under it in both modes
+   (UX audit shell-public-05). The row's content is placed in the padding, so
+   Sign in and Create account are the same height and the dialog stays put. */
+.ss-auth__password { position: relative; padding-bottom: var(--ss-control-height); }
+.ss-auth__password .ss-auth-field__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  min-height: var(--ss-control-height);
+}
+/* 'Forgot password?' is a quiet aside, not louder than the submit under it:
+   the note's size and colour, right-aligned, with a 44px press. */
+.ss-auth__forgot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+}
+.ss-auth__forgot button {
+  min-height: var(--ss-control-height);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--ss-type-meta);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ss-auth__forgot button:hover { color: var(--color-text-primary); }
+.ss-auth__forgot button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .ss-auth__lead { margin: 0; color: var(--color-text-secondary); line-height: 1.55; overflow-wrap: anywhere; }
 .ss-auth__lead:focus { outline: none; }
 .ss-auth__lead:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; border-radius: var(--radius-inner); }

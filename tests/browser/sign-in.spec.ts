@@ -68,6 +68,26 @@ for (const theme of ['light', 'dark'] as const) {
   }
 }
 
+test('Sign in and Create account are the same height, so the dialog does not move when the mode changes', async ({ page }) => {
+  // UX audit shell-public-05: the dialog was 612px in Sign in and 583px in
+  // Create account, and its centred top moved 14px under the pointer.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await offlineApi(page);
+  await localAuth(page);
+  const { dialog } = await openDialog(page);
+  const google = dialog.getByRole('button', { name: 'Continue with Google' });
+  const signIn = { dialog: await dialog.boundingBox(), google: await google.boundingBox() };
+  await dialog.getByRole('radio', { name: 'Create account' }).click();
+  await expect(dialog.getByText('At least 8 characters.')).toBeVisible();
+  const signUp = { dialog: await dialog.boundingBox(), google: await google.boundingBox() };
+  expect(signUp.dialog?.height).toBeCloseTo(signIn.dialog?.height ?? 0, 0);
+  expect(signUp.dialog?.y).toBeCloseTo(signIn.dialog?.y ?? 0, 0);
+  expect(signUp.google?.y).toBeCloseTo(signIn.google?.y ?? 0, 0);
+  // One title for both modes; the segmented control carries the mode.
+  await expect(dialog.getByRole('heading', { name: 'Your devShark account' })).toBeVisible();
+});
+
 test('the keyboard reaches everything in order, Escape closes, and focus goes back to Sign in', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });

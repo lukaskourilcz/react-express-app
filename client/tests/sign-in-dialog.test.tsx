@@ -98,11 +98,17 @@ const press = (dialog: HTMLElement, name: string | RegExp) => fireEvent.click(wi
 /** A paragraph by its whole text: the address in it is a span of its own. */
 const paragraph = (dialog: HTMLElement, text: RegExp) => within(dialog).getByText((_, element) => element?.tagName === 'P' && text.test(element.textContent ?? ''));
 const signUpTab = (dialog: HTMLElement) => fireEvent.click(within(dialog).getByRole('radio', { name: 'Create account' }));
+/** The dialog has one title in both modes; the segmented control says which
+ * mode is open (UX audit shell-public-05). */
+const expectMode = (dialog: HTMLElement, mode: 'Sign in' | 'Create account') => {
+  expect(within(dialog).getByRole('heading', { name: 'Your devShark account' })).toBeInTheDocument();
+  expect(within(dialog).getByRole('radio', { name: mode })).toBeChecked();
+};
 
 describe('the sign-in dialog', () => {
   it('puts Google first, then the email form, with the fields password managers expect', async () => {
     const { dialog } = await openDialog();
-    expect(within(dialog).getByRole('heading', { name: 'Sign in to devShark' })).toBeInTheDocument();
+    expectMode(dialog, 'Sign in');
     const google = within(dialog).getByRole('button', { name: 'Continue with Google' });
     const email = field(dialog, 'Email');
     const password = field(dialog, 'Password');
@@ -114,14 +120,23 @@ describe('the sign-in dialog', () => {
     expect(email).toHaveAttribute('autocapitalize', 'none');
     expect(password).toHaveAttribute('type', 'password');
     expect(password).toHaveAttribute('autocomplete', 'current-password');
+    // 'Forgot password?' sits in the row reserved under the password, as a
+    // quiet note-sized link, not a third 'Sign in'-weight control.
+    const forgot = within(dialog).getByRole('button', { name: 'Forgot password?' });
+    expect(forgot.closest('.ss-auth__password')).toContainElement(password);
+    expect(forgot.closest('p')).toHaveClass('ss-auth__forgot');
     expect(within(dialog).getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/terms');
     expect(within(dialog).getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
 
     // Create account asks for a new password, and says the rule.
     signUpTab(dialog);
-    expect(within(dialog).getByRole('heading', { name: 'Create your devShark account' })).toBeInTheDocument();
+    expectMode(dialog, 'Create account');
     expect(field(dialog, 'Password')).toHaveAttribute('autocomplete', 'new-password');
     expect(within(dialog).getByText('At least 8 characters.')).toBeInTheDocument();
+    // The rule takes the row 'Forgot password?' holds in Sign in: the same
+    // reserved row under the password in both modes, so nothing moves.
+    expect(within(dialog).getByText('At least 8 characters.').closest('.ss-auth__password')).toContainElement(field(dialog, 'Password'));
+    expect(within(dialog).queryByRole('button', { name: 'Forgot password?' })).toBeNull();
 
     // Show password is one toggle button, pressed or not.
     const toggle = within(dialog).getByRole('button', { name: 'Show password' });
@@ -271,7 +286,7 @@ describe('the sign-in dialog', () => {
 
     // Another address: back to the form, with the one typed so far.
     press(dialog, 'Use a different email');
-    expect(within(dialog).getByRole('heading', { name: 'Create your devShark account' })).toBeInTheDocument();
+    expectMode(dialog, 'Create account');
     expect(field(dialog, 'Email')).toHaveValue('ada@example.com');
     expect(field(dialog, 'Email')).toHaveFocus();
   });
@@ -286,7 +301,7 @@ describe('the sign-in dialog', () => {
     press(dialog, 'Create account');
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('An account with this email already exists. Sign in, or reset your password if you’ve forgotten it.');
     press(dialog, 'Sign in instead');
-    expect(within(dialog).getByRole('heading', { name: 'Sign in to devShark' })).toBeInTheDocument();
+    expectMode(dialog, 'Sign in');
     expect(field(dialog, 'Email')).toHaveValue('ada@example.com');
     expect(field(dialog, 'Email')).toHaveFocus();
     expect(within(dialog).queryByRole('alert')).toBeNull();
@@ -350,7 +365,7 @@ describe('the sign-in dialog', () => {
     expect(recover.body).toMatchObject({ email: 'ada@example.com' });
     expect(recover.query.redirect_to).toBe('http://localhost:3000/reset-password');
     press(dialog, 'Back to sign in');
-    expect(within(dialog).getByRole('heading', { name: 'Sign in to devShark' })).toBeInTheDocument();
+    expectMode(dialog, 'Sign in');
   });
 
   it('sends one sign-in, one account and one reset link for a press that lands twice', async () => {
@@ -401,7 +416,7 @@ describe('the sign-in dialog', () => {
     signUpTab(dialog);
     await act(async () => { answer(); });
     await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Create account' })).toBeEnabled());
-    expect(within(dialog).getByRole('heading', { name: 'Create your devShark account' })).toBeInTheDocument();
+    expectMode(dialog, 'Create account');
     expect(within(dialog).queryByRole('alert')).toBeNull();
   });
 
