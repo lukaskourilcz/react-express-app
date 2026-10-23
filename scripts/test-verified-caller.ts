@@ -471,7 +471,7 @@ async function main() {
     // A daily board names a real day: 2026-02-30 has the right shape, and the
     // routine's date cast would fail on it. A period or date repeated in the
     // query string names neither.
-    for (const query of [{ period: 'daily', date: '2026-02-30' }, { period: 'daily', date: '2026-13-01' }, { period: 'daily', date: ['2026-10-01', '2026-10-02'] }, { period: ['daily', 'global'] }] as Record<string, string>[]) {
+    for (const query of [{ period: 'daily', date: '2026-02-30' }, { period: 'daily', date: '2026-13-01' }, { period: 'daily', date: '0000-01-01' }, { period: 'daily', date: ['2026-10-01', '2026-10-02'] }, { period: ['daily', 'global'] }] as Record<string, string>[]) {
       seen.length = 0;
       const refused = await call(leaderboard as Handler, { query });
       assert.equal(refused.statusCode, 400, `${JSON.stringify(query)} is a bad request (${JSON.stringify(refused.body)})`);
