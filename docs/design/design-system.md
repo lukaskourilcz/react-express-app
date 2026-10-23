@@ -101,6 +101,10 @@ Every question screen draws through the shared parts in `client/src/components/q
 
 **QuestionHint** (`QuestionHint.tsx`). The one keyboard hint, directly under the answer list: "Press 1–{max} to {verb} · Enter to {next}" (`question.keysHint`), or "Press 1–{max} to {verb}" when Enter does nothing (`question.keysHintShort`). Props: `max`, `verb` (`'select'` where a digit only picks, as in Quiz and Challenge; `'answer'` where it grades at once, as in Learn), `next` (`'continue'` or `'submit'`, what Enter does now), `hidden`. Its line is reserved in every state: `hidden` keeps the height and hides the words (after grading, say), so nothing moves. It is drawn only on a desktop with a fine pointer; a coarse pointer or a layout under 600px has no such keys, and there the line is not drawn on any question. A runner without number keys shows no hint.
 
+**QuestionFeedback** (`QuestionFeedback.tsx`). The graded verdict: an Astryx `Banner` (`status` success, error or info; `title` the verdict in words; `description` the explanation) in normal flow directly under the answer list and the hint, inside the panel, never positioned over the answers and with no shadow of its own. `children` sit under the verdict (Save as Shark Card). It takes focus when it appears (`autoFocus`, default `true`), so a screen reader reads it; pass `autoFocus={false}` when the runner moves focus to its Continue with `QuestionActions focusPrimary`. The ref is the feedback block. The answers do not move, because content is only added below them; a long explanation scrolls the page.
+
+A run's composition, top to bottom: `QuestionShell` › `QuestionHeader` › question block › `AnswerOptionList` › `QuestionHint` › `QuestionFeedback` (once graded), then `QuestionActions` under the panel. Quiz (`client/src/components/Quiz.tsx`) is the reference.
+
 ## Layout and density
 
 - Mobile gutter: 16px; tablet: 24px; desktop: 24–32px.

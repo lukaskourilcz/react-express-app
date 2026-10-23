@@ -346,3 +346,7 @@ their props), never drawn again by hand.
 - **One keyboard hint, on a reserved line.** `QuestionHint` says "Press 1–4
   to {select|answer} · Enter to {continue|submit}" under the answers, on a
   desktop with a fine pointer only. Grading hides its words, never its line.
+- **Feedback under the answers, never over them.** `QuestionFeedback` is the
+  verdict and explanation in normal flow below the list, inside the panel,
+  and it takes focus when it appears. Nothing on a question screen is
+  absolutely positioned over the answers.
