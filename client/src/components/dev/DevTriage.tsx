@@ -23,7 +23,7 @@ import ErrorRetry from '../ErrorRetry';
 import { AppToast } from '../ui/AppToast';
 import { getCategoryLabel, textOnColor } from '../../lib/categories';
 import { friendlyError } from '../../lib/api';
-import { listQuestions, setQuestionDeleted, type AdminQuestion } from '../../lib/devApi';
+import { deleteQuestions, listQuestions, setQuestionDeleted, type AdminQuestion } from '../../lib/devApi';
 import { loadTriageVerdicts, GATE_LABEL, type TriageVerdict } from '../../lib/triageApi';
 import { useActiveSubject } from '../../lib/subjects';
 import { BrandedConfirmDialog, type ConfirmRequest } from '../ui/BrandedConfirmDialog';
@@ -181,10 +181,7 @@ export default function DevTriage() {
     setRemoved((prev) => { const next = new Set(prev); ids.forEach((id) => next.add(id)); return next; });
     let n = 0;
     try {
-      for (const id of ids) {
-        await setQuestionDeleted(id, true);
-        n++;
-      }
+      await deleteQuestions(ids, () => { n++; });
       setSnack(`Deleted ${n} question${n === 1 ? '' : 's'}`);
     } catch (err) {
       // The rows from the one that failed on are still in the bank: show them

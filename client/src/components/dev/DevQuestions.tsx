@@ -14,6 +14,7 @@ import { importanceBand, IMPORTANCE_BAND_LABEL, type ImportanceBand } from '../.
 import {
   listQuestions,
   setQuestionDeleted,
+  deleteQuestions,
   resetQuestion,
   bulkHideByImportance,
   type AdminQuestion,
@@ -400,10 +401,7 @@ export default function DevQuestions() {
     setConfirm({ title: `Delete ${ids.length} selected question${ids.length === 1 ? '' : 's'}?`, description: 'This permanently removes the selected questions and cannot be undone.', actionLabel: 'Delete permanently', onConfirm: async () => {
     let n = 0;
     try {
-      for (const id of ids) {
-        await setQuestionDeleted(id, true);
-        n += 1;
-      }
+      await deleteQuestions(ids, () => { n += 1; });
       setSnack(`Removed ${n} question${n === 1 ? '' : 's'}`);
     } catch (err) {
       setSnack(`${friendlyError(err)} (removed ${n} of ${ids.length} before stopping)`);

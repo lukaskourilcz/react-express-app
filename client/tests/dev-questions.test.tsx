@@ -111,6 +111,31 @@ describe('/dev → Quality triage', () => {
 });
 
 describe('/dev → Question bank', () => {
+  it('waits out the admin rate limit in a bulk delete instead of stopping at its fifth question', async () => {
+    let bank = ['b1', 'b2', 'b3'];
+    let limited = false;
+    server.use(
+      http.get('*/api/admin/questions', () => HttpResponse.json({ questions: bank.map(question), categories: ['react'], reportCounts: {} })),
+      http.post('*/api/admin/delete', async ({ request }) => {
+        const { id } = (await request.json()) as { id: string };
+        // The admin bucket runs dry once, on the second question.
+        if (id === 'b2' && !limited) {
+          limited = true;
+          return HttpResponse.json({ error: { code: 'rate_limited', message: 'Too many requests. Try again shortly.' } }, { status: 429 });
+        }
+        bank = bank.filter((one) => one !== id);
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    renderTab('questions');
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select all questions on this page' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected (3)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete permanently' }));
+    expect(await screen.findByText('Removed 3 questions', {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(limited).toBe(true);
+    expect(bank).toEqual([]);
+  });
+
   it('unselects and re-reads the questions a bulk delete removed before it stopped on an error', async () => {
     let bank = ['b1', 'b2', 'b3'];
     let reads = 0;
