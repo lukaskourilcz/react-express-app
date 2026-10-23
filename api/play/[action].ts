@@ -210,9 +210,6 @@ async function create(req: VercelRequest, res: VercelResponse) {
   };
 
   const { play: playSettings } = await getGameSettings();
-  // The Google name, the sharkname, or "Player" and a number; never anything
-  // from the address (lib/public-identity.ts).
-  const hostName = await roomDisplayName(hostAuth, supabase);
   const mode = body.mode === 'classroom' ? 'classroom' : 'multiplayer';
   const requestedCount = typeof body.count === 'number' ? body.count : 10;
   const count = Math.min(
@@ -242,7 +239,13 @@ async function create(req: VercelRequest, res: VercelResponse) {
   }
   categories = scope.categories;
 
-  const allQuestions = await getEffectiveQuestions(scope.subject);
+  // The host's name (the Google name, the sharkname, or "Player" and a
+  // number; never anything from the address, lib/public-identity.ts) is
+  // worked out while the question bank loads.
+  const [hostName, allQuestions] = await Promise.all([
+    roomDisplayName(hostAuth, supabase),
+    getEffectiveQuestions(scope.subject),
+  ]);
   const pool = allQuestions.filter((q) => categories.includes(q.category));
   if (pool.length < playSettings.minQuestions) {
     return jsonError(res, 400, 'too_few_questions', 'Not enough questions for these filters');
@@ -342,16 +345,22 @@ async function join(req: VercelRequest, res: VercelResponse) {
 
   const code = body.code.toUpperCase();
   try {
-    const { data: match, error } = await withTimeout(
-      supabase!
-        .from('matches')
-        .select(
-          'id, code, mode, subject, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s, revealed_idx',
-        )
-        .eq('code', code)
-        .in('subject', deploymentSubjectIds())
-        .maybeSingle(),
-    );
+    // The player's name is worked out while the room is read: a class joins
+    // from one code at once, and the two waits added up for every pupil.
+    // roomDisplayName never throws; it falls back to "Player" and a number.
+    const [{ data: match, error }, displayName] = await Promise.all([
+      withTimeout(
+        supabase!
+          .from('matches')
+          .select(
+            'id, code, mode, subject, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s, revealed_idx',
+          )
+          .eq('code', code)
+          .in('subject', deploymentSubjectIds())
+          .maybeSingle(),
+      ),
+      roomDisplayName(auth, supabase),
+    ]);
 
     if (error) {
       logEvent('play/join', { status: 500, error: error.message });
@@ -362,7 +371,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
 
     const participantInsert = await withTimeout(
       supabase!.from('match_participants').upsert(
-        { match_id: match.id, user_id: sub, display_name: await roomDisplayName(auth, supabase) },
+        { match_id: match.id, user_id: sub, display_name: displayName },
         { onConflict: 'match_id,user_id' },
       ),
     );
