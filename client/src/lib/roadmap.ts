@@ -137,6 +137,10 @@ export function submitRoadmapAnswer(
   });
 }
 
+// Counts the account records completions have written, so a progress sync
+// whose GET left before one of them does not write its older read over it.
+let completionWrites = 0;
+
 export async function completeRoadmapAttempt(sessionId: string): Promise<RoadmapCompletionResult> {
   const epoch = accountEpoch();
   const result = await apiFetch<RoadmapCompletionResult>('/api/quiz/roadmap?resource=complete', {
@@ -150,7 +154,10 @@ export async function completeRoadmapAttempt(sessionId: string): Promise<Roadmap
   if (accountEpoch() !== epoch) {
     throw new ApiError('Your sign-in changed during this level.', 409, 'session_owner_mismatch');
   }
-  if (result.progress) writeProgress(result.progress);
+  if (result.progress) {
+    writeProgress(result.progress);
+    completionWrites += 1;
+  }
   // A finished level or part test is a streak day, passed or not.
   if (result.applied) staleProfileStats();
   return result;
@@ -640,6 +647,7 @@ async function syncOnce(epoch: number): Promise<void> {
   }
   let serverProgress: RoadmapProgress = {};
   let serverExtras: ServerExtras = {};
+  const writesBefore = completionWrites;
   try {
     const res = await apiFetch<{ data: RoadmapProgress; extra?: ServerExtras }>(PROGRESS_GET);
     serverProgress = res.data ?? {};
@@ -652,7 +660,9 @@ async function syncOnce(epoch: number): Promise<void> {
   if (accountEpoch() !== epoch) return;
   // Signed-in progress is server-authoritative. Legacy server rows are retained
   // by migration; unverified browser-only values cannot unlock account XP.
-  writeProgress(serverProgress);
+  // A completion that answered while this GET was out wrote a newer read of
+  // the same record, which this one must not replace.
+  if (completionWrites === writesBefore) writeProgress(serverProgress);
 
   // Unlocks are the server's too. A guest's skill-check unlocks, or ones this
   // device granted itself when applying a receipt failed, would draw a topic

@@ -94,3 +94,32 @@ describe('a level completion in flight at sign-out', () => {
     expect(localStorage.getItem(PROGRESS)).toBeNull();
   });
 });
+
+// A progress GET that left before a level completion and answers after it
+// holds the account as it was before that pass. Written over the completion's
+// record, it drew the level just passed as not passed until the next sync.
+describe('a progress sync that answers after a level completion', () => {
+  it('keeps the progress the completion wrote', async () => {
+    const progress = holdProgress();
+    const passed = { html: { levels: { 1: { passed: true, bestPct: 100 }, 2: { passed: true, bestPct: 90 }, 3: { passed: true, bestPct: 80 } }, checkpoints: {} } };
+    server.use(http.post('*/api/quiz/roadmap', () => HttpResponse.json({ correctAnswers: 8, totalQuestions: 10, percentage: 80, passed: true, applied: true, codingPending: [], progress: passed })));
+    const sync = syncProgressWithServer();
+    await completeRoadmapAttempt('session-2');
+    await progress.answer(accountA);
+    await sync;
+    const stored = JSON.parse(localStorage.getItem(PROGRESS) ?? '{}') as typeof passed;
+    expect(stored.html.levels[3]).toEqual({ passed: true, bestPct: 80 });
+    expect(JSON.parse(localStorage.getItem(UNLOCKS) ?? '[]')).toEqual(['css']);
+  });
+
+  it('still stores a sync that started after the completion', async () => {
+    server.use(http.post('*/api/quiz/roadmap', () => HttpResponse.json({ correctAnswers: 8, totalQuestions: 10, percentage: 80, passed: true, applied: true, codingPending: [], progress: accountB.data })));
+    await completeRoadmapAttempt('session-3');
+    const progress = holdProgress();
+    const sync = syncProgressWithServer();
+    await progress.answer(accountA);
+    await sync;
+    const stored = JSON.parse(localStorage.getItem(PROGRESS) ?? '{}') as Record<string, unknown>;
+    expect(Object.keys(stored)).toEqual(['html']);
+  });
+});
