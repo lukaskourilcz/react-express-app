@@ -83,6 +83,10 @@ it('scrolls the tab strip instead of squeezing its tabs, and drops the Resources
   const phone = css.slice(css.indexOf('@media (max-width: 599px)'));
   expect(phone).toMatch(/\.cd-tab \{ padding: 8px; font-size: 0\.9rem; \}/);
   expect(phone).toMatch(/\.cd-tab\[data-tab='resources'\] \.cd-tab__badge \{ display: none; \}/);
+  // From 600px the tabs sit closer, so four tabs with their run badges fit a
+  // 1280px frame's results pane instead of scrolling the last one away.
+  const wider = css.slice(css.indexOf('@media (min-width: 600px) {\n  .cd-tabs'));
+  expect(wider).toMatch(/^@media \(min-width: 600px\) \{\s*\.cd-tabs \{ gap: 2px; \}\s*\.cd-tab \{ gap: 6px; padding-inline: 10px; font-size: 0\.95rem; \}\s*\.cd-tab__badge \{ padding-inline: 6px; \}/);
 });
 
 it('lists checks as one divided list: the call, the expected value after an arrow, then what came back (coding-15)', async () => {

@@ -495,6 +495,15 @@
 .cd-tab__badge { font-size: 0.78rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--color-background-muted); color: var(--color-text-primary); }
 .cd-tab__badge--good { background: var(--ss-success-soft); }
 .cd-tab__badge--bad { background: var(--ss-error-soft); }
+/* From 600px the tabs sit a little closer, so a TypeScript or React strip
+   with its run badges (Results 0/5, Console, Types 1/5, Resources 2: 486px at
+   the old spacing) fits the 454px results pane of a 1280px frame instead of
+   scrolling its last tab out of view. */
+@media (min-width: 600px) {
+  .cd-tabs { gap: 2px; }
+  .cd-tab { gap: 6px; padding-inline: 10px; font-size: 0.95rem; }
+  .cd-tab__badge { padding-inline: 6px; }
+}
 /* A phone: tighter tabs, and Resources drops its count (its label says
    enough), so four plain tabs fit a 328px strip. */
 @media (max-width: 599px) {
