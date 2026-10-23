@@ -28,6 +28,10 @@
    to show (no plan chosen, billing unreachable) it is an inline note and its
    button, not a card around them (canvas, then one panel). */
 .ss-checkout-card:has(.astryx-banner) { padding: 0; border: 0; background: none; box-shadow: none; }
+/* The card's own actions (Try again, Sign in to continue, Continue to secure
+   payment) are page actions: the .ss-action type, at their own width like
+   'Back to plans' below them, not stretched across the card (shell-public-02). */
+.ss-checkout-card > .ss-action { align-self: flex-start; }
 .ss-checkout-price { margin: 0; font-size: 1.35rem; }
 .ss-checkout-form[data-ready="true"] { min-height: 320px; }
 /* Focus lands on the form's box when it opens, so Tab goes on into Stripe's
