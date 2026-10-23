@@ -91,6 +91,9 @@ it('lists checks as one divided list: the call, the expected value after an arro
   const panel = screen.getByRole('tabpanel', { name: 'Results' });
   const [zero, other] = within(panel).getAllByRole('listitem');
   expect(zero).toHaveTextContent('digitSum(0) → expected 0edge');
+  // The call is its own element, so it is the short form and nothing else.
+  expect(zero.querySelector('.cd-result__call')).toHaveTextContent(/^digitSum\(0\)$/);
+  expect(zero.querySelector('.cd-result__line > .cd-result__expect')).toHaveTextContent('→ expected 0');
   expect(zero.querySelector('.cd-tag.cd-result__edge')).toHaveTextContent('edge');
   expect(zero.querySelector('.cd-result__label')).toHaveTextContent('zero has a digit sum of zero');
   // "Expected" is never printed: it is read in place of the arrow.

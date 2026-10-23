@@ -518,7 +518,8 @@
 .cd-result__status { grid-row: 1 / span 3; font-weight: 700; white-space: nowrap; }
 .cd-result--pass .cd-result__status { color: var(--ss-success-strong, var(--ss-success)); }
 .cd-result--fail .cd-result__status { color: var(--ss-error); }
-.cd-result__call { font-family: var(--cd-mono); overflow-wrap: anywhere; }
+.cd-result__call,
+.cd-result__line { font-family: var(--cd-mono); overflow-wrap: anywhere; }
 .cd-result__expect { color: var(--color-text-secondary); }
 .cd-result__edge { margin-inline-start: 8px; font-size: 0.72rem; vertical-align: 1px; }
 .cd-result__label { grid-column: 2; color: var(--color-text-secondary); font-size: 0.82rem; }

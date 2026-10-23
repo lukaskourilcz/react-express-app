@@ -842,8 +842,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     return (
       <li key={index} className={`cd-result cd-result--${status}`}>
         <span className="cd-result__status">{status === 'pass' ? t('coding.results.pass') : status === 'fail' ? t('coding.results.fail') : <><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></>}</span>
-        <span className="cd-result__call">
-          {test.shown ?? test.call}
+        {/* The call alone is .cd-result__call; what it should return and
+            what came back follow it on the same line. */}
+        <span className="cd-result__line">
+          <span className="cd-result__call">{test.shown ?? test.call}</span>
           {!result?.error && (
             <span className="cd-result__expect">
               <span aria-hidden="true"> → </span><span className="cd-visually-hidden"> {t('coding.results.expected')} </span>{JSON.stringify(test.expected)}
