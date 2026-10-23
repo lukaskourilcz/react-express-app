@@ -329,7 +329,9 @@ their props), never drawn again by hand.
   one `.ss-panel` surface and no accent edge. A runner sets no width, card or
   `flex: 1` of its own. The question block keeps one reserved height
   (`--ss-question-block-min`) and scrolls past `--ss-question-block-max`, so
-  the answers start at the same y on every question.
+  the answers start at the same y on every question. On a phone the header's
+  tag row keeps two lines (`--ss-question-tags-min`) whether a topic's tag
+  wraps or not, for the same reason.
 - **One answer list.** `AnswerOptionList`: 48px rows 8px apart, a 26px
   number chip, the brand accent for the selection (never a track colour), no
   border or radius of a runner's own. A graded row says what it is in text

@@ -90,6 +90,7 @@ Every question screen draws through the shared parts in `client/src/components/q
 | `--ss-answer-gap` | 8px | The gap between answer rows. |
 | `--ss-answer-chip` | 26px | The number chip at the start of a row. |
 | `--ss-question-title-size` | 1.25rem | The run's `h1` in the QuestionHeader. |
+| `--ss-question-tags-min` | 56px | Under 560px, the QuestionHeader's second row when it holds a tag and the difficulty badge: two lines of tags, so a long topic name that wraps beside the icon buttons does not move the answers. |
 
 **QuestionShell** (`QuestionShell.tsx`). The `--ss-width-task` (640px) column, centred, with one `.ss-panel` surface (24px padding, 16px under 560px, `--radius-container`, no accent edge) and the actions 16px under it. Props: `header` (a QuestionHeader), `question` (the text, code and notes), `questionId` (the block's id, which names the answer list), `children` (the answer list, hint and feedback, under the block), `actions` (a QuestionActions row), `notice` (an error banner above the panel), `stable` (default `true`: the block keeps `--ss-question-block-min` and scrolls past `--ss-question-block-max`; `false` for one question on its own page), `focusable` (default `true`: the block takes `tabIndex -1`), `className`, `labelledBy`. The forwarded ref is the question block, for moving focus to it when a run starts or moves on. A runner sets no width, card or `flex: 1` of its own: the shell is top-anchored and as tall as its content.
 

@@ -13,6 +13,8 @@
   --ss-answer-gap: 8px;
   --ss-answer-chip: 26px;
   --ss-question-title-size: 1.25rem;
+  /* Two lines of 24px tags with the 8px gap between them. */
+  --ss-question-tags-min: 56px;
 }
 
 /* ——— QuestionShell ——— */
@@ -83,6 +85,13 @@
 .ss-question-header__status { flex: none; margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: var(--ss-type-compact); font-weight: 600; }
 .ss-question-header__meta { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .ss-question-header__tools { flex: none; display: flex; align-items: center; gap: 4px; margin-inline-start: auto; }
+/* Under 560px a tag and the difficulty badge wrap to two lines beside the
+   icon buttons for a long topic name and stay on one for a short one; the
+   row keeps the two lines' height either way, so the question block and the
+   answers under it start at one y on every question (questions-06). */
+@media (max-width: 559px) {
+  .ss-question-header__row--tags { min-height: var(--ss-question-tags-min); }
+}
 
 .ss-question-icon-button {
   display: inline-flex;

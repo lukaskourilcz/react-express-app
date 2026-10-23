@@ -102,7 +102,11 @@ export function QuestionHeader({ title, run, titleRef, progress, status, meta, d
         {status != null && <div className="ss-question-header__status">{status}</div>}
       </div>
       {hasSecondRow && (
-        <div className="ss-question-header__row">
+        // A tag and the difficulty badge can wrap to two lines beside three
+        // icon buttons on a phone ("JavaScript" did, "React" did not), which
+        // moved the answers 10px from one question to the next; this row then
+        // keeps two lines' height on every question (questions-06).
+        <div className={meta != null && difficulty != null ? 'ss-question-header__row ss-question-header__row--tags' : 'ss-question-header__row'}>
           <div className="ss-question-header__meta">
             {meta}
             {difficulty != null && <Badge variant="neutral" label={t('question.difficultyLevel', { level: difficulty })} />}

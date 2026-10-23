@@ -48,6 +48,23 @@ describe('QuestionHeader', () => {
     expect(rows[1]).toContainElement(screen.getByRole('button', { name: 'Report this question' }));
   });
 
+  it('keeps two tag lines on a phone when a tag and the difficulty share the second row', () => {
+    const { container, rerender } = renderIn(
+      <QuestionHeader title="Question 1 of 2" meta={<span>JavaScript</span>} difficulty={1} />,
+    );
+    expect(container.querySelectorAll('.ss-question-header__row')[1]).toHaveClass('ss-question-header__row--tags');
+    // A runner whose second row is one line of text has nothing to wrap.
+    rerender(
+      <LanguageProvider>
+        <QuestionHeader title="Level 1" meta={<span>Question 1 of 8</span>} />
+      </LanguageProvider>,
+    );
+    expect(container.querySelector('.ss-question-header__row--tags')).toBeNull();
+    const css = readFileSync(new URL('../src/components/question/question.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/--ss-question-tags-min: 56px/);
+    expect(css).toMatch(/@media \(max-width: 559px\) \{\s*\.ss-question-header__row--tags \{ min-height: var\(--ss-question-tags-min\); \}/);
+  });
+
   it('can take focus on its h1 when the runner asks', () => {
     const ref = createRef<HTMLHeadingElement>();
     renderIn(<QuestionHeader title="Level 1 · Values & Math" titleRef={ref} />);
