@@ -808,7 +808,8 @@
 .ss-topic-article a:not(.ss-topic-cta) { color: var(--brand-accent); font-weight: 600; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .ss-topic-article summary:focus-visible, .ss-topic-article a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; }
 .ss-topic-article .topic-practice p { margin-top: 1rem; }
-.ss-topic-cta { display: inline-flex; align-items: center; min-height: var(--ss-control-height); padding: 0 20px; border-radius: 999px; background: var(--brand-accent); color: var(--brand-on-accent); font-weight: 600; text-decoration: none; }
+.ss-topic-cta { display: inline-flex; align-items: center; min-height: var(--ss-control-height); padding: 0 20px; border-radius: 999px; background: var(--brand-accent); color: var(--brand-on-accent); font-size: 1rem; font-weight: 600; text-decoration: none; }
+.ss-topic-cta:hover { background: var(--brand-accent-hover); }
 .ss-topic-cta:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 3px; }
 
 /* Keep scrollbar geometry stable; only the thumb's paint follows activity. */

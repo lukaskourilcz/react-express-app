@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import TopicLandingPage from '../src/components/TopicLandingPage';
+import { addSheet, declared } from './css';
 
 function Where() {
   const location = useLocation();
@@ -61,4 +62,11 @@ it('draws the practice link as the page action and the questions as details', ()
   const practice = document.querySelectorAll('details.topic-practice');
   expect(practice.length).toBeGreaterThan(0);
   for (const item of practice) expect(item.querySelector('summary')).not.toBeNull();
+  // The pill page action: 44px, 16px/600, and a hover of its own.
+  const rules = [...addSheet('appShell').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+  expect(declared(rules, '.ss-topic-cta', 'min-height')).toBe('var(--ss-control-height)');
+  expect(declared(rules, '.ss-topic-cta', 'border-radius')).toBe('999px');
+  expect(declared(rules, '.ss-topic-cta', 'font-size')).toBe('1rem');
+  expect(declared(rules, '.ss-topic-cta', 'font-weight')).toBe('600');
+  expect(declared(rules, '.ss-topic-cta:hover', 'background')).toBe('var(--brand-accent-hover)');
 });
