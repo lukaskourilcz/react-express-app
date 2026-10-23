@@ -795,6 +795,9 @@ details[open] > .lp-evidence__row > .lp-evidence__summary { white-space: normal;
 
 .rm-path-shelf { margin: 0 0 18px; }
 .rm-path-shelf__title { margin: 0; color: var(--color-text-primary); }
+/* The card sits outside .lp-page, so its h3 drops the browser's own margin
+   here, which left an empty band above 'Guided path outline'. */
+.rm-path-shelf .lp-module__title { margin: 0; }
 /* The card's title is the shelf's link into the path: a 44px target, and it
    wraps at 360px with 200 % text instead of overflowing. */
 .rm-path-shelf .lp-module__title a {
