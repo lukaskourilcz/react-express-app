@@ -156,3 +156,24 @@ it('says a used walkthrough must be opened again, offers Try again, and stops re
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
+
+// Try again opens a new session with the options in a new order. The runner
+// kept the last attempt's verdict and answers, so the new session showed the
+// old verdict, and a resubmit would have sent indexes that now name other
+// options.
+it('starts a new attempt clean when the session changes', async () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockResolvedValue(verdict({ design: [{ correct: true, given: 0 }, { correct: false, given: 1 }, { correct: false, given: 0 }] }));
+  const view = (session: string) => (
+    <MemoryRouter><LanguageProvider>
+      <DesignRunner task={task} session={session} locked={null} signedIn mode="section" onRetry={vi.fn()} />
+    </LanguageProvider></MemoryRouter>
+  );
+  const { rerender } = render(view('first-session'));
+  expect(await answerAndSubmit()).toHaveTextContent('Failed');
+  rerender(view('second-session'));
+  expect(screen.queryByRole('heading', { level: 3, name: /^Failed/ })).toBeNull();
+  expect(screen.getByRole('heading', { level: 3, name: 'What are we building' })).toBeVisible();
+  expect(screen.getByRole('radio', { name: 'Reads dominate' })).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'Next question' })).toBeDisabled();
+});

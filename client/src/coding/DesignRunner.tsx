@@ -29,7 +29,15 @@ export interface DesignRunnerProps {
   onContinue?: () => void;
 }
 
-export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict, onRetry, nextHref, backHref, onContinue }: DesignRunnerProps) {
+/** One attempt per session. Try again opens a new session whose options come
+ * back in a new order, so the answers, the verdict and "already checked" of
+ * the last one must not carry over: an answer is an option's index, and the
+ * same index names another option now. Keyed like the code puzzle. */
+export function DesignRunner(props: DesignRunnerProps) {
+  return <DesignAttempt key={`${props.task.id}:${props.session ?? ''}`} {...props} />;
+}
+
+function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRetry, nextHref, backHref, onContinue }: DesignRunnerProps) {
   const { t } = useLanguage();
   const baseId = useId();
   const design = task.design;
