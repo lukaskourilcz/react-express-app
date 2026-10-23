@@ -55,7 +55,18 @@ export function withRequestContext<T>(
     } catch (error) {
       // A refusal of locked content is an answer, not a failure.
       if (error instanceof PremiumRequiredError && !res.headersSent) return jsonPremiumRequired(res, error);
-      if (error instanceof ServiceUnavailableError && !res.headersSent) return jsonError(res, 503, error.code, error.message);
+      if (error instanceof ServiceUnavailableError && !res.headersSent) {
+        // A timeout or an unrecordable claim is still a failure monitoring
+        // should see at level error, as the 500 path logs one.
+        logEvent('request', {
+          level: 'error',
+          method: req.method ?? 'UNKNOWN',
+          path: req.url?.split('?')[0] ?? 'unknown',
+          status: 503,
+          category: error.code,
+        });
+        return jsonError(res, 503, error.code, error.message);
+      }
       // Log the status the caller gets: an escaped AuthError answers its own
       // 401 or 503, and a refused token is a warning, not a server fault.
       const status = error instanceof AuthError ? error.status : 500;

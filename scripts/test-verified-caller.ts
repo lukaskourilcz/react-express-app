@@ -573,7 +573,14 @@ async function main() {
     assert.equal(authDown.res.statusCode, 503);
     assert.deepEqual({ level: authDown.failure?.level, status: authDown.failure?.status }, { level: 'error', status: 503 },
       'Auth being down is an error logged with the 503 it answers');
-    console.log('PASS verified caller: an escaped AuthError is logged with the status it answers');
+    const timedOutLog = await escapedLogs(new http.UpstreamTimeoutError());
+    assert.equal(timedOutLog.res.statusCode, 503);
+    assert.deepEqual(
+      { level: timedOutLog.failure?.level, status: timedOutLog.failure?.status, category: timedOutLog.failure?.category },
+      { level: 'error', status: 503, category: 'upstream_timeout' },
+      'a timeout answered 503 is still logged at level error, as the 500 it replaced was',
+    );
+    console.log('PASS verified caller: an escaped AuthError is logged with the status it answers, and a 503 at level error');
 
     // ── Supabase Auth down ───────────────────────────────────────────────
     for (const query of [{ resource: 'due' }, { resource: 'review', count: '5', categories: 'javascript' }] as Record<string, string>[]) {
