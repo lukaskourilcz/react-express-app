@@ -387,12 +387,10 @@ export const en = {
   'question.keysSubmit': 'submit',
 
   // Quiz, in progress
-  'quiz.questionOf': 'Question {current} of {total}',
   'quiz.progressAria': 'Quiz progress',
   'quiz.questionCounter': 'Question {current} of {total}',
   'quiz.showHint': 'Show hint',
   'quiz.closeHint': 'Close hint',
-  'quiz.keyboardTip': 'Keys 1–{max} to answer · Enter to continue',
   'quiz.previous': 'Previous',
   'quiz.next': 'Next',
   'quiz.exitQuiz': 'Exit quiz',

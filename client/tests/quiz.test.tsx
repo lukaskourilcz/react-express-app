@@ -80,9 +80,10 @@ function renderQuiz(path = '/quiz') {
   return render(quizTree(path));
 }
 
-const counter = () => screen.getAllByText(/^Question \d+ of \d+$/)[0].textContent;
+/** The counter is the run's h1, "Quiz · Question 2 of 5"; this reads its count. */
+const counter = () => screen.getByRole('heading', { level: 1 }).textContent!.replace(/^Quiz · /, '');
 /** The answer cards of the question on screen (the setup screen has radios too). */
-const answerCards = () => screen.getAllByRole('radio').filter((radio) => radio.closest('fieldset'));
+const answerCards = () => screen.getAllByRole('radio').filter((radio) => radio.closest('.ss-answer-list'));
 const checked = () => answerCards().map((radio) => radio.getAttribute('aria-checked') === 'true');
 /** Waits for a question, then lets its effects run: the shortcuts listen
  * from an effect, and a key pressed before it runs is lost. */
@@ -191,13 +192,66 @@ describe('focus', () => {
 });
 
 describe('touch targets', () => {
-  it('gives the hint and report buttons beside the question 44px', async () => {
+  it('gives the hint, report and exit buttons in the question header 44px', async () => {
     await startQuiz([Q('a', { introduction: 'Think about types.' })]);
-    for (const name of ['Show hint', 'Report this question']) {
+    for (const name of ['Show hint', 'Report this question', 'Exit quiz']) {
       const button = screen.getByRole('button', { name });
       expect(button.style.width).toBe('44px');
       expect(button.style.height).toBe('44px');
+      expect(button.closest('.ss-question-header__tools')).not.toBeNull();
     }
+  });
+});
+
+describe('the question screen (UX audit U2)', () => {
+  it('names the run in one h1 that is also the counter, and shows the difficulty', async () => {
+    await startQuiz([Q('a', { difficulty: 3 }), Q('b')]);
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Quiz · Question 1 of 2');
+    // Said once: no hidden legend repeats the counter.
+    expect(screen.getAllByText(/Question 1 of 2/)).toHaveLength(1);
+    expect(screen.getByText('Difficulty 3')).toBeInTheDocument();
+  });
+
+  it('draws the run in the shared shell: one panel, the shared answer list and one primary on the right', async () => {
+    await startQuiz();
+    const shell = document.querySelector('.ss-question')!;
+    expect(shell.querySelectorAll('.ss-panel')).toHaveLength(1);
+    expect(screen.getByRole('radiogroup')).toHaveAccessibleName('Question a?');
+    expect(answerCards()).toHaveLength(4);
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /^next$/i })).toHaveClass('ss-swim-cta--md');
+    expect(screen.getByRole('button', { name: /^previous$/i }).closest('.ss-question-actions__secondary')).not.toBeNull();
+    // The question block is the same element from question to question, so
+    // the answers under it start at one y.
+    const block = document.querySelector('.ss-question__block');
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(document.querySelector('.ss-question__block')).toBe(block);
+    expect(block).toHaveAttribute('data-stable', 'true');
+  });
+
+  it('says what the keys do, and that Enter submits on the last question once all are answered', async () => {
+    await startQuiz();
+    expect(screen.getByText('Press 1–4 to select · Enter to continue')).toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(screen.getByText('Press 1–4 to select')).toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: '2' });
+    expect(screen.getByText('Press 1–4 to select · Enter to submit')).toBeInTheDocument();
+  });
+
+  it('keeps Submit pressable with questions left, says how many, and goes to the first one open', async () => {
+    await startQuiz([Q('a'), Q('b'), Q('c')]);
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    fireEvent.keyDown(document.body, { key: '1' });
+    const submit = screen.getByRole('button', { name: /submit quiz/i });
+    expect(submit).not.toBeDisabled();
+    expect(submit).toHaveAttribute('aria-disabled', 'true');
+    expect(submit).toHaveAccessibleDescription('Answer 2 more to submit');
+    fireEvent.click(submit);
+    expect(screen.getByText('Question a?')).toBeInTheDocument();
   });
 });
 

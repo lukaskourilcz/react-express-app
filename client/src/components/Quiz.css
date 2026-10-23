@@ -1,14 +1,8 @@
 /* Quiz view styles — only the classes Quiz.tsx actually renders. */
 
-.quiz-question-text {
-  font-size: clamp(0.95rem, 3vw, 1rem);
-  margin-bottom: 1.25rem;
-  font-weight: 500;
-  line-height: 1.6;
-}
-/* Focused when the quiz starts (Quiz.tsx); the ring shows for the keyboard only. */
-.quiz-question-text:focus { outline: none; }
-.quiz-question-text:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+/* A one-line note under the first question (interleaved review, hardest
+   available); it sits in the shared question block. */
+.quiz-question-note { margin: 10px 0 0; font-size: var(--ss-type-compact); color: var(--color-text-secondary); }
 
 .quiz-review-header {
   font-family: var(--font-family-heading);
@@ -56,13 +50,6 @@
 
 @media (max-width: 820px) {
   .quiz-review-grid { grid-template-columns: 1fr; gap: 14px; }
-}
-
-/* The keyboard hint names keys a phone does not have. A coarse pointer is the
-   honest test for "no keyboard"; the width guard catches a phone-sized layout
-   whose pointer still reports fine, such as device emulation without touch. */
-@media (pointer: coarse), (max-width: 599px) {
-  .quiz-keyboard-tip { display: none; }
 }
 
 /* The hint popover: the text, with a close button that is always on screen.
