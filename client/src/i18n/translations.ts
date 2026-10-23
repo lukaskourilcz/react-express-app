@@ -760,7 +760,7 @@ export const en = {
   // explains the topic. The collectible card packs are retired.
   'sharkCards.title': 'Shark Cards',
   'sharkCards.kicker': 'Saved questions',
-  'sharkCards.lead': 'Questions you missed and saved. Read the question, answer it in your head, then turn the card for the answer and why.',
+  'sharkCards.lead': 'Questions you missed and saved: answer each in your head, then turn the card for the answer and why.',
   'sharkCards.save': 'Save as a Shark Card',
   'sharkCards.savedButton': 'Saved as Shark Card',
   'sharkCards.open': 'Open Shark Cards',
@@ -774,8 +774,6 @@ export const en = {
   'sharkCards.emptyQuiz': 'Take a quiz',
   'sharkCards.emptyLearn': 'Go to Learn',
   'sharkCards.position': 'Card {n} of {total}',
-  'sharkCards.frontLabel': 'Question',
-  'sharkCards.backLabel': 'Answer',
   'sharkCards.turn': 'Show the answer',
   'sharkCards.turnBack': 'Hide the answer',
   'sharkCards.answerLabel': 'Correct answer',

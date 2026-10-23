@@ -30,26 +30,26 @@
    the page header, the tabs and the card share one left edge and the deck is
    one width on both routes (UX audit social-account-05). */
 .sc-deck { display: flex; flex-direction: column; gap: 1.25rem; width: 100%; }
-.sc-deck__header { display: flex; flex-direction: column; gap: 0.35rem; }
-.sc-deck__body { display: flex; flex-direction: column; gap: 0.85rem; }
-.sc-deck__position { margin: 0; font-size: var(--ss-type-label); font-weight: 700; letter-spacing: 0.04em; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
-.sc-deck__controls { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.75rem; align-items: center; }
-.sc-deck__controls > :first-child { justify-self: start; }
-.sc-deck__controls > :last-child { justify-self: end; }
-.sc-deck__controls .astryx-button { min-height: 44px; }
-.sc-deck__hint { margin: 0; text-align: center; font-size: var(--ss-type-meta); color: var(--color-text-secondary); }
+/* The card, then the shared QuestionActions row 16px under it (UX audit
+   questions-14): Previous and Next together on the left, Got it on the right;
+   under 560px Got it is the last row at full width (question.css). */
+.sc-deck__body { display: flex; flex-direction: column; gap: 16px; }
+.sc-deck__hint { margin: 0; font-size: var(--ss-type-meta); color: var(--color-text-secondary); }
 
+/* The card hugs its content: no 300px floor, which left 160px empty under a
+   one-line question. The question keeps three lines, so a short question
+   leaves the turn button and the action row at one y from card to card. */
 .sc-card {
   display: flex; flex-direction: column; gap: 1rem;
-  min-height: 300px; padding: 1.25rem 1.25rem 1rem;
+  padding: 1.25rem 1.25rem 1rem;
   background: var(--color-background-surface);
   border-radius: var(--radius-container);
   border-top: 4px solid var(--brand-accent);
 }
 .sc-card.is-turned { border-top-color: var(--ss-success-strong, var(--ss-success)); }
 .sc-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.sc-card__side { font-size: var(--ss-type-label); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-secondary); }
-.sc-card__question { font-weight: 600; line-height: 1.55; overflow-wrap: anywhere; }
+.sc-card__position { flex: none; margin-inline-start: auto; font-size: var(--ss-type-meta); font-weight: 700; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.sc-card__question { min-height: calc(3 * 1.55em); font-weight: 600; line-height: 1.55; overflow-wrap: anywhere; }
 .sc-card__back {
   display: flex; flex-direction: column; gap: 0.35rem;
   padding-top: 1rem; border-top: 1px dashed var(--color-border);
@@ -82,11 +82,8 @@
 
 @keyframes sc-turn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-@media (max-width: 520px) {
-  .sc-card { padding: 1rem; min-height: 260px; }
-  .sc-deck__controls { grid-template-columns: 1fr 1fr; }
-  .sc-deck__controls > :nth-child(2) { grid-column: 1 / -1; grid-row: 1; justify-self: stretch; }
-  .sc-deck__controls > :nth-child(2) .astryx-button, .sc-deck__controls > .astryx-button:nth-child(2) { width: 100%; }
+@media (max-width: 559px) {
+  .sc-card { padding: 1rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
