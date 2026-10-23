@@ -406,6 +406,32 @@ describe('the daily challenge', () => {
   });
 });
 
+describe('the review linked from Today', () => {
+  it('starts once and drops the parameter', async () => {
+    signIn();
+    const asked: string[] = [];
+    server.use(http.get('*/api/quiz/questions', ({ request }) => {
+      asked.push(new URL(request.url).searchParams.get('resource') ?? '');
+      return HttpResponse.json({ sessionId: sessionFor('review'), expiresAt: Date.now() + 3_600_000, questions: [Q('r1')] });
+    }));
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/quiz?mode=review']}>
+          <LanguageProvider>
+            <Routes>
+              <Route path="/quiz" element={<><Quiz /><LocationProbe /></>} />
+            </Routes>
+          </LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Question r1?')).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(asked).toEqual(['review']);
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/quiz$/);
+  });
+});
+
 describe('submitting', () => {
   it('locks the answers once a submit was sent, and a retry sends the same ones', async () => {
     const bodies: { answers: Record<string, number> }[] = [];

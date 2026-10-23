@@ -544,13 +544,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // Today's review card links straight here. The parameter starts the same
   // session the button does, once, and is then cleared so a reload does not
   // silently restart it under the learner.
+  //
+  // The URL changes in a transition, after the start's own render. The start
+  // is read through a ref: it is a new function on every render (the topic
+  // list it reads is), so as a dependency it ran this effect again on the
+  // start's render, which started again, and so on until React gave up with
+  // "Maximum update depth exceeded".
   const [searchParams, setSearchParams] = useSearchParams();
   const reviewRequested = searchParams.get('mode') === 'review';
+  const startReviewRef = useRef(startPersonalizedReview);
+  startReviewRef.current = startPersonalizedReview;
   useEffect(() => {
     if (!reviewRequested || !isAuthenticated) return;
     setSearchParams({}, { replace: true });
-    void startPersonalizedReview();
-  }, [reviewRequested, isAuthenticated, setSearchParams, startPersonalizedReview]);
+    void startReviewRef.current();
+  }, [reviewRequested, isAuthenticated, setSearchParams]);
 
   // The Home tile and the leaderboard's Today tab link to the daily challenge
   // the same way. It starts once the sign-in is known, since a daily fetched
