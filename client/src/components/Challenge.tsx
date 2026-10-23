@@ -308,6 +308,13 @@ export default function Challenge() {
   }, [syncRewards, user?.id]);
   // Focus target when the run ends, so AT users hear the transition.
   const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
+  // Each new question takes the focus. Start unmounts with the intro, and
+  // Next turns into a Submit that is disabled until a pick, so focus fell to
+  // the page and a screen reader heard nothing of the question.
+  const questionRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (phase === 'playing' && current) questionRef.current?.focus({ preventScroll: true });
+  }, [phase, current]);
 
   const livesLeft = MAX_LIVES - livesLost;
 
@@ -977,7 +984,7 @@ export default function Challenge() {
           </HStack>
 
           {/* Scrollable question region — answers below keep their position. */}
-          <div id="challenge-question" style={{ marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+          <div id="challenge-question" ref={questionRef} tabIndex={-1} style={{ marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             {renderQuestion(current.question)}
           </div>
 

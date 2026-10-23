@@ -533,6 +533,19 @@ describe('a grade whose response was lost', () => {
   });
 });
 
+describe('focus', () => {
+  it('goes to each new question, from Start and from Next', async () => {
+    await mount();
+    await start();
+    expect(document.activeElement?.id).toBe('challenge-question');
+    expect(document.activeElement).toHaveTextContent('Batch 1 question 1?');
+    await answer('right');
+    await next();
+    expect(document.activeElement?.id).toBe('challenge-question');
+    expect(document.activeElement).toHaveTextContent('Batch 1 question 2?');
+  });
+});
+
 describe('a double press', () => {
   // Both presses land before React renders the busy button.
   it('grades the pick once, so its point counts once', async () => {
