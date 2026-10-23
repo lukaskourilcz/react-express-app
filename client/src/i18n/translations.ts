@@ -63,6 +63,8 @@ export const en = {
   'nav.home': '{brand} home',
   'nav.menu': 'Open navigation menu',
   'nav.menuTitle': 'Navigation',
+  'nav.groupPractice': 'Practice',
+  'nav.groupYou': 'You',
   'footer.ariaUtility': 'Legal information and site settings',
   'footer.legal': 'Legal and support',
   'figure.inWords': 'This figure in words',

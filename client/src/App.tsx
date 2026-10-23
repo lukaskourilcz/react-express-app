@@ -27,6 +27,8 @@ import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m, AnimatePresence, useReducedMotion } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
+import { useColorMode } from './theme/ColorModeContext';
+import { useSettings } from './lib/settings';
 import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
 import { CloseIcon, CoinsIcon, TrophyIcon } from './components/ui/icons';
@@ -215,6 +217,38 @@ const NAV_ITEMS: {
   { to: '/premium', key: 'nav.premium', isActive: (p) => p === '/premium' || p.startsWith('/premium/') },
   { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop', signedIn: true },
 ];
+
+// The mobile drawer splits the same items as the desktop header does (UX
+// audit shell-public-15): the learning destinations, then the learner's own
+// pages and the purchase ones, each under a small label. 'You' keeps this
+// order; anything not listed here is practice.
+const DRAWER_YOU_ROUTES = ['/roadmap', '/collection', '/leaderboard', '/shop', '/premium'];
+
+/** The appearance and sound toggles, pinned to the bottom of the mobile
+ * drawer: below the nav breakpoint the footer's pair hides, so they live in
+ * one place and are not buried under a long page behind the open drawer. The
+ * same labels as the footer's (BrandFooter.tsx). */
+function DrawerSettings() {
+  const { t } = useLanguage();
+  const { mode, toggle } = useColorMode();
+  const [settings, updateSettings] = useSettings();
+  return (
+    // Pressing a toggle keeps the drawer open: the panel closes on a click.
+    <div className="ss-drawer-settings" role="group" aria-label={t('profile.preferences')} onClick={(event) => event.stopPropagation()}>
+      <button type="button" className="ss-drawer-link" onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
+        {mode === 'light' ? t('footer.darkMode') : t('footer.lightMode')}
+      </button>
+      <button
+        type="button"
+        className="ss-drawer-link"
+        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+        aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+      >
+        {settings.soundEffects ? t('footer.soundOff') : t('footer.soundOn')}
+      </button>
+    </div>
+  );
+}
 
 // Shown only while the first page of a visit loads: a navigation keeps the
 // current page until the next one can render (see the route Suspense below).
@@ -679,20 +713,27 @@ function App() {
                 <BrandLogo height={20} />
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
-              <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {navItems.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    replace={inBox(item.to)}
-                    className="ss-drawer-link"
-                    data-active={item.isActive(navPath)}
-                    aria-current={item.isActive(location.pathname) ? 'page' : undefined}
-                  >
-                    {t(item.key)}
-                  </Link>
-                ))}
-              </div>
+              {([
+                ['practice', navItems.filter((item) => !DRAWER_YOU_ROUTES.includes(item.to))],
+                ['you', DRAWER_YOU_ROUTES.flatMap((to) => navItems.filter((item) => item.to === to))],
+              ] as const).filter(([, items]) => items.length > 0).map(([group, items]) => (
+                <div key={group} className="ss-drawer-group" role="group" aria-labelledby={`ss-drawer-${group}`}>
+                  <p id={`ss-drawer-${group}`} className="ss-drawer-group__label">{t(group === 'practice' ? 'nav.groupPractice' : 'nav.groupYou')}</p>
+                  {items.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      replace={inBox(item.to)}
+                      className="ss-drawer-link"
+                      data-active={item.isActive(navPath)}
+                      aria-current={item.isActive(location.pathname) ? 'page' : undefined}
+                    >
+                      {t(item.key)}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+              <DrawerSettings />
             </m.div>
           </m.div>
         )}
