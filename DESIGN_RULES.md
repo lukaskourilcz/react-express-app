@@ -319,3 +319,7 @@ coming back. The tokens and the map are in
   `.ss-section-title` (1.75rem, 1.5rem under 600px); a section never sets its
   own heading size inline or in its own stylesheet.
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
+- **One signed-out state.** A money screen asks a visitor to sign in with
+  `SignedOutBlock`: one sentence and one "Sign in" button, in place of the
+  content, never a placeholder number or a silently disabled button. A
+  button the visitor cannot use yet reads "Sign in to …" and opens sign-in.
