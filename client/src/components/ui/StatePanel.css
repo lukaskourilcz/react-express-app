@@ -1,6 +1,7 @@
 /* The shared state panel (UX audit social-account-16): sign-in gates, empty
    shelves and callback states. It sits in the 640px task column, centred, as
-   Play's gates do; the column is the shared task width, not a page width. */
+   Play's gates do; the column is the shared task width, not a page width.
+   The inline look (money-05) is at the end. */
 .ss-state-panel {
   display: flex; flex-direction: column; align-items: center; gap: 1rem;
   width: 100%; max-width: var(--ss-width-task); margin: 0 auto; padding: 2rem 1.5rem;
@@ -16,6 +17,12 @@
 .ss-state-panel__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
 .ss-state-panel__actions .astryx-button { --spacing-3: 20px; --text-label-size: 1rem; --font-weight-medium: 600; }
 @media (max-width: 520px) {
-  .ss-state-panel { padding: 1.5rem 1rem; }
-  .ss-state-panel__actions { align-self: stretch; flex-direction: column; }
+  .ss-state-panel:not(.ss-state-panel--inline) { padding: 1.5rem 1rem; }
+  .ss-state-panel:not(.ss-state-panel--inline) > .ss-state-panel__actions { align-self: stretch; flex-direction: column; }
 }
+/* Inline (money-05): a sentence and its action on the surface it replaces
+   content on, on the start edge. Not a card: no border, no background, no
+   padding, and no width of its own. */
+.ss-state-panel--inline { align-items: flex-start; gap: 0.75rem; max-width: none; margin: 0; padding: 0; min-width: 0; background: none; text-align: start; }
+.ss-state-panel--inline > .ss-state-panel__body { max-width: 68ch; }
+.ss-state-panel--inline > .ss-state-panel__actions { justify-content: flex-start; }

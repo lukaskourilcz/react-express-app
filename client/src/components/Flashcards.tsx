@@ -23,7 +23,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
-import { openSignIn } from '../lib/signInDialog';
 import { useT } from '../i18n/LanguageContext';
 import { CATEGORY_LOOKUP, categoryLabelKey } from '../lib/categories';
 import type { CategoryType } from '../types/quiz';
@@ -150,9 +149,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
 
   if (!isAuthenticated) {
     return (
-      <StatePanel level={heading} icon={<BookmarkIcon size={22} />} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')}>
-        <Button variant="primary" label={t('collection.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
-      </StatePanel>
+      <StatePanel level={heading} icon={<BookmarkIcon size={22} />} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')} signIn />
     );
   }
 

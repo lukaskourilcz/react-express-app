@@ -346,7 +346,12 @@ coming back. The tokens and the map are in
 - **One state panel.** A sign-in gate, an empty shelf or a callback state is
   the shared `StatePanel` (`components/ui/StatePanel.tsx`): centred in the
   640px task column, one heading, one body line, the one primary first at
-  44px. Do not build a gate card by hand.
+  44px. Do not build a gate card by hand. The panel stands in for the whole
+  screen, or the whole section under a page header; when only one part of a
+  screen that otherwise draws waits for sign-in, it is `StatePanel inline`
+  (one sentence and its action, no heading, no card). Either way the sign-in
+  action is its `signIn` prop, one "Sign in" that opens the dialog, never a
+  hand-built button.
 - **One panel per subject on the Profile.** Every Profile card is `.ss-panel`
   with 24px padding and a `<Kicker as="h2">`. The learner's names live in one
   'Your name' panel with 'Friends see' and 'Leaderboards show' side by side;
@@ -449,6 +454,7 @@ their props), never drawn again by hand.
   or checkpoint colour may tint the confetti and the result's icon tile,
   never text or a button (JavaScript's yellow is under 3:1 on the panel).
 - **One signed-out state.** A money screen asks a visitor to sign in with
-  `SignedOutBlock`: one sentence and one "Sign in" button, in place of the
-  content, never a placeholder number or a silently disabled button. A
-  button the visitor cannot use yet reads "Sign in to …" and opens sign-in.
+  `StatePanel inline` and `signIn`: one sentence and one "Sign in" button, in
+  place of the content, never a placeholder number or a silently disabled
+  button. A button the visitor cannot use yet reads "Sign in to …" and opens
+  sign-in.

@@ -50,9 +50,10 @@
 @media (max-width: 599px) {
   .ss-checkout-actions { flex-direction: column-reverse; align-items: stretch; }
   .ss-checkout-actions > .astryx-button.ghost:first-child { margin-inline-start: 0; }
-  /* Signed out, the step's primary is the signed-out block's Sign in to
+  /* Signed out, the step's primary is the inline state's Sign in to
      continue: full width too, over the full-width Back to plans. */
-  .ss-checkout-card .ss-signed-out { align-items: stretch; }
+  .ss-checkout-card .ss-state-panel--inline { align-items: stretch; }
+  .ss-checkout-card .ss-state-panel--inline > .ss-state-panel__actions { flex-direction: column; }
 }
 .ss-checkout-form[data-ready="true"] { min-height: 320px; }
 /* Until Stripe mounts into it the host is empty, and its flex slot would add

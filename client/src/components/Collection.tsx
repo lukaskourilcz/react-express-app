@@ -3,7 +3,6 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
-import { openSignIn } from '../lib/signInDialog';
 import { getSupabaseSession } from '../lib/supabaseClient';
 import { flashcardsQuery } from '../lib/queries';
 import { readOnce, useFirstData } from '../lib/routeData';
@@ -30,9 +29,7 @@ function SavedChallenges() {
   if (authLoading && !isAuthenticated) return <LoadingScreen label={t('common.loading')} />;
   // The same gate as the Shark Cards tab: the shared StatePanel under the
   // page header, with one primary (social-account-16).
-  if (!isAuthenticated) return <StatePanel level={2} title={t('collection.signInTitle')} body={t('collection.signInBody')}>
-    <Button variant="primary" label={t('collection.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
-  </StatePanel>;
+  if (!isAuthenticated) return <StatePanel level={2} title={t('collection.signInTitle')} body={t('collection.signInBody')} signIn />;
   if (query.isPending) return <LoadingScreen label={t('common.loading')} />;
   if (query.isError) return <div role="alert"><p>{t('coding.saved.loadFailed')}</p><Button variant="secondary" label={t('coding.retry')} onClick={() => void query.refetch()} /></div>;
   return <section aria-label={t('collection.challenges')}>
