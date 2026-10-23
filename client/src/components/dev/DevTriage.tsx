@@ -17,7 +17,7 @@ import {
   TableCell,
   TableHeaderCell,
 } from '@astryxdesign/core/Table';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
 import { AppToast } from '../ui/AppToast';
@@ -84,6 +84,11 @@ export default function DevTriage() {
       ? friendlyError(triageQuery.error)
       : null;
   const reload = () => void questionsQuery.refetch();
+  // The Question bank tab reads the same cached list: after a delete here it
+  // is out of date, and for a minute that tab still listed the deleted
+  // questions as live.
+  const queryClient = useQueryClient();
+  const markBankChanged = () => void queryClient.invalidateQueries({ queryKey: ['admin', 'questions'] });
 
   // Join the live questions with their triage verdict (by id). Custom questions
   // added after scoring simply have no verdict and are skipped.
@@ -148,7 +153,7 @@ export default function DevTriage() {
   const removeConfirmed = (r: Row) => {
     setRemoved((prev) => new Set(prev).add(r.q.id));
     setQuestionDeleted(r.q.id, true)
-      .then(() => setSnack(`Deleted ${r.q.id}`))
+      .then(() => { setSnack(`Deleted ${r.q.id}`); markBankChanged(); })
       .catch((err) => {
         setRemoved((prev) => {
           const next = new Set(prev);
@@ -190,6 +195,7 @@ export default function DevTriage() {
       setRemoved((prev) => { const next = new Set(prev); kept.forEach((id) => next.delete(id)); return next; });
       setSnack(`${friendlyError(err)} (deleted ${n} before stopping)`);
     } finally {
+      if (n > 0) markBankChanged();
       setBusy(false);
     }
   };

@@ -73,8 +73,7 @@ const question = (id: string): AdminQuestion => ({
 });
 const verdict = (mean: number) => ({ cat: 'react', diff: 2, rel: 2, disc: 2, fit: 2, clar: 2, mean, gate: false, greasons: [], dup: false, dec: 'cut', reasons: [], note: '' });
 
-function renderTab(tab: 'triage' | 'questions') {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+function renderTab(tab: 'triage' | 'questions', client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })) {
   return render(
     <QueryClientProvider client={client}>
       <LanguageProvider>{tab === 'triage' ? <DevTriage /> : <DevQuestions />}</LanguageProvider>
@@ -107,6 +106,34 @@ describe('/dev → Quality triage', () => {
     expect(screen.queryByText('Question t1?')).toBeNull();
     expect(screen.getByText('Question t2?')).toBeInTheDocument();
     expect(screen.getByText('Question t3?')).toBeInTheDocument();
+  });
+});
+
+describe('/dev → Quality triage and the Question bank', () => {
+  it('lets the Question bank tab drop a question deleted in triage', async () => {
+    let bank = ['t1', 't2'];
+    server.use(
+      http.get('*/api/admin/questions', () => HttpResponse.json({ questions: bank.map(question), categories: ['react'], reportCounts: {} })),
+      http.get('*/triage-verdicts.json', () => HttpResponse.json({
+        meta: { total: 2, keep: 0, cut: 2, generatedFrom: 'test', keepRule: 'test' },
+        verdicts: { t1: verdict(1), t2: verdict(2) },
+      })),
+      http.post('*/api/admin/delete', async ({ request }) => {
+        const { id } = (await request.json()) as { id: string };
+        bank = bank.filter((one) => one !== id);
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    // One cache for both tabs, kept fresh for a minute as the app's is.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 60_000 } } });
+    const triage = renderTab('triage', client);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Delete' }))[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete permanently' }));
+    expect(await screen.findByText('Deleted t1')).toBeInTheDocument();
+    triage.unmount();
+    renderTab('questions', client);
+    expect(await screen.findByText('Question t2?')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Question t1?')).toBeNull());
   });
 });
 
