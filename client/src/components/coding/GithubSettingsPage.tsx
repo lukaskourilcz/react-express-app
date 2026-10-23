@@ -10,7 +10,7 @@ import { useClearOnPageRestore } from '../../lib/pageRestore';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { codingKeys, finishGithubConnect, startGithubConnect } from '../../coding/api';
-import { SwimmingFin } from '../SharkFin';
+import { StatePanel } from '../ui/StatePanel';
 
 /** What an error offers next: sending the same code again, starting a new
  * connection on GitHub, or neither. */
@@ -133,23 +133,23 @@ export function GithubSettingsPage() {
       : phase.kind === 'requested' ? t('github.callbackRequestedBody')
         : t('github.callbackWorkingBody');
 
+  // An error with nothing to retry or reconnect, or an installation request,
+  // leaves only the way back, so that is the primary then.
+  const backIsPrimary = phase.kind === 'requested' || (phase.kind === 'error' && phase.next === null);
+
+  // An operational callback, not a public page: every phase is the shared
+  // StatePanel, centred in the task column, with one primary at 44px
+  // (UX audit social-account-21). The body is a polite status, so a phase
+  // that changes in place is read out.
   return (
-    <article className="ss-info-page">
-      <header className="ss-info-page__header">
-        <SwimmingFin size={26} />
-        <span className="ss-info-page__kicker">{t('github.title')}</span>
-        <h1>{heading}</h1>
-        <p role="status" aria-live="polite">{body}</p>
-      </header>
-      <div className="ss-info-actions">
-        {phase.kind === 'signin' && <Button variant="primary" label={t('github.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />}
-        {phase.kind === 'error' && phase.next === 'retry' && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
-        {phase.kind === 'error' && phase.next === 'connect' && (
-          <Button variant="primary" label={opening ? t('github.connecting') : t('github.connectAgain')} isDisabled={opening} onClick={connectAgain} />
-        )}
-        {phase.kind !== 'working' && <Button variant="secondary" label={t('github.backToProfile')} onClick={() => navigate('/profile', { replace: true })} />}
-      </div>
-    </article>
+    <StatePanel level={1} kicker={t('github.title')} title={heading} body={body} live>
+      {phase.kind === 'signin' && <Button variant="primary" label={t('github.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />}
+      {phase.kind === 'error' && phase.next === 'retry' && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
+      {phase.kind === 'error' && phase.next === 'connect' && (
+        <Button variant="primary" label={opening ? t('github.connecting') : t('github.connectAgain')} isDisabled={opening} onClick={connectAgain} />
+      )}
+      {phase.kind !== 'working' && <Button variant={backIsPrimary ? 'primary' : 'secondary'} label={t('github.backToProfile')} onClick={() => navigate('/profile', { replace: true })} />}
+    </StatePanel>
   );
 }
 
