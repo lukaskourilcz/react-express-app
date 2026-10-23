@@ -431,10 +431,6 @@ export function StreakCard({
                   <Text id={currentLabelId} type="supporting" color="primary" weight="semibold" justify="center">
                     {t('profile.currentStreak')}
                   </Text>
-                  {/* Protection lives inside the streak it protects. It used to
-                      be a card of its own below, which read as a separate
-                      feature rather than as part of this number. */}
-                  {!unavailable && <StreakShield state={protection} streak={currentStreak} missed={missed} onChange={setProtection} />}
                 </VStack>
               </Card>
             </div>
@@ -459,6 +455,12 @@ export function StreakCard({
               </Card>
             </div>
           </Grid>
+
+          {/* Protection sits under the pair, full width, so both tiles are
+              sized to their figures (UX audit social-account-17). It used to
+              be a card of its own, then a button inside the current tile,
+              which stretched the longest-streak tile beside it. */}
+          {!unavailable && <StreakShield state={protection} streak={currentStreak} missed={missed} onChange={setProtection} />}
 
           {unavailable ? (
             <Text type="supporting" size="xsm" color="secondary" justify="center">
@@ -523,29 +525,34 @@ function StreakShield({
 
   if (!state || !state.shieldSupported) return null;
 
+  // One labelled group under the two tiles, whichever state it shows.
+  const row = (children: ReactNode) => (
+    <div className="de-streak-protect" role="group" aria-label={t('shop.protectionName')}>{children}</div>
+  );
+
   const left = shieldRemaining(state.shieldUntil, now);
   if (left) {
-    return (
+    return row(
       <span className="de-shield de-shield--on">
         <ShieldIcon size={16} />
         {t('profile.shieldActive', { h: left.hours, m: left.minutes })}
-      </span>
+      </span>,
     );
   }
 
   if (state.remaining <= 0) {
-    return (
+    return row(
       <span className="de-shield de-shield--spent">
         <ShieldIcon size={16} />
         {t('profile.shieldNone')}
-      </span>
+      </span>,
     );
   }
 
   if (streak <= 0) return null;
 
   if (state.remaining - 1 < missed) {
-    return <span className="de-shield__meta">{t('profile.shieldLearnToday')}</span>;
+    return row(<span className="de-shield__meta">{t('profile.shieldLearnToday')}</span>);
   }
 
   const spend = async () => {
@@ -560,15 +567,15 @@ function StreakShield({
     }
   };
 
-  return (
-    <VStack gap={0.5} align="center">
+  return row(
+    <>
       <button type="button" className="de-shield de-shield--action" onClick={spend} disabled={pending}>
         <ShieldIcon size={16} />
         {pending ? t('profile.shieldSpending') : t('profile.shieldAction')}
       </button>
       <span className="de-shield__meta">{t('profile.shieldLeft', { n: state.remaining })}</span>
       {error && <span className="de-shield__meta de-shield__meta--error" role="alert">{error}</span>}
-    </VStack>
+    </>,
   );
 }
 

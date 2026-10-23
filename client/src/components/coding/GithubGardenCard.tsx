@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Kicker } from '../landing/LandingKit';
 import { useQueryClient } from '@tanstack/react-query';
-import { Card } from '@astryxdesign/core/Card';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Text } from '@astryxdesign/core/Text';
@@ -23,14 +22,6 @@ const INSTALLATIONS_URL = 'https://github.com/settings/installations';
 
 type Toast = { message: string; severity: 'success' | 'error' } | null;
 type Action = 'connect' | 'repo' | 'sync' | 'disconnect';
-
-function Raised({ children }: { children: ReactNode }) {
-  return (
-    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-      {children}
-    </div>
-  );
-}
 
 /**
  * The GitHub garden panel on the devShark profile: connect the app, pick the
@@ -277,15 +268,16 @@ export function GithubGardenCard() {
 
   return (
     <>
-      <Raised>
-        <Card variant="default" padding={3} width="100%">
-          <VStack gap={1.5}>
-            <Kicker as="h2" id="github-garden" elementRef={anchorRef} tabIndex={-1}>{t('github.title')}</Kicker>
-            <Text weight="semibold">{t('github.tagline')}</Text>
-            {body}
-          </VStack>
-        </Card>
-      </Raised>
+      {/* The stock of every Profile card (UX audit social-account-17):
+          .ss-panel, 24px padding and a Kicker h2, so its kicker lines up with
+          the cards above and below it. */}
+      <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
+        <VStack gap={1.5}>
+          <Kicker as="h2" id="github-garden" elementRef={anchorRef} tabIndex={-1}>{t('github.title')}</Kicker>
+          <Text weight="semibold">{t('github.tagline')}</Text>
+          {body}
+        </VStack>
+      </div>
       <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <AppToast
         open={!!toast}

@@ -117,3 +117,24 @@ describe('the Profile columns (social-account-03)', () => {
     expect(within(account).queryByRole('heading', { name: 'Study advisor' })).toBeNull();
   });
 });
+
+describe('the Profile card stock (social-account-17)', () => {
+  it('builds every overview card as a plain .ss-panel with 24px padding and a Kicker h2', async () => {
+    const { container } = await mountProfile();
+    await screen.findByRole('heading', { name: 'GitHub garden' });
+    await screen.findByRole('heading', { name: 'Your name' });
+    const panel = container.querySelector('#profile-panel-overview') as HTMLElement;
+    // No card in the overview wraps an Astryx Card in .ss-raised any more.
+    expect(panel.querySelector('.ss-raised')).toBeNull();
+    const cards = Array.from(panel.querySelectorAll('.ss-panel')).filter(
+      (card) => !card.parentElement!.closest('.ss-panel'),
+    ) as HTMLElement[];
+    const titles = cards.map((card) => card.querySelector('h2.ss-kicker')?.textContent);
+    expect(titles).toEqual(['Streaks', 'Career level', 'Track and sections', 'Study advisor', 'GitHub garden', 'Your name', 'Account']);
+    for (const card of cards) {
+      // Plain surface: no card overrides the panel's background.
+      expect(card.style.background).toBe('');
+      expect(card.style.padding === '24px' || card.classList.contains('sn-card')).toBe(true);
+    }
+  });
+});
