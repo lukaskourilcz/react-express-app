@@ -269,6 +269,10 @@ export default function LearningPathsCard() {
                 <span className="lp-activity__kind">
                   {t('paths.kicker.role')}
                 </span>
+                {/* The status is a second line under the role name, so the
+                    row never wraps it onto a line of its own (UX audit
+                    social-account-18). */}
+                <span className="de-role-text">
                 <span className="lp-activity__title">{manifest.title}</span>
                 <span className="lp-activity__minutes">
                   {/* A short state that fits its slot: closed, resume a paused
@@ -282,6 +286,7 @@ export default function LearningPathsCard() {
                   {isOpen(entry.availability) && barred(manifest.id) && (
                     <> <span className="ss-premium-label">{t('premium.badge')}</span></>
                   )}
+                </span>
                 </span>
               </Link>
               {/* Only ever visible once the server says the path is finished,

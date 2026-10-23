@@ -623,11 +623,15 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
         <SectionLabel>{t('profile.career')}</SectionLabel>
         {syncWarning && <Banner status="warning" title={t('profile.syncUnavailable')} />}
 
-        <HStack gap={2} align="center" wrap="wrap">
+        {/* One row at every width (UX audit social-account-18): the rank
+            title takes what is left and wraps to two lines, the XP figure keeps
+            its width beside it. Below 480px the decorative rank tile steps out
+            so the title keeps its room. */}
+        <div className="de-career-head">
           {/* The learner's earned rank icon (data, not chrome) in a quiet tile. */}
           <div
             aria-hidden
-            className="ss-tile"
+            className="ss-tile de-career-head__tile"
             style={{
               width: 52,
               height: 52,
@@ -638,20 +642,17 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
           >
             <TrophyIcon size={24} />
           </div>
-          {/* The rank title takes the room it needs (at least 10rem); the XP
-              figure keeps its width and wraps under it on a narrow card, so a
-              long title never pushes it out of the card. */}
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: '1 1 10rem' }}>
+          <div className="de-career-head__title">
             <Heading level={3} maxLines={2}>{title}</Heading>
             <Text type="supporting" size="xsm" color="secondary">
               {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
             </Text>
           </div>
-          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <span className="de-career-head__xp">
             <Text size="3xl" weight="bold" color="accent">{nf(totalXp)}</Text>
             <Text type="supporting" color="secondary">{t('profile.xpUnit')}</Text>
           </span>
-        </HStack>
+        </div>
 
         <VStack gap={1}>
           <ProgressBar

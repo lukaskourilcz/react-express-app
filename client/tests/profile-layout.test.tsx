@@ -138,3 +138,22 @@ describe('the Profile card stock (social-account-17)', () => {
     }
   });
 });
+
+describe('the Profile on a phone (social-account-18)', () => {
+  const css = () => readFileSync(new URL('../src/components/DeepEndScreens.css', import.meta.url), 'utf8');
+
+  it('keeps the XP figure on the career title row', async () => {
+    const { container } = await mountProfile();
+    const head = container.querySelector('.de-career-head') as HTMLElement;
+    expect(within(head).getByRole('heading', { level: 3 })).toBeInTheDocument();
+    expect(head.querySelector('.de-career-head__xp')).toHaveTextContent(/XP/);
+    expect(css()).toContain('.de-career-head{display:flex;flex-wrap:nowrap;');
+    expect(css()).toContain('.de-career-head__xp{display:inline-flex;align-items:baseline;gap:6px;flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}');
+  });
+
+  it('stacks a role row status under the role name', () => {
+    expect(css()).toContain('.de-role-text{display:flex;flex-direction:column;');
+    const card = readFileSync(new URL('../src/components/paths/LearningPathsCard.tsx', import.meta.url), 'utf8');
+    expect(card).toMatch(/<span className="de-role-text">\s*(\{\/\*[\s\S]*?\*\/\}\s*)?<span className="lp-activity__title">[\s\S]*?<span className="lp-activity__minutes">/);
+  });
+});

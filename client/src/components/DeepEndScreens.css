@@ -86,6 +86,19 @@
 /* Under the two streak tiles, full width (social-account-17): the shield's
    state or its action, then its note. */
 .de-streak-protect{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:100%}
+/* The Career card's head (social-account-18): tile, rank title and XP on one
+   row at every width; the XP keeps its width in tabular figures and the title
+   wraps. Below 480px the decorative tile steps out. */
+.de-career-head{display:flex;flex-wrap:nowrap;align-items:center;gap:16px;min-width:0}
+.de-career-head__tile{flex:none}
+.de-career-head__title{display:flex;flex-direction:column;flex:1 1 0;min-width:0}
+.de-career-head__xp{display:inline-flex;align-items:baseline;gap:6px;flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+@media (max-width:480px){.de-career-head{gap:12px}.de-career-head>.de-career-head__tile{display:none}}
+/* The Track card's role row (social-account-18): the role name, then its
+   status on the line under it. Profile only: the card lives on no other
+   page. */
+.de-role-text{display:flex;flex-direction:column;gap:2px;flex:1 1 0;min-width:0}
+.de-role-text>.lp-activity__title,.de-role-text>.lp-activity__minutes{flex:none}
 /* Profile tabs — the overview and the friends list. Underline rather than a
    pill row: two tabs do not need a container, and the selected one says so with
    weight and a rule, not with colour alone. */
