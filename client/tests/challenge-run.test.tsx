@@ -569,6 +569,32 @@ describe('focus', () => {
     expect(document.activeElement?.id).toBe('challenge-question');
     expect(document.activeElement).toHaveTextContent('Batch 1 question 2?');
   });
+
+  // Supabase hands a new user object on a token refresh or a return to the
+  // tab. The game-over screen took the focus back from wherever it was then.
+  it('stays where the learner put it on the game-over screen when the session refreshes', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const tree = () => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/challenge']}>
+          <LanguageProvider><Challenge /></LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const frame = () => act(async () => { await new Promise((resolve) => requestAnimationFrame(() => resolve(null))); });
+    api.auth = { ...SIGNED_IN, user: { id: 'learner-1' } };
+    let view!: ReturnType<typeof render>;
+    await act(async () => { view = render(tree()); });
+    await start();
+    await strikeOutNow();
+    await frame();
+    const playAgain = screen.getByRole('button', { name: 'Play again' });
+    act(() => playAgain.focus());
+    api.auth = { ...SIGNED_IN, user: { id: 'learner-1' } };
+    await act(async () => { view.rerender(tree()); });
+    await frame();
+    expect(document.activeElement).toBe(playAgain);
+  });
 });
 
 describe('the verdict', () => {

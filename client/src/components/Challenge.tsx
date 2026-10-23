@@ -667,11 +667,16 @@ export default function Challenge() {
       }
       if (!user) awardQuestXp(challengeRunXp(score), 'quiz');
     }
-    // Announce the run's end to AT by moving focus to the game-over heading.
-    if (phase === 'gameover') {
-      requestAnimationFrame(() => gameOverHeadingRef.current?.focus());
-    }
   }, [phase, score, user, syncRewards]);
+  // Announce the run's end to AT by moving focus to the game-over heading,
+  // once per game over. In the effect above it ran again on every new user
+  // object (a token refresh, a return to the tab) and took the focus back
+  // from Play again or the name field.
+  useEffect(() => {
+    if (phase !== 'gameover') return;
+    const frame = requestAnimationFrame(() => gameOverHeadingRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [phase]);
 
   /* ─── keyboard during play ──────────────────────────────────── */
 
