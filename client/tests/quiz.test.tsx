@@ -33,6 +33,7 @@ import Quiz from '../src/components/Quiz';
 import PendingQuizResults from '../src/components/PendingQuizResults';
 import Leaderboard from '../src/components/Leaderboard';
 import { onXpToast } from '../src/lib/xp';
+import { clearAccountData } from '../src/lib/accountData';
 
 // jsdom has no modal dialogs; leaving a quiz confirms in one.
 const dialogProto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
@@ -533,6 +534,28 @@ describe('saving a result to the account', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
     // The second failure is kept beside the first, not over it.
     await waitFor(() => expect(Object.values(pendingStore()).map((pending) => pending.receipt).sort()).toEqual(['receipt-1', 'receipt-2']));
+  });
+
+  it('keeps nothing on the device when the account signed out while the grade was on its way', async () => {
+    signIn();
+    let answer: (() => void) | undefined;
+    let recorded = 0;
+    server.use(
+      http.post('*/api/quiz/submit', () => new Promise<Response>((resolve) => {
+        answer = () => resolve(HttpResponse.json({ ...graded([Q('a')]), resultReceipt: 'left-receipt' }));
+      })),
+      http.post('*/api/user/stats', () => { recorded++; return HttpResponse.json({ data: null, xp: null, applied: true }); }),
+    );
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    await waitFor(() => expect(answer).toBeDefined());
+    clearAccountData();
+    await act(async () => { answer!(); });
+    await screen.findByText('1 / 1');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(localStorage.getItem(PENDING_KEY)).toBeNull();
+    expect(recorded).toBe(0);
   });
 
   it('drops a result the server refuses and says it could not be saved', async () => {

@@ -16,6 +16,7 @@ import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { AppToast } from './ui/AppToast';
 import { CloseIcon } from './ui/icons';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { visuallyHidden } from '../theme/MuiTheme';
 import {
@@ -584,6 +585,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     if (submittingRef.current) return;
     submittingRef.current = true;
     const screen = screenRef.current;
+    // The account the quiz was submitted under. Signed out elsewhere while
+    // the grade was on its way, the receipt was queued after the account's
+    // data was cleared and left on the device for the next person.
+    const epoch = accountEpoch();
     setSubmitting(true);
     setAnswersLocked(true);
     setError(null);
@@ -615,11 +620,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         correct: data.correctAnswers,
         total: data.totalQuestions,
       });
-      if (data.percentage === 100) recordPerfectQuiz();
 
       // Every quiz counts. There is no unranked kind any more, so the only
       // question left is whether there is an account to record it against.
-      if (isAuthenticated && user?.id) {
+      // Signed out since the submit, nothing of the account is kept here.
+      const sameAccount = accountEpoch() === epoch;
+      if (sameAccount && data.percentage === 100) recordPerfectQuiz();
+      if (sameAccount && isAuthenticated && user?.id) {
         if (!data.resultReceipt) {
           // Nothing to record. A daily fetched signed out is practice; with
           // every question retired there was nothing to grade, and the
@@ -658,7 +665,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             }
           }
         }
-      } else if (data.questXp > 0) {
+      } else if (sameAccount && data.questXp > 0) {
         // Anonymous progress remains local. Signing in replaces it with the
         // account's verified balance rather than uploading a client total.
         awardQuestXp(data.questXp, 'quiz');
