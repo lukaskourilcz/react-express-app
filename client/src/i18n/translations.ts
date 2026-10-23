@@ -74,7 +74,6 @@ export const en = {
   'figure.next': 'Next',
   'figure.reset': 'Reset',
   'figure.step': 'Step {current} of {total}',
-  'footer.curation': 'How we curate',
   'footer.privacy': 'Privacy',
   'footer.terms': 'Terms',
   'title.home': 'devShark: quizzes and learning paths',
@@ -96,7 +95,6 @@ export const en = {
   'title.classroom': 'Classroom · devShark',
   'title.notFound': 'Page not found · devShark',
   'title.dev': 'Control room · devShark',
-  'title.curation': 'How we curate · devShark',
   // A learning path's pages; {name} is the path's name.
   'title.path': '{name} · devShark',
 
@@ -116,14 +114,11 @@ export const en = {
   'home.fde.loading': 'Loading the path outline…',
   'home.fde.unavailable': 'The path outline could not load here. Try opening it in Learn.',
   'home.fde.cta': 'Explore the FDE path',
-  'home.ctaSignIn': 'Sign in to start',
   'home.ctaLearn': 'Go to learning path',
   // The path picker's title and Current mark live in translations.picker.ts.
 
   // Editorial landing ("Deep End v2")
-  'home.freeForever': 'Free to start',
   'home.chooseTopic': 'Choose a topic',
-  'home.signInGoogle': 'Sign in with Google',
   'home.statTracks': 'topic tracks',
   'home.statQuestions': 'questions',
   'home.statCodingChallenges': 'coding challenges',
@@ -142,8 +137,6 @@ export const en = {
   'home.pathRegion': 'Learn path for {name}',
   'home.checkpoint': 'Checkpoint',
   'home.startLearning': 'Start learning {name}',
-  'home.startLevel1': 'Start {name} — Level 1',
-  'home.roadmapNote': 'Progress saves to your account.',
   'home.moreKicker': 'Also in devShark',
   'home.stripCareerTitle': 'Career roadmap',
   'home.stripCareerText': 'The skills each level expects, and where you stand.',
