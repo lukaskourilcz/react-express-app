@@ -1793,6 +1793,7 @@ export const en = {
   'coding.types.tests': 'Type checks',
   'coding.console.empty': 'Nothing logged.',
   'coding.preview.starting': 'Starting the sandbox…',
+  'coding.preview.idle': 'Run to see the component.',
   'coding.preview.error': 'The preview could not render: {message}',
   'coding.preview.reload': 'Restart sandbox',
   'coding.preview.timeout': 'The sandbox did not answer in time.',

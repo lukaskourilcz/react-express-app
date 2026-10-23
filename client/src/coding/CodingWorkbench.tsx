@@ -183,7 +183,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   // The last Run or Submit kept the code on this device only.
   const [draftTooLarge, setDraftTooLarge] = useState(false);
-  const [tab, setTab] = useState<Tab>(isReact ? 'preview' : 'results');
+  // Every track opens on the checks the learner has to pass, React included
+  // (UX audit coding-04); the preview takes over after the first Run that
+  // renders something.
+  const [tab, setTab] = useState<Tab>('results');
+  const previewShown = useRef(false);
   const [hintsTaken, setHintsTaken] = useState(0);
   const [confirming, setConfirming] = useState<'reset' | 'reveal' | null>(null);
   const [solution, setSolution] = useState<string | null>(null);
@@ -327,7 +331,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         const outcome = await harness.start(files(), { tests: Boolean(task.suite), preview: true });
         restoreFocus();
         if (outcome.status !== 'done' || outcome.failed > 0) setFailedRun(true);
-        setTab(task.suite ? 'results' : 'preview');
+        const rendered = outcome.status === 'done' && !outcome.previewError;
+        const firstRender = rendered && !previewShown.current;
+        if (rendered) previewShown.current = true;
+        setTab(firstRender || !task.suite ? 'preview' : 'results');
       } else {
         // Leaving the task stops the run (the unmount below aborts it), so a
         // loop or a first compile does not keep a worker busy for nothing.
@@ -706,10 +713,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
    * stopped on the types, or the code ran out of time. */
   const runNote = (outcome: RunOutcome): string => outcome.runnerUnavailable ? t('coding.results.runnerUnavailable')
     : outcome.codeError === TYPE_CHECK_STOPPED_MESSAGE ? t('coding.results.typeCheckStopped') : t('coding.results.timeout');
+  // One order on every track (UX audit coding-04): Results, Console, then
+  // the track's own tab (Types or Preview), then Resources, so the shared tabs
+  // keep their place from one track to the next.
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
-    ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
+    ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
     // Reading the documentation is not asking for help: this tab is open from
     // the moment the task loads, costs no hint rung, and needs no failed run.
@@ -970,12 +980,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const logs = isReact ? (reactRun?.logs.map((entry) => `${entry.level === 'log' ? '' : `[${entry.level}] `}${entry.text}`) ?? []) : (run?.logs ?? []);
   const renderConsole = (): ReactNode => (logs.length === 0 ? <p className="cd-console__empty">{t('coding.console.empty')}</p> : <pre className="cd-console">{logs.join('\n')}</pre>);
 
+  // Before the first run there is nothing to show, so the preview says so in
+  // one line and its frame takes no room (coding-04). The frame stays mounted
+  // all the same: the sandbox loads while the learner reads, and a run needs it.
+  const previewIdle = !reactRun && !busy;
   const renderPreview = (): ReactNode => (
     <>
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
       {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <Button variant="ghost" size="sm" onClick={harness.reload} label={t('coding.preview.reload')} /></p>}
-      {!harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
-      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className="cd-frame" tabIndex={tab === 'preview' ? undefined : -1} />
+      {previewIdle ? <p className="cd-console__empty">{t('coding.preview.idle')}</p>
+        : !harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
+      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className={previewIdle ? 'cd-frame cd-frame--idle' : 'cd-frame'} aria-hidden={previewIdle || undefined} tabIndex={tab === 'preview' && !previewIdle ? undefined : -1} />
     </>
   );
 

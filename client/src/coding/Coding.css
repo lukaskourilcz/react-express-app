@@ -485,6 +485,9 @@
 .cd-console__empty { color: var(--color-text-secondary); font-size: 0.9rem; margin: 0; }
 
 .cd-frame { width: 100%; min-height: 320px; border: 1px solid var(--ss-card-line); border-radius: var(--radius-inner); background: var(--color-background-body); }
+/* Nothing rendered yet: the frame is there for the sandbox to load, and takes
+   no room until a run draws into it. */
+.cd-frame--idle { min-height: 0; height: 0; border: 0; }
 
 /* hints */
 .cd-hints { display: flex; flex-direction: column; gap: 8px; }
