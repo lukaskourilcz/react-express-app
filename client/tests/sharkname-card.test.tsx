@@ -313,6 +313,14 @@ describe('what friends see', () => {
     expect(screen.getByText('Your account has no photo, so friends see your initials.')).toBeInTheDocument();
   });
 
+  it('gives the photo switch the same 44px hit area as the leaderboard column beside it', () => {
+    const square = /top: -10px !important; left: -2px !important; width: 44px !important; height: 44px !important;/;
+    const rule = (css: string, selector: string) => css.split('\n').find((line) => line.startsWith(selector)) ?? '';
+    expect(rule(readSheet(), ".sn-see input[role='switch']")).toMatch(square);
+    const board = readFileSync(new URL('../src/components/LeaderboardVisibilitySwitch.css', import.meta.url), 'utf8');
+    expect(rule(board, ".lb-photo input[role='switch']")).toMatch(square);
+  });
+
   it('puts a switch back and says so when the save fails', async () => {
     const { identityPuts } = serve({ identityFails: true });
     renderCard();

@@ -80,6 +80,10 @@
   .sn-columns { grid-template-columns: minmax(0, 1fr); }
 }
 .sn-see { gap: 14px; }
+/* Astryx draws a 40×24 switch whose invisible checkbox is the hit area; it
+   grows to 44×44 around the track, as on the 'Leaderboards show' column
+   beside it (.lb-photo), so both photo switches are the same target. */
+.sn-see input[role='switch'] { top: -10px !important; left: -2px !important; width: 44px !important; height: 44px !important; }
 .sn-column__title { margin: 0; font-weight: 650; }
 
 .sn-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
