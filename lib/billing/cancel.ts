@@ -84,8 +84,9 @@ async function cancelAtPeriodEnd(deps: BillingDeps, sub: Stripe.Subscription, em
  * (finding integrity-2). Milliseconds, or null before any payment. */
 async function firstPaymentAt(deps: BillingDeps, customerIds: readonly string[]): Promise<number | null> {
   let first: number | null = null;
-  for (const customer of new Set(customerIds)) {
-    const invoices = await deps.stripe.invoices.list({ customer, status: 'paid', limit: 100 });
+  const lists = await Promise.all([...new Set(customerIds)].map((customer) =>
+    deps.stripe.invoices.list({ customer, status: 'paid', limit: 100 })));
+  for (const invoices of lists) {
     for (const invoice of invoices.data) {
       const paidAt = invoice.status_transitions?.paid_at;
       if (typeof paidAt === 'number' && (first === null || paidAt < first)) first = paidAt;
@@ -182,15 +183,15 @@ export async function cancelByEmail(
 ): Promise<CancelEffect[]> {
   const addresses = [...new Set([email, email.toLowerCase()])];
   const customers = new Map<string, Stripe.Customer>();
-  for (const address of addresses) {
-    const found = await deps.stripe.customers.list({ email: address, limit: 10 });
-    for (const customer of found.data) customers.set(customer.id, customer);
-  }
+  // The reads run together; the changes below stay one after another.
+  const found = await Promise.all(addresses.map((address) => deps.stripe.customers.list({ email: address, limit: 10 })));
+  for (const list of found) for (const customer of list.data) customers.set(customer.id, customer);
   const effects: CancelEffect[] = [];
   const all = [...customers.values()];
-  for (const customer of all) {
-    const subs = await deps.stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 20 });
-    for (const sub of subs.data) {
+  const subsOf = await Promise.all(all.map((customer) =>
+    deps.stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 20 })));
+  for (const [index, customer] of all.entries()) {
+    for (const sub of subsOf[index].data) {
       if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status) || !isOurs(sub, config)) continue;
       effects.push(
         action === 'withdraw'
