@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
@@ -83,6 +83,24 @@ async function mount(path = '/play/ABC123', multiplayerOn = true) {
       </QueryClientProvider>,
     );
   });
+}
+
+/** mount(), with a way to draw the tree again after the account changed. */
+async function mountWithRerender() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
+  client.setQueryData(GAME_CONFIG_KEY, DEFAULT_CONFIG);
+  const tree = () => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/play/ABC123']}>
+        <LanguageProvider>
+          <Routes><Route path="/play/:code" element={<PlayMatch />} /></Routes>
+        </LanguageProvider>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(tree()); });
+  return { rerender: () => view.rerender(tree()) };
 }
 
 const settle = () => act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
@@ -181,6 +199,54 @@ describe('recovery', () => {
     await screen.findByText('Next one?');
     await settle();
     expect(api.joinMatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the previous room behind when the address moves straight to another room', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValueOnce(match).mockReturnValue(new Promise(() => undefined));
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    let go: (path: string) => void = () => undefined;
+    function Navigator() {
+      const navigate = useNavigate();
+      go = navigate;
+      return null;
+    }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
+    client.setQueryData(GAME_CONFIG_KEY, DEFAULT_CONFIG);
+    await act(async () => {
+      render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/play/ABC123']}>
+            <LanguageProvider>
+              <Navigator />
+              <Routes><Route path="/play/:code" element={<PlayMatch />} /></Routes>
+            </LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    });
+    await screen.findByText('Pick one?');
+    await act(async () => { go('/play/XYZ789'); });
+    await settle();
+    expect(api.joinMatch).toHaveBeenLastCalledWith(expect.objectContaining({ code: 'XYZ789' }));
+    // The new room is still joining: nothing of ABC123 is left to answer.
+    expect(screen.queryByText('Pick one?')).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'beta' })).toBeNull();
+  });
+
+  it('drops the previous account\'s pick and room when another account signs in mid-room', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValueOnce(match).mockReturnValue(new Promise(() => undefined));
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.submitMatchAnswer.mockResolvedValue({ ok: true, is_correct: true, advanced: false });
+    const { rerender } = await mountWithRerender();
+    fireEvent.click(await screen.findByRole('radio', { name: 'beta' }));
+    await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1));
+    currentUser = { id: 'player-2', user_metadata: {} };
+    await act(async () => { rerender(); });
+    await settle();
+    expect(api.joinMatch).toHaveBeenLastCalledWith(expect.objectContaining({ user_id: 'player-2' }));
+    expect(screen.queryByText('Pick one?')).toBeNull();
   });
 
   it('shows the results of a room that finished instead of an error', async () => {

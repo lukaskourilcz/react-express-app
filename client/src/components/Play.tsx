@@ -448,7 +448,18 @@ export function PlayLanding() {
   );
 }
 
+/** One room per code and account. Going from one /play/:code straight to
+ * another keeps the route element, and an account change keeps the screen,
+ * so without the key the previous room's question, pick and scoreboard stayed
+ * on screen (and answerable) until the new join landed. Keyed by the
+ * account's id, not the user object, which every session refresh replaces. */
 export function PlayMatch() {
+  const { code } = useParams<{ code: string }>();
+  const { user } = useAuth();
+  return <PlayRoom key={`${(code || '').toUpperCase()}:${user?.id ?? ''}`} />;
+}
+
+function PlayRoom() {
   const { code: codeParam } = useParams<{ code: string }>();
   const code = (codeParam || '').toUpperCase();
   const navigate = useNavigate();
