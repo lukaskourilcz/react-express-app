@@ -124,10 +124,11 @@ async function withdraw(
   sub: Stripe.Subscription,
   email: string | null,
   customers: readonly Stripe.Customer[],
+  firstPaidOf: (customerIds: readonly string[]) => Promise<number | null>,
 ): Promise<CancelEffect> {
   const now = deps.now?.() ?? Date.now();
   const customerIds = [...customers.map((customer) => customer.id), idOf(sub.customer)].filter((id): id is string => Boolean(id));
-  const firstPaid = await firstPaymentAt(deps, customerIds);
+  const firstPaid = await firstPaidOf(customerIds);
   if (firstPaid !== null && now - firstPaid > WITHDRAWAL_DAYS * 86_400_000) {
     // The withdrawal period is over: the request still ends the subscription.
     return cancelAtPeriodEnd(deps, sub, email);
@@ -190,12 +191,24 @@ export async function cancelByEmail(
   const effects: CancelEffect[] = [];
   const all = [...customers.values()];
   const subsOf = await Promise.all(all.map((customer) => allSubscriptionsOf(deps, customer.id)));
+  // Every subscription here belongs to one of these customers, so the first
+  // payment is the same answer for each: read the invoices once.
+  const firstPaid = new Map<string, Promise<number | null>>();
+  const firstPaidOf = (customerIds: readonly string[]) => {
+    const key = [...new Set(customerIds)].sort().join(',');
+    let found = firstPaid.get(key);
+    if (!found) {
+      found = firstPaymentAt(deps, customerIds);
+      firstPaid.set(key, found);
+    }
+    return found;
+  };
   for (const [index, customer] of all.entries()) {
     for (const sub of subsOf[index]) {
       if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status) || !isOurs(sub, config)) continue;
       effects.push(
         action === 'withdraw'
-          ? await withdraw(deps, sub, customer.email ?? null, all)
+          ? await withdraw(deps, sub, customer.email ?? null, all, firstPaidOf)
           : await cancelAtPeriodEnd(deps, sub, customer.email ?? null),
       );
     }
