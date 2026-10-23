@@ -90,6 +90,21 @@ describe('GitHub garden card', () => {
     expect(sent).toEqual(['github-sync']);
   });
 
+  it('keeps an answer that lands after a sign-out out of the next account\'s screen', async () => {
+    answer(() => HttpResponse.json(PENDING));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    posts(async () => { await held; return HttpResponse.json({ ...ACTIVE, queued: 0 }); });
+    const { client } = mount();
+    fireEvent.click(await screen.findByRole('radio', { name: 'garden-owner/garden' }));
+    fireEvent.click(screen.getByRole('button', { name: en['github.useRepo'] }));
+    // The learner signs out while the choice is on its way.
+    act(() => { clearAccountData(); client.setQueryData(codingKeys.github(), NOT_CONNECTED); });
+    await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(client.getQueryData(codingKeys.github())).toEqual(NOT_CONNECTED);
+    expect(screen.queryByText(en['github.repoSaved'].replace('{repo}', 'garden-owner/garden'))).not.toBeInTheDocument();
+  });
+
   it('still says when the connection could not be read', async () => {
     answer(() => HttpResponse.json({ error: { code: 'internal_error', message: 'Could not handle the GitHub request' } }, { status: 500 }));
     mount();

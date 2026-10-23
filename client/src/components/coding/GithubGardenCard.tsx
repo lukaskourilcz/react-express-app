@@ -10,6 +10,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import type { GithubConnectionResponse } from '../../../../shared/coding-api';
 import { useAuth } from '../../lib/auth';
 import { friendlyError } from '../../lib/api';
+import { accountEpoch } from '../../lib/accountData';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { codingKeys, chooseGithubRepo, disconnectGithub, startGithubConnect, syncGithub, useGithubConnection } from '../../coding/api';
 import { RadioCard, RadioCardGroup } from '../ui/RadioCards';
@@ -72,24 +73,32 @@ export function GithubGardenCard() {
 
   const setConnection = (next: GithubConnectionResponse) => queryClient.setQueryData(codingKeys.github(), next);
 
+  // An answer that lands after the learner signed out (or in as someone
+  // else) belongs to the account that left: it neither fills the new
+  // account's cache nor announces anything (lib/accountData.ts).
   const connect = async () => {
     if (!begin('connect')) return;
+    const epoch = accountEpoch();
     try {
       const { url } = await startGithubConnect();
+      if (accountEpoch() !== epoch) return end();
       window.location.assign(url);
     } catch (error) {
-      setToast({ message: friendlyError(error), severity: 'error' });
+      if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
       end();
     }
   };
 
   const chooseRepo = async () => {
     if (!repoChoice || !begin('repo')) return;
+    const epoch = accountEpoch();
     try {
-      setConnection(await chooseGithubRepo(repoChoice));
+      const next = await chooseGithubRepo(repoChoice);
+      if (accountEpoch() !== epoch) return;
+      setConnection(next);
       setToast({ message: t('github.repoSaved', { repo: repoChoice }), severity: 'success' });
     } catch (error) {
-      setToast({ message: friendlyError(error), severity: 'error' });
+      if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
     } finally {
       end();
     }
@@ -97,8 +106,10 @@ export function GithubGardenCard() {
 
   const sync = async () => {
     if (!begin('sync')) return;
+    const epoch = accountEpoch();
     try {
       const result = await syncGithub();
+      if (accountEpoch() !== epoch) return;
       await queryClient.invalidateQueries({ queryKey: codingKeys.github() });
       setToast({
         message: result.committed > 0
@@ -109,7 +120,7 @@ export function GithubGardenCard() {
         severity: result.failed > 0 && result.committed === 0 ? 'error' : 'success',
       });
     } catch (error) {
-      setToast({ message: friendlyError(error), severity: 'error' });
+      if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
     } finally {
       end();
     }
@@ -123,12 +134,14 @@ export function GithubGardenCard() {
       destructive: true,
       onConfirm: async () => {
         if (!begin('disconnect')) return;
+        const epoch = accountEpoch();
         try {
           await disconnectGithub();
+          if (accountEpoch() !== epoch) return;
           await queryClient.invalidateQueries({ queryKey: codingKeys.github() });
           setToast({ message: t('github.disconnected'), severity: 'success' });
         } catch (error) {
-          setToast({ message: friendlyError(error), severity: 'error' });
+          if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
         } finally {
           end();
         }
