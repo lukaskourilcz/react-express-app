@@ -35,16 +35,18 @@ function mount(onDraft = vi.fn()) {
 it('disables idle/empty formatting and enables it only for a real formatting change', async () => {
   mount();
   expect(screen.getByRole('button', {name:'Hint'})).toBeInTheDocument();
+  // Format and Reset are the editor toolbar's icon buttons (coding-02): off,
+  // they stay focusable for their tooltip and say so with aria-disabled.
   const format = screen.getByRole('button', { name: 'Format' });
-  expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled();
-  expect(format).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Reset' })).toHaveAttribute('aria-disabled', 'true');
+  expect(format).toHaveAttribute('aria-disabled', 'true');
   fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one=()=>2' } });
-  await waitFor(() => expect(format).toBeEnabled(), { timeout: 5000 });
+  await waitFor(() => expect(format).not.toHaveAttribute('aria-disabled'), { timeout: 5000 });
   fireEvent.click(format);
   await waitFor(() => expect(screen.getByLabelText('Test editor')).toHaveValue('const one = () => 2;\n'));
-  await waitFor(() => expect(format).toBeDisabled());
+  await waitFor(() => expect(format).toHaveAttribute('aria-disabled', 'true'));
   fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: '   ' } });
-  expect(format).toBeDisabled();
+  expect(format).toHaveAttribute('aria-disabled', 'true');
 });
 
 it('Reset clears exhausted hints even when the code is unchanged', async () => {
@@ -65,7 +67,7 @@ it('Reset clears exhausted hints even when the code is unchanged', async () => {
   fireEvent.click(within(dialog).getByRole('button', { name: 'Reset' }));
   await waitFor(() => expect(screen.queryByText('Use a function.')).toBeNull());
   expect(screen.getByRole('button',{name:'Hint'})).toBeInTheDocument();
-  expect(reset).toBeDisabled();
+  expect(reset).toHaveAttribute('aria-disabled', 'true');
 });
 
 it('saves the draft on Run and Submit, never while typing or on leaving', async () => {

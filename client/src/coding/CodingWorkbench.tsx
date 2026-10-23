@@ -5,6 +5,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
+import { DropdownMenu, DropdownMenuItem } from '@astryxdesign/core/DropdownMenu';
+import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
@@ -22,11 +24,11 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
+import { FlagIcon, FormatCodeIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
-import { useIsNarrowForEditor, useMediaQuery } from '../lib/useMediaQuery';
+import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
 import { resetCoding, revealCoding, submitCoding, useCodingApproaches } from './api';
@@ -154,8 +156,6 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const online = useOnline();
   const baseId = useId();
   const isReact = task.track === 'react';
-  const compactViewport = useMediaQuery('(width < 1220px)');
-  const compactCommands = mode === 'landing' || compactViewport;
   const isTypeScript = task.track === 'typescript';
   const codeTrack = task.track === 'typescript' ? 'typescript' : 'javascript';
   const checklist = task.verify === 'checklist';
@@ -200,6 +200,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const verdictRef = useRef<HTMLElement | null>(null);
   const resetRef = useRef<HTMLButtonElement | null>(null);
   const revealRef = useRef<HTMLButtonElement | null>(null);
+  const moreRef = useRef<HTMLButtonElement | null>(null);
   const solutionRef = useRef<HTMLDivElement | null>(null);
   // The browser's run in progress: a Run, or the preview during a Submit,
   // which the server's answer replaces.
@@ -210,6 +211,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Both offer the editor anyway, so neither is a dead end: a puzzle never
   // completes its task, and without the editor a phone could not pass it.
   const narrow = useIsNarrowForEditor();
+  // Below the two-column layout Hint, Solution, Skip and Report share one
+  // More actions menu, so Run and Submit keep their words (UX audit coding-13).
+  const menuCommands = mode === 'landing' || narrow;
   const [editorHere, setEditorHere] = useState(readNarrowEditor);
   const editorPaneRef = useRef<HTMLElement | null>(null);
   const focusEditorPane = useRef(false);
@@ -536,7 +540,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setSubmitError(error instanceof ApiError && error.code === 'reveal_locked'
         ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) })
         : isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
-      revealRef.current?.focus();
+      (revealRef.current ?? moreRef.current)?.focus();
     } finally {
       revealing.current = false;
     }
@@ -596,7 +600,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Keeping the code, by the button or by Escape, hands focus back to the
   // button that asked; otherwise it fell to the page.
   const cancelConfirm = () => {
-    const trigger = confirming === 'reset' ? resetRef.current : revealRef.current;
+    // In the More actions menu, Solution has no button of its own: the menu's does.
+    const trigger = confirming === 'reset' ? resetRef.current : (revealRef.current ?? moreRef.current);
     setConfirming(null);
     trigger?.focus();
   };
@@ -1013,7 +1018,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       )}
       {verdict.verdict === 'passed' && !verdict.puzzle && (
         <div className="cd-verdict__actions">
-          {mode === 'lesson' && onContinue && <SwimCta size="sm" dir={1} onClick={onContinue} label={t('coding.lesson.continue')} />}
+          {mode === 'lesson' && onContinue && <SwimCta dir={1} onClick={onContinue} label={t('coding.lesson.continue')} />}
           {mode === 'section' && nextHref && <Button variant="primary" as={Link} href={nextHref} label={t('coding.verdict.next')} />}
           {mode === 'section' && backHref && <Button variant="secondary" as={Link} href={backHref} label={t('coding.verdict.back')} />}
         </div>
@@ -1107,57 +1112,69 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     </BriefZone>
   );
 
-  // Run, Submit and the rest close the same pane, under the code.
+  // Format and Reset act on the code, so they sit in the editor's own slim
+  // toolbar above it: 36px icon buttons with a 44px hit area (.ss-compact)
+  // and their names as tooltips (UX audit coding-02).
+  const editorBar = (
+    <div className="cd-editor-bar ss-compact">
+      <Button variant="ghost" isIconOnly icon={<FormatCodeIcon />} tooltip={t('coding.format')} onClick={() => void format()} isDisabled={formatDisabled} label={t('coding.format')} />
+      <Button variant="ghost" ref={resetRef} isIconOnly icon={<ResetIcon />} tooltip={t('coding.reset')} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
+    </div>
+  );
+
+  // Run, Submit and the rest close the same pane, under the code: one 44px
+  // row. Run and Submit lead with their words at every width, and Submit is
+  // the screen's one filled primary (SwimCta md). Hint, Solution and Skip are
+  // ghost buttons beside them from 1024px, and fold into More actions below
+  // that, with Report (UX audit coding-02, coding-13).
+  const hintLabel = taken === 0 ? t('coding.hint') : t('coding.hintNext');
+  const showReveal = mode !== 'landing' && Boolean(session) && !solution && !solutions;
+  const showSkip = signedIn && mode === 'section' && !skipResult;
   const actionBar = (
     <div className="cd-editor-actions">
       <div className="cd-actions cd-actions--commands">
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus
             (a disabled one hands it to the page), and a press does nothing. */}
-        <Button variant="secondary" isIconOnly={compactCommands} icon={compactCommands ? <PlayIcon /> : undefined} onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : compactCommands ? t('coding.run') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
-        {mode !== 'landing' && (compactCommands
-          ? <Button variant="primary" isIconOnly icon={<CheckCircleIcon />} onClick={() => { if (!submitDisabled) void submit(); }} isDisabled={submitDisabled} tooltip={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
-          : <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />)}
-        <Button variant="ghost" isIconOnly={compactCommands} icon={compactCommands ? <FormatCodeIcon /> : undefined} onClick={() => void format()} isDisabled={formatDisabled} tooltip={compactCommands ? t('coding.format') : undefined} label={t('coding.format')} />
-        <Button variant="ghost" ref={resetRef} isIconOnly={compactCommands} icon={compactCommands ? <ResetIcon /> : undefined} tooltip={compactCommands ? t('coding.reset') : undefined} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
+        <Button className="ss-action" variant="secondary" onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
+        {mode !== 'landing' && <SwimCta dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />}
         </>}
 
-        {/* Unavailable for a reason: focusable, with the reason as its tooltip. */}
-        <Button
-          variant="secondary"
-          isIconOnly={compactCommands}
-          icon={compactCommands ? <HintIcon /> : undefined}
-          onClick={takeHint}
-          isDisabled={hintUnavailable !== ''}
-          tooltip={compactCommands ? `${taken === 0 ? t('coding.hint') : t('coding.hintNext')}${hintUnavailable ? `. ${hintUnavailable}` : ''}` : hintUnavailable || undefined}
-          label={taken === 0 ? t('coding.hint') : t('coding.hintNext')}
-        />
-        {mode !== 'landing' && session && !solution && !solutions && (
-          <Button
-            variant="ghost"
-            isIconOnly={compactCommands}
-            icon={compactCommands ? <EyeIcon /> : undefined}
-            ref={revealRef}
-            onClick={askToReveal}
-            isDisabled={giveUpUnavailable !== '' || busy}
-            tooltip={compactCommands ? `${t('coding.giveUp')}${giveUpUnavailable ? `. ${giveUpUnavailable}` : ''}` : giveUpUnavailable || undefined}
-            label={t('coding.giveUp')}
-          />
-        )}
-        {signedIn && mode === 'section' && !skipResult && (
-          <Button variant="ghost" isIconOnly={compactCommands} icon={compactCommands ? <SkipIcon /> : undefined} tooltip={compactCommands ? t('coding.skip.action') : undefined} onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
-        )}
-        {mode !== 'landing' && <div className="cd-actions cd-actions--utility">
-          {!locked && saveAction}
-          <Button
-            variant="ghost"
-            isIconOnly
-            icon={<FlagIcon size={16} />}
-            label={t('coding.reportTask')}
-            tooltip={t('coding.reportTask')}
-            onClick={() => setReportOpen(true)}
-          />
-        </div>}
+        {!menuCommands && <>
+          {/* Unavailable for a reason: focusable, with the reason as its tooltip. */}
+          <Button variant="ghost" onClick={takeHint} isDisabled={hintUnavailable !== ''} tooltip={hintUnavailable || undefined} label={hintLabel} />
+          {showReveal && (
+            <Button variant="ghost" ref={revealRef} onClick={askToReveal} isDisabled={giveUpUnavailable !== '' || busy} tooltip={giveUpUnavailable || undefined} label={t('coding.giveUp')} />
+          )}
+          {showSkip && <Button variant="ghost" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />}
+        </>}
+        <div className="cd-actions cd-actions--utility">
+          {mode !== 'landing' && !locked && saveAction}
+          {menuCommands ? (
+            // The menu items keep the reason an action is unavailable, as
+            // their description rather than a tooltip.
+            <DropdownMenu
+              button={{ label: t('coding.moreActions'), icon: <Icon icon="moreHorizontal" />, isIconOnly: true, variant: 'ghost', tooltip: t('coding.moreActions'), ref: moreRef }}
+              hasChevron={false}
+              placement="above"
+            >
+              <DropdownMenuItem icon={<HintIcon size={16} />} label={hintLabel} description={hintUnavailable || undefined} isDisabled={hintUnavailable !== ''} onClick={takeHint} />
+              {showReveal && <DropdownMenuItem icon={<EyeIcon size={16} />} label={t('coding.giveUp')} description={giveUpUnavailable || undefined} isDisabled={giveUpUnavailable !== '' || busy} onClick={askToReveal} />}
+              {showSkip && <DropdownMenuItem icon={<SkipIcon size={16} />} label={t('coding.skip.action')} onClick={() => setSkipping((open) => !open)} />}
+              {mode !== 'landing' && <DropdownMenuItem icon={<FlagIcon size={16} />} label={t('coding.reportTask')} onClick={() => setReportOpen(true)} />}
+            </DropdownMenu>
+          ) : (
+            // Not the landing sample: it always takes the menu.
+            <Button
+              variant="ghost"
+              isIconOnly
+              icon={<FlagIcon />}
+              label={t('coding.reportTask')}
+              tooltip={t('coding.reportTask')}
+              onClick={() => setReportOpen(true)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1227,6 +1244,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           <section className="cd-pane cd-pane--editor" ref={editorPaneRef} tabIndex={-1} hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
             {!puzzleMode && !pendingOnDesktop && brief}
             <div className="cd-editor-slot">
+              {!puzzleMode && !pendingOnDesktop && editorBar}
               {/* In the frame (1024px and up) the editor takes what the brief
                   and the action bar leave and scrolls inside; stacked, it
                   starts at --cd-editor-min and grows with the code. */}

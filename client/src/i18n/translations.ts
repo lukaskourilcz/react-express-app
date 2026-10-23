@@ -1583,6 +1583,8 @@ export const en = {
   'coding.groupBlurb.rendering': 'Turning state into markup a keyboard can reach.',
   'coding.groupBlurb.design': 'Sizing a system before building it, and naming what will break.',
   'coding.reportTask': 'Report a problem with this task',
+  // Below 1024px Hint, Solution, Skip and Report share one menu (UX audit coding-13).
+  'coding.moreActions': 'More actions',
   'coding.group.loops': 'Loops',
   'coding.group.array-methods': 'Array methods',
   'coding.group.strings': 'Strings',

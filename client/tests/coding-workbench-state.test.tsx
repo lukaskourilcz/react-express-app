@@ -456,14 +456,17 @@ it('keeps Big O space targets and guidance exclusively inside its named tooltip'
   expect(document.querySelector('.cd-complexity > span')).not.toHaveTextContent('Target extra space');
 });
 
-it('uses named icons and tooltips only for the homepage command buttons', () => {
+it('labels Run and Submit at every width and keeps icons with tooltips for the editor\'s own toolbar (coding-02, coding-13)', () => {
   vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
     matches: false, media: query, onchange: null,
     addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
   }) as MediaQueryList);
   const landing = mount({ mode: 'landing' });
-  for (const name of ['Run', 'Format']) {
+  // Run keeps its word; Format and Reset are the editor toolbar's named icons.
+  expect(screen.getByRole('button', { name: 'Run' })).toHaveTextContent('Run');
+  for (const name of ['Format', 'Reset']) {
     const button = screen.getByRole('button', { name });
+    expect(button.closest('.cd-editor-bar')).toHaveClass('ss-compact');
     expect(button.querySelector('svg')).not.toBeNull();
     expect(button).not.toHaveTextContent(name);
     expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(name);
@@ -475,13 +478,41 @@ it('uses named icons and tooltips only for the homepage command buttons', () => 
   expect(submitCoding).not.toHaveBeenCalled();
   landing.unmount();
   mount();
-  for (const name of ['Run', 'Submit', 'Format']) {
+  for (const name of ['Run', 'Submit', 'Solution']) {
     expect(screen.getByRole('button', { name })).toHaveTextContent(name);
   }
-  expect(screen.getByRole('button', { name: 'Solution' })).toBeVisible();
+  // Submit is the row's one filled primary, SwimCta md.
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveClass('ss-swim-cta--md');
+  expect(screen.getByRole('button', { name: 'Run' }).closest('.cd-editor-actions')!.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Format' }).closest('.cd-editor-actions')).toBeNull();
   expect(screen.getByRole('button', { name: 'Report a problem with this task' })).toBeVisible();
 });
 
+it('folds Hint, Solution and Report into one More actions menu below 1024px, with Run and Submit still labelled (coding-13)', async () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query.includes('1023.95'), media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  sessionStorage.setItem('devshark:coding:narrow-editor:v1', '1');
+  mount();
+  expect(screen.getByRole('button', { name: 'Run' })).toHaveTextContent('Run');
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveTextContent('Submit');
+  expect(screen.queryByRole('button', { name: 'Hint' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Report a problem with this task' })).toBeNull();
+  const more = screen.getByRole('button', { name: 'More actions' });
+  expect(more).toHaveAttribute('aria-haspopup', 'menu');
+  fireEvent.click(more);
+  const menu = await screen.findByRole('menu', { name: 'More actions' });
+  expect(within(menu).getByRole('menuitem', { name: /Hint/ })).toHaveTextContent('Hint');
+  // The reason Hint is unavailable stays, as the item's description.
+  expect(within(menu).getByRole('menuitem', { name: /Hint/ })).toHaveTextContent('Hints open after a minute of editing');
+  expect(within(menu).getByRole('menuitem', { name: /Report a problem/ })).toBeInTheDocument();
+  sessionStorage.clear();
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+});
 
 it('keeps the draft and requires the latest brief after a stale Submit', async () => {
   vi.mocked(submitCoding).mockRejectedValueOnce(new ApiError('Task changed', 409, 'task_changed'));
