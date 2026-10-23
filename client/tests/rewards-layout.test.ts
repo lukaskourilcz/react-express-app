@@ -16,4 +16,14 @@ describe('/shop on a phone', () => {
   it('gives both coin rows one structure, the action on its own row', () => {
     expect(phone).toMatch(/\.rw-spend__row \{[^}]*grid-template-areas: 'icon name' 'icon blurb' '\. action';/);
   });
+
+  it('keeps the signed-out sentence beside the coin, not on a row under it (money-05)', () => {
+    expect(css).toMatch(/\.rw-wallet__balance \{[^}]*flex: 1 1 0;[^}]*min-width: 0;/);
+  });
+
+  it('puts See what Premium includes under the note with its label on the sentence\'s edge (money-14)', () => {
+    const narrow = css.slice(css.indexOf('@media (max-width: 639px)'));
+    expect(narrow).toMatch(/\.rw-earn__note \{ flex-direction: column; align-items: flex-start; \}/);
+    expect(narrow).toContain('.rw-earn__note > .astryx-button.ghost { margin-inline-start: -20px; }');
+  });
 });
