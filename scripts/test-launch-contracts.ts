@@ -3490,6 +3490,19 @@ async function identityContracts() {
   const list = (await friends('friends-list', 'GET')).body as { friends: { handle: string; displayName: string; picture: string | null }[]; requests: unknown[] };
   assert.deepEqual([list.friends[0].handle, list.friends[0].displayName, list.friends[0].picture], ['thirsty-sharkie', 'Ada Lovelace', null]);
   assert.deepEqual(list.requests, [{ handle: 'fin-de-fiesta', displayName: 'Dee Example', direction: 'incoming' }]);
+
+  // Answering a request and blocking are decisions: a value that is not a
+  // real true or false is refused before the database, never read as "no".
+  friendCalls.length = 0;
+  for (const [op, body] of [
+    ['friends-respond', { handle: 'fin-de-fiesta', accept: 'yes' }],
+    ['friends-respond', { handle: 'fin-de-fiesta' }],
+    ['friends-remove', { handle: 'fin-de-fiesta', block: 'true' }],
+  ] as const) {
+    const refused = await friends(op, 'POST', { body });
+    assert.equal(refused.statusCode, 400, `${op} ${JSON.stringify(body)} is refused (${JSON.stringify(refused.body)})`);
+  }
+  assert.deepEqual(friendCalls, [], 'and nothing is answered or removed');
 }
 
 async function main() {

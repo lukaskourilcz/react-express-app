@@ -176,6 +176,14 @@ export async function handleFriends(
     }
     const handle = readHandle(body.handle);
     if (!handle) return jsonError(res, 400, 'invalid_handle', KNOWN.invalid_handle.message);
+    // Answering and blocking are decisions, so they are read only from a real
+    // true or false: an `accept` of "yes" used to decline the request.
+    if (op === 'friends-respond' && typeof body.accept !== 'boolean') {
+      return jsonError(res, 400, 'bad_request', 'accept must be true or false');
+    }
+    if (op === 'friends-remove' && body.block !== undefined && typeof body.block !== 'boolean') {
+      return jsonError(res, 400, 'bad_request', 'block must be true or false');
+    }
 
     if (op === 'friends-request') {
       const { data, error } = await withTimeout(
