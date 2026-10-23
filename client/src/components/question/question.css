@@ -103,7 +103,9 @@
 .ss-question-icon-button svg { width: 20px; height: 20px; }
 
 /* ——— AnswerOptionList ——— */
-.ss-answer-list { display: flex; flex-direction: column; gap: var(--ss-answer-gap); min-width: 0; }
+/* scroll-margin-top: when QuestionActions brings the list back into view
+   after its focus move, it stops clear of the floating site header. */
+.ss-answer-list { display: flex; flex-direction: column; gap: var(--ss-answer-gap); min-width: 0; scroll-margin-top: 6rem; }
 .ss-question .ss-answer-option.ss-radio-card,
 .ss-answer-list .ss-answer-option.ss-radio-card {
   display: flex;

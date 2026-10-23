@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Button } from '@astryxdesign/core/Button';
-import { QuestionActions } from '../src/components/question';
+import { AnswerOptionList, QuestionActions, QuestionShell } from '../src/components/question';
 
 const css = readFileSync(new URL('../src/components/question/question.css', import.meta.url), 'utf8');
 
@@ -56,6 +56,35 @@ describe('QuestionActions', () => {
     expect(document.activeElement).toBe(document.body);
     rerender(<QuestionActions primary={{ label: 'Continue', onClick: () => {} }} focusPrimary />);
     expect(screen.getByRole('button', { name: 'Continue' })).toHaveFocus();
+  });
+
+  // UX audit learn-02: a plain focus() centres an off-screen button, which
+  // scrolled the graded answers out of sight. Focus without scrolling, scroll
+  // the least that shows the button, then bring the answer list back if that
+  // took it off the top.
+  it('scrolls only as far as the primary when it takes focus, and keeps the answers in sight', () => {
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    const scrolled: Array<[string, unknown]> = [];
+    const scrollIntoView = vi.fn(function (this: HTMLElement, options: unknown) { scrolled.push([this.className || this.tagName, options]); });
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+    try {
+      render(
+        <QuestionShell
+          questionId="q"
+          question="Which?"
+          actions={<QuestionActions primary={{ label: 'Continue', onClick: () => {} }} focusPrimary />}
+        >
+          <AnswerOptionList options={['A', 'B']} value={1} onChange={() => {}} labelledBy="q" disabled grade={{ correct: 0, picked: 1 }} />
+        </QuestionShell>,
+      );
+      expect(screen.getByRole('button', { name: 'Continue' })).toHaveFocus();
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+      expect(scrolled.map(([target]) => target)).toEqual([expect.stringContaining('ss-swim-cta'), expect.stringContaining('ss-answer-list')]);
+      expect(scrolled.every(([, options]) => (options as { block: string }).block === 'nearest')).toBe(true);
+    } finally {
+      focus.mockRestore();
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
   });
 
   it('puts the primary on its own full-width last row under 560px', () => {

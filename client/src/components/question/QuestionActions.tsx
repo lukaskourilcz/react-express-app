@@ -22,7 +22,9 @@ export interface QuestionActionsProps {
   secondary?: ReactNode;
   /**
    * When this turns true, focus moves to the primary: after grading, so the
-   * next Tab or Enter continues (the Learn runner's Continue).
+   * next Tab or Enter continues (the Learn runner's Continue). The page
+   * scrolls only as far as it takes to show the button, never to centre it,
+   * and back up if that hid the shell's answer list.
    */
   focusPrimary?: boolean;
   /** Accessible name of the row, when a screen has more than one group of actions. */
@@ -39,7 +41,16 @@ export interface QuestionActionsProps {
 export function QuestionActions({ primary, secondary, focusPrimary, label, className }: QuestionActionsProps) {
   const primaryRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (focusPrimary) primaryRef.current?.querySelector('button')?.focus();
+    if (!focusPrimary) return;
+    const button = primaryRef.current?.querySelector('button');
+    // The least scroll that shows it, and never so far that the answers it
+    // follows leave the screen: the pick and the right answer stay in sight
+    // with the verdict. A plain focus() centred an off-screen button in
+    // Chrome, which pushed every answer under the site header, at 1280 too
+    // (UX audit learn-02).
+    button?.focus({ preventScroll: true });
+    button?.scrollIntoView?.({ block: 'nearest' });
+    primaryRef.current?.closest('.ss-question')?.querySelector<HTMLElement>('.ss-answer-list')?.scrollIntoView?.({ block: 'nearest' });
   }, [focusPrimary]);
   return (
     <div
