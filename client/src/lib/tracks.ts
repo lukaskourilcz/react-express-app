@@ -103,9 +103,6 @@ const topicsOf = (tracks: Record<Track, TrackDef>, track: Track): Set<RoadmapTop
 export const trackTopics = (track: Track): Set<RoadmapTopic> =>
   topicsOf(tracksForActiveSubject(), track);
 
-export const isTopicInTrack = (track: Track, topic: RoadmapTopic): boolean =>
-  trackTopics(track).has(topic);
-
 // The career-title flavor each track maps to (drives "Junior Frontend
 // Developer", "Senior Backend Engineer", etc.).
 const TRACK_SPECIALIZATION: Record<Track, Specialization> = {
