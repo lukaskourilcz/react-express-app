@@ -540,18 +540,6 @@ export async function pushProgressToServer(
   });
 }
 
-// Auth cache accessor set by lib/auth on session change so beacons can read
-// the current token synchronously (supabase-js exposes an async getSession(),
-// which is unusable inside pagehide).
-let readCachedAccessToken: () => string | null = () => null;
-export function registerAccessTokenReader(fn: () => string | null): void {
-  readCachedAccessToken = fn;
-}
-/** Public wrapper for other modules (xp.ts) that need the cached token. */
-export function getCachedAccessTokenForBeacon(): string | null {
-  return readCachedAccessToken();
-}
-
 /**
  * Kept for the module that calls it at start-up; it installs nothing. It
  * once sent the progress PUT with keepalive on every pagehide and every hide

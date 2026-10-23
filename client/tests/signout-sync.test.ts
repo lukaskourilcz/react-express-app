@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from './mocks/server';
-import { completeRoadmapAttempt, installProgressSyncFlusher, registerAccessTokenReader, syncProgressWithServer } from '../src/lib/roadmap';
+import { completeRoadmapAttempt, installProgressSyncFlusher, syncProgressWithServer } from '../src/lib/roadmap';
 import { clearAccountData } from '../src/lib/accountData';
 
 const PROGRESS = 'devquiz:roadmap:v2';
@@ -131,7 +131,6 @@ describe('a progress sync that answers after a level completion', () => {
 describe('a signed-in tab that is hidden or closed', () => {
   it('sends no progress PUT', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    registerAccessTokenReader(() => 'stand-in-token');
     try {
       installProgressSyncFlusher();
       window.dispatchEvent(new Event('pagehide'));
@@ -140,7 +139,6 @@ describe('a signed-in tab that is hidden or closed', () => {
       const puts = fetchSpy.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT');
       expect(puts).toEqual([]);
     } finally {
-      registerAccessTokenReader(() => null);
       Reflect.deleteProperty(document, 'visibilityState');
       fetchSpy.mockRestore();
     }
