@@ -104,3 +104,16 @@ it('lists checks as one divided list: the call, the expected value after an arro
   expect(failed).toHaveTextContent('digitSum(493) → expected 16 · got undefined');
   expect(other).toBeDefined();
 });
+
+it('draws the pane separator as a quiet 1px line in a 12px column with 2px either side (coding-18)', () => {
+  const { container } = mount('javascript');
+  const separator = screen.getByRole('separator', { name: 'Resize the editor and results panes' });
+  expect(separator).toHaveAttribute('tabindex', '0');
+  expect(container.querySelector('.cd-workbench__grid')).toContainElement(separator);
+  const css = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+  expect(css).toMatch(/grid-template-columns: minmax\(0, var\(--cd-split, 58%\)\) 12px minmax\(0, 1fr\);\s*column-gap: 2px;/);
+  const rest = css.slice(css.indexOf('  .cd-splitter {'), css.indexOf('}', css.indexOf('  .cd-splitter {')));
+  expect(rest).toContain('var(--ss-card-line)');
+  expect(rest).not.toContain('border-radius: 999px');
+  expect(css).toMatch(/\.cd-splitter:hover,\s*\.cd-splitter:focus-visible \{ background: linear-gradient\([^)]*var\(--brand-accent\)/);
+});

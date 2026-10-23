@@ -258,8 +258,11 @@
 @media (min-width: 1024px) {
   /* The split is the learner's, kept between sessions. It is bounded so
      neither pane can be dragged away entirely. */
+  /* The separator's column is 12px with 2px on each side, a 16px gutter like
+     every other gap (UX audit coding-18). */
   .cd-workbench__grid {
-    grid-template-columns: minmax(0, var(--cd-split, 58%)) 10px minmax(0, 1fr);
+    grid-template-columns: minmax(0, var(--cd-split, 58%)) 12px minmax(0, 1fr);
+    column-gap: 2px;
     align-items: stretch;
   }
   /* The frame: the first row is --cd-frame-h on every task, so the editor
@@ -288,17 +291,19 @@
      verdict under it stays in view — it never has to be scrolled to. The outer
      scroll is only the fallback for a verdict and hint taller than the pane. */
   .cd-output-scroll > .cd-panel { flex: 1 1 auto; min-height: 160px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  /* Quiet at rest: a 1px card-line down the middle of the 12px column, which
+     stays the pointer's target. Hover and keyboard focus draw it 3px in the
+     accent; focus keeps its ring as well. */
   .cd-splitter {
     align-self: stretch;
-    min-height: 120px;
-    width: 10px;
-    border-radius: 999px;
-    background: var(--color-border);
+    width: 12px;
+    background: linear-gradient(to right, transparent calc(50% - 0.5px), var(--ss-card-line) calc(50% - 0.5px), var(--ss-card-line) calc(50% + 0.5px), transparent calc(50% + 0.5px));
     cursor: col-resize;
     touch-action: none;
   }
-  .cd-splitter:hover { background: var(--brand-accent); }
-  .cd-splitter:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+  .cd-splitter:hover,
+  .cd-splitter:focus-visible { background: linear-gradient(to right, transparent calc(50% - 1.5px), var(--brand-accent) calc(50% - 1.5px), var(--brand-accent) calc(50% + 1.5px), transparent calc(50% + 1.5px)); }
+  .cd-splitter:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 }
 /* Below the two-column breakpoint there is nothing to split, and a stray
    focusable element would be one more thing to tab past. */
