@@ -71,6 +71,10 @@ const SLOW_ERASURE: Account = { id: '1a2b3c4d-0000-4000-8000-000000000012', toke
 const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE];
 // A token presented while Supabase Auth answers 500 (not one of ACCOUNTS).
 const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 'auth-is-down', email: 'down@example.invalid', confirmed: true };
+// Tokens presented while Supabase Auth does not answer at all (the connection
+// drops), and while it answers 429 to its own rate limit.
+const AUTH_UNREACHABLE: Account = { ...AUTH_DOWN, token: 'auth-unreachable' };
+const AUTH_THROTTLED: Account = { ...AUTH_DOWN, token: 'auth-throttled' };
 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
@@ -114,6 +118,8 @@ async function startStandIns() {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
       // Supabase Auth itself failing, for any token.
       if (token === AUTH_DOWN.token) return send(500, { message: 'stand-in auth is down' });
+      if (token === AUTH_UNREACHABLE.token) { req.socket.destroy(); return; }
+      if (token === AUTH_THROTTLED.token) return send(429, { message: 'stand-in: request rate limit reached' });
       const account = ACCOUNTS.find((one) => one.token === token);
       if (!account) return send(401, { message: 'invalid token' });
       return send(200, {
@@ -612,10 +618,17 @@ async function main() {
       assert.equal(down.statusCode, 503, `${query.resource}: a sign-in service that is down is not an invalid session (${JSON.stringify(down.body)})`);
       assert.equal(errorCode(down), 'auth_unavailable');
     }
+    // No answer, or Auth's own rate limit, decides nothing about the token
+    // either: supabase-js reports the first with status 0, and both read 401.
+    for (const account of [AUTH_UNREACHABLE, AUTH_THROTTLED]) {
+      const undecided = await call(questions as Handler, { account, query: { resource: 'due' } });
+      assert.equal(undecided.statusCode, 503, `${account.token}: Supabase Auth that did not decide is not an invalid session (${JSON.stringify(undecided.body)})`);
+      assert.equal(errorCode(undecided), 'auth_unavailable');
+    }
     const refusedToken = await call(questions as Handler, { account: { ...A, token: 'not-a-token' }, query: { resource: 'due' } });
     assert.equal(refusedToken.statusCode, 401, 'a token Supabase refuses is still 401');
     assert.equal(errorCode(refusedToken), 'unauthorized');
-    console.log('PASS verified caller: Today\'s due list and a review keep 503 when Supabase Auth is down, and 401 for a refused token');
+    console.log('PASS verified caller: Today\'s due list and a review keep 503 when Supabase Auth is down, unreachable or throttled, and 401 for a refused token');
 
     // ── a quiz submit whose one-time claim cannot be taken ───────────────
     claimFails = true;

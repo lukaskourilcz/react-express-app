@@ -55,6 +55,18 @@ async function withAuthDeadline<T>(promise: Promise<T>, timeoutMs = 3000): Promi
   }
 }
 
+/** Supabase Auth did not decide on the token, as opposed to refusing it: no
+ * answer at all (supabase-js reports a network failure as an
+ * `AuthRetryableFetchError` with status 0), a 5xx, its own rate limit (429), or
+ * an answer it could not read (`AuthUnknownError`). Each is a 503, because a
+ * 401 tells a signed-in learner their session ended. The browser reads the
+ * same signs (`serverUnreachable` in client/src/lib/auth.tsx). */
+function authUndecided(error: { name?: string; status?: number }): boolean {
+  if (error.name === 'AuthRetryableFetchError' || error.name === 'AuthUnknownError') return true;
+  const { status } = error;
+  return typeof status === 'number' && (status === 0 || status === 429 || status >= 500);
+}
+
 /**
  * Verify the caller's Supabase access token and return the verified subject
  * (the Supabase user id / UUID).
@@ -71,8 +83,7 @@ export async function requireAuth(req: VercelRequest): Promise<AuthResult> {
     if (!token) throw new AuthError(401, 'missing_token', 'Missing Bearer token');
     const { data, error } = await withAuthDeadline(authClient.auth.getUser(token));
     if (error || !data?.user?.id) {
-      const status = typeof error?.status === 'number' ? error.status : 401;
-      if (status >= 500) {
+      if (error && authUndecided(error)) {
         throw new AuthError(503, 'auth_unavailable', 'Authentication service is unavailable');
       }
       throw new AuthError(401, 'invalid_token', 'Token verification failed');
