@@ -34,34 +34,14 @@
 .de-disclosure>summary:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px;border-radius:var(--radius-inner)}
 @media(max-width:820px){.de-challenge-grid{grid-template-columns:1fr}.de-page{padding-top:0}.de-hero-panel{padding:20px}.de-card-grid{grid-template-columns:1fr}.de-mode-card{padding:14px}.de-stat-row{gap:16px}}
 @media(prefers-reduced-motion:reduce){.de-flashcard__answer{transform:none}.de-mode-card,.de-flashcard__answer{transition:none}}
-/* Play's time limit: the Astryx group is one inline row, which at 320px ran
-   53px past the "Host a game" card. It wraps like the question count. */
-.play-time-limit>.astryx-toggle-button-group{flex-wrap:wrap}
-/* Classroom/multiplayer invite: compact on screen, isolated as a printable
-   handout so a teacher can put one code/QR on a wall or projector. */
-.play-invite__qr {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-container);
-  background: var(--color-background-muted);
-  overflow-wrap: anywhere;
-}
-.play-invite__qr img {
-  flex: 0 0 auto;
-  border-radius: var(--radius-element);
-}
-@media (max-width: 520px) {
-  .play-invite__qr { flex-direction: column; text-align: center; }
-}
+/* Classroom/multiplayer invite: isolated as a printable handout so a teacher
+   can put one code/QR on a wall or projector. The lobby's own layout and the
+   printed QR size are in Play.css. */
 @media print {
   body * { visibility: hidden !important; }
   .play-invite, .play-invite * { visibility: visible !important; }
   .play-invite { position: fixed; inset: 24px; box-shadow: none !important; }
   .play-invite button { display: none !important; }
-  .play-invite__qr img { width: 240px; height: 240px; }
 }
 /* Shared radio cards expose selection through data-selected. These overrides
    keep legacy Deep End mode-card styling aligned with the accessible control. */
