@@ -1030,6 +1030,20 @@ async function tierContracts() {
     );
     assert.equal(grant.statusCode, 503);
     assert.equal((grant.body as { error: { code: string } }).error.code, 'migration_required', 'the admin grant names the missing migration');
+    // The owner's view of one account: a plan that could not be read is not
+    // shown as "not Premium".
+    const grantRows: Record<string, unknown> = {
+      select: () => grantRows, order: () => grantRows, limit: () => grantRows, eq: () => grantRows,
+      then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+    };
+    const accountView = mockResponse();
+    await handleAdminEntitlements(
+      { method: 'GET', headers: {}, query: { userId: 'contract-owner-account' } } as never,
+      accountView as never,
+      { from: () => grantRows, rpc: async () => ({ data: null, error: { code: '08006', message: 'connection failure' } }) } as never,
+    );
+    assert.equal(accountView.statusCode, 503, `an unreadable plan is not shown as free (${JSON.stringify(accountView.body)})`);
+    assert.equal((accountView.body as { error: { code: string } }).error.code, 'entitlement_unavailable');
   }
 }
 

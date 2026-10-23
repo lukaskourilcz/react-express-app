@@ -169,6 +169,13 @@ export async function handleAdminEntitlements(req: VercelRequest, res: VercelRes
       }
       return jsonError(res, 500, 'db_error', 'Could not load grants');
     }
+    // An account's plan that could not be read is not "not Premium": the
+    // owner would grant Premium to someone who holds it, or tell them they do
+    // not.
+    if (premium?.error) {
+      if (isRpcMissing(premium.error)) return jsonError(res, 503, 'migration_required', 'Entitlement migration 039 is not installed');
+      return jsonError(res, 503, 'entitlement_unavailable', "Could not check this account's plan. Try again in a moment.");
+    }
     return res.json({
       grants: ((rows.data ?? []) as GrantRow[]).map(toAdminGrant),
       ...(userId ? { userId, premium: premium?.data === true } : {}),
