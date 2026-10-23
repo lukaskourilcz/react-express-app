@@ -824,6 +824,31 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(grants[0].status, 'canceled');
   });
 
+  await check('a delivery that read the state before a payment went through does not leave it unpaid', async () => {
+    // Two deliveries of one change run at once: this one read "incomplete",
+    // the payment went through, another delivery wrote "active", and only
+    // then did this one write what it had read.
+    const a = await account('Race2', { status: 'incomplete' });
+    let moved = false;
+    const racing = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === 'upsert_provider_entitlement' && !moved) {
+          moved = true;
+          stripe.setSub(a.ids, { status: 'active' });
+        }
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const raw = eventText('customer.subscription.created', a.ids, 'race2');
+    const res = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, res as never, racing);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.outcome, 'applied');
+    assert.equal((await providerGrant(a.userId))?.status, 'active', 'the last write follows a read made after it');
+    assert.equal(await premium(a.userId), true);
+  });
+
   await check('an unknown user is recorded and answered 200', async () => {
     const ghost = newUserId();
     const ids = idsFor('Ghost1', ghost);

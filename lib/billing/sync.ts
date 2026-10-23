@@ -266,6 +266,9 @@ export interface SyncResult {
   cancelAtPeriodEnd: boolean;
 }
 
+/** How many times a mirror reads the subscription again after writing it. */
+const MIRROR_REREADS = 2;
+
 /** Mirror one subscription into its provider grant. `revoke` writes the grant
  * as revoked with that note (a full refund, a dispute, a withdrawal); a revoked
  * grant stays revoked whatever Stripe says later.
@@ -277,38 +280,65 @@ export interface SyncResult {
  * it is refused as permanent, which records the event with the reason, and a
  * revocation does not make it devShark's. A devShark subscription whose
  * account was deleted is ended at Stripe (BILL-3) and recorded as
- * unknown_user. */
+ * unknown_user.
+ *
+ * Stripe sends the events of one change within the same second, and each
+ * delivery reads the live subscription, so the order they arrive in does not
+ * matter. Two deliveries running at once still can: one that read the state
+ * before a payment went through may write it after another delivery wrote the
+ * paid state, and a paid subscription would stay "incomplete" until the next
+ * renewal. So after writing, the mirror reads the subscription again and
+ * writes once more when it moved on. The last write of every delivery then
+ * follows a read made after it wrote. */
 export async function syncSubscription(
   deps: BillingDeps,
   subscriptionId: string,
   options: { userHint?: string | null; revoke?: string | null } = {},
 ): Promise<SyncResult> {
-  const sub = await retrieveSubscription(deps, subscriptionId);
-  const premium = billsPremium(sub);
-  const fromCheckout = fromDevsharkCheckout(sub);
-  if (!premium && !fromCheckout) throw new BillingPermanentError('not_devshark_price', sub.id);
+  let sub = await retrieveSubscription(deps, subscriptionId);
+  if (!billsPremium(sub) && !fromDevsharkCheckout(sub)) throw new BillingPermanentError('not_devshark_price', sub.id);
   const userId = await accountFor(deps, sub, options.userHint ?? null);
   const customerId = idOf(sub.customer);
   if (customerId) await linkCustomer(deps, userId, customerId);
-  const status = options.revoke ? 'revoked' : premium ? sub.status : 'canceled';
+  const today = day(Math.floor((deps.now?.() ?? Date.now()) / 1000));
+  let mirror = mirrorOf(sub, userId, options.revoke ?? null, today);
+  await rpc(deps, 'upsert_provider_entitlement', mirror.args);
+  // A revoked grant stays revoked whatever is read later.
+  if (!options.revoke) {
+    for (let pass = 0; pass < MIRROR_REREADS; pass += 1) {
+      sub = await retrieveSubscription(deps, subscriptionId);
+      const fresh = mirrorOf(sub, userId, null, today);
+      if (JSON.stringify(fresh.args) === JSON.stringify(mirror.args)) break;
+      mirror = fresh;
+      await rpc(deps, 'upsert_provider_entitlement', mirror.args);
+    }
+  }
+  return mirror.result;
+}
+
+/** The provider grant one read of a subscription writes. */
+function mirrorOf(sub: Stripe.Subscription, userId: string, revoke: string | null, today: string) {
+  const premium = billsPremium(sub);
+  const status = revoke ? 'revoked' : premium ? sub.status : 'canceled';
   if (status !== 'revoked' && !PROVIDER_STATUSES.has(status)) throw new BillingPermanentError('unknown_status', `${sub.id} ${status}`);
   const currentPeriodEnd = periodEnd(sub);
   const cancelAtPeriodEnd = endsInsteadOfRenewing(sub);
-  const note = options.revoke
-    ?? (premium ? null : `Ended: the subscription no longer bills a devShark Premium price (${day(Math.floor((deps.now?.() ?? Date.now()) / 1000))}).`);
-  await rpc(deps, 'upsert_provider_entitlement', {
-    p_user_id: userId,
-    p_subscription_id: sub.id,
-    p_status: status,
-    p_price_id: priceOf(sub),
-    p_current_period_end: currentPeriodEnd,
-    p_cancel_at_period_end: cancelAtPeriodEnd,
-    p_note: note,
-    // The grace window of a failed renewal runs from the start of the unpaid
-    // period; the database keeps the first value it sees (finding product-3).
-    p_past_due_since: status === 'past_due' ? periodStart(sub) : null,
-  });
-  return { userId, subscriptionId: sub.id, status, currentPeriodEnd, cancelAtPeriodEnd };
+  const note = revoke ?? (premium ? null : `Ended: the subscription no longer bills a devShark Premium price (${today}).`);
+  return {
+    args: {
+      p_user_id: userId,
+      p_subscription_id: sub.id,
+      p_status: status,
+      p_price_id: priceOf(sub),
+      p_current_period_end: currentPeriodEnd,
+      p_cancel_at_period_end: cancelAtPeriodEnd,
+      p_note: note,
+      // The grace window of a failed renewal runs from the start of the unpaid
+      // period; the database keeps the first value it sees (finding product-3).
+      p_past_due_since: status === 'past_due' ? periodStart(sub) : null,
+    },
+    result: { userId, subscriptionId: sub.id, status, currentPeriodEnd, cancelAtPeriodEnd } satisfies SyncResult,
+  };
 }
 
 /** The subscription a payment paid for, found through its invoice. */
