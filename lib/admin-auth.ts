@@ -9,8 +9,8 @@
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { timingSafeEqual } from 'node:crypto';
-import { jsonError } from './http';
-import { AuthError, confirmedEmail, requireAuth } from './auth';
+import { jsonError, tryAuthOnce } from './http';
+import { AuthError, confirmedEmail } from './auth';
 
 const IS_PROD = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
 const RAW_DEV_PASSWORD = process.env.DEV_PASSWORD;
@@ -81,8 +81,9 @@ const verifiedAdmins = new WeakMap<VercelRequest, string>();
 export async function requireAdmin(req: VercelRequest, res: VercelResponse): Promise<boolean> {
   let undecided: AuthError | null = null;
   try {
-    const auth = await requireAuth(req);
-    if (hasAdminRole(auth.payload)) {
+    // Verified once per request: a write's rate limit may have asked already.
+    const auth = await tryAuthOnce(req);
+    if (auth && hasAdminRole(auth.payload)) {
       verifiedAdmins.set(req, auth.sub);
       return true;
     }

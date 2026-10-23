@@ -408,7 +408,13 @@ async function main() {
     const gateDown = await fulfilment(AUTH_DOWN);
     assert.equal(gateDown.statusCode, 503, `an Auth outage at the admin gate is not "not an admin" (${JSON.stringify(gateDown.body)})`);
     assert.equal(errorCode(gateDown), 'auth_unavailable');
-    console.log('PASS verified caller: the admin gate answers 503 during an Auth outage');
+    // A fulfilment write verifies its token for the write limit and the gate
+    // once: an unknown item is refused after the gate.
+    authChecks = 0;
+    const stockWrite = await user('fulfilment', { method: 'POST', account: ROLE_ADMIN, body: { op: 'stock', sku: 'not-an-item' } });
+    assert.equal(stockWrite.statusCode, 400, `the admin passed the gate (${JSON.stringify(stockWrite.body)})`);
+    assert.equal(authChecks, 1, 'an admin write asks Supabase Auth once, for the rate limit and the gate alike');
+    console.log('PASS verified caller: the admin gate answers 503 during an Auth outage and reuses the verified token');
 
     // The fulfilment op takes the admin bucket before the gate, GET included.
     // With the clock still: the bucket refills a token a second.
