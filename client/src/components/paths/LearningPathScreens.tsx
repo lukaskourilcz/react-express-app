@@ -1,4 +1,4 @@
-import { FdeHub } from './FdeHub';
+import { FdeEvidence, FdeLoop } from './FdeHub';
 // The learning-path screens of the FDE role specialization, the one
 // published path since E5 (#496) retired DSA Foundations:
 //
@@ -292,6 +292,12 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   // evidence without dead ends.
   const reachable = Boolean(enrollment) && enrollment?.status !== 'paused' && open && !barred;
   const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
+  const hubState = {
+    manifest,
+    progress: progress.data,
+    pending: Boolean((isAuthenticated && enrollments.isPending) || (enrollment && progress.isPending)),
+    error: Boolean(enrollments.error || progress.error),
+  };
   const diagnosticModule = manifest.diagnosticActivityId
     ? manifest.modules.find(module => module.activities.some(activity => activity.id === manifest.diagnosticActivityId))
     : undefined;
@@ -399,10 +405,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         <p className="lp-lead">{manifest.entryRequirement}</p>
       </section>
 
-      {pathId === 'fde' && <FdeHub manifest={manifest} progress={progress.data} reachable={reachable} activityLock={activityLock}
-        pending={Boolean((isAuthenticated && enrollments.isPending) || (enrollment && progress.isPending))}
-        error={Boolean(enrollments.error || progress.error)}
-        retry={() => { void enrollments.refetch(); if (enrollment) void progress.refetch(); }} />}
+      {pathId === 'fde' && <FdeLoop {...hubState} retry={() => { void enrollments.refetch(); if (enrollment) void progress.refetch(); }} />}
 
       {progress.data && (
         <section className="lp-card lp-completion">
@@ -516,6 +519,10 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
           ))}
         </div>
       </section>
+
+      {/* Competency evidence sums up the modules, so it follows them, closed
+          (UX audit learn-11). */}
+      {pathId === 'fde' && <FdeEvidence {...hubState} reachable={reachable} activityLock={activityLock} />}
 
       {/* The loop, then the shelves, then placement and bridges. */}
       {shelves.map(({ shelf, modules }) => (

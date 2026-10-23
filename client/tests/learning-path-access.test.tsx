@@ -24,7 +24,7 @@ const pathManifest = (id: 'fde') => ({
     activities: [{ ...lesson('fde-diagnostic-check', 'Diagnostic check'), kind: 'check', purpose: 'diagnostic' }], requires: [], estimatedMinutes: 10,
   }] : []), {
     id: `${id}-m01`, title: 'Module one', outcomes: [], competencies: [], dependsOn: [], lessons: [],
-    activities: [lesson(`${id}-m01-l1-read`, `${id} first lesson`)], requires: [], estimatedMinutes: 10,
+    activities: [{ ...lesson(`${id}-m01-l1-read`, `${id} first lesson`), competencies: ['integration'] }], requires: [], estimatedMinutes: 10,
   }, ...(state.secondModule ? [{ id: `${id}-m02`, title: 'Module two', outcomes: [], competencies: [], dependsOn: [], lessons: [], activities: [lesson(`${id}-m02-l1-read`, `${id} second lesson`)], requires: [], estimatedMinutes: 10 }] : []), ...(id === 'fde' && state.shelf ? [{
     id: 'fde-ip01', title: 'Learning round', optional: true, shelf: 'interview-prep', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [lesson('fde-ip01-l1', 'Interview lesson')], requires: [], estimatedMinutes: 10,
@@ -330,11 +330,25 @@ describe('the path page', () => {
     expect(document.querySelector('.lp-head__actions')).toBeNull();
   });
 
+  // UX audit learn-11: the evidence board follows the modules, closed, and
+  // the delivery loop stays above them.
+  it('puts the delivery loop above the modules and the closed evidence board below them', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const modules = screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
+    const loop = screen.getByRole('region', { name: 'The delivery loop' });
+    const board = screen.getByRole('region', { name: 'Competency evidence' });
+    expect(loop.compareDocumentPosition(modules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(modules.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect((board.querySelector('details') as HTMLDetailsElement).open).toBe(false);
+  });
+
   it('after Premium lapses, the first module stays open', async () => {
     state.tier = 'free';
     state.enrollments = [enrolled('fde')];
     await overview('fde');
-    expect(screen.getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
+    const modules = screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
+    expect(within(modules).getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
     expect(state.sheet).not.toHaveBeenCalled();
   });
 });

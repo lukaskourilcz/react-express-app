@@ -6,6 +6,8 @@ import { pathInventory } from '../../shared/learning-paths';
 
 const manifest = publicManifest(pathById('fde')!);
 const first = manifest.modules.find(module => !module.optional && !module.shelf)!;
+// The board lists only the competencies some loop activity supplies (UX audit learn-11).
+const areas = manifest.competencies.filter(competency => manifest.modules.some(module => !module.optional && !module.shelf && module.activities.some(activity => activity.competencies.includes(competency.id))));
 const enrollment = { enrollmentId: 'LOCALFDEHUB000000000', pathId: 'fde', curriculumVersion: 1, status: 'active', baseTrackAtEnrollment: 'fullstack', startedAt: '2026-10-22T00:00:00Z', updatedAt: '2026-10-22T00:00:00Z' };
 for (const theme of ['light', 'dark'] as const) {
   test(`${theme}: recorded FDE board, keyboard, reflow and completion artwork`, async ({ page }, info) => {
@@ -34,8 +36,13 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto('/learn/forward-deployed-engineer/path');
     const board = page.getByRole('region', { name: 'Competency evidence' });
     await expect(board).toBeVisible();
-    await expect(board.locator('h3')).toHaveCount(manifest.competencies.length);
+    // One closed disclosure below the modules, one row per area inside it.
+    await expect(board.locator(':scope > details')).not.toHaveAttribute('open', '');
+    await expect(board.locator(':scope > details > summary')).toContainText(`${areas.length} areas`);
+    await expect(board.locator('h3')).toHaveCount(areas.length);
     await expect(board).not.toContainText('Verified pass');
+    const modules = page.locator('section.lp-section').filter({ has: page.getByRole('heading', { level: 2, name: 'Modules' }) });
+    expect((await board.boundingBox())!.y).toBeGreaterThan((await modules.boundingBox())!.y);
     await expect(page.locator('[aria-current="step"]')).toContainText('Discover and scope');
     await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(1);
     // The shell's delayed route focus finishes before keyboard interaction.
@@ -43,9 +50,15 @@ for (const theme of ['light', 'dark'] as const) {
     const summary = board.locator('summary').first();
     await summary.focus(); await page.keyboard.press('Enter');
     await expect(summary.locator('..')).toHaveAttribute('open', '');
+    expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+    await page.keyboard.press('Tab');
+    const row = board.locator('.lp-evidence__row').first();
+    await expect(row).toBeFocused();
+    expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+    await page.keyboard.press('Enter');
+    await expect(row.locator('..')).toHaveAttribute('open', '');
     await page.keyboard.press('Tab');
     await expect(board.locator('a').first()).toBeFocused();
-    expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     for (const width of [360, 390, 430, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `reflow ${width}`).toBe(true);
