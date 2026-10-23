@@ -41,6 +41,7 @@ import { LockedButton } from './ui/LockedButton';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
 import { Page } from './PublicInfoPages';
+import { SignedOutBlock } from './SignedOutBlock';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
@@ -49,6 +50,7 @@ import { friendlyError } from '../lib/api';
 import { entitlementQuery, useEntitlement } from '../lib/entitlement';
 import { useGameConfig } from '../lib/gameConfig';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
+import { openSignIn } from '../lib/signInDialog';
 import { categoryLabelKey } from '../lib/categories';
 import { referralQuery } from '../lib/referral';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
@@ -153,14 +155,19 @@ function Wallet({ signedIn, restoring = false }: { signedIn: boolean; restoring?
           {/* The h1 says Coins and the number says coins: the label names
               the section for a screen reader only (UX audit money-12). */}
           <h2 id="rw-wallet-title" className="ss-sr-only">{t('shop.balanceLabel')}</h2>
-          <p className="rw-wallet__amount">
-            <strong>{signedIn && wallet.data ? wallet.data.balance.toLocaleString('en-GB') : '—'}</strong>
-            <span>{t('shop.tokensUnit')}</span>
-          </p>
+          {/* Signed out, the money screens' one signed-out block stands where
+              the balance goes, so no '—' poses as a number (money-05). */}
+          {!signedIn && !restoring ? (
+            <SignedOutBlock message={t('shop.signInForWallet')} />
+          ) : (
+            <p className="rw-wallet__amount">
+              <strong>{signedIn && wallet.data ? wallet.data.balance.toLocaleString('en-GB') : '—'}</strong>
+              <span>{t('shop.tokensUnit')}</span>
+            </p>
+          )}
         </div>
       </div>
 
-      {!signedIn && !restoring && <p className="rw-muted">{t('shop.signInForWallet')}</p>}
       {loading && <p className="rw-muted" role="status">{t('common.loading')}</p>}
       {signedIn && wallet.isError && !wallet.data && (
         <div className="rw-inline-error" role="alert">
@@ -565,6 +572,13 @@ function Shop() {
   // The balance only once it is known: a row says how many coins are missing
   // against a real number, never against the 0 above.
   const knownBalance = isAuthenticated && wallet.data ? wallet.data.balance : null;
+  // Signed out, Buy says what it needs and asks for it, instead of sitting
+  // disabled without a reason (UX audit money-05). Secondary: the wallet's
+  // Sign in above is the screen's primary.
+  const signedOut = !isAuthenticated && !restoring;
+  const signInToBuy = (
+    <Button variant="secondary" label={t('shop.signInToBuy')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+  );
   const ownsCrown = useMemo(
     () => (wallet.data?.cosmetics ?? []).some((one) => one.id === 'crown'),
     [wallet.data],
@@ -664,7 +678,7 @@ function Shop() {
                     isDisabled={cosmetic.isPending}
                     onClick={() => wearCrown(wearingCrown ? 'unequip' : 'equip')}
                   />
-                ) : (describedBy) => (
+                ) : signedOut ? signInToBuy : (describedBy) => (
                   <Button
                     variant="primary"
                     label={t('shop.buy')}
@@ -682,7 +696,7 @@ function Shop() {
                 blurb={t('shop.protectionBlurb', { cap: shop.data.protection.cap })}
                 price={shop.data.protection.tokenPrice}
                 balance={knownBalance}
-                action={(describedBy) => (
+                action={signedOut ? signInToBuy : (describedBy) => (
                   <Button
                     variant="primary"
                     label={t('shop.buy')}

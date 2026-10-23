@@ -273,8 +273,23 @@ describe('the Rewards screen', () => {
     signOut();
     routes();
     await mountShop();
-    expect(screen.getByText(/Sign in to see your coins/)).toBeInTheDocument();
     expect(screen.getByText('Streak milestones')).toBeInTheDocument();
+    // UX audit money-05: one signed-out block where the balance goes, with no
+    // '—' standing in for a number; one primary Sign in on the screen; Buy
+    // asks to sign in instead of sitting disabled.
+    const walletSection = screen.getByRole('region', { name: 'Your coins' });
+    expect(within(walletSection).getByText('Your coins and what earned them show here once you sign in.')).toBeInTheDocument();
+    expect(within(walletSection).queryByText('—')).toBeNull();
+    expect(within(walletSection).getByRole('button', { name: 'Sign in' })).toHaveClass('primary');
+    const signIns = screen.getAllByRole('button', { name: 'Sign in' });
+    expect(signIns.filter((one) => one.classList.contains('primary'))).toHaveLength(1);
+    const buys = await screen.findAllByRole('button', { name: 'Sign in to buy' });
+    expect(buys).toHaveLength(2);
+    for (const buy of buys) {
+      expect(buy).toBeEnabled();
+      expect(buy).toHaveAttribute('aria-haspopup', 'dialog');
+    }
+    expect(screen.queryByRole('button', { name: 'Buy' })).toBeNull();
   });
 
   it('buys one streak protection for a double click on Buy', async () => {
@@ -406,8 +421,9 @@ describe('the Rewards screen', () => {
     await mountShop();
     // The invite section draws from the public settings while signed out.
     expect(await screen.findByRole('heading', { name: 'Invite a friend' })).toBeInTheDocument();
-    expect(screen.queryByText('Sign in to see your coins.')).toBeNull();
-    expect(screen.queryByText('Sign in to get your invite link.')).toBeNull();
+    expect(screen.queryByText('Your coins and what earned them show here once you sign in.')).toBeNull();
+    expect(screen.queryByText('Your invite link shows here once you sign in.')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Sign in/ })).toBeNull();
     expect(screen.getAllByRole('status').some((one) => one.textContent === 'Loading…')).toBe(true);
   });
 
