@@ -63,6 +63,9 @@ const INSTALLATIONS: Record<number, { id: number; account: { login: string; id: 
 };
 
 let oauthAnswer: 'normal' | 'server_error' = 'normal';
+// How the repository listing answers: as GitHub does, with an outage page
+// from a proxy in front of it, or not before our timer aborts the call.
+let reposAnswer: 'normal' | 'html' | 'timeout' = 'normal';
 const calls: string[] = [];
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -105,6 +108,8 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
     return json(200, found);
   }
   if (url.pathname === '/installation/repositories') {
+    if (reposAnswer === 'html') return new Response('<html><body>502 Bad Gateway</body></html>', { status: 502, headers: { 'content-type': 'text/html' } });
+    if (reposAnswer === 'timeout') throw new DOMException('This operation was aborted', 'AbortError');
     const id = Number(/ghs_installation_(\d+)/.exec(headers.get('authorization') ?? '')?.[1]);
     const account = INSTALLATIONS[id]?.account;
     if (!account) return json(401, { message: 'Bad credentials' });
@@ -295,7 +300,22 @@ async function main() {
   assert.equal(busySync.statusCode, 503, 'a timed-out sync is a 503');
   assert.equal(errorCode(busySync.body), 'upstream_timeout');
 
-  // 13. Rate limits are each learner's own, with an address backstop that
+  // 13. GitHub not answering: an outage page is a GitHub error (502), and a
+  //     call our timer aborted is GitHub busy for a moment (503), never a 500.
+  const accountD = 'aaaaaaaa-0000-4000-8000-00000000d004';
+  table.set(accountD, { user_id: accountD, installation_id: STRANGER_INSTALLATION, account_login: STRANGER.login, account_id: STRANGER.id, repo_full_name: null, default_branch: null, status: 'pending_repo', last_error: null, last_commit_at: null });
+  reposAnswer = 'html';
+  const outage = await call('github-repo', accountD, 'POST', { repoFullName: `${STRANGER.login}/garden` });
+  reposAnswer = 'timeout';
+  const slow = await call('github-repo', accountD, 'POST', { repoFullName: `${STRANGER.login}/garden` });
+  reposAnswer = 'normal';
+  assert.equal(outage.statusCode, 502, 'an outage page from GitHub is a 502');
+  assert.equal(errorCode(outage.body), 'github_error');
+  assert.equal(slow.statusCode, 503, 'a GitHub call that timed out is a 503');
+  assert.equal(errorCode(slow.body), 'upstream_timeout');
+  table.delete(accountD);
+
+  // 14. Rate limits are each learner's own, with an address backstop that
   //     holds a class: every seat of a class behind one address spends its
   //     whole connect and sync budget without a 429, one learner past their
   //     budget is refused, and the next learner at that address is not.

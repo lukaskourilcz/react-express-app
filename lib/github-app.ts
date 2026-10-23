@@ -16,7 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CodingGardenStatus } from '../shared/coding-api';
 import { gardenPathFor, hasLearnLevel, type CodingTask } from '../shared/coding-catalog';
 import type { GardenPassInput } from './github-garden';
-import { withTimeout } from './http';
+import { UpstreamTimeoutError, withTimeout } from './http';
 
 const API = 'https://api.github.com';
 const USER_AGENT = 'devShark-garden';
@@ -67,10 +67,18 @@ export class GithubError extends Error {
   }
 }
 
+/** How long one GitHub call may take before it counts as GitHub not answering. */
+const GITHUB_TIMEOUT_MS = 8_000;
+
+/** Our own timer aborted the call: GitHub did not answer in time, which is the
+ * service unavailable for a moment (503 `upstream_timeout`), not a fault. */
+const timedOut = (error: unknown): boolean =>
+  error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
+
 /** `bearer` for an app JWT or a user access token, `token` for an installation token. */
 async function gh<T>(path: string, init: { method?: string; token: string; body?: unknown; bearer?: boolean }): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8_000);
+  const timer = setTimeout(() => controller.abort(), GITHUB_TIMEOUT_MS);
   try {
     const response = await fetch(`${API}${path}`, {
       method: init.method ?? 'GET',
@@ -86,12 +94,23 @@ async function gh<T>(path: string, init: { method?: string; token: string; body?
     });
     if (response.status === 204) return undefined as T;
     const text = await response.text();
-    const data = text ? (JSON.parse(text) as unknown) : null;
+    let data: unknown = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // An outage page from a proxy in front of GitHub, not an API answer.
+        throw new GithubError(response.ok ? 502 : response.status, response.ok ? 'GitHub answered with something other than JSON' : response.statusText);
+      }
+    }
     if (!response.ok) {
       const message = data && typeof data === 'object' && 'message' in data ? String((data as { message: unknown }).message) : response.statusText;
       throw new GithubError(response.status, message.slice(0, 200));
     }
     return data as T;
+  } catch (error) {
+    if (timedOut(error)) throw new UpstreamTimeoutError();
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -129,7 +148,7 @@ const MAX_INSTALLATION_PAGES = 10;
  * `error` field, which comes back as `refused`; a transport failure throws. */
 async function exchangeInstallCode(code: string): Promise<{ token: string } | { refused: string }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8_000);
+  const timer = setTimeout(() => controller.abort(), GITHUB_TIMEOUT_MS);
   try {
     const response = await fetch(OAUTH_TOKEN_URL, {
       method: 'POST',
@@ -143,6 +162,9 @@ async function exchangeInstallCode(code: string): Promise<{ token: string } | { 
     // Only GitHub's short error name is kept, for the log: never the body.
     const reason = typeof data?.error === 'string' && /^[a-z_]{1,64}$/.test(data.error) ? data.error : 'no_token';
     return { refused: reason };
+  } catch (error) {
+    if (timedOut(error)) throw new UpstreamTimeoutError();
+    throw error;
   } finally {
     clearTimeout(timer);
   }
