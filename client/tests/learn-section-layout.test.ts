@@ -19,6 +19,8 @@ describe('the section header (learn-08)', () => {
     for (const selector of ['.rm-section-note', '.rm-section-error', '.rm-section-status']) {
       expect(declared(wide, selector, 'grid-column')).toBe('1 / -1');
     }
+    // The visitor's device-only note runs the row's width (learn-01).
+    expect(declared(wide, '.rm-section-note', 'max-width')).toBe('none');
   });
 
   it('stays stacked below 768px', () => {

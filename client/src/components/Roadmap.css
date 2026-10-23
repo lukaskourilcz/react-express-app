@@ -559,6 +559,9 @@
   .rm-section-note,
   .rm-section-error,
   .rm-section-status { grid-column: 1 / -1; }
+  /* The note runs the row's width, so the visitor's device-only note is one
+     line at 800px rather than two under a 62ch cap. */
+  .rm-section-note { max-width: none; }
 }
 .rm-section-status:empty { display: none; }
 .rm-section-status { font-size: var(--ss-type-meta); color: var(--color-text-primary); }
