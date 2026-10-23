@@ -15,6 +15,8 @@ import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingVerdictResponse, DesignAnswer } from '../../../shared/coding-api';
 import './Coding.css';
 import { Button } from '@astryxdesign/core/Button';
+import { workbenchCopy } from '../i18n/translations.workbench';
+import { openSignIn } from '../lib/signInDialog';
 
 export interface DesignRunnerProps {
   task: PlayableCodingTask;
@@ -192,7 +194,11 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
             </h3>
             {design && <p className="cd-verdict__row">{t('coding.design.score', { correct, total: steps.length })} · {t('coding.design.passMark', { n: design.passMark, total: steps.length })}</p>}
             {!passed && <p className="cd-verdict__row">{t('coding.design.failedNote')}</p>}
-            {passed && !verdict.progress && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
+            {/* Signed out, the pass says it needs an account, with the way
+                to get one (UX audit coding-10). */}
+            {passed && !verdict.progress && (signedIn
+              ? <p className="cd-verdict__row">{t('coding.verdict.notRecorded')}</p>
+              : <p className="cd-verdict__row cd-verdict__signin">{t('coding.verdict.signIn')} <Button variant="secondary" aria-haspopup="dialog" onClick={() => openSignIn()} label={workbenchCopy('coding.verdict.signInAction')} /></p>)}
             {verdictActions}
           </section>
           <div className="cd-review">
@@ -250,7 +256,6 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
       <section className="cd-pane">
         {header}
         {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
-        {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
         {design && (
           <details open={stepIndex === 0}>
             <summary className="cd-editor-label" style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>{t('coding.design.brief')}</summary>

@@ -180,7 +180,7 @@ const press = async (name: string | RegExp) => {
   await act(async () => { fireEvent.click(screen.getByRole('button', { name })); });
 };
 const wait = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
-const status = () => document.querySelector('.lp-work .lp-actions__status')?.textContent;
+const status = () => document.querySelector('.cd-workbench--activity .lp-actions__status')?.textContent;
 
 describe('one attempt takes one result', () => {
   it('finishes code with the shared Passed banner and two actions', async () => {
@@ -546,7 +546,10 @@ it('refreshes a changed code brief without submitting or clearing the draft', as
   await type('keep this draft');
   await press('Submit');
   await screen.findByRole('button', { name: 'Load latest brief' });
-  expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  // Submit is the frame's SwimCta: unavailable (focusable, aria-disabled)
+  // until the latest brief is loaded, and a press sends nothing.
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
+  await press('Submit');
   expect(calls.submit).toHaveLength(1);
   expect(calls.start).toEqual([A]);
   expect(editor().value).toBe('keep this draft');
@@ -575,7 +578,9 @@ it('shows a renewed changed brief before grading a second code submission', asyn
   expect(calls.start).toEqual([A, A]);
   expect(calls.submit).toHaveLength(1);
   expect(editor().value).toBe('keep the correction');
-  expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
+  await press('Submit');
+  expect(calls.submit).toHaveLength(1);
   await press('Load latest brief');
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Load latest brief' })).toBeNull());
   expect(calls.submit).toHaveLength(1);

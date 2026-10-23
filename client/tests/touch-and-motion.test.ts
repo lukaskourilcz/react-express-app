@@ -121,10 +121,14 @@ describe('control heights on every pointer', () => {
     );
   });
 
-  it('gives the coding workbench’s Submit the row’s 44px and the page-action type, not SwimCta sm’s 32px', () => {
+  it('gives the coding workbench’s Submit the row’s 44px as SwimCta md, not SwimCta sm’s 32px (coding-02)', () => {
     const coding = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+    const workbench = readFileSync(new URL('../src/coding/CodingWorkbench.tsx', import.meta.url), 'utf8');
     expect(coding).not.toContain('--swim-cta-height: 32px');
-    expect(coding).toContain('.cd-workbench .ss-swim-cta--sm { padding: 10px 18px !important; font-size: 0.95rem !important; }');
+    expect(coding).not.toContain('ss-swim-cta--sm');
+    // Every SwimCta in the workbench takes the md default (44px, 0.95rem text).
+    expect(workbench).toMatch(/<SwimCta /);
+    expect(workbench).not.toMatch(/<SwimCta[^>]*size="sm"/);
   });
 });
 

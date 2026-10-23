@@ -29,15 +29,24 @@ const mount = (collapsible = true) => render(
   </MemoryRouter>,
 );
 
+// UX audit coding-08: the collapsed planner is a hairline row, not a card,
+// that says what a run is and ends in a "Plan a run" button.
 it('starts collapsed to one row and opens the form on click', () => {
-  mount();
-  const toggle = screen.getByRole('button', { name: /Challenge run/ });
+  const { container } = mount();
+  const section = container.querySelector('section')!;
+  expect(section).not.toHaveClass('cd-pane');
+  expect(screen.getByRole('heading', { level: 2, name: 'Challenge run' })).toBeInTheDocument();
+  expect(section).toHaveTextContent('Pick a track and a time, and we line up the tasks.');
+  const toggle = screen.getByRole('button', { name: 'Plan a run' });
   expect(toggle).toHaveAttribute('aria-expanded', 'false');
   expect(screen.queryByRole('group', { name: 'Track' })).toBeNull();
   fireEvent.click(toggle);
   expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  expect(screen.getByRole('heading', { level: 2, name: /Challenge run/ })).toBeInTheDocument();
+  expect(toggle).toHaveAccessibleName('Hide the planner');
   expect(document.getElementById(toggle.getAttribute('aria-controls') ?? '')?.querySelector('form')).not.toBeNull();
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('group', { name: 'Track' })).toBeNull();
 });
 
 // Audit C3-1: the button was a type="button" with an empty onClick, so a
@@ -77,4 +86,12 @@ it('offers no Start while the open run is loading', () => {
   mount(false);
   expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
   expect(screen.getByRole('status')).toHaveTextContent('Loading');
+});
+
+// One filled primary per screen: the planner sits on the Coding home, whose
+// SwimCta is the next challenge, so its own actions are secondary.
+it('draws no SwimCta of its own', () => {
+  const { container } = mount(false);
+  expect(screen.getByRole('button', { name: 'Start' })).not.toHaveClass('ss-swim-cta');
+  expect(container.querySelector('.ss-swim-cta')).toBeNull();
 });

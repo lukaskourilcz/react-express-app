@@ -11,6 +11,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingHome, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import type { CodingProgressResponse, CodingTaskProgress } from '../../shared/coding-api';
 import { CODING_INDEX } from '../../shared/coding-index';
+import { evolvingStage } from '../../shared/evolving';
 
 const passed: CodingTaskProgress = { status: 'passed', passes: 1, reviewStage: 0, nextReviewAt: null, revealCount: 0, bestPassedAt: null };
 const state = vi.hoisted(() => ({ progress: undefined as CodingProgressResponse | undefined }));
@@ -55,18 +56,22 @@ beforeEach(() => {
   state.progress = { tasks: { 'js-double-numbers': { ...passed, nextReviewAt: '2026-01-01T00:00:00Z' } }, due: [], javascriptLevelsCleared: 0, passedByTrack: {} as CodingProgressResponse['passedByTrack'] };
 });
 
+// UX audit coding-16: status is one select in the single filter row.
 it('filters a track by all, open, passed and saved, and offers no review filter', () => {
   mount('/coding/javascript');
-  const status = screen.getByRole('group', { name: 'Status' });
-  expect(within(status).getAllByRole('button').map((chip) => chip.textContent)).toEqual(['All', 'Open', 'Passed', 'Saved']);
+  const status = screen.getByRole('combobox', { name: 'Status' });
+  expect(within(status).getAllByRole('option').map((option) => option.textContent)).toEqual(['Any status', 'Open', 'Passed', 'Saved']);
   expect(screen.queryByText(/Due for review/)).toBeNull();
 });
 
 it('lists the whole track for an old review-queue link, rather than nothing', () => {
   mount('/coding/javascript?status=due');
-  expect(screen.getByText(/^Showing \d+ of \d+$/).textContent).toMatch(/^Showing ([1-9]\d*) of \1$/);
+  const whole = CODING_INDEX.filter((task) => task.track === 'javascript' && !evolvingStage(task.id)).length;
+  expect(document.querySelectorAll('.cd-rows > li')).toHaveLength(whole);
+  // Nothing narrows the list, so it does not count it: the header holds the total.
+  expect(screen.queryByText(/^Showing \d+ of \d+$/)).toBeNull();
   expect(screen.queryByText('No challenge matches those filters. Clear them to see the rest.')).toBeNull();
-  expect(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('all');
 });
 
 it('says every open task is passed without promising a review queue', () => {

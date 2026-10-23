@@ -152,18 +152,18 @@ for (const theme of ['light', 'dark'] as const) {
   test(`${theme}: a code activity shows its fixture note above the editor`, async ({ page }, info) => {
     await setUp(page, theme);
     await page.goto(`/learn/forward-deployed-engineer/path/fde-v1-x01?activity=${drill.id}`);
-    const note = page.locator('.lp-work > .lp-notice--info');
+    const note = page.locator('.cd-workbench--activity .cd-brief > .lp-notice--info');
     await expect(note).toBeVisible();
     await expect(note).toContainText('Before you start');
     await expect(note).toContainText(NOTE_FIRST);
-    const editor = page.locator('.lp-work .cm-editor');
+    const editor = page.locator('.cd-workbench--activity .cm-editor');
     await expect(editor).toBeVisible();
     for (const width of [360, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       expect((await note.boundingBox())!.y, `note above the editor at ${width}`).toBeLessThan((await editor.boundingBox())!.y);
     }
-    await expectReflow(page, '.lp-work > .lp-notice--info');
+    await expectReflow(page, '.cd-workbench--activity .cd-brief > .lp-notice--info');
     await note.screenshot({ path: info.outputPath(`fixture-note-${theme}.png`) });
-    await expectNoAxeViolations(page, '.lp-work > .lp-notice--info');
+    await expectNoAxeViolations(page, '.cd-workbench--activity .cd-brief > .lp-notice--info');
   });
 }

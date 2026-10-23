@@ -9,6 +9,7 @@ import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { revealCoding, submitCoding, useCodingApproaches } from '../src/coding/api';
 import { runCodeTests, type RunOutcome } from '../src/coding/runner/run-tests';
 import { skipTask } from '../src/coding/practice';
+import { openSignIn } from '../src/lib/signInDialog';
 import { ApiError } from '../src/lib/api';
 import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import type { CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
@@ -21,6 +22,7 @@ vi.mock('../src/coding/Editor', () => ({
 }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: vi.fn(() => ({ data: undefined })), submitCoding: vi.fn(), revealCoding: vi.fn() }));
 vi.mock('../src/coding/practice', () => ({ skipTask: vi.fn() }));
+vi.mock('../src/lib/signInDialog', () => ({ openSignIn: vi.fn() }));
 vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/coding/runner/run-tests')>(),
   runCodeTests: vi.fn(),
@@ -117,7 +119,7 @@ it('blames the hidden checks only when every visible check passed', async () => 
 for (const [name, run, says] of [
   ['an error', outcome({ codeError: 'ReferenceError: x is not defined' }), 'Your code could not run.'],
   ['a timeout', outcome({ timedOut: true, codeError: 'Timed out. Check for an infinite loop.' }), 'Timed out. Check for an infinite loop.'],
-  ['type errors', outcome({ results: [{ pass: true, actual: '[2]', error: null }, { pass: true, actual: '[]', error: null }], check: { codeErrors: [{ line: 1, message: 'Type error' }], typeTests: [{ pass: false, error: 'no' }] } }), '2 of 2 passing. 2 type errors'],
+  ['type errors', outcome({ results: [{ pass: true, actual: '[2]', error: null }, { pass: true, actual: '[]', error: null }], check: { codeErrors: [{ line: 1, message: 'Type error' }], typeTests: [{ pass: false, error: 'no' }] } }), '2 of 2 passing. 1 compiler error · 1 of 1 type check fails'],
 ] as const) {
   it(`announces ${name} as what it is`, async () => {
     vi.mocked(runCodeTests).mockResolvedValueOnce(run);
@@ -345,8 +347,9 @@ function climbTheLadder() {
 // later", which nothing does; and its way out said "Try again".
 it('tells a signed-out visitor what a reveal really does, and Keep trying returns focus', () => {
   mount({ signedIn: false });
-  // The note beside the brief no longer says any task runs without an account.
-  expect(screen.getByText(/^Sign in to keep your progress\./)).toHaveTextContent('Signed out, you can run and check the free tasks, but no pass is recorded.');
+  // UX audit coding-10: the brief carries no sign-in note; a pass says it
+  // needs an account, where it matters (the next test).
+  expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
   climbTheLadder();
   const solution = screen.getByRole('button', { name: 'Solution' });
   fireEvent.click(solution);
@@ -438,7 +441,9 @@ it('shows three landing examples while Run still checks every test', async () =>
   const results = screen.getByRole('tabpanel', { name: 'Results' });
   expect(within(results).getAllByRole('listitem')).toHaveLength(3);
   fireEvent.click(screen.getByRole('button', { name: 'Run' }));
-  await waitFor(() => expect(within(results).getByText('5 of 5 passing')).toBeVisible());
+  // The count of every check run is the Results badge, said once (coding-19).
+  await waitFor(() => expect(screen.getByRole('tab', { name: /Results/ })).toHaveTextContent('Results5/5'));
+  expect(within(results).queryByText('5 of 5 passing')).toBeNull();
   expect(within(results).getAllByRole('listitem')).toHaveLength(3);
   expect(vi.mocked(runCodeTests).mock.calls[0][0].tests).toHaveLength(5);
 });
@@ -456,14 +461,17 @@ it('keeps Big O space targets and guidance exclusively inside its named tooltip'
   expect(document.querySelector('.cd-complexity > span')).not.toHaveTextContent('Target extra space');
 });
 
-it('uses named icons and tooltips only for the homepage command buttons', () => {
+it('labels Run and Submit at every width and keeps icons with tooltips for the editor\'s own toolbar (coding-02, coding-13)', () => {
   vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
     matches: false, media: query, onchange: null,
     addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
   }) as MediaQueryList);
   const landing = mount({ mode: 'landing' });
-  for (const name of ['Run', 'Format']) {
+  // Run keeps its word; Format and Reset are the editor toolbar's named icons.
+  expect(screen.getByRole('button', { name: 'Run' })).toHaveTextContent('Run');
+  for (const name of ['Format', 'Reset']) {
     const button = screen.getByRole('button', { name });
+    expect(button.closest('.cd-editor-bar')).toHaveClass('ss-compact');
     expect(button.querySelector('svg')).not.toBeNull();
     expect(button).not.toHaveTextContent(name);
     expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(name);
@@ -475,13 +483,41 @@ it('uses named icons and tooltips only for the homepage command buttons', () => 
   expect(submitCoding).not.toHaveBeenCalled();
   landing.unmount();
   mount();
-  for (const name of ['Run', 'Submit', 'Format']) {
+  for (const name of ['Run', 'Submit', 'Solution']) {
     expect(screen.getByRole('button', { name })).toHaveTextContent(name);
   }
-  expect(screen.getByRole('button', { name: 'Solution' })).toBeVisible();
+  // Submit is the row's one filled primary, SwimCta md.
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveClass('ss-swim-cta--md');
+  expect(screen.getByRole('button', { name: 'Run' }).closest('.cd-editor-actions')!.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Format' }).closest('.cd-editor-actions')).toBeNull();
   expect(screen.getByRole('button', { name: 'Report a problem with this task' })).toBeVisible();
 });
 
+it('folds Hint, Solution and Report into one More actions menu below 1024px, with Run and Submit still labelled (coding-13)', async () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query.includes('1023.95'), media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  sessionStorage.setItem('devshark:coding:narrow-editor:v1', '1');
+  mount();
+  expect(screen.getByRole('button', { name: 'Run' })).toHaveTextContent('Run');
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveTextContent('Submit');
+  expect(screen.queryByRole('button', { name: 'Hint' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Report a problem with this task' })).toBeNull();
+  const more = screen.getByRole('button', { name: 'More actions' });
+  expect(more).toHaveAttribute('aria-haspopup', 'menu');
+  fireEvent.click(more);
+  const menu = await screen.findByRole('menu', { name: 'More actions' });
+  expect(within(menu).getByRole('menuitem', { name: /Hint/ })).toHaveTextContent('Hint');
+  // The reason Hint is unavailable stays, as the item's description.
+  expect(within(menu).getByRole('menuitem', { name: /Hint/ })).toHaveTextContent('Hints open after a minute of editing');
+  expect(within(menu).getByRole('menuitem', { name: /Report a problem/ })).toBeInTheDocument();
+  sessionStorage.clear();
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+});
 
 it('keeps the draft and requires the latest brief after a stale Submit', async () => {
   vi.mocked(submitCoding).mockRejectedValueOnce(new ApiError('Task changed', 409, 'task_changed'));
@@ -530,4 +566,28 @@ it('lets long code tokens in the brief, the hints and the notes wrap', () => {
     expect(declared(rules, selector, 'overflow-wrap'), selector).toBe('anywhere');
   }
   style.remove();
+});
+
+// UX audit coding-10: signed out, the brief says nothing about an account; the
+// pass says it was not recorded and offers Sign in, the moment it matters.
+it('tells a signed-out visitor at the pass, with Sign in, that it needs an account', async () => {
+  vi.mocked(openSignIn).mockClear();
+  vi.mocked(submitCoding).mockResolvedValueOnce(verdict({ progress: null, firstPass: false, xpAwarded: 0 }));
+  mount({ signedIn: false });
+  expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
+  const line = screen.getByText(/^Sign in to record this pass\./);
+  const signIn = within(line).getByRole('button', { name: 'Sign in' });
+  expect(signIn).toHaveAttribute('aria-haspopup', 'dialog');
+  fireEvent.click(signIn);
+  expect(openSignIn).toHaveBeenCalledTimes(1);
+});
+
+it('says a signed-in pass that was not recorded without offering Sign in', async () => {
+  vi.mocked(submitCoding).mockResolvedValueOnce(verdict({ progress: null, firstPass: false, xpAwarded: 0 }));
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
 });

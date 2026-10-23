@@ -5,8 +5,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
+import { DropdownMenu, DropdownMenuItem } from '@astryxdesign/core/DropdownMenu';
+import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
+import { workbenchCopy } from '../i18n/translations.workbench';
+import { openSignIn } from '../lib/signInDialog';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
@@ -22,17 +26,18 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
+import { FlagIcon, FormatCodeIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
-import { useIsNarrowForEditor, useMediaQuery } from '../lib/useMediaQuery';
+import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
 import { resetCoding, revealCoding, submitCoding, useCodingApproaches } from './api';
 import { RepeatXpNote } from './RepeatXpNote';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
+import { BriefZone } from './BriefZone';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import { complexityGuidance } from '../../../shared/coding-complexity';
 import './Coding.css';
@@ -153,8 +158,6 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const online = useOnline();
   const baseId = useId();
   const isReact = task.track === 'react';
-  const compactViewport = useMediaQuery('(width < 1220px)');
-  const compactCommands = mode === 'landing' || compactViewport;
   const isTypeScript = task.track === 'typescript';
   const codeTrack = task.track === 'typescript' ? 'typescript' : 'javascript';
   const checklist = task.verify === 'checklist';
@@ -182,7 +185,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   // The last Run or Submit kept the code on this device only.
   const [draftTooLarge, setDraftTooLarge] = useState(false);
-  const [tab, setTab] = useState<Tab>(isReact ? 'preview' : 'results');
+  // Every track opens on the checks the learner has to pass, React included
+  // (UX audit coding-04); the preview takes over after the first Run that
+  // renders something.
+  const [tab, setTab] = useState<Tab>('results');
+  const previewShown = useRef(false);
   const [hintsTaken, setHintsTaken] = useState(0);
   const [confirming, setConfirming] = useState<'reset' | 'reveal' | null>(null);
   const [solution, setSolution] = useState<string | null>(null);
@@ -199,6 +206,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const verdictRef = useRef<HTMLElement | null>(null);
   const resetRef = useRef<HTMLButtonElement | null>(null);
   const revealRef = useRef<HTMLButtonElement | null>(null);
+  const moreRef = useRef<HTMLButtonElement | null>(null);
   const solutionRef = useRef<HTMLDivElement | null>(null);
   // The browser's run in progress: a Run, or the preview during a Submit,
   // which the server's answer replaces.
@@ -209,6 +217,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Both offer the editor anyway, so neither is a dead end: a puzzle never
   // completes its task, and without the editor a phone could not pass it.
   const narrow = useIsNarrowForEditor();
+  // Below the two-column layout Hint, Solution, Skip and Report share one
+  // More actions menu, so Run and Submit keep their words (UX audit coding-13).
+  const menuCommands = mode === 'landing' || narrow;
   const [editorHere, setEditorHere] = useState(readNarrowEditor);
   const editorPaneRef = useRef<HTMLElement | null>(null);
   const focusEditorPane = useRef(false);
@@ -322,7 +333,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         const outcome = await harness.start(files(), { tests: Boolean(task.suite), preview: true });
         restoreFocus();
         if (outcome.status !== 'done' || outcome.failed > 0) setFailedRun(true);
-        setTab(task.suite ? 'results' : 'preview');
+        const rendered = outcome.status === 'done' && !outcome.previewError;
+        const firstRender = rendered && !previewShown.current;
+        if (rendered) previewShown.current = true;
+        setTab(firstRender || !task.suite ? 'preview' : 'results');
       } else {
         // Leaving the task stops the run (the unmount below aborts it), so a
         // loop or a first compile does not keep a worker busy for nothing.
@@ -535,7 +549,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setSubmitError(error instanceof ApiError && error.code === 'reveal_locked'
         ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) })
         : isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
-      revealRef.current?.focus();
+      (revealRef.current ?? moreRef.current)?.focus();
     } finally {
       revealing.current = false;
     }
@@ -595,7 +609,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Keeping the code, by the button or by Escape, hands focus back to the
   // button that asked; otherwise it fell to the page.
   const cancelConfirm = () => {
-    const trigger = confirming === 'reset' ? resetRef.current : revealRef.current;
+    // In the More actions menu, Solution has no button of its own: the menu's does.
+    const trigger = confirming === 'reset' ? resetRef.current : (revealRef.current ?? moreRef.current);
     setConfirming(null);
     trigger?.focus();
   };
@@ -653,7 +668,22 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const resultsBadge = isReact
     ? reactRun && reactRun.status === 'done' && reactRun.total > 0 ? `${reactRun.passed}/${reactRun.total}` : null
     : run && !run.codeError && run.results.length > 0 ? `${run.results.filter((r) => r.pass === true).length}/${run.results.length}` : null;
-  const typesBadge = run?.check ? (run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) ? 'ok' : String(run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length)) : null;
+  // The Types badge reads like the Results one, checks passed of checks
+  // (UX audit coding-19); compiler errors turn it to the failing colour and
+  // are counted in the panel's summary, never added into the checks.
+  const typesClean = run?.check ? run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) : null;
+  const typesBadge = run?.check
+    ? run.check.typeTests.length > 0 ? `${run.check.typeTests.filter((one) => one.pass).length}/${run.check.typeTests.length}` : typesClean ? 'ok' : String(run.check.codeErrors.length)
+    : null;
+  /** What the type checker said, each kind of error counted on its own:
+   * "1 compiler error · 4 of 5 type checks fail". */
+  const typesSummary = (check: NonNullable<RunOutcome['check']>): string => {
+    const failing = check.typeTests.filter((one) => !one.pass).length;
+    const parts: string[] = [];
+    if (check.codeErrors.length > 0) parts.push(workbenchCopy(check.codeErrors.length === 1 ? 'coding.types.compilerError' : 'coding.types.compilerErrors', { n: check.codeErrors.length }));
+    if (failing > 0) parts.push(workbenchCopy(check.typeTests.length === 1 ? 'coding.types.checkFails' : 'coding.types.checksFail', { failing, total: check.typeTests.length }));
+    return parts.length > 0 ? parts.join(' · ') : t('coding.types.clean');
+  };
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const resources = useMemo(() => taskResources(task.focus).filter(entry => !task.references?.some(ref => ref.url === entry.url)), [task.focus, task.references]);
   const resourceCount = resources.length + (task.references?.length ?? 0);
@@ -700,10 +730,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
    * stopped on the types, or the code ran out of time. */
   const runNote = (outcome: RunOutcome): string => outcome.runnerUnavailable ? t('coding.results.runnerUnavailable')
     : outcome.codeError === TYPE_CHECK_STOPPED_MESSAGE ? t('coding.results.typeCheckStopped') : t('coding.results.timeout');
+  // One order on every track (UX audit coding-04): Results, Console, then
+  // the track's own tab (Types or Preview), then Resources, so the shared tabs
+  // keep their place from one track to the next.
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
-    ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
+    ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesClean }] : []),
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
     // Reading the documentation is not asking for help: this tab is open from
     // the moment the task loads, costs no hint rung, and needs no failed run.
@@ -800,19 +833,30 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   );
 
   /** One row of the Results list. Before a run the row still says what goes
-   * in and what should come out; only the verdict column waits. */
+   * in and what should come out; only the status column waits. A row is a
+   * line of a divided list, not a card of its own (UX audit coding-15): the
+   * call, then the expected value after an arrow, and after a run what came
+   * back. "Expected" is never printed; a screen reader hears it in place of
+   * the arrow. */
   const codeRow = (test: NonNullable<PlayableCodingTask['tests']>[number], result: RunOutcome['results'][number] | undefined, index: number): ReactNode => {
     const status = result?.pass === true ? 'pass' : result?.pass === false ? 'fail' : 'idle';
     return (
       <li key={index} className={`cd-result cd-result--${status}`}>
         <span className="cd-result__status">{status === 'pass' ? t('coding.results.pass') : status === 'fail' ? t('coding.results.fail') : <><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></>}</span>
-        <span className="cd-result__call">{test.shown ?? test.call}{test.edge && <span className="cd-result__label"> · {t('coding.results.edge')}</span>}</span>
-        {test.label && <span className="cd-result__label">{test.label}</span>}
-        <span className="cd-result__detail">
-          {result?.error
-            ? <><b>{t('coding.results.error')}:</b> {result.error}</>
-            : <><b>{t('coding.results.expected')}:</b> {JSON.stringify(test.expected)}{result && <> · <b>{t('coding.results.actual')}:</b> {result.actual}</>}</>}
+        {/* The call alone is .cd-result__call; what it should return and
+            what came back follow it on the same line. */}
+        <span className="cd-result__line">
+          <span className="cd-result__call">{test.shown ?? test.call}</span>
+          {!result?.error && (
+            <span className="cd-result__expect">
+              <span aria-hidden="true"> → </span><span className="cd-visually-hidden"> {t('coding.results.expected')} </span>{JSON.stringify(test.expected)}
+              {result && <> · {workbenchCopy('coding.results.got', { value: result.actual ?? '' })}</>}
+            </span>
+          )}
+          {test.edge && <span className="cd-tag cd-result__edge">{t('coding.results.edge')}</span>}
         </span>
+        {test.label && <span className="cd-result__label">{test.label}</span>}
+        {result?.error && <span className="cd-result__detail"><b>{t('coding.results.error')}:</b> {result.error}</span>}
       </li>
     );
   };
@@ -859,7 +903,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       if (reactRun.status === 'timeout') return <p className="cd-note cd-note--warn">{t('coding.preview.timeout')}</p>;
       return (
         <>
-          {reactRun.status === 'done' && <p className="cd-summary">{t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total })}{verdict?.hidden && serverChecked && <small>{t('coding.results.hidden', { passed: verdict.hidden.passed, total: verdict.hidden.total })}</small>}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
+          {/* The count is the tab's badge; the panel says only what the
+              badge cannot (coding-19). */}
+          {reactRun.status === 'done' && (serverChecked || stale) && <p className="cd-summary">{verdict?.hidden && serverChecked && <small>{t('coding.results.hidden', { passed: verdict.hidden.passed, total: verdict.hidden.total })}</small>}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
           <ul className="cd-results">
             {reactRun.cases.map((one, index) => (
               <li key={index} className={`cd-result cd-result--${one.status}`}>
@@ -892,15 +938,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     }
     if (run.runnerUnavailable || run.timedOut) return <p className="cd-note cd-note--warn">{runNote(run)}</p>;
     if (run.codeError) return <p className="cd-note cd-note--error">{t('coding.results.codeError')} <code className="cd-inline-code">{run.codeError}</code></p>;
-    const passedCount = run.results.filter((r) => r.pass === true).length;
+    // "N of M passing" is the Results badge above, so it is not said again
+    // here; the live region still announces it (coding-19).
     return (
       <>
-        <p className="cd-summary">
-          {t('coding.results.passing', { passed: passedCount, total: run.results.length })}
+        {(serverChecked || stale) && <p className="cd-summary">
           {verdict?.hidden && serverChecked && <small>{t('coding.results.hidden', { passed: verdict.hidden.passed, total: verdict.hidden.total })}</small>}
           {serverChecked && <small>{t('coding.results.serverNote')}</small>}
           {stale && <small>{t('coding.results.stale')}</small>}
-        </p>
+        </p>}
         <ul className="cd-results">
           {(mode === 'landing' ? run.results.slice(0, 3) : run.results).map((result, index) => codeRow(tests[index] ?? { call: '', expected: undefined }, result, index))}
         </ul>
@@ -929,10 +975,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         </>
       );
     }
-    const failing = check.typeTests.filter((one) => !one.pass).length;
     return (
       <>
-        <p className="cd-summary">{check.codeErrors.length === 0 && failing === 0 ? t('coding.types.clean') : t('coding.types.errors', { n: check.codeErrors.length + failing })}</p>
+        <p className="cd-summary">{typesSummary(check)}</p>
         {check.codeErrors.length > 0 && (
           <ul className="cd-results">
             {check.codeErrors.map((error, index) => (
@@ -964,12 +1009,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const logs = isReact ? (reactRun?.logs.map((entry) => `${entry.level === 'log' ? '' : `[${entry.level}] `}${entry.text}`) ?? []) : (run?.logs ?? []);
   const renderConsole = (): ReactNode => (logs.length === 0 ? <p className="cd-console__empty">{t('coding.console.empty')}</p> : <pre className="cd-console">{logs.join('\n')}</pre>);
 
+  // Before the first run there is nothing to show, so the preview says so in
+  // one line and its frame takes no room (coding-04). The frame stays mounted
+  // all the same: the sandbox loads while the learner reads, and a run needs it.
+  const previewIdle = !reactRun && !busy;
   const renderPreview = (): ReactNode => (
     <>
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
       {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <Button variant="ghost" size="sm" onClick={harness.reload} label={t('coding.preview.reload')} /></p>}
-      {!harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
-      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className="cd-frame" tabIndex={tab === 'preview' ? undefined : -1} />
+      {previewIdle ? <p className="cd-console__empty">{workbenchCopy('coding.preview.idle')}</p>
+        : !harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
+      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className={previewIdle ? 'cd-frame cd-frame--idle' : 'cd-frame'} aria-hidden={previewIdle || undefined} tabIndex={tab === 'preview' && !previewIdle ? undefined : -1} />
     </>
   );
 
@@ -1001,7 +1051,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       ) : (
         !isReact && verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>
       )}
-      {verdict.verdict === 'passed' && !verdict.progress && !verdict.puzzle && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
+      {/* Signed out, a pass says here, where it matters, that it needs an
+          account, with the way to get one (UX audit coding-10). */}
+      {verdict.verdict === 'passed' && !verdict.progress && !verdict.puzzle && (signedIn
+        ? <p className="cd-verdict__row">{t('coding.verdict.notRecorded')}</p>
+        : <p className="cd-verdict__row cd-verdict__signin">{t('coding.verdict.signIn')} <Button variant="secondary" aria-haspopup="dialog" onClick={() => openSignIn()} label={workbenchCopy('coding.verdict.signInAction')} /></p>)}
       {verdict.github && verdict.github.status !== 'not_connected' && (
         <p className="cd-verdict__row">
           {verdict.github.status === 'committed' && verdict.github.url ? <a className="cd-link" href={verdict.github.url} target="_blank" rel="noreferrer">{t('coding.github.committed', { repo: verdict.github.url.replace(/^https:\/\/github\.com\//, '').split('/').slice(0, 2).join('/') })}</a>
@@ -1012,7 +1066,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       )}
       {verdict.verdict === 'passed' && !verdict.puzzle && (
         <div className="cd-verdict__actions">
-          {mode === 'lesson' && onContinue && <SwimCta size="sm" dir={1} onClick={onContinue} label={t('coding.lesson.continue')} />}
+          {mode === 'lesson' && onContinue && <SwimCta dir={1} onClick={onContinue} label={t('coding.lesson.continue')} />}
           {mode === 'section' && nextHref && <Button variant="primary" as={Link} href={nextHref} label={t('coding.verdict.next')} />}
           {mode === 'section' && backHref && <Button variant="secondary" as={Link} href={backHref} label={t('coding.verdict.back')} />}
         </div>
@@ -1035,8 +1089,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     if (run.runnerUnavailable || run.timedOut) return runNote(run);
     if (run.codeError) return t('coding.results.codeError');
     const passing = t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length });
-    const typeErrors = run.check ? run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length : 0;
-    return typeErrors > 0 ? `${passing}. ${t('coding.types.errors', { n: typeErrors })}` : passing;
+    return run.check && !typesClean ? `${passing}. ${typesSummary(run.check)}` : passing;
   };
   // Once the code changes, the results on screen are about earlier code. Read
   // out again they would sound like news about the new code (the first
@@ -1059,16 +1112,26 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     ? t(evolution.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length })
     : `${trackLabel} · ${tierLabel}${task.topic === 'dsa' ? ` · ${t('category.dsa')}` : ''}${hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}`;
 
-  // The brief opens the pane the learner works in, whichever pane that is: one
-  // green line with where the task sits and what it is called, then what it asks.
+  // The brief opens the pane the learner works in, whichever pane that is: a
+  // quiet eyebrow saying where the task sits, then its name as the heading
+  // with the difficulty beside it (UX audit coding-11), then what it asks.
+  // The body under the heading is capped (BriefZone, coding-01), so the editor
+  // and the action bar sit at one height on every task.
   const brief = (
-    <div className="cd-brief">
-      <div className="cd-brief__line">
-        <span className="cd-brief__meta">{briefMeta}</span>
-        <Title id={titleId} className="cd-brief__title">{task.title}</Title>
-        <DifficultyBadge difficulty={difficultyOf(task)} />
-        {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
-      </div>
+    <BriefZone
+      labelledBy={titleId}
+      head={(
+        <div className="cd-brief__head">
+          <p className="cd-brief__meta">{briefMeta}</p>
+          <div className="cd-brief__line">
+            <Title id={titleId} className="cd-brief__title">{task.title}</Title>
+            <DifficultyBadge difficulty={difficultyOf(task)} />
+            {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+          </div>
+        </div>
+      )}
+      after={locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
+    >
       <Prompt className="cd-prompt" text={task.prompt} />
       {complexity.targetTime && <div className="cd-complexity">
         <span>{t('coding.complexity.desired', { complexity: complexity.targetTime })}</span>
@@ -1092,62 +1155,72 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <TermsBar texts={[task.prompt, task.title]} domain={glossaryDomainFor(task.track)} />
       {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
       {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{task.api.note}</p>}
-      {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
-      {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
+    </BriefZone>
+  );
+
+  // Format and Reset act on the code, so they sit in the editor's own slim
+  // toolbar above it: 36px icon buttons with a 44px hit area (.ss-compact)
+  // and their names as tooltips (UX audit coding-02).
+  const editorBar = (
+    <div className="cd-editor-bar ss-compact">
+      <Button variant="ghost" isIconOnly icon={<FormatCodeIcon />} tooltip={t('coding.format')} onClick={() => void format()} isDisabled={formatDisabled} label={t('coding.format')} />
+      <Button variant="ghost" ref={resetRef} isIconOnly icon={<ResetIcon />} tooltip={t('coding.reset')} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
     </div>
   );
 
-  // Run, Submit and the rest close the same pane, under the code.
+  // Run, Submit and the rest close the same pane, under the code: one 44px
+  // row. Run and Submit lead with their words at every width, and Submit is
+  // the screen's one filled primary (SwimCta md). Hint, Solution and Skip are
+  // ghost buttons beside them from 1024px, and fold into More actions below
+  // that, with Report (UX audit coding-02, coding-13).
+  const hintLabel = taken === 0 ? t('coding.hint') : t('coding.hintNext');
+  const showReveal = mode !== 'landing' && Boolean(session) && !solution && !solutions;
+  const showSkip = signedIn && mode === 'section' && !skipResult;
   const actionBar = (
     <div className="cd-editor-actions">
       <div className="cd-actions cd-actions--commands">
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus
             (a disabled one hands it to the page), and a press does nothing. */}
-        <Button variant="secondary" isIconOnly={compactCommands} icon={compactCommands ? <PlayIcon /> : undefined} onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : compactCommands ? t('coding.run') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
-        {mode !== 'landing' && (compactCommands
-          ? <Button variant="primary" isIconOnly icon={<CheckCircleIcon />} onClick={() => { if (!submitDisabled) void submit(); }} isDisabled={submitDisabled} tooltip={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
-          : <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />)}
-        <Button variant="ghost" isIconOnly={compactCommands} icon={compactCommands ? <FormatCodeIcon /> : undefined} onClick={() => void format()} isDisabled={formatDisabled} tooltip={compactCommands ? t('coding.format') : undefined} label={t('coding.format')} />
-        <Button variant="ghost" ref={resetRef} isIconOnly={compactCommands} icon={compactCommands ? <ResetIcon /> : undefined} tooltip={compactCommands ? t('coding.reset') : undefined} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
+        <Button className="ss-action" variant="secondary" onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
+        {mode !== 'landing' && <SwimCta dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />}
         </>}
 
-        {/* Unavailable for a reason: focusable, with the reason as its tooltip. */}
-        <Button
-          variant="secondary"
-          isIconOnly={compactCommands}
-          icon={compactCommands ? <HintIcon /> : undefined}
-          onClick={takeHint}
-          isDisabled={hintUnavailable !== ''}
-          tooltip={compactCommands ? `${taken === 0 ? t('coding.hint') : t('coding.hintNext')}${hintUnavailable ? `. ${hintUnavailable}` : ''}` : hintUnavailable || undefined}
-          label={taken === 0 ? t('coding.hint') : t('coding.hintNext')}
-        />
-        {mode !== 'landing' && session && !solution && !solutions && (
-          <Button
-            variant="ghost"
-            isIconOnly={compactCommands}
-            icon={compactCommands ? <EyeIcon /> : undefined}
-            ref={revealRef}
-            onClick={askToReveal}
-            isDisabled={giveUpUnavailable !== '' || busy}
-            tooltip={compactCommands ? `${t('coding.giveUp')}${giveUpUnavailable ? `. ${giveUpUnavailable}` : ''}` : giveUpUnavailable || undefined}
-            label={t('coding.giveUp')}
-          />
-        )}
-        {signedIn && mode === 'section' && !skipResult && (
-          <Button variant="ghost" isIconOnly={compactCommands} icon={compactCommands ? <SkipIcon /> : undefined} tooltip={compactCommands ? t('coding.skip.action') : undefined} onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
-        )}
-        {mode !== 'landing' && <div className="cd-actions cd-actions--utility">
-          {!locked && saveAction}
-          <Button
-            variant="ghost"
-            isIconOnly
-            icon={<FlagIcon size={16} />}
-            label={t('coding.reportTask')}
-            tooltip={t('coding.reportTask')}
-            onClick={() => setReportOpen(true)}
-          />
-        </div>}
+        {!menuCommands && <>
+          {/* Unavailable for a reason: focusable, with the reason as its tooltip. */}
+          <Button variant="ghost" onClick={takeHint} isDisabled={hintUnavailable !== ''} tooltip={hintUnavailable || undefined} label={hintLabel} />
+          {showReveal && (
+            <Button variant="ghost" ref={revealRef} onClick={askToReveal} isDisabled={giveUpUnavailable !== '' || busy} tooltip={giveUpUnavailable || undefined} label={t('coding.giveUp')} />
+          )}
+          {showSkip && <Button variant="ghost" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />}
+        </>}
+        <div className="cd-actions cd-actions--utility">
+          {mode !== 'landing' && !locked && saveAction}
+          {menuCommands ? (
+            // The menu items keep the reason an action is unavailable, as
+            // their description rather than a tooltip.
+            <DropdownMenu
+              button={{ label: workbenchCopy('coding.moreActions'), icon: <Icon icon="moreHorizontal" />, isIconOnly: true, variant: 'ghost', tooltip: workbenchCopy('coding.moreActions'), ref: moreRef }}
+              hasChevron={false}
+              placement="above"
+            >
+              <DropdownMenuItem icon={<HintIcon size={16} />} label={hintLabel} description={hintUnavailable || undefined} isDisabled={hintUnavailable !== ''} onClick={takeHint} />
+              {showReveal && <DropdownMenuItem icon={<EyeIcon size={16} />} label={t('coding.giveUp')} description={giveUpUnavailable || undefined} isDisabled={giveUpUnavailable !== '' || busy} onClick={askToReveal} />}
+              {showSkip && <DropdownMenuItem icon={<SkipIcon size={16} />} label={t('coding.skip.action')} onClick={() => setSkipping((open) => !open)} />}
+              {mode !== 'landing' && <DropdownMenuItem icon={<FlagIcon size={16} />} label={t('coding.reportTask')} onClick={() => setReportOpen(true)} />}
+            </DropdownMenu>
+          ) : (
+            // Not the landing sample: it always takes the menu.
+            <Button
+              variant="ghost"
+              isIconOnly
+              icon={<FlagIcon />}
+              label={t('coding.reportTask')}
+              tooltip={t('coding.reportTask')}
+              onClick={() => setReportOpen(true)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1168,6 +1241,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {
     return <div className={`cd-workbench cd-workbench--${mode}`}><CodingCompletion
       xp={verdict.xpAwarded} complexity={verdict.complexity} sectionRef={verdictRef}
+      signInToRecord={!signedIn && !verdict.progress}
       onNext={mode === 'lesson' ? onContinue : undefined} nextHref={nextHref ?? undefined}
       backHref={backHref ?? (mode === 'lesson' ? '/learn' : `/coding/${task.track}`)} /></div>;
   }
@@ -1202,12 +1276,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   kept exactly as it is, and nothing about this marks it done.
                   Waiting is the default, never the only way: the editor works
                   here too, just with less room. */}
-              <p className="cd-note cd-note--warn" role="status">{t('coding.pendingDesktop')}</p>
-              <p className="cd-shortcuts">{t('coding.pendingDesktopNote')}</p>
-              <div className="cd-actions">
+              {/* One note and its one decision (UX audit coding-14). Hint,
+                  Solution and Report wait for the editor: without it they
+                  had nothing to act on. */}
+              {/* The status is the sentence; the button beside it is not
+                  part of what a screen reader announces. */}
+              <div className="cd-note cd-note--warn cd-wait">
+                <p role="status">{t('coding.pendingDesktop')}</p>
                 <Button variant="secondary" onClick={chooseEditorHere} label={t('coding.pendingDesktopUseEditor')} />
               </div>
-              {actionBar}
             </section>
           )}
 
@@ -1217,9 +1294,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           <section className="cd-pane cd-pane--editor" ref={editorPaneRef} tabIndex={-1} hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
             {!puzzleMode && !pendingOnDesktop && brief}
             <div className="cd-editor-slot">
-              {/* Shorter on a narrow screen, so Run and Submit are not a screen
-                  away from the code; it still grows with the code. */}
-              <Editor minHeight={mode === 'landing' ? 160 : narrow ? 280 : 480} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              {!puzzleMode && !pendingOnDesktop && editorBar}
+              {/* In the frame (1024px and up) the editor takes what the brief
+                  and the action bar leave and scrolls inside; stacked, it
+                  starts at --cd-editor-min and grows with the code. */}
+              <Editor fill={mode !== 'landing'} minHeight={mode === 'landing' ? 160 : undefined} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
               <span id={`${baseId}-keys`} className="cd-visually-hidden">{t(mode === 'landing' ? 'coding.shortcuts.preview' : 'coding.shortcuts')}</span>
@@ -1356,6 +1435,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 tabIndex={tab === one.key ? 0 : -1}
                 ref={(node) => { tabRefs.current[one.key] = node; }}
                 className="cd-tab"
+                data-tab={one.key}
                 onClick={() => setTab(one.key)}
               >
                 {one.label}

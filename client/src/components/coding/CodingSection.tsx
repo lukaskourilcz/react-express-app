@@ -1,13 +1,14 @@
 // The Coding section: home, one track and one task. The review queue is
 // retired (a pass is permanent); /coding/review only redirects home.
 // devShark-only routes; the App gates them like /roadmap and /typing.
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { codingListCopy } from '../../i18n/translations.codingLists';
 import { useAuth } from '../../lib/auth';
 import { accountEpoch } from '../../lib/accountData';
-import { Kicker } from '../landing/LandingKit';
+import { FadeFinCta, Kicker, SwimCta } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import { useWorkbench, useWarmWorkbench } from '../../coding/loadWorkbench';
@@ -20,7 +21,6 @@ import { CategoryGlyph } from '../ui/techIcons';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import { evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, listedChallenges, type EvolvingCategory } from '../../../../shared/evolving';
 import { prepareEvolvingDraft } from '../../../../shared/coding-fullstack-support';
-import { SwimCta } from '../landing/LandingKit';
 import {
   CODING_DIFFICULTIES,
   CODING_SECTION_TRACKS,
@@ -68,6 +68,8 @@ const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
 const SECTION_INDEX = CODING_INDEX.filter((task) => isCodingSectionTrack(task.track) && !evolvingStage(task.id));
 const INDEX_BY_ID = new Map(CODING_INDEX.map((task) => [task.id, task]));
 const TIERS: readonly CodingTier[] = [1, 2, 3, 4, 5];
+/** How many project or path rows a list shows before "Show all". */
+const LIST_FOLD = 5;
 
 /** The difficulty a track list is filtered to. `?difficulty=` is the filter;
  * an older `?tier=` link still lands on the label its tier projects to. */
@@ -184,13 +186,16 @@ const TaskRow = memo(function TaskRow({ task, status, premium = 'open', saved, o
 }) {
   const { t } = useLanguage();
   const locked = status === 'locked';
+  // One line (UX audit coding-06): the title, its level as quiet meta, any
+  // tag, then the status at the row's end; every row the same height.
+  const level = task.topic === 'dsa'
+    ? hasLearnLevel(task) ? `${t('category.dsa')} · ${t('coding.level', { n: task.level })}` : t('category.dsa')
+    : hasLearnLevel(task) ? t('coding.level', { n: task.level }) : null;
   const inner = (
     <>
-      <span className="cd-row__title">{task.title}</span>
-      <span className="cd-row__meta">
-        {task.topic === 'dsa'
-          ? <span>{hasLearnLevel(task) ? `${t('category.dsa')} · ${t('coding.level', { n: task.level })}` : t('category.dsa')}</span>
-          : hasLearnLevel(task) && <span>{t('coding.level', { n: task.level })}</span>}
+      <span className="cd-row__main">
+        <span className="cd-row__title">{task.title}</span>
+        {level && <span className="cd-row__meta"><span aria-hidden>·</span>{level}</span>}
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
         {isBarred(premium) && status !== 'premium' && <Badge variant="neutral" label={t('premium.badge')} />}
       </span>
@@ -217,12 +222,45 @@ const TaskRow = memo(function TaskRow({ task, status, premium = 'open', saved, o
  * come with it. The numbers are the index's projected flags, so they are
  * shared/tiers.ts's rule: stages 1, 2 and 3 of a ten-stage project, 1 and 2
  * of a FullStack app, level 1 of a short path, always the first ones. */
+function freeStages(stages: readonly string[]): { count: number; list: string } {
+  const free = stages.flatMap((id, index) => (INDEX_BY_ID.get(id)?.free ? [index + 1] : []));
+  return { count: free.length, list: free.length > 1 ? `${free.slice(0, -1).join(', ')} and ${free[free.length - 1]}` : String(free[0] ?? 1) };
+}
+
 function PremiumStagesNote({ stages, short }: { stages: readonly string[]; short: boolean }) {
   const { t } = useLanguage();
-  const free = stages.flatMap((id, index) => (INDEX_BY_ID.get(id)?.free ? [index + 1] : []));
-  const list = free.length > 1 ? `${free.slice(0, -1).join(', ')} and ${free[free.length - 1]}` : String(free[0] ?? 1);
-  const note = short ? t('premium.levelsNote') : t(free.length > 1 ? 'premium.stagesNote' : 'premium.stageNote', { stages: list });
+  const { count, list } = freeStages(stages);
+  const note = short ? t('premium.levelsNote') : t(count > 1 ? 'premium.stagesNote' : 'premium.stageNote', { stages: list });
   return <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
+}
+
+/** The free-plan stages of a list of projects, as "1, 2 and 3", or null when
+ * the list holds no long project. Every long project in one list opens the
+ * same opening stages (shared/tiers.ts), so the first one speaks for all. */
+function freeStagesOf(challenges: readonly { stages: readonly string[]; short?: boolean }[]): string | null {
+  const project = challenges.find((challenge) => !challenge.short);
+  return project ? freeStages(project.stages).list : null;
+}
+
+/** The Premium rule of one list, said once in its intro rather than under
+ * every row (UX audit coding-05): level 1 of a path, the opening stages of a
+ * project, or both when the list holds both. */
+function PremiumRuleNote({ challenges }: { challenges: readonly { stages: readonly string[]; short?: boolean }[] }) {
+  const { t } = useLanguage();
+  const stages = freeStagesOf(challenges);
+  const paths = challenges.some((challenge) => challenge.short);
+  const note = stages === null
+    ? codingListCopy('premium.pathsRule')
+    : paths ? codingListCopy('premium.pathsProjectsRule', { stages }) : codingListCopy('premium.projectsRule', { stages });
+  return <p className="ss-premium-note cd-projects__rule"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
+}
+
+/** Signed out, what a pass needs: said once per screen, as one quiet line
+ * under the page lead (UX audit coding-10), not a tinted bar and not again in
+ * a list's intro. The header's Sign in button is the way to act on it. */
+function SignInLine() {
+  const { t } = useLanguage();
+  return <p className="cd-signin-line">{t('coding.signInHint')}</p>;
 }
 
 /* ── /coding ──────────────────────────────────────────────────────────── */
@@ -234,54 +272,74 @@ function PremiumStagesNote({ stages, short }: { stages: readonly string[]; short
  * home holds the long projects only. `listedChallenges` decides. */
 function EvolvingGallery({ passed, premiumOf, category, track }: { passed: ReadonlySet<string>; premiumOf: (taskId: string) => LockState; category?: EvolvingCategory; track?: CodingTrack }) {
   const { t } = useLanguage();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
   const fullstack = category === 'fullstack';
   const challenges = useMemo(() => listedChallenges({ category, track }), [category, track]);
-  const scrollable = challenges.length > 5;
   const titleId = `${track ? `${track}-paths` : category ?? 'evolving'}-title`;
+  const listId = `${titleId}-list`;
+  // A long list shows its first five rows and a button for the rest, in
+  // place of a scroll box inside the page (UX audit coding-09). The open list
+  // is remembered by its id, so another track's list starts folded.
+  const foldable = challenges.length > LIST_FOLD;
+  const [openList, setOpenList] = useState<string | null>(null);
+  const showAll = !foldable || openList === listId;
+  // Opening the rest moves focus to the first row that was hidden.
+  const focusFirstHidden = useRef(false);
+  useEffect(() => {
+    if (!focusFirstHidden.current || !showAll) return;
+    focusFirstHidden.current = false;
+    (listRef.current?.children[LIST_FOLD] as HTMLElement | undefined)?.focus();
+  }, [showAll]);
   const titleKey = track ? 'coding.evolving.paths' : category === 'fullstack' ? 'coding.evolving.fullstack' : category === 'debugging' ? 'coding.evolving.debugging' : 'coding.evolving.title';
   const bodyKey = track ? 'coding.evolving.pathsBody' : category === 'fullstack' ? 'coding.evolving.fullstackBody' : category === 'debugging' ? 'coding.evolving.debuggingBody' : 'coding.evolving.body';
-  // Before paint: measured after it, the list first drew at the fallback height
-  // and then jumped to five rows.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list || !scrollable) return;
-    const rows = Array.from(list.children).slice(0, 5);
-    // Measure actual rows so long text, zoom and narrow layouts still show five.
-    const sizeList = () => list.style.setProperty('--cd-project-list-height', `${rows.reduce((height, row) => height + row.getBoundingClientRect().height, 0) + 1}px`);
-    sizeList();
-    const observer = new ResizeObserver(sizeList);
-    rows.forEach(row => observer.observe(row));
-    return () => observer.disconnect();
-  }, [scrollable, category, track]);
   if (challenges.length === 0) return null;
+  // On a free account the stages after the opening ones read "Premium". The
+  // rule is said once, in the intro; each row keeps only its badge.
+  const laterLockedIn = (challenge: (typeof challenges)[number]) => challenge.stages.some((id) => isBarred(premiumOf(id)));
+  const anyLocked = challenges.some(laterLockedIn);
   return <section className="cd-projects" aria-labelledby={titleId}>
     <div className="cd-projects__intro">
     <Kicker as="h2" id={titleId}>{t(titleKey)}</Kicker>
-    <p className="cd-lead">{t(bodyKey)}{(bodyKey === 'coding.evolving.body' || bodyKey === 'coding.evolving.pathsBody') && !authLoading && !isAuthenticated && <> {t('coding.evolving.signIn')}</>}</p>
+    <p className="cd-lead">{t(bodyKey)}</p>
+    {anyLocked && <PremiumRuleNote challenges={challenges} />}
     </div>
-    <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
+    <div className="cd-projects__body">
+    <div ref={listRef} id={listId} className="cd-project-list">{(showAll ? challenges : challenges.slice(0, LIST_FOLD)).map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
-      // The opening stages come with the free plan; on a free account the stages after them read "Premium".
-      const laterLocked = challenge.stages.some((id) => isBarred(premiumOf(id)));
-      return <article key={challenge.id} className="cd-project">
+      const laterLocked = laterLockedIn(challenge);
+      // The verb says where the learner stands: nothing done, part done, all done.
+      const action = completed === challenge.stages.length ? codingListCopy('coding.evolving.review') : completed > 0 ? t('coding.continue') : codingListCopy('coding.evolving.start');
+      return <article key={challenge.id} className="cd-project" tabIndex={index >= LIST_FOLD ? -1 : undefined} aria-labelledby={`${challenge.id}-name`}>
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
         {/* On a section's own page every path is that section's, so the line would only repeat the heading. */}
         {!track && <p className="cd-project__track">{fullstack ? 'JavaScript · TypeScript · React · API' : category === 'debugging' ? `${t(`coding.track.${challenge.track}` as never)} · ${t('coding.format.debug')}` : t(`coding.track.${challenge.track}` as never)}</p>}
-        <h3>{challenge.title}</h3>
+        <h3 id={`${challenge.id}-name`}>{challenge.title}</h3>
         </div>
         <div className="cd-project__progress">
           <div className="cd-stage-meter" aria-hidden>{challenge.stages.map(id => <span key={id} data-complete={evolvingPassed(id, passed)} />)}</div>
-          <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}</p>
-          {laterLocked && <PremiumStagesNote stages={challenge.stages} short={challenge.short === true} />}
+          <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}{laterLocked && <> <Badge variant="neutral" label={t('premium.badge')} /></>}</p>
         </div>
-        <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
+        {/* The quieter fin: the page's one SwimCta is its next challenge. */}
+        <FadeFinCta label={action} finLeft="62%" finSize={26} accent="var(--brand-accent)" onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
     })}</div>
+    {foldable && (
+      <Button
+        variant="ghost"
+        className="cd-projects__more"
+        aria-expanded={showAll}
+        aria-controls={listId}
+        label={showAll ? codingListCopy('coding.evolving.showFewer') : codingListCopy('coding.evolving.showAll', { n: challenges.length })}
+        onClick={() => {
+          focusFirstHidden.current = !showAll;
+          setOpenList(showAll ? null : listId);
+        }}
+      />
+    )}
+    </div>
   </section>;
 }
 
@@ -333,10 +391,10 @@ export function CodingHome() {
         <header>
           <Kicker as="h1" className="ss-section-title">{t('coding.title')}</Kicker>
           <p className="cd-lead">{t('coding.subtitle')}</p>
+          {!authLoading && !isAuthenticated && <SignInLine />}
         </header>
         <NextChallenge next={next} state={nextState} onRetry={() => void progress.refetch()} />
       </div>
-      {!authLoading && !isAuthenticated && <p className="cd-note">{t('coding.signInHint')}</p>}
       <section aria-label={t('coding.title')} className="cd-track-directory">
         {CODING_SECTION_TRACKS.map((track) => {
           const tasks = SECTION_INDEX.filter((task) => task.track === track);
@@ -422,7 +480,7 @@ export function CodingTrackScreen() {
   const { t } = useLanguage();
   const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { passed, statusOf, lockReason, premiumOf, planLoading, planFailed, retryPlan } = useStatuses(progress.data);
   const track = isCodingSectionTrack(trackParam) ? trackParam : null;
@@ -524,6 +582,7 @@ export function CodingTrackScreen() {
       <header>
         <Kicker as="h1" className="ss-section-title">{t(`coding.track.${track}` as never)}</Kicker>
         <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
+        {!authLoading && !isAuthenticated && <SignInLine />}
         <div style={{ marginTop: 12, maxWidth: 420 }}>
           <WaterlineProgress decorativeFins value={tasks.length ? (100 * done) / tasks.length : 0} label={t('coding.progress', { passed: done, total: tasks.length })} />
           <p className="cd-track__count" style={{ margin: '6px 0 0' }}>{t('coding.progress', { passed: done, total: tasks.length })}</p>
@@ -535,25 +594,9 @@ export function CodingTrackScreen() {
         </p>
       )}
       <EvolvingGallery passed={passed} premiumOf={premiumOf} track={track} />
-      {/* Under 760px the technique chips fold into the filter row as one
-          select (design audit P2.3); both drive the same `group` filter. */}
-      <div className="cd-chips cd-technique-chips" role="group" aria-label={t('coding.techniques')}>
-        <button type="button" className="cd-chip" aria-pressed={!group} onClick={() => setFilter('group', null)}>{t('coding.techniques.all')}</button>
-        {groupsHere.map((g) => <button key={g} type="button" className="cd-chip" aria-pressed={group === g} onClick={() => setFilter('group', g)}>{t(`coding.group.${g}` as never)}</button>)}
-      </div>
-      {isAuthenticated && (
-        <div className="cd-chips" role="group" aria-label={t('coding.filter.status')}>
-          {(['all', 'open', 'passed'] as const).map((value) => (
-            <button key={value} type="button" className="cd-chip" aria-pressed={statusFilter === value} onClick={() => setFilter('status', value === 'all' ? null : value)}>
-              {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : t('coding.status.passed')}
-            </button>
-          ))}
-          <button type="button" className="cd-chip" aria-pressed={savedOnly} onClick={() => setFilter('saved', savedOnly ? null : '1')}>
-            {t('coding.filter.saved')}
-          </button>
-        </div>
-      )}
-
+      {/* One filter row (UX audit coding-16): the search and one select per
+          filter, the technique one at every width, and status with Saved for
+          a signed-in learner. Under 760px it folds to a 2-column grid. */}
       <div className="cd-search">
         <label className="cd-visually-hidden" htmlFor={`${track}-search`}>{t('coding.filter.searchLabel')}</label>
         <input
@@ -566,7 +609,7 @@ export function CodingTrackScreen() {
           onChange={(event) => setFilter('q', event.target.value || null)}
         />
         <label className="cd-visually-hidden" htmlFor={`${track}-technique`}>{t('coding.techniques')}</label>
-        <select id={`${track}-technique`} className="cd-technique-select" value={group ?? 'all'} onChange={(event) => setFilter('group', event.target.value === 'all' ? null : event.target.value)}>
+        <select id={`${track}-technique`} value={group ?? 'all'} onChange={(event) => setFilter('group', event.target.value === 'all' ? null : event.target.value)}>
           <option value="all">{t('coding.techniques.all')}</option>
           {groupsHere.map((g) => <option key={g} value={g}>{t(`coding.group.${g}` as never)}</option>)}
         </select>
@@ -590,11 +633,37 @@ export function CodingTrackScreen() {
           <option value="tests">{t('coding.filter.formatTests')}</option>
           <option value="debug">{t('coding.filter.formatDebug')}</option>
         </select>
+        {isAuthenticated && (
+          <>
+            <label className="cd-visually-hidden" htmlFor={`${track}-status`}>{t('coding.filter.status')}</label>
+            <select
+              id={`${track}-status`}
+              value={savedOnly ? 'saved' : statusFilter}
+              onChange={(event) => {
+                const value = event.target.value;
+                const next = new URLSearchParams(params);
+                next.delete('status');
+                next.delete('saved');
+                if (value === 'saved') next.set('saved', '1');
+                else if (value !== 'all') next.set('status', value);
+                setParams(next, { replace: true });
+              }}
+            >
+              <option value="all">{codingListCopy('coding.filter.anyStatus')}</option>
+              <option value="open">{t('coding.status.open')}</option>
+              <option value="passed">{t('coding.status.passed')}</option>
+              <option value="saved">{t('coding.filter.saved')}</option>
+            </select>
+          </>
+        )}
         {filtersOn && (
           <Button variant="ghost" onClick={() => { if (searchBox.current) searchBox.current.value = ''; setParams(new URLSearchParams(), { replace: true }); }} label={t('coding.filter.reset')} />
         )}
       </div>
-      <p className="cd-shortcuts" role="status">{t('coding.filter.count', { shown: filtered.length, total: tasks.length })}</p>
+      {/* The total is the header's; the count speaks only once a filter
+          narrows the list. The live region stays in place, empty, so the
+          first filter is announced too. */}
+      <p className="cd-filter-count" role="status">{filtersOn ? t('coding.filter.count', { shown: filtered.length, total: tasks.length }) : ''}</p>
 
       {filtered.length === 0 && <p className="cd-note">{filtersOn ? t('coding.filter.empty') : t('coding.empty')}</p>}
       {bands.map(({ level, tiers }) => (

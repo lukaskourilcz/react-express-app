@@ -120,10 +120,19 @@ describe('the stage list on the free plan', () => {
 });
 
 describe('the project cards on the free plan', () => {
-  it('name the stages the free plan opens: 1 and 2 of a FullStack app, level 1 of a short path', () => {
+  // UX audit coding-05: the rule is said once, in the list's intro, and every
+  // row keeps only its "Premium" badge beside its progress line.
+  it('name the stages the free plan opens once: 1 and 2 of a FullStack app, level 1 of a short path', () => {
     mount('/coding/fullstack', <FullStackScreen />, '/coding/fullstack');
-    expect(screen.getAllByText('Stages 1 and 2 come with the free plan. Premium opens the stages after them.')).toHaveLength(3);
-    expect(screen.getByText('Level 1 comes with the free plan. Premium opens the levels after it.')).toBeInTheDocument();
+    const list = screen.getByRole('region', { name: 'FullStack' });
+    expect(within(list).getAllByText(/come with the free plan/)).toHaveLength(1);
+    expect(within(list).getByText('Level 1 of every path, and stages 1 and 2 of every project, come with the free plan. Premium opens the rest.')).toBeInTheDocument();
+    const rows = within(list).getAllByRole('article');
+    expect(rows).toHaveLength(4);
+    for (const row of rows) {
+      expect(within(row).getByText('Premium')).toBeInTheDocument();
+      expect(row).not.toHaveTextContent(/free plan/);
+    }
   });
 });
 

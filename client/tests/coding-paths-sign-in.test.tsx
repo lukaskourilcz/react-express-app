@@ -6,7 +6,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingTrackScreen } from '../src/components/coding/CodingSection';
 
 // Audit C5-7: the Paths block of every track page told signed-in learners to
-// "Sign in to save progress." Only a visitor who is signed out is asked.
+// "Sign in to save progress." Only a visitor who is signed out is told, once.
 const state = vi.hoisted(() => ({ auth: { isAuthenticated: true, isLoading: false } }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => state.auth }));
 vi.mock('../src/lib/entitlement', () => ({
@@ -45,11 +45,17 @@ it('does not ask a signed-in learner to sign in to save path progress', async ()
   mount();
   const paths = await screen.findByRole('region', { name: 'Paths' });
   expect(paths).toHaveTextContent('earlier checks run again.');
-  expect(screen.queryByText(/Sign in to save progress/)).toBeNull();
+  expect(screen.queryByText(/Sign in/)).toBeNull();
 });
 
-it('asks a signed-out visitor to sign in to save path progress', async () => {
+// UX audit coding-10: the visitor is told once per screen, under the page
+// lead, and the Paths intro no longer repeats it.
+it('tells a signed-out visitor once, under the page lead, and not again in Paths', async () => {
   state.auth = { isAuthenticated: false, isLoading: false };
   mount();
-  expect(await screen.findByRole('region', { name: 'Paths' })).toHaveTextContent('earlier checks run again. Sign in to save progress.');
+  const paths = await screen.findByRole('region', { name: 'Paths' });
+  expect(paths).not.toHaveTextContent(/Sign in/);
+  const hints = screen.getAllByText(/Sign in to keep your progress/);
+  expect(hints).toHaveLength(1);
+  expect(hints[0].closest('header')).toContainElement(screen.getByRole('heading', { level: 1 }));
 });
