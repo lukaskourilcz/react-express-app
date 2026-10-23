@@ -24,8 +24,10 @@
 .sc-state__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
 
 /* ── the deck ───────────────────────────────────────────────────────────── */
-.sc-deck { display: flex; flex-direction: column; gap: 1.25rem; width: 100%; max-width: 720px; margin: 0 auto; }
-.sc-deck--embedded { max-width: 720px; }
+/* The deck fills the route's 800px column on /cards and on /collection, so
+   the page header, the tabs and the card share one left edge and the deck is
+   one width on both routes (UX audit social-account-05). */
+.sc-deck { display: flex; flex-direction: column; gap: 1.25rem; width: 100%; }
 .sc-deck__header { display: flex; flex-direction: column; gap: 0.35rem; }
 .sc-deck__body { display: flex; flex-direction: column; gap: 0.85rem; }
 .sc-deck__position { margin: 0; font-size: var(--ss-type-label); font-weight: 700; letter-spacing: 0.04em; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }

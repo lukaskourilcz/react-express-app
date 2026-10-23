@@ -23,8 +23,9 @@
   --cd-syntax-operator: #e7edf8;
   --cd-syntax-comment: #a5d98b;
   --cd-syntax-string: #f4bda3;
+  /* No max-width: the route shell picks the page width (1200px on /coding/*,
+     800px on /collection; UX audit social-account-05). */
   width: 100%;
-  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

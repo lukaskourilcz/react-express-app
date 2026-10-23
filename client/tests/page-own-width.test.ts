@@ -29,6 +29,16 @@ describe('pages fill the route width', () => {
     expect(lb).not.toMatch(/max-width/);
   });
 
+  it('/collection and /cards: the page and the deck fill the route column, one width on both routes (social-account-05)', () => {
+    const page = rule(source('coding/Coding.css'), '.cd-page');
+    expect(page).toContain('width: 100%');
+    expect(page).not.toMatch(/max-width/);
+    const deck = rule(source('components/SharkCards.css'), '.sc-deck');
+    expect(deck).toContain('width: 100%');
+    expect(deck).not.toMatch(/max-width/);
+    expect(source('components/Flashcards.tsx')).toContain('<div className="sc-deck">');
+  });
+
   it('gives the Leaderboard figures fixed 96px columns so the name takes the rest (social-account-02)', () => {
     expect(rule(source('components/Leaderboard.css'), '.lb-col-num')).toContain('width: 96px');
   });

@@ -195,7 +195,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
 
   const topic = topicLabel(card.category, t);
   return (
-    <div className={`sc-deck${embedded ? ' sc-deck--embedded' : ' de-page'}`}>
+    <div className="sc-deck">
       {!embedded && (
         <header className="sc-deck__header">
           <Kicker>{t('sharkCards.kicker')}</Kicker>
