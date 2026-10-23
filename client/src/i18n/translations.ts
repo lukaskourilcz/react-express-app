@@ -1620,6 +1620,7 @@ export const en = {
   // The capped brief at the top of the coding frame (UX audit coding-01).
   'coding.brief.showFull': 'Show full brief',
   'coding.brief.showLess': 'Show less',
+  'coding.brief.label': 'Task brief',
   'coding.run': 'Run',
   'coding.submit': 'Submit',
   'coding.submitting': 'Checking…',

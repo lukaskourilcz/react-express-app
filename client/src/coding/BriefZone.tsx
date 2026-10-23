@@ -12,7 +12,9 @@ import './Coding.css';
 
 export interface BriefZoneProps {
   /** The id of the task's heading, which names the scrolling body. */
-  labelledBy: string;
+  labelledBy?: string;
+  /** The body's name where the task's heading is not part of the frame. */
+  label?: string;
   /** The heading block: shown in full above the capped body. */
   head?: ReactNode;
   /** The prompt and what belongs with it: the part that is capped. */
@@ -21,7 +23,7 @@ export interface BriefZoneProps {
   after?: ReactNode;
 }
 
-export function BriefZone({ labelledBy, head, children, after }: BriefZoneProps) {
+export function BriefZone({ labelledBy, label, head, children, after }: BriefZoneProps) {
   const t = useT();
   const bodyId = useId();
   const body = useRef<HTMLDivElement | null>(null);
@@ -63,6 +65,7 @@ export function BriefZone({ labelledBy, head, children, after }: BriefZoneProps)
         // way to scroll it without a pointer.
         role={scrolls ? 'region' : undefined}
         aria-labelledby={scrolls ? labelledBy : undefined}
+        aria-label={scrolls && !labelledBy ? label : undefined}
         tabIndex={scrolls ? 0 : undefined}
       >
         {children}

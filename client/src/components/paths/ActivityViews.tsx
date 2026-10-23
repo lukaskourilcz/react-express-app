@@ -7,6 +7,7 @@
 
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
+import { BriefZone } from '../../coding/BriefZone';
 import { useT } from '../../i18n/LanguageContext';
 import { beforeAccountChange } from '../../lib/accountData';
 import { lazyShellPart } from '../../lib/routeRecovery';
@@ -393,138 +394,159 @@ export function CodeActivity({
 
   const verdict = result?.code ?? null;
 
+  // The same frame as the coding workbench (UX audit coding-03): from 1024px
+  // the code pane (a capped brief, the editor filling the rest, the actions
+  // at its foot) and the pane beside it share the workbench's columns and its
+  // viewport-tall row, and the editor starts at the shared --cd-editor-min.
+  // ss-wide-page widens the route box to the wide page while it is mounted.
   return (
-    <div className="lp-split">
-      <div className="lp-split__brief">
-        <div className="lp-brief lp-card">
-          <RichText text={code.prompt} />
-          {code.complexityGuidance?.targetTime && <div className="cd-complexity"><span>{t('coding.complexity.desired', { complexity: code.complexityGuidance.targetTime })}</span><ComplexityInfo guidance={code.complexityGuidance} /></div>}
-          {contract.length > 0 && (
-            <section className="lp-section">
-              <h3>{t('paths.code.contract')}</h3>
-              <ul className="lp-list">
-                {contract.map((entry, index) => (
-                  <li key={index}>{entry}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {ladder.length > 0 && (
-            <section className="lp-section">
-              <h3>{t('paths.code.hints')}</h3>
-              <ol className="lp-list" ref={ladderList}>
-                {ladder.slice(0, hintsShown).map((rung, index) => (
-                  <li key={index} tabIndex={-1}>{rung.text}</li>
-                ))}
-              </ol>
-              {hintsShown < ladder.length && (
-                <Button variant="ghost" onClick={() => {
-                  revealed.current = true;
-                  setHintsShown((n) => Math.min(n + 1, ladder.length));
-                }} label={t('paths.code.nextHint', { remaining: ladder.length - hintsShown })} />
-              )}
-              {code.skeleton && hintsShown >= ladder.length && (
-                <details>
-                  <summary>{t('paths.code.skeleton')}</summary>
-                  <pre className="lp-question__context">
-                    <code>{code.skeleton}</code>
-                  </pre>
-                </details>
-              )}
-            </section>
-          )}
-        </div>
-      </div>
-
-      <div className="lp-work">
-        {fixtureNote !== undefined && (
-          <div className="lp-notice lp-notice--info">
-            <span className="lp-notice__glyph" aria-hidden="true">
-              ℹ
-            </span>
+    <div className="cd-page cd-workbench cd-workbench--activity ss-wide-page">
+      <div className="cd-workbench__grid">
+        <div className="cd-pane cd-pane--editor">
+          <BriefZone label={t('coding.brief.label')}>
             <div className="lp-brief">
-              <strong>{pathCopy['paths.code.fixtureNoteTitle']}</strong>
-              <RichText text={fixtureNote} />
+              <RichText text={code.prompt} />
             </div>
-          </div>
-        )}
-        <div className="lp-actions">
-          <span className="lp-actions__status" aria-live="polite">
-            {t(`paths.draft.${draftStatus}` as never)}
-          </span>
-          <Button variant="ghost" ref={resetButton} onClick={() => (source === code.starter ? reset() : setConfirmingReset(true))} isDisabled={busy} label={t('paths.code.reset')} />
-          <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || submitBlocked || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
-        </div>
-        {confirmingReset && (
-          <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('paths.code.reset')} onKeyDown={onConfirmKeyDown}>
-            <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
-            <div className="cd-actions">
-              <Button variant="primary" onClick={reset} label={t('coding.reset')} />
-              <Button variant="secondary" onClick={keepCode} ref={focusOnMount} label={t('coding.resetCancel')} />
-            </div>
-          </div>
-        )}
-
-        <Suspense fallback={<div className="cd-note" role="status" style={{ minHeight: 320 }}>{t('common.loading')}</div>}>
-          <ShellPartBoundary fallback={(retry, retrying) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={retrying} />}>
-            <Editor
-              value={source}
-              onChange={(next) => {
-                setSource(next);
-                queueDraft(next);
-              }}
-              track={code.language === 'typescript' ? 'typescript' : code.language === 'react' ? 'react' : 'javascript'}
-              ariaLabel={t('paths.code.editorLabel')}
-              readOnly={busy}
-              minHeight={320}
-            />
-          </ShellPartBoundary>
-        </Suspense>
-
-        {code.tests && code.tests.length > 0 && (
-          <section className="lp-section lp-card lp-card--muted">
-            <h3>{t('paths.code.visibleTests')}</h3>
-            <ul className="lp-results">
-              {code.tests.map((test, index) => {
-                const outcome = verdict?.results[index];
-                return (
-                  <li key={index} className="lp-result">
-                    <span className="lp-result__mark" aria-hidden="true">
-                      {outcome ? (outcome.pass ? '✓' : '✗') : '·'}
-                    </span>
-                    <code>{test.call}</code>
-                    {test.label && <span>— {test.label}</span>}
-                    {outcome && (
-                      <span className="ss-sr-only">
-                        {outcome.pass ? t('paths.code.testPassed') : t('paths.code.testFailed')}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            {verdict?.hidden && (
-              <p className="lp-field__help">
-                {t('paths.code.hiddenTests', { passed: verdict.hidden.passed, total: verdict.hidden.total })}
-              </p>
+            {code.complexityGuidance?.targetTime && <div className="cd-complexity"><span>{t('coding.complexity.desired', { complexity: code.complexityGuidance.targetTime })}</span><ComplexityInfo guidance={code.complexityGuidance} /></div>}
+            {fixtureNote !== undefined && (
+              <div className="lp-notice lp-notice--info">
+                <span className="lp-notice__glyph" aria-hidden="true">
+                  ℹ
+                </span>
+                <div className="lp-brief">
+                  <strong>{pathCopy['paths.code.fixtureNoteTitle']}</strong>
+                  <RichText text={fixtureNote} />
+                </div>
+              </div>
             )}
-          </section>
-        )}
+          </BriefZone>
 
-        {verdict?.codeError && (
-          <div className="lp-notice lp-notice--error">
-            <span className="lp-notice__glyph" aria-hidden="true">
-              !
-            </span>
-            <span>{verdict.codeError}</span>
+          <div className="cd-editor-slot">
+            <Suspense fallback={<div className="cd-note" role="status" style={{ minHeight: 'var(--cd-editor-min, 280px)' }}>{t('common.loading')}</div>}>
+              <ShellPartBoundary fallback={(retry, retrying) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={retrying} />}>
+                <Editor
+                  value={source}
+                  onChange={(next) => {
+                    setSource(next);
+                    queueDraft(next);
+                  }}
+                  track={code.language === 'typescript' ? 'typescript' : code.language === 'react' ? 'react' : 'javascript'}
+                  ariaLabel={t('paths.code.editorLabel')}
+                  readOnly={busy}
+                  fill
+                />
+              </ShellPartBoundary>
+            </Suspense>
+          </div>
+
+          <div className="cd-editor-actions">
+            <div className="cd-actions cd-actions--commands">
+              <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || submitBlocked || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
+              <Button variant="ghost" ref={resetButton} onClick={() => (source === code.starter ? reset() : setConfirmingReset(true))} isDisabled={busy} label={t('paths.code.reset')} />
+              <span className="lp-actions__status cd-actions--utility" aria-live="polite">
+                {t(`paths.draft.${draftStatus}` as never)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {confirmingReset && (
+          <div className="cd-pane cd-pane--controls">
+            <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('paths.code.reset')} onKeyDown={onConfirmKeyDown}>
+              <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
+              <div className="cd-actions">
+                <Button variant="primary" onClick={reset} label={t('coding.reset')} />
+                <Button variant="secondary" onClick={keepCode} ref={focusOnMount} label={t('coding.resetCancel')} />
+              </div>
+            </div>
           </div>
         )}
-        {verdict && verdict.logs.length > 0 && (
-          <details>
-            <summary>{t('paths.code.console')}</summary>
-            <pre className="lp-console">{verdict.logs.join('\n')}</pre>
-          </details>
-        )}
+
+        {/* What the brief allows, the hint ladder and what a submission
+            showed, beside the code; it scrolls inside the frame. */}
+        <div className="cd-pane cd-pane--output">
+          <div className="cd-output-scroll">
+            {contract.length > 0 && (
+              <section className="lp-section">
+                <h3>{t('paths.code.contract')}</h3>
+                <ul className="lp-list">
+                  {contract.map((entry, index) => (
+                    <li key={index}>{entry}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {ladder.length > 0 && (
+              <section className="lp-section">
+                <h3>{t('paths.code.hints')}</h3>
+                <ol className="lp-list" ref={ladderList}>
+                  {ladder.slice(0, hintsShown).map((rung, index) => (
+                    <li key={index} tabIndex={-1}>{rung.text}</li>
+                  ))}
+                </ol>
+                {hintsShown < ladder.length && (
+                  <Button variant="ghost" onClick={() => {
+                    revealed.current = true;
+                    setHintsShown((n) => Math.min(n + 1, ladder.length));
+                  }} label={t('paths.code.nextHint', { remaining: ladder.length - hintsShown })} />
+                )}
+                {code.skeleton && hintsShown >= ladder.length && (
+                  <details>
+                    <summary>{t('paths.code.skeleton')}</summary>
+                    <pre className="lp-question__context">
+                      <code>{code.skeleton}</code>
+                    </pre>
+                  </details>
+                )}
+              </section>
+            )}
+
+            {code.tests && code.tests.length > 0 && (
+              <section className="lp-section">
+                <h3>{t('paths.code.visibleTests')}</h3>
+                <ul className="lp-results">
+                  {code.tests.map((test, index) => {
+                    const outcome = verdict?.results[index];
+                    return (
+                      <li key={index} className="lp-result">
+                        <span className="lp-result__mark" aria-hidden="true">
+                          {outcome ? (outcome.pass ? '✓' : '✗') : '·'}
+                        </span>
+                        <code>{test.call}</code>
+                        {test.label && <span>— {test.label}</span>}
+                        {outcome && (
+                          <span className="ss-sr-only">
+                            {outcome.pass ? t('paths.code.testPassed') : t('paths.code.testFailed')}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {verdict?.hidden && (
+                  <p className="lp-field__help">
+                    {t('paths.code.hiddenTests', { passed: verdict.hidden.passed, total: verdict.hidden.total })}
+                  </p>
+                )}
+              </section>
+            )}
+
+            {verdict?.codeError && (
+              <div className="lp-notice lp-notice--error">
+                <span className="lp-notice__glyph" aria-hidden="true">
+                  !
+                </span>
+                <span>{verdict.codeError}</span>
+              </div>
+            )}
+            {verdict && verdict.logs.length > 0 && (
+              <details>
+                <summary>{t('paths.code.console')}</summary>
+                <pre className="lp-console">{verdict.logs.join('\n')}</pre>
+              </details>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

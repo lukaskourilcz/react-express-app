@@ -532,8 +532,11 @@ export function LessonRunner({
   if (codingPhase && codingTasks[codingIndex]) {
     const current = codingTasks[codingIndex];
     const title = current.task.title;
+    // ss-wide-page: while the editor is mounted the route box widens to the
+    // wide page (1200px), so the workbench has the same frame and editor size
+    // as on /coding (UX audit coding-03). Reading and quiz phases stay narrow.
     return (
-      <div className="cd-page" style={{ flex: 1, minHeight: 0, overflowY: 'auto', gap: 12, paddingBottom: 24 }}>
+      <div className="cd-page ss-wide-page" style={{ flex: 1, minHeight: 0, overflowY: 'auto', gap: 12, paddingBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="md" label={t('roadmap.exit')} onClick={onExit} />
           <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>

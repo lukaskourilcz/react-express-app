@@ -269,18 +269,27 @@
      starts and Run and Submit sit at the same place whatever the brief says.
      Hints, confirmations and errors take the row under it. */
   .cd-workbench--section .cd-workbench__grid,
-  .cd-workbench--lesson .cd-workbench__grid { grid-template-rows: var(--cd-frame-h) auto; }
+  .cd-workbench--lesson .cd-workbench__grid,
+  .cd-workbench--activity .cd-workbench__grid { grid-template-rows: var(--cd-frame-h) auto; }
+  /* A path's code activity has no separator: its second pane takes the
+     workbench's third column, so the code pane is the same width. */
+  .cd-workbench--activity .cd-pane--editor { grid-column: 1; grid-row: 1; }
+  .cd-workbench--activity .cd-pane--output { grid-column: 3; grid-row: 1; }
   /* Inside the frame the code pane is brief, editor, action bar: the brief
      and the bar keep their size and the editor takes the rest. */
   .cd-workbench--section .cd-pane--editor,
-  .cd-workbench--lesson .cd-pane--editor { min-height: 0; overflow: hidden; }
+  .cd-workbench--lesson .cd-pane--editor,
+  .cd-workbench--activity .cd-pane--editor { min-height: 0; overflow: hidden; }
   .cd-workbench--section .cd-pane--editor > *,
-  .cd-workbench--lesson .cd-pane--editor > * { flex: none; }
+  .cd-workbench--lesson .cd-pane--editor > *,
+  .cd-workbench--activity .cd-pane--editor > * { flex: none; }
   .cd-workbench--section .cd-pane--editor > .cd-editor-slot,
-  .cd-workbench--lesson .cd-pane--editor > .cd-editor-slot { flex: 1 1 0; min-height: 0; }
+  .cd-workbench--lesson .cd-pane--editor > .cd-editor-slot,
+  .cd-workbench--activity .cd-pane--editor > .cd-editor-slot { flex: 1 1 0; min-height: 0; }
   /* The full brief still leaves the editor its floor and the bar its row. */
   .cd-workbench--section .cd-brief__body[data-capped='false'],
-  .cd-workbench--lesson .cd-brief__body[data-capped='false'] { max-height: calc(var(--cd-frame-h) - var(--cd-editor-min) - 180px); overflow-y: auto; }
+  .cd-workbench--lesson .cd-brief__body[data-capped='false'],
+  .cd-workbench--activity .cd-brief__body[data-capped='false'] { max-height: calc(var(--cd-frame-h) - var(--cd-editor-min) - 180px); overflow-y: auto; }
   /* The output pane fills the same frame and scrolls inside. Size
      containment stops its content from growing the row. Scoped to this
      layout: stacked, the pane has a row of its own and would collapse. */

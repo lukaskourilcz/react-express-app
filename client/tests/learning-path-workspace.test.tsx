@@ -180,7 +180,7 @@ const press = async (name: string | RegExp) => {
   await act(async () => { fireEvent.click(screen.getByRole('button', { name })); });
 };
 const wait = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
-const status = () => document.querySelector('.lp-work .lp-actions__status')?.textContent;
+const status = () => document.querySelector('.cd-workbench--activity .lp-actions__status')?.textContent;
 
 describe('one attempt takes one result', () => {
   it('finishes code with the shared Passed banner and two actions', async () => {
