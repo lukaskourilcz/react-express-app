@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -52,6 +53,10 @@ describe('Learn lesson reading', () => {
     fireEvent.click(back);
     await screen.findByRole('button', { name: '1. Complexity Basics' });
     expect(screen.queryByRole('button', { name: 'Start the questions' })).toBeNull();
+  });
+  it('lines Back\u2019s arrow up with the h1 by pulling back the ghost button\u2019s padding (learn-05)', () => {
+    const css = readFileSync(new URL('../src/components/paths/LearningPaths.css', import.meta.url), 'utf8');
+    expect(css).toContain('.lp-page > .lp-lesson-back { align-self: flex-start; margin-inline-start: -12px; }');
   });
   it('keeps questions available when public reading fails', async () => {
     const reads = mount(true);
