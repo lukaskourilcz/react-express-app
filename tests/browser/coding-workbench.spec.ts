@@ -175,7 +175,11 @@ test('React: a focus check passes on every Run, not just the first, and a build 
     // A changed line each time, so the note that Results are from earlier
     // code shows until this Run has finished.
     await fillEditor(page, `${solutionFor(id)!.solution}\n// run ${attempt}\n`);
-    if (attempt > 1) await expect(changed).toBeVisible();
+    // After the first Run the preview is the open tab (coding-04), so the
+    // note is in the closed Results panel; from the third Run on, Results is
+    // open and the note shows.
+    if (attempt === 2) await expect(changed).toBeAttached();
+    if (attempt > 2) await expect(changed).toBeVisible();
     await run.click();
     await expect(announced(page)).toHaveText(`${expectedCases} of ${expectedCases} passing`, { timeout: 30_000 });
     await expect(changed).toHaveCount(0);
