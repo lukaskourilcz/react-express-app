@@ -1329,10 +1329,9 @@ function RunningQuestion({
             no-limit match mid-question) or end the match early. */}
         {isHost && mode === 'multiplayer' && (
           <HStack gap={1} justify="between">
-            <Button variant="ghost" size="sm" label={t('play.endMatch')} isDisabled={controlPending} onClick={onFinish} />
+            <Button variant="ghost" label={t('play.endMatch')} isDisabled={controlPending} onClick={onFinish} />
             <Button
               variant="ghost"
-              size="sm"
               label={lastQuestion ? t('play.showResults') : t('play.skipQuestion')}
               isDisabled={controlPending}
               onClick={onAdvance}
