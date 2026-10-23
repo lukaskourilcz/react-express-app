@@ -80,3 +80,24 @@ it('reads no XP after a coding pass that earned none', async () => {
   await new Promise((resolve) => setTimeout(resolve, 50));
   expect(xpReads).toBe(0);
 });
+
+// Two syncs out at once, the older answering last: a read that left before
+// the quiz result was recorded holds the balance from before it.
+it('keeps the newer balance and its rank-up when an older sync answers last', async () => {
+  primeRankMarker();
+  const waiting: ((xp: number) => void)[] = [];
+  server.use(http.get('*/api/user/xp', () => new Promise<Response>((resolve) => {
+    waiting.push((xp) => resolve(HttpResponse.json({ data: { quest_xp: xp, by_subject: { webdev: xp } } })));
+  })));
+  const { toasts, off } = collectToasts();
+  const older = syncXpWithServer();
+  const newer = syncXpWithServer({ announceRankUp: true });
+  await vi.waitFor(() => expect(waiting).toHaveLength(2));
+  waiting[1](2020);
+  await newer;
+  waiting[0](20);
+  await older;
+  off();
+  expect(JSON.parse(localStorage.getItem('devquiz:xp:quest:v2') ?? '{}')).toEqual({ webdev: 2020 });
+  expect(toasts.filter((toast) => toast.kind === 'rankup')).toHaveLength(1);
+});
