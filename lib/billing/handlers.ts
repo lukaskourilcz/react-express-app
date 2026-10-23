@@ -464,13 +464,20 @@ export async function handleBillingCancel(req: VercelRequest, res: VercelRespons
     return res.json({ received: false, confirmBy: 'sign-in', action, email });
   }
   const token = randomBytes(32).toString('base64url');
-  const created = await withTimeout(supabase.rpc('create_billing_cancel_request', {
-    p_token_hash: tokenHash(token),
-    p_email: email,
-    p_action: action,
-    p_ttl_minutes: CANCEL_LINK_MINUTES,
-    p_requested_at: receivedAt,
-  })).catch(() => ({ data: null, error: { message: 'timeout' } }));
+  let created: { data: unknown; error: { code?: string; message?: string } | null };
+  try {
+    created = await withTimeout(supabase.rpc('create_billing_cancel_request', {
+      p_token_hash: tokenHash(token),
+      p_email: email,
+      p_action: action,
+      p_ttl_minutes: CANCEL_LINK_MINUTES,
+      p_requested_at: receivedAt,
+    }));
+  } catch (error) {
+    // The database busy for a moment answers 503, which the page may retry.
+    if (error instanceof ServiceUnavailableError) return unavailable(res, error, 'cancel_request');
+    created = { data: null, error: { message: 'db_error' } };
+  }
   if (created.error) {
     if (isRpcMissing(created.error)) return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
     log({ status: 500, kind: 'cancel_request', reason: 'db_error' });
@@ -508,7 +515,7 @@ async function handleCancelLink(req: VercelRequest, res: VercelResponse, supabas
   try {
     request = await read(step === 'review' ? 'review_billing_cancel_request' : 'consume_billing_cancel_request');
   } catch (error) {
-    if (error instanceof BillingMigrationError) return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
+    if (error instanceof BillingMigrationError || error instanceof ServiceUnavailableError) return unavailable(res, error, `cancel_${step}`);
     log({ status: 500, kind: `cancel_${step}`, reason: 'db_error' });
     return jsonError(res, 500, 'db_error', 'Could not read this link. Try again in a minute.');
   }

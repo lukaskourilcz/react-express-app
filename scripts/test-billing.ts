@@ -1439,6 +1439,30 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     applyEnv({ RESEND_API_KEY: undefined, RESEND_FROM: undefined });
   });
 
+  await check('a database timeout on the cancel link answers 503 upstream_timeout, not 500', async () => {
+    applyEnv(withResend);
+    const slow = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name.endsWith('billing_cancel_request')) throw new lib.UpstreamTimeoutError();
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const post = async (body: Record<string, unknown>) => {
+      const res = mockRes();
+      await lib.handleBillingCancel(apiReq('POST', 'billing-cancel', { body }) as never, res as never, slow);
+      return res;
+    };
+    for (const res of [
+      await post({ email: 'slowdb@example.com', action: 'cancel', step: 'confirm' }),
+      await post({ step: 'review', token: 'B'.repeat(43) }),
+      await post({ step: 'execute', token: 'B'.repeat(43) }),
+    ]) {
+      assert.deepEqual([res.statusCode, res.body.error.code], [503, 'upstream_timeout']);
+    }
+    applyEnv({ RESEND_API_KEY: undefined, RESEND_FROM: undefined });
+  });
+
   await check('a signed-in owner acts at once and sees the effective date; cancel keeps Premium to the period end', async () => {
     const k = await account('Cancel2');
     await deliver(eventText('customer.subscription.created', k.ids, 'cancel2'));
