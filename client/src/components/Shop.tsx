@@ -580,8 +580,10 @@ function Shop() {
     }
   });
 
+  // The page fills the route's narrow 800px column (components/ui/pageWidth.ts),
+  // which centres it; it sets no width of its own (UX audit money-01).
   return (
-    <VStack gap={5} width="100%" maxWidth={1080}>
+    <VStack gap={5} width="100%">
       <VStack gap={1}>
         <Heading level={1} type="display-3">{t('shop.title')}</Heading>
         <Text type="large" color="secondary">
