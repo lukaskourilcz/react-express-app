@@ -207,7 +207,7 @@ import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, r
 import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
 import { handleFriends, handleIdentity } from '../lib/friends-handlers';
 import { isValidHandle } from '../shared/handles';
-import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
+import { accountExists, handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
 import { en as ENGLISH } from '../client/src/i18n/translations';
@@ -1044,6 +1044,26 @@ async function tierContracts() {
     );
     assert.equal(mistyped.statusCode, 404, `a grant to an id that is not an account is refused (${JSON.stringify(mistyped.body)})`);
     assert.equal(granted, false, 'nothing is granted to a mistyped id');
+    // An Auth that does not answer cannot say the account exists: the grant
+    // has no foreign key, so it waits instead of opening Premium for nobody.
+    for (const [label, getUserById] of [
+      ['an Auth 503', async () => ({ data: { user: null }, error: { name: 'AuthRetryableFetchError', status: 503, message: 'Service Unavailable' } })],
+      ['no answer at all', async () => { throw new Error('fetch failed'); }],
+    ] as const) {
+      const outage = mockResponse();
+      await handleAdminEntitlements(
+        { method: 'POST', headers: {}, query: {}, body: { action: 'grant', userId: '0c0ffee0-0000-4000-8000-00000000c040', validUntil: null, note: 'contract' } } as never,
+        outage as never,
+        { rpc: async () => { granted = true; return { data: 'grant-id', error: null }; }, auth: { admin: { getUserById } } } as never,
+      );
+      assert.equal(outage.statusCode, 503, `${label}: the grant waits for Auth (${JSON.stringify(outage.body)})`);
+      assert.equal((outage.body as { error: { code: string } }).error.code, 'auth_unavailable');
+      assert.equal(granted, false, `${label}: nothing is granted while Auth cannot answer`);
+    }
+    // The billing webhook keeps reading an Auth outage as "exists", so a paid
+    // subscription is never dropped for it.
+    assert.equal(await accountExists({ auth: { admin: { getUserById: async () => { throw new Error('fetch failed'); } } } } as never, '0c0ffee0-0000-4000-8000-00000000c040'), true);
+    assert.equal(await accountExists({ auth: { admin: { getUserById: async () => ({ data: { user: null }, error: { status: 404, message: 'User not found' } }) } } } as never, '0c0ffee0-0000-4000-8000-00000000c040'), false);
     // The owner's view of one account: a plan that could not be read is not
     // shown as "not Premium".
     const grantRows: Record<string, unknown> = {

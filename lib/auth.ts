@@ -61,7 +61,7 @@ async function withAuthDeadline<T>(promise: Promise<T>, timeoutMs = 3000): Promi
  * an answer it could not read (`AuthUnknownError`). Each is a 503, because a
  * 401 tells a signed-in learner their session ended. The browser reads the
  * same signs (`serverUnreachable` in client/src/lib/auth.tsx). */
-function authUndecided(error: { name?: string; status?: number }): boolean {
+export function authUndecided(error: { name?: string; status?: number }): boolean {
   if (error.name === 'AuthRetryableFetchError' || error.name === 'AuthUnknownError') return true;
   const { status } = error;
   return typeof status === 'number' && (status === 0 || status === 429 || status >= 500);
