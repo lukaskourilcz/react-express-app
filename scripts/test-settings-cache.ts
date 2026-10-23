@@ -24,6 +24,9 @@ try{
  if(!process.env.BASELINE_SETTINGS_ONLY){
   setGameSettingsForTests(null);release=()=>{};const oldRead=getGameSettings();await new Promise(r=>setTimeout(r,10));
   const fresh={...DEFAULT_SETTINGS,quiz:{...DEFAULT_SETTINGS.quiz,maxCount:31}};await saveGameSettings(fresh);release();await oldRead;assert.equal((await getGameSettings()).quiz.maxCount,31);assert.equal(writes,1);
+  // Nor may it become the copy a later outage serves in place of the save.
+  {const realFetch=globalThis.fetch;const realNow=Date.now;const later=realNow()+60_000;globalThis.fetch=async()=>{throw new Error('synthetic outage');};Date.now=()=>later;
+  try{assert.equal((await getGameSettings()).quiz.maxCount,31,'an outage after a save serves the saved settings, not a read begun before it');}finally{Date.now=realNow;globalThis.fetch=realFetch;}}
   // Concurrent failures share one request, settle safely, and reset can retry.
   setGameSettingsForTests(null);let failures=0;globalThis.fetch=async()=>{failures++;throw new Error('synthetic outage');};
   const failed=await Promise.all(Array.from({length:5},()=>getGameSettings()));assert.ok(failures < 5, `outage requests must be coalesced, including SDK retries: ${failures}`);assert.ok(failed.every(v=>v===DEFAULT_SETTINGS));

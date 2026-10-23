@@ -466,7 +466,7 @@ export function setGameSettingsForTests(value: GameSettings | null): void {
   cache = value ? { at: Number.POSITIVE_INFINITY, value } : null;
 }
 
-async function readGameSettings(): Promise<GameSettings> {
+async function readGameSettings(revision: number): Promise<GameSettings> {
   if (supabase) {
     try {
       const { data, error } = await withTimeout(
@@ -476,7 +476,9 @@ async function readGameSettings(): Promise<GameSettings> {
       if (!error) {
         // No row yet is the defaults, as before; a stored row is the owner's.
         const value = data?.value ? normalizeSettings(data.value) : DEFAULT_SETTINGS;
-        lastKnown = value;
+        // A read begun before a save answers what the save replaced, which
+        // must not become the copy an outage serves.
+        if (revision === cacheRevision) lastKnown = value;
         return value;
       }
       logEvent('settings', { status: 503, category: 'read_failed', error: error.message, served: lastKnown ? 'last_known' : 'defaults' });
@@ -493,7 +495,7 @@ export function getGameSettings(): Promise<GameSettings> {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return Promise.resolve(cache.value);
   if (inflight?.revision === cacheRevision) return inflight.promise;
   const revision = cacheRevision;
-  const promise = readGameSettings().then((value) => {
+  const promise = readGameSettings(revision).then((value) => {
     // A successful save/reset wins over a read started before it.
     if (revision === cacheRevision) cache = { at: Date.now(), value };
     return value;
