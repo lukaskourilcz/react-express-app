@@ -173,7 +173,7 @@ export function PremiumCheckoutPage() {
               <p className="ss-checkout-price">{offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{PREMIUM_PRICE.symbol}{PREMIUM_PRICE[plan]}</strong>}</p>
               {offer && <LaunchOfferNote offer={offer} compact />}
               <p>{t(plan === 'annual' ? 'premium.page.annualRenews' : 'premium.page.monthlyRenews')}</p>
-              <p><Link to="/terms">{t('legal.link.terms')}</Link> · <Link to="/privacy">{t('legal.link.privacy')}</Link></p>
+              <p className="ss-text-links"><Link to="/terms">{t('legal.link.terms')}</Link><Link to="/privacy">{t('legal.link.privacy')}</Link></p>
               <CheckboxInput value={consent} onChange={setConsent} label={t('billing.checkout.consent')} isRequired isDisabled={busy || ready} />
               {!ready && <Button label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
               {busy && <p role="status">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
