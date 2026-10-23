@@ -268,6 +268,38 @@ describe('the discoverable switch', () => {
   });
 });
 
+describe('a read the next read overtakes', () => {
+  it('keeps the value being saved on screen until the newer read draws', async () => {
+    let discoverable = true;
+    let reads = 0;
+    const gates: Array<() => void> = [];
+    server.use(
+      http.get('*/api/user/friends-handle', () => HttpResponse.json({ handle: 'thirsty-sharkie', discoverable, country: null, canChangeAt: null })),
+      http.get('*/api/user/friends-list', async () => {
+        reads += 1;
+        if (reads > 1) await new Promise<void>((done) => gates.push(done));
+        return HttpResponse.json({ friends: [], requests: [{ handle: 'mucho-chomp-shark', displayName: 'Dee Example', direction: 'incoming' }] });
+      }),
+      http.put('*/api/user/friends-handle', async ({ request }) => {
+        ({ discoverable } = await request.json() as { discoverable: boolean });
+        return HttpResponse.json({ discoverable });
+      }),
+      http.post('*/api/user/friends-respond', () => HttpResponse.json({ state: 'declined_in' })),
+    );
+    renderPanel();
+    const box = await screen.findByRole('checkbox');
+    fireEvent.click(box);
+    await waitFor(() => expect(reads).toBe(2));
+    // A second read starts (an answer to a request) and overtakes the first.
+    fireEvent.click(screen.getByRole('button', { name: 'Decline Dee Example' }));
+    await waitFor(() => expect(reads).toBe(3));
+    await act(async () => { gates[0](); await new Promise((done) => setTimeout(done, 30)); });
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    await act(async () => { gates[1](); await new Promise((done) => setTimeout(done, 30)); });
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
+});
+
 describe('your sharkname on the Friends tab', () => {
   it('says what friends add you by, and sends you to the Overview card to change it', async () => {
     serve();

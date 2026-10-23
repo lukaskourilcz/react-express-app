@@ -58,27 +58,35 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
   // Two answers in a row start two reads; only the later one may draw, or
   // the earlier, older list brings back a request already answered.
   const readSeq = useRef(0);
+  // The newest read. A read a later one overtook settles with that one, so a
+  // caller waiting on it (a save showing its value until the read lands)
+  // waits for the read that draws, not for one that drew nothing.
+  const latestRead = useRef<Promise<void>>(Promise.resolve());
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback((): Promise<void> => {
     const seq = ++readSeq.current;
-    try {
-      const [own, list] = await Promise.all([getHandle(), listFriends()]);
-      if (seq !== readSeq.current) return;
-      setHandleState(own);
-      setFriends(list.friends);
-      setRequests(list.requests);
-      setError(null);
-      loaded.current = true;
-      setState('ready');
-    } catch (err) {
-      if (seq !== readSeq.current) return;
-      setError(friendlyError(err));
-      // The most likely cause of a first read failing is the migration not
-      // being applied yet. Either way the honest thing is to say the tab is
-      // not available, not to show an empty friends list that looks like
-      // nobody has been added.
-      if (!loaded.current) setState('unavailable');
-    }
+    const read = (async (): Promise<void> => {
+      try {
+        const [own, list] = await Promise.all([getHandle(), listFriends()]);
+        if (seq !== readSeq.current) return latestRead.current;
+        setHandleState(own);
+        setFriends(list.friends);
+        setRequests(list.requests);
+        setError(null);
+        loaded.current = true;
+        setState('ready');
+      } catch (err) {
+        if (seq !== readSeq.current) return latestRead.current;
+        setError(friendlyError(err));
+        // The most likely cause of a first read failing is the migration not
+        // being applied yet. Either way the honest thing is to say the tab is
+        // not available, not to show an empty friends list that looks like
+        // nobody has been added.
+        if (!loaded.current) setState('unavailable');
+      }
+    })();
+    latestRead.current = read;
+    return read;
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
