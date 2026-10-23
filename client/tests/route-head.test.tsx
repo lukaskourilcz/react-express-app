@@ -2,8 +2,8 @@
 // navigation): the tab title, the prerendered head of a share page, and the
 // not-found page's noindex line.
 import { beforeEach, describe, expect, it } from 'vitest';
-import { render, renderHook } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LanguageProvider, useLanguage } from '../src/i18n/LanguageContext';
 import { applyRouteHead, readShareHead, type ShareHead } from '../src/lib/routeHead';
 import { NotFoundPage } from '../src/components/PublicInfoPages';
@@ -164,6 +164,23 @@ describe('the not-found page', () => {
     expect(robots()).toEqual([]);
     visit('/quiz');
     expect(robots()).toEqual([]);
+  });
+});
+
+describe('the missing page’s Go back', () => {
+  it('goes home from a missing page opened in a new tab, where there is nothing to go back to', () => {
+    render(
+      <MemoryRouter initialEntries={['/no-such-page']}>
+        <LanguageProvider>
+          <Routes>
+            <Route path="/" element={<p>Home page</p>} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </LanguageProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+    expect(screen.getByText('Home page')).toBeInTheDocument();
   });
 });
 
