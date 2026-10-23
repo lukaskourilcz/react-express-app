@@ -64,7 +64,9 @@ const EMAIL: Account = {
 };
 // An account whose own rows the database is too slow to read.
 const SLOW: Account = { id: '1a2b3c4d-0000-4000-8000-000000000010', token: 'slow-rows', email: 'slow@example.invalid', confirmed: true };
-const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW];
+// An account whose sharkname row the database fails to read.
+const HANDLES_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-000000000011', token: 'handles-down', email: 'handles@example.invalid', confirmed: true };
+const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN];
 // A token presented while Supabase Auth answers 500 (not one of ACCOUNTS).
 const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 'auth-is-down', email: 'down@example.invalid', confirmed: true };
 
@@ -162,6 +164,7 @@ async function startStandIns() {
     }
     if (url.pathname.startsWith('/rest/v1/')) {
       const single = String(req.headers.accept ?? '').includes('vnd.pgrst.object');
+      if (url.pathname === '/rest/v1/user_handles' && req.method === 'GET' && filters.user_id === HANDLES_DOWN.id) return send(500, { code: '08006', message: 'stand-in: connection failure' });
       if (url.pathname === '/rest/v1/user_handles' && req.method === 'GET') return send(200, single ? { leaderboard_name_mode: 'nickname' } : []);
       if (req.method === 'POST' || req.method === 'PATCH') {
         const row = (Array.isArray(body) ? body[0] : body) as Row;
@@ -287,6 +290,14 @@ async function main() {
     const unavailable = await user('leaderboard-name', { method: 'PUT', account: LISTED_UNCONFIRMED, body: { mode: 'account' } });
     assert.equal(unavailable.statusCode, 409);
     assert.equal(errorCode(unavailable), 'account_name_unavailable');
+    // A photo switch whose name row cannot be read changes nothing: a write
+    // beside a failed read answered 503, and the Profile put the old switch
+    // back while the photo was already on the boards.
+    seen.length = 0;
+    const photoBlind = await user('leaderboard-name', { method: 'PUT', account: HANDLES_DOWN, body: { showPhoto: true } });
+    assert.equal(photoBlind.statusCode, 503, JSON.stringify(photoBlind.body));
+    assert.equal(errorCode(photoBlind), 'leaderboard_name_unavailable');
+    assert.ok(!reads('/rest/v1/user_stats').some((one) => one.method === 'POST'), 'no photo switch is written when the setting cannot be read');
     console.log('PASS verified caller: leaderboard names use the verified profile or confirmed email prefix, independently of friends');
 
     // A signed-in Challenge batch verifies its token once, for the rate limit
