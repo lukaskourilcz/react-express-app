@@ -4,13 +4,11 @@
  * mobile drawer live here.
  */
 
-/* Header (glassy, blurred). */
-.ss-header {
-  background: var(--ss-header-bg);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--ss-header-border);
-}
+/* The header's surface, edge and blur come from the Apple layer below
+   (:root[data-design='apple'] .ss-header), which main.tsx always sets; base
+   declarations it overrides are left out (they never applied). The same goes
+   for the toolbar's height, the nav link's weight and corner, and the
+   drawer panel's width, surface and edge. */
 .ss-toolbar {
   max-width: 1200px;
   width: 100%;
@@ -19,7 +17,6 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  min-height: 56px;
 }
 @media (min-width: 600px) {
   .ss-toolbar { padding: 8px 24px; }
@@ -83,13 +80,11 @@
 /* Nav links. */
 .ss-navlink {
   font-family: var(--font-family-body);
-  font-weight: 500;
   font-size: var(--ss-type-compact);
   white-space: nowrap;
   text-decoration: none;
   color: var(--color-text-secondary);
   padding: 8px 12px;
-  border-radius: var(--radius-element);
   transition: color 0.15s ease, background 0.15s ease;
 }
 .ss-navlink:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
@@ -116,10 +111,7 @@
   left: 0;
   bottom: 0;
   z-index: 1201;
-  width: 264px;
   max-width: 82vw;
-  background: var(--color-background-surface);
-  border-right: 1px solid var(--color-border);
   box-shadow: var(--shadow-high);
   display: flex;
   flex-direction: column;
@@ -336,7 +328,9 @@
   max-width: var(--ss-width-chrome);
   margin-inline: auto;
   margin-top: 3.5rem;
-  padding: 1.25rem 0 1rem;
+  /* 5rem below: room above the ocean overlay (was an Apple-layer override of
+     a 1rem base value that never applied). */
+  padding: 1.25rem 0 5rem;
   border-top: 1px solid var(--ss-header-border);
   color: var(--color-text-secondary);
   font-size: var(--ss-type-meta);
@@ -402,7 +396,6 @@
 .topic-practice { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); padding: 14px 16px; }
 .topic-practice summary { cursor: pointer; font-weight: 700; }
 .topic-practice p { margin: 12px 0 0; color: var(--color-text-secondary); }
-.ss-info-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .ss-info-card { padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid var(--ss-card-line); border-bottom: 2px solid var(--ss-card-edge); border-radius: var(--radius-container); background: var(--ss-card-bg); }
 .ss-info-card h2 { margin: 0 0 0.65rem; font: 700 1.05rem var(--font-family-heading); }
 .ss-info-card p { margin: 0.5rem 0; color: var(--color-text-secondary); line-height: 1.65; }
@@ -421,8 +414,6 @@
 .ss-text-links button:disabled { cursor: progress; opacity: 0.7; }
 .ss-text-links a:focus-visible,
 .ss-text-links button:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
-.ss-link-button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 1rem; border-radius: var(--radius-element); background: var(--brand-accent); color: var(--brand-on-accent); font-weight: 700; text-decoration: none; }
-@media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } }
 
 /* The crown, worn. It sits on the avatar rather than beside it, tilted very
    slightly so it reads as placed rather than pasted. Decorative: the avatar
@@ -798,12 +789,6 @@
 .ss-topic-article summary:focus-visible, .ss-topic-article a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; }
 .ss-topic-article .topic-practice p { margin-top: 1rem; }
 .ss-topic-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.75rem 1rem; background: var(--brand-accent); color: var(--brand-on-accent); border-radius: var(--radius-element); font-weight: 700; text-decoration: none; }
-/* A horizontal scroller a keyboard can reach. Same contract as
-   .ss-compare-scroll: the element is focusable and carries role="region" plus
-   a name, so arrow keys scroll it. The ring sits inside the box because the
-   strip sits flush inside a panel. */
-.ss-scroll-strip { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.ss-scroll-strip:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: -3px; border-radius: var(--radius-inner); }
 
 /* Keep scrollbar geometry stable; only the thumb's paint follows activity. */
 * { --ss-scrollbar-thumb: transparent; scrollbar-width: thin; scrollbar-color: var(--ss-scrollbar-thumb) transparent; }
@@ -1011,9 +996,9 @@
 :root[data-design='apple'] .ss-radio-card { min-height: 3rem; border-radius: .85rem; background: var(--color-background-muted); border-color: transparent; }
 :root[data-design='apple'] .ss-radio-card[data-tone='success'] { background: var(--ss-success-soft); border-color: var(--ss-success); }
 :root[data-design='apple'] .ss-text-links :is(a, button) { text-decoration-thickness: 1px; text-underline-offset: .2em; }
-:root[data-design='apple'] :is(.ss-fin-button, .astryx-button, .ss-link-button) { border-radius: 999px !important; }
+:root[data-design='apple'] :is(.ss-fin-button, .astryx-button) { border-radius: 999px !important; }
 /* Instant response to a press; the selection is still confirmed only by the native click. */
-:root[data-design='apple'] :is(button, .ss-navlink, .ss-link-button) { touch-action: manipulation; }
+:root[data-design='apple'] :is(button, .ss-navlink) { touch-action: manipulation; }
 :root[data-design='apple'] :is(.astryx-button, .ss-fin-button, .ss-radio-card, .ss-navlink, .ss-strip-tile):active:not(:disabled):not([aria-disabled='true']) {
   transform: scale(.97);
   transition: transform 80ms ease-out;
@@ -1030,8 +1015,6 @@
   box-shadow: var(--shadow-high) !important;
 }
 :root[data-design='apple'] dialog.astryx-dialog::backdrop { background: rgba(0, 0, 0, .36) !important; }
-:root[data-design='apple'] .ss-design-preview { border-radius: 1.25rem; }
-:root[data-design='apple'] .ss-brand-footer { padding-bottom: 5rem; }
 
 @media (max-width: 760px) {
   :root[data-design='apple'] .ss-hero-grid { grid-template-columns: 1fr; gap: 2rem; padding-top: 0; }

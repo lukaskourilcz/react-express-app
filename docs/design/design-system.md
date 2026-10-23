@@ -84,7 +84,7 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 - Panels/cards: `--radius-container`.
 - Controls: `--radius-element`.
 - Inner tiles: `--radius-inner`.
-- Pill shape (`border-radius: 999px`) only for buttons (`.astryx-button`, `.ss-fin-button`, `.ss-link-button`), the header nav links (`.ss-navlink`), tags (`.ss-tag`), compact filters such as the topic pills (`.ss-topic-pill`), small inline toggles (glossary terms, figure buttons) and compact segmented controls. Cards, panels, inputs, selects, radio cards, drawer links and dialogs use the radius tokens above.
+- Pill shape (`border-radius: 999px`) only for buttons (`.astryx-button`, `.ss-fin-button`), the header nav links (`.ss-navlink`), tags (`.ss-tag`), compact filters such as the topic pills (`.ss-topic-pill`), small inline toggles (glossary terms, figure buttons) and compact segmented controls. Cards, panels, inputs, selects, radio cards, drawer links and dialogs use the radius tokens above.
 - Default content hierarchy is canvas → one panel → rows. Avoid panel-inside-card-inside-card.
 
 ## Shared component patterns
