@@ -14,7 +14,7 @@
 // Source maps are already emitted as 'hidden' in vite.config.ts; upload them
 // with @sentry/vite-plugin + SENTRY_AUTH_TOKEN in CI for readable stack traces
 // (optional, not required at runtime). To shrink the prod bundle further, drop
-// browserTracingIntegration below for errors-only reporting.
+// browserTracingIntegration in lib/sentry-sdk.ts for errors-only reporting.
 
 type SentryModule = typeof import('./sentry-sdk');
 
@@ -27,22 +27,9 @@ export function initSentry(): void {
   initialised = true;
   void import('./sentry-sdk')
     .then((Sentry) => {
-      Sentry.init({
-        dsn,
-        environment: import.meta.env.MODE,
-        // Performance tracing (Web Vitals + transactions) at a low sample rate,
-        // without the cost of full sampling or Session Replay.
-        // `linkPreviousTrace: 'in-memory'` is the SDK's default, pinned: the
-        // other setting keeps the last trace in sessionStorage.
-        integrations: [Sentry.browserTracingIntegration({ linkPreviousTrace: 'in-memory' })],
-        tracesSampleRate: 0.1,
-        // No IP address, cookies or user context. Error monitoring runs for
-        // every visitor without asking (lib/consent.ts, "necessary") only
-        // because it stores nothing in the browser and carries no identifier
-        // of the person: no cookie, no storage key, no Session Replay, no
-        // setUser. Keep it that way, or put it under analytics consent.
-        sendDefaultPii: false,
-      });
+      // The options, consent-free monitoring's privacy rules among them, are
+      // in lib/sentry-sdk.ts with the SDK.
+      Sentry.start(dsn, import.meta.env.MODE);
       sentry = Sentry;
     })
     .catch(() => {});

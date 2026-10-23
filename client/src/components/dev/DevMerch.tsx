@@ -12,7 +12,7 @@
 // what paid orders hold is refused. Cash checkout stays off; cash sales happen
 // in the Spreadshop checkout.
 
-import { useEffect, useId, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Switch } from '@astryxdesign/core/Switch';
@@ -190,13 +190,28 @@ function Quotes({ onDone }: { onDone: (message: string) => void }) {
   const [drafts, setDrafts] = useState<Record<MerchSku, QuoteDraft> | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Fill the form from each new copy of the settings, unless it holds unsaved
+  // edits: a re-read that landed mid-edit (a reconnect, App settings saving)
+  // used to throw the quotes being typed away. Its own save refills it.
+  const formRef = useRef<string | null>(null);
+  const hydratedRef = useRef<string | null>(null);
+  formRef.current = drafts ? JSON.stringify({ enabled, testMode, policyUrl, drafts }) : null;
   useEffect(() => {
     if (!settingsQuery.data) return;
     const current = settingsQuery.data.settings.merch ?? DEFAULT_MERCH_SETTINGS;
-    setEnabled(current.enabled);
-    setTestMode(current.testMode);
-    setPolicyUrl(current.policyUrl);
-    setDrafts(Object.fromEntries(MERCH_SKUS.map((sku) => [sku, toDraft(current.pricing[sku])])) as Record<MerchSku, QuoteDraft>);
+    const next = {
+      enabled: current.enabled,
+      testMode: current.testMode,
+      policyUrl: current.policyUrl,
+      drafts: Object.fromEntries(MERCH_SKUS.map((sku) => [sku, toDraft(current.pricing[sku])])) as Record<MerchSku, QuoteDraft>,
+    };
+    const previous = hydratedRef.current;
+    hydratedRef.current = JSON.stringify(next);
+    if (formRef.current !== null && previous !== null && formRef.current !== previous) return;
+    setEnabled(next.enabled);
+    setTestMode(next.testMode);
+    setPolicyUrl(next.policyUrl);
+    setDrafts(next.drafts);
   }, [settingsQuery.data]);
 
   if (settingsQuery.isPending) return <LoadingScreen label="Loading merchandise settings…" />;
@@ -223,6 +238,7 @@ function Quotes({ onDone }: { onDone: (message: string) => void }) {
     try {
       const next: GameSettings = { ...base, merch: { ...merch, enabled, testMode, policyUrl: policyUrl.trim(), pricing } };
       const { settings } = await saveAdminSettings(next);
+      hydratedRef.current = null;
       queryClient.setQueryData(SETTINGS_KEY, { settings });
       const dropped = Object.keys(pricing).filter((sku) => !settings.merch?.pricing[sku as MerchSku]);
       onDone(dropped.length ? `Saved, but the server refused the quote for ${dropped.join(', ')}.` : 'Merchandise settings saved');
@@ -490,11 +506,16 @@ function OrderCard({ order, items, onDone }: {
   const [tracking, setTracking] = useState(order.tracking_ref ?? '');
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busy, setBusy] = useState(false);
+  // `busy` disables the buttons a render late, so a double click sent a
+  // cancel twice and the second came back as an error after the refund.
+  const busyRef = useRef(false);
   const sendable = order.state === 'paid' || (order.package && order.state === 'awaiting_payment');
   const shippable = sendable || order.state === 'submitted';
   const cancellable = order.state === 'paid' || order.state === 'awaiting_payment';
 
   const act = async (op: 'submit' | 'ship' | 'cancel', message: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       await advanceOrder(order.order_id, op, op === 'ship' ? { carrier: carrier.trim(), trackingRef: tracking.trim() } : undefined);
@@ -502,6 +523,7 @@ function OrderCard({ order, items, onDone }: {
     } catch (err) {
       await onDone(friendlyError(err));
     } finally {
+      busyRef.current = false;
       setBusy(false);
       setConfirmCancel(false);
     }

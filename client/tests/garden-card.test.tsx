@@ -3,7 +3,7 @@
 // `available: false` until then, and the card renders nothing rather than a
 // "not enabled on this deployment" notice on every learner's profile.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { en } from '../src/i18n/translations';
 import { GithubGardenCard } from '../src/components/coding/GithubGardenCard';
 import { codingKeys } from '../src/coding/api';
+import { clearAccountData } from '../src/lib/accountData';
 import { server } from './mocks/server';
 
 const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false } }));
@@ -40,6 +41,20 @@ function mount() {
   return { ...view, client };
 }
 
+const ACTIVE = { ...NOT_CONNECTED, status: 'active', accountLogin: 'garden-owner', repoFullName: 'garden-owner/garden', defaultBranch: 'main', queued: 2 };
+const PENDING = { ...NOT_CONNECTED, status: 'pending_repo', accountLogin: 'garden-owner', repositories: [{ fullName: 'garden-owner/garden', defaultBranch: 'main', private: false, fork: false }] };
+
+/** Answers every POST op with `answer(op)` and records each op sent. */
+function posts(answer: (op: string) => Promise<Response> | Response) {
+  const sent: string[] = [];
+  server.use(http.post('*/api/user/*', ({ request }) => {
+    const op = new URL(request.url).searchParams.get('op') ?? '';
+    sent.push(op);
+    return answer(op);
+  }));
+  return sent;
+}
+
 describe('GitHub garden card', () => {
   it('renders nothing on a deployment without the GitHub App', async () => {
     answer(() => HttpResponse.json(UNAVAILABLE));
@@ -62,6 +77,65 @@ describe('GitHub garden card', () => {
     mount();
     expect(await screen.findByRole('button', { name: en['github.connect'] })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: en['github.title'] })).toBeInTheDocument();
+  });
+
+  it('sends one sync for a double click, before the busy state has rendered', async () => {
+    answer(() => HttpResponse.json(ACTIVE));
+    const sent = posts(async () => { await delay(50); return HttpResponse.json({ committed: 2, failed: 0, remaining: 0 }); });
+    mount();
+    const sync = await screen.findByRole('button', { name: en['github.syncNow'] });
+    act(() => { fireEvent.click(sync); fireEvent.click(sync); });
+    await waitFor(() => expect(sent).toEqual(['github-sync']));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(sent).toEqual(['github-sync']);
+  });
+
+  it('keeps an answer that lands after a sign-out out of the next account\'s screen', async () => {
+    answer(() => HttpResponse.json(PENDING));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    posts(async () => { await held; return HttpResponse.json({ ...ACTIVE, queued: 0 }); });
+    const { client } = mount();
+    fireEvent.click(await screen.findByRole('radio', { name: 'garden-owner/garden' }));
+    fireEvent.click(screen.getByRole('button', { name: en['github.useRepo'] }));
+    // The learner signs out while the choice is on its way.
+    act(() => { clearAccountData(); client.setQueryData(codingKeys.github(), NOT_CONNECTED); });
+    await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(client.getQueryData(codingKeys.github())).toEqual(NOT_CONNECTED);
+    expect(screen.queryByText(en['github.repoSaved'].replace('{repo}', 'garden-owner/garden'))).not.toBeInTheDocument();
+  });
+
+  it('offers Connect again when Back brings the page back from the browser cache', async () => {
+    answer(() => HttpResponse.json(NOT_CONNECTED));
+    posts(() => HttpResponse.json({ url: 'https://github.com/apps/devshark-garden/installations/new?state=s' }));
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, origin: original.origin, hash: '', assign } });
+    try {
+      mount();
+      fireEvent.click(await screen.findByRole('button', { name: en['github.connect'] }));
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('button', { name: en['github.connecting'] })).toBeDisabled();
+      act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+      expect(screen.getByRole('button', { name: en['github.connect'] })).toBeEnabled();
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
+  it('forgets a repository choice the re-read list no longer offers, so Use is not sent for it', async () => {
+    answer(() => HttpResponse.json(PENDING));
+    const sent = posts(() => HttpResponse.json({ error: { code: 'bad_repo', message: 'Pick a repository you own that the app is installed on' } }, { status: 400 }));
+    const { client } = mount();
+    fireEvent.click(await screen.findByRole('radio', { name: 'garden-owner/garden' }));
+    expect(screen.getByRole('button', { name: en['github.useRepo'] })).toBeEnabled();
+    // The learner narrowed the installation on GitHub: the list read again
+    // offers another repository only.
+    act(() => { client.setQueryData(codingKeys.github(), { ...PENDING, repositories: [{ fullName: 'garden-owner/other', defaultBranch: 'main', private: false, fork: false }] }); });
+    const use = await screen.findByRole('button', { name: en['github.useRepo'] });
+    expect(use).toBeDisabled();
+    fireEvent.click(use);
+    expect(sent).toEqual([]);
   });
 
   it('still says when the connection could not be read', async () => {

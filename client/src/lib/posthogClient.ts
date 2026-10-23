@@ -2,7 +2,7 @@
 // only after the visitor says yes to analytics, so posthog-js, these settings
 // and the URL scrubber travel in one lazy chunk and never in the shell.
 
-import posthog, { type PostHog } from 'posthog-js';
+import posthog, { type PostHog, type PostHogConfig } from 'posthog-js';
 import { scrubUrl } from './analytics';
 
 /** A URL or referrer property as analytics may see it. PostHog's `$direct`
@@ -31,10 +31,10 @@ function scrubEvent<T extends { properties?: Record<string, unknown>; $set?: Rec
   return event;
 }
 
-/** Initialise the singleton client, opted out and storing nothing. The
- * caller opts it in. */
-export function startPostHog(key: string, apiHost: string): PostHog {
-  posthog.init(key, {
+/** The settings the client starts with. Exported for the test that runs
+ * them in the real posthog-js. */
+export function posthogConfig(apiHost: string): Partial<PostHogConfig> {
+  return {
     api_host: apiHost,
     // Where the SDK sends users for the toolbar / links (EU Cloud UI).
     ui_host: 'https://eu.posthog.com',
@@ -56,7 +56,17 @@ export function startPostHog(key: string, apiHost: string): PostHog {
     persistence: 'localStorage+cookie',
     opt_out_capturing_by_default: true,
     opt_out_persistence_by_default: true,
+    // Each event leaves when it is captured. Batched, an event waited up to
+    // three seconds in PostHog's queue, which neither reset() nor an opt-out
+    // empties, so one captured just before a withdrawal was sent after it.
+    request_batching: false,
     before_send: (event) => scrubEvent(event),
-  });
+  };
+}
+
+/** Initialise the singleton client, opted out and storing nothing. The
+ * caller opts it in. */
+export function startPostHog(key: string, apiHost: string): PostHog {
+  posthog.init(key, posthogConfig(apiHost));
   return posthog;
 }

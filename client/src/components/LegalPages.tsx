@@ -357,9 +357,14 @@ function LegalDocument({ title, lead, sections }: { title: CopyKey; lead: CopyKe
 
   // Another page links to a section (/terms#trader); the app scrolls inside
   // <main>, so the browser's own jump does not happen on a client navigation.
+  // A malformed escape (/privacy#%E0) makes decodeURIComponent throw, which
+  // replaced the whole policy with the error page: such a hash names no
+  // section, so the page simply stays at the top.
   useEffect(() => {
     if (!hash) return;
-    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: 'start' });
+    let id: string;
+    try { id = decodeURIComponent(hash.slice(1)); } catch { return; }
+    document.getElementById(id)?.scrollIntoView({ block: 'start' });
   }, [hash]);
 
   const render = (block: Block, index: number): ReactNode => {

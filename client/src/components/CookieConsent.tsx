@@ -89,8 +89,10 @@ function ConsentBanner({ onDecided }: { onDecided: (record: ConsentRecord) => vo
   const bodyId = useId();
   const ref = useRef<HTMLElement | null>(null);
   useDockHeight(ref);
-  // Fetch the dialog's code in the background, so Choose opens at once.
+  // Fetch the dialog's code in the background, so Choose opens at once;
+  // not for a visitor who asked the browser to save data, who gets it on Choose.
   useEffect(() => {
+    if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true) return;
     const id = window.setTimeout(() => void loadDialog().catch(() => {}), 1500);
     return () => window.clearTimeout(id);
   }, []);

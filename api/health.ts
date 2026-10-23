@@ -3,6 +3,43 @@ import { createServiceClient, jsonError, withTimeout, logEvent, withRequestConte
 
 const service = createServiceClient();
 
+type DependencyStatus = 'ok' | 'down' | 'unconfigured';
+
+/** Read one row of `table` on the service connection within 1.5 s. A check
+ * that fails is logged with its reason, whether the read threw or answered an
+ * error, so the 503 a monitor sees has a line in the logs saying why. */
+async function dependencyStatus(dependency: string, table: string, column: string): Promise<DependencyStatus> {
+  if (!service) return 'unconfigured';
+  let reason: string;
+  try {
+    const { error } = await withTimeout(service.from(table).select(column).limit(1), 1500);
+    if (!error) return 'ok';
+    reason = error.code || 'query_error';
+  } catch (error) {
+    reason = error instanceof Error ? error.message : 'unknown';
+  }
+  logEvent('health', { level: 'error', category: 'dependency_check', dependency, reason });
+  return 'down';
+}
+
+// The probe is public, uncached and not rate limited, so a flood of it was a
+// flood of database reads: two per request. Requests that arrive while a check
+// is running share its answer instead of starting their own. Nothing is kept
+// after it settles, so every answer is still a fresh check.
+let running: Promise<[DependencyStatus, DependencyStatus]> | null = null;
+
+/** The database and service-role checks, run together (a monitor waits for
+ * the slower one only, not their sum: up to 3 s while the database hangs). */
+function checkDependencies(): Promise<[DependencyStatus, DependencyStatus]> {
+  running ??= Promise.all([
+    dependencyStatus('database', 'user_stats', 'id'),
+    dependencyStatus('service_role', 'quiz_submissions', 'grade_key'),
+  ]).finally(() => {
+    running = null;
+  });
+  return running;
+}
+
 /**
  * GET /api/health
  *
@@ -24,35 +61,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  let supabaseStatus: 'ok' | 'down' | 'unconfigured' = 'unconfigured';
-  let privilegedStatus: 'ok' | 'down' | 'unconfigured' = 'unconfigured';
-
   // Private learning tables intentionally grant nothing to anonymous callers.
   // Readiness checks run on the server's authorized connection too; requiring
   // an anonymous SELECT would report a healthy, private database as down.
-  if (service) {
-    try {
-      const { error } = await withTimeout(service.from('user_stats').select('id').limit(1), 1500);
-      supabaseStatus = error ? 'down' : 'ok';
-    } catch (error) {
-      supabaseStatus = 'down';
-      logEvent('health', {
-        level: 'error',
-        category: 'dependency_check',
-        dependency: 'database',
-        reason: error instanceof Error ? error.message : 'unknown',
-      });
-    }
-  }
-
-  if (service) {
-    try {
-      const { error } = await withTimeout(service.from('quiz_submissions').select('grade_key').limit(1), 1500);
-      privilegedStatus = error ? 'down' : 'ok';
-    } catch {
-      privilegedStatus = 'down';
-    }
-  }
+  const [supabaseStatus, privilegedStatus] = await checkDependencies();
 
   const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
   const degraded = supabaseStatus === 'down' || privilegedStatus === 'down' ||

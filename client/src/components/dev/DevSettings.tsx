@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { TextArea } from '@astryxdesign/core/TextArea';
@@ -247,9 +247,16 @@ export default function DevSettings() {
   const [snack, setSnack] = useState<string | null>(null);
 
   // Hydrate (and re-hydrate after a save/refetch) the editable form from the
-  // server settings. Edits live in `form`; `base` stays the server truth.
+  // server settings. Edits live in `form`; `base` stays the server truth. A
+  // re-read that lands while the form has unsaved edits (a reconnect, the
+  // Merchandise tab saving) keeps them: it used to wipe them.
+  const hydratedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (settingsQuery.data) setForm(toForm(settingsQuery.data.settings));
+    if (!settingsQuery.data) return;
+    const next = toForm(settingsQuery.data.settings);
+    const previous = hydratedRef.current;
+    hydratedRef.current = JSON.stringify(next);
+    setForm((current) => (current && previous !== null && JSON.stringify(current) !== previous ? current : next));
   }, [settingsQuery.data]);
 
   if (settingsQuery.isPending) return <LoadingScreen label="Loading settings…" />;
@@ -285,8 +292,9 @@ export default function DevSettings() {
     setSaving(true);
     try {
       const { settings } = await saveAdminSettings(toSettings(form, base));
-      // Update the cache (the hydrate effect re-fills the form, reflecting any
-      // server-side clamping).
+      // Update the cache; the hydrate effect re-fills the form from it,
+      // reflecting any server-side clamping, as the edits are saved now.
+      hydratedRef.current = null;
       queryClient.setQueryData(SETTINGS_KEY, { settings });
       // Apply the (validated) thresholds to the live leveling module so ranks
       // update across the app without a reload.

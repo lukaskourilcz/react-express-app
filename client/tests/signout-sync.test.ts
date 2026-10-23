@@ -9,6 +9,9 @@ import { server } from './mocks/server';
 import { completeRoadmapAttempt, syncProgressWithServer } from '../src/lib/roadmap';
 import { clearAccountData } from '../src/lib/accountData';
 import { syncXpWithServer } from '../src/lib/xp';
+import { createElement, useEffect } from 'react';
+import { render, screen } from '@testing-library/react';
+import { createStore, useStore } from '../src/lib/store';
 
 const PROGRESS = 'devquiz:roadmap:v2';
 const UNLOCKS = 'devquiz:roadmap:unlocks:v1';
@@ -176,6 +179,25 @@ describe('an XP sync in flight at sign-out', () => {
     await answer();
     await sync;
     expect(JSON.parse(localStorage.getItem(QUEST) ?? '{}')).toEqual({ webdev: 420 });
+  });
+});
+
+// A sign-out reaches the screen through the stores (emitAllStores). A store
+// that changed before a component subscribed to it, as a child writing on
+// mount does (its effect runs before its parent's), must still be shown.
+describe('a store on screen', () => {
+  it('shows a change emitted between the first render and the subscription', () => {
+    let stored = 'the previous account';
+    const store = createStore(() => stored);
+    function Child() {
+      useEffect(() => { stored = 'nobody'; store.emit(); }, []);
+      return null;
+    }
+    function Shown() {
+      return createElement('p', null, useStore(store), createElement(Child));
+    }
+    render(createElement(Shown));
+    expect(screen.getByText('nobody')).toBeTruthy();
   });
 });
 

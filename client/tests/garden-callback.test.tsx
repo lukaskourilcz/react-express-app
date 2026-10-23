@@ -6,11 +6,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { en } from '../src/i18n/translations';
 import GithubSettingsPage from '../src/components/coding/GithubSettingsPage';
 import { server } from './mocks/server';
+import { clearAccountData } from '../src/lib/accountData';
 
 const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false } }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ ...auth.value, signInWithGoogle: async () => undefined }) }));
@@ -53,14 +54,16 @@ function Where() {
   return <p data-testid="where">{location.pathname + location.hash}</p>;
 }
 
+let lastClient: QueryClient | null = null;
 const mount = (search: string) => act(async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  lastClient = client;
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/settings/github${search}`]}>
         <LanguageProvider>
           <Routes>
-            <Route path="/settings/github" element={<><GithubSettingsPage /><Where /></>} />
+            <Route path="/settings/github" element={<><GithubSettingsPage /><Where /><Link to="/learn">Leave</Link></>} />
             <Route path="*" element={<Where />} />
           </Routes>
         </LanguageProvider>
@@ -147,6 +150,62 @@ describe('GitHub garden callback', () => {
       { installationId: '555001', state: 'sealed-state', code: 'one-time-code' },
     ]);
     expect(starts).toEqual([]);
+  });
+
+  it('opens GitHub once for a double click on Connect again', async () => {
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, origin: original.origin, assign } });
+    try {
+      finishAnswers(refusal(500, 'internal_error', 'Could not handle the GitHub request'));
+      await mount(`${CALLBACK}&code=one-time-code`);
+      const again = await screen.findByRole('button', { name: en['github.connectAgain'] });
+      act(() => { again.click(); again.click(); });
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(starts).toEqual(['github-connect-start']);
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
+  it('offers Connect again once more when Back restores the page from the browser cache', async () => {
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, origin: original.origin, assign } });
+    try {
+      finishAnswers(refusal(500, 'internal_error', 'Could not handle the GitHub request'));
+      await mount(`${CALLBACK}&code=one-time-code`);
+      await act(async () => { (await screen.findByRole('button', { name: en['github.connectAgain'] })).click(); });
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('button', { name: en['github.connecting'] })).toBeDisabled();
+      act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+      expect(screen.getByRole('button', { name: en['github.connectAgain'] })).toBeEnabled();
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
+  it('leaves a learner who moved on where they are when the finish answers late', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    finishAnswers(() => HttpResponse.json(CONNECTED));
+    server.use(http.post('*/api/user/*', async () => { await held; return HttpResponse.json(CONNECTED); }));
+    await mount(`${CALLBACK}&code=one-time-code`);
+    await act(async () => { screen.getByRole('link', { name: 'Leave' }).click(); });
+    expect(screen.getByTestId('where')).toHaveTextContent('/learn');
+    await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(screen.getByTestId('where')).toHaveTextContent('/learn');
+  });
+
+  it('keeps a finish that answers after a sign-out out of the next account', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    server.use(http.post('*/api/user/*', async () => { await held; return HttpResponse.json(CONNECTED); }));
+    await mount(`${CALLBACK}&code=one-time-code`);
+    act(() => { clearAccountData(); });
+    await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(lastClient?.getQueryData(['coding', 'github'])).toBeUndefined();
+    expect(screen.getByTestId('where')).toHaveTextContent('/settings/github');
   });
 
   it('sends a learner who changed the installation on GitHub back to the profile', async () => {

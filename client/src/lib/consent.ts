@@ -102,7 +102,10 @@ function writeCookie(record: ConsentRecord, now: number): void {
   }
 }
 
-/** Store a choice; false when the browser refused. */
+/** Store a choice; false when the browser refused. A refused write must not
+ * leave an earlier choice behind: a withdrawal the browser would not store
+ * would otherwise come back as the old yes on the next visit. Removing needs
+ * no space, so it works where a full storage refused the write. */
 function persist(record: ConsentRecord, now: number): boolean {
   try {
     window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({
@@ -112,6 +115,16 @@ function persist(record: ConsentRecord, now: number): boolean {
       decidedAt: record.decidedAt,
     }));
   } catch {
+    try {
+      window.localStorage.removeItem(CONSENT_STORAGE_KEY);
+    } catch {
+      // Storage refused altogether: it holds no earlier choice to come back.
+    }
+    try {
+      document.cookie = `${CONSENT_COOKIE}=; Path=/; Max-Age=0`;
+    } catch {
+      // No cookie access: no copy to remove.
+    }
     return false;
   }
   writeCookie(record, now);

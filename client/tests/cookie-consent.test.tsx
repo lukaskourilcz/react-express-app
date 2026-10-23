@@ -55,6 +55,23 @@ afterEach(() => {
 });
 
 describe('the cookie banner', () => {
+  it('fetches the settings dialog ahead of time, except for a visitor saving data', () => {
+    const warmUps = () => timers.mock.calls.filter(([, delay]) => delay === 1500).length;
+    const timers = vi.spyOn(window, 'setTimeout');
+    const first = mount();
+    expect(warmUps()).toBe(1);
+    first.unmount();
+    timers.mockClear();
+    Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } });
+    try {
+      mount();
+      expect(banner()).not.toBeNull();
+      expect(warmUps()).toBe(0);
+    } finally {
+      delete (navigator as { connection?: unknown }).connection;
+    }
+  });
+
   it('asks on a first visit with three actions of the same weight', () => {
     mount();
     const region = banner();

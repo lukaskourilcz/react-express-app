@@ -5,7 +5,7 @@
 // See DESIGN_RULES.md for the fin-baseline, fade-in-only and accent rules these
 // implement.
 
-import { forwardRef, useState, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react';
+import { forwardRef, useEffect, useRef, useState, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react';
 import { generateFinHover, finHoverStyle, type FinHoverAnimation } from '../../lib/finHover';
 import { useWaveVariant } from '../../lib/waveBank';
 import { useT } from '../../i18n/LanguageContext';
@@ -168,9 +168,18 @@ export interface SampleQuestion { text: string; code?: string; opts: string[]; a
 export function SampleCard({ chip, question, onAnswered, showTeaser = true }: { chip: string; question: SampleQuestion; onAnswered?: () => void; showTeaser?: boolean }) {
   const t = useT();
   const [picked, setPicked] = useState<number | null>(null);
+  // One answer per card, even when two presses land before React re-renders.
+  const pickedRef = useRef(false);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const answered = picked !== null;
   const correct = question.a;
   const right = answered && picked === correct;
+  // Answering disables every option, the pressed one included, which dropped
+  // keyboard focus to the page body. The verdict takes it instead, so the
+  // next Tab continues from the card and a screen reader reads the verdict.
+  useEffect(() => {
+    if (answered) feedbackRef.current?.focus();
+  }, [answered]);
 
   return (
     <div className="ss-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14, borderRadius: 'var(--radius-container)' }}>
@@ -194,7 +203,7 @@ export function SampleCard({ chip, question, onAnswered, showTeaser = true }: { 
           return (
             <button
               key={i} type="button" disabled={answered}
-              onClick={() => { if (picked === null) { setPicked(i); onAnswered?.(); } }}
+              onClick={() => { if (pickedRef.current) return; pickedRef.current = true; setPicked(i); onAnswered?.(); }}
               className="ss-radio-card" data-tone={isCorrect ? 'success' : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', fontSize: '0.95rem', opacity: dim ? 0.6 : 1,
@@ -214,7 +223,7 @@ export function SampleCard({ chip, question, onAnswered, showTeaser = true }: { 
         </div>
       </fieldset>
       {answered && (
-        <div role="status" aria-live="polite" style={{
+        <div ref={feedbackRef} tabIndex={-1} role="status" aria-live="polite" style={{
           borderRadius: 'var(--radius-element)', padding: '12px 14px',
           background: right ? 'var(--ss-success-soft)' : 'var(--ss-error-soft)',
           border: `1px solid ${right ? 'var(--ss-success)' : 'var(--ss-error)'}`,

@@ -4,7 +4,12 @@ import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import { handleGithub } from '../lib/github-handlers';
 import { encodeGithubConnectState } from '../lib/quiz-tokens';
+import { UpstreamTimeoutError } from '../lib/http';
 import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { afterCodingPass } from '../lib/github-garden';
+import { retryQueued } from '../lib/github-app';
+import { CODING_TASKS } from '../lib/coding/catalog';
+import { gardenPathFor } from '../shared/coding-catalog';
 
 // The GitHub garden's connect step, run through the real handler against a
 // stand-in GitHub and a stand-in github_connections table. The state token
@@ -61,7 +66,17 @@ const INSTALLATIONS: Record<number, { id: number; account: { login: string; id: 
   [ORGANISATION_INSTALLATION]: { id: ORGANISATION_INSTALLATION, account: { ...ORGANISATION, type: 'Organization' }, repository_selection: 'selected' },
 };
 
+// A stand-in repository: file contents by `owner/repo:path`, and every write.
+const repoFiles = new Map<string, { sha: string; content: string }>();
+const puts: string[] = [];
+let fileSeq = 0;
+
 let oauthAnswer: 'normal' | 'server_error' = 'normal';
+// How the repository listing answers: as GitHub does, with an outage page
+// from a proxy in front of it, or not before our timer aborts the call.
+let reposAnswer: 'normal' | 'html' | 'timeout' = 'normal';
+// The stranger's installation on "All repositories" of an account with 101.
+let manyRepos = false;
 const calls: string[] = [];
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -104,35 +119,101 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
     return json(200, found);
   }
   if (url.pathname === '/installation/repositories') {
+    if (reposAnswer === 'html') return new Response('<html><body>502 Bad Gateway</body></html>', { status: 502, headers: { 'content-type': 'text/html' } });
+    if (reposAnswer === 'timeout') throw new DOMException('This operation was aborted', 'AbortError');
     const id = Number(/ghs_installation_(\d+)/.exec(headers.get('authorization') ?? '')?.[1]);
     const account = INSTALLATIONS[id]?.account;
     if (!account) return json(401, { message: 'Bad credentials' });
+    if (manyRepos && id === STRANGER_INSTALLATION) {
+      const all = Array.from({ length: 101 }, (_, index) => ({ full_name: `${account.login}/garden-${index}`, default_branch: 'main', private: true, fork: false, owner: { login: account.login, id: account.id } }));
+      const perPage = Number(url.searchParams.get('per_page')) || 30;
+      const page = Number(url.searchParams.get('page')) || 1;
+      return json(200, { total_count: all.length, repositories: all.slice((page - 1) * perPage, page * perPage) });
+    }
     return json(200, { total_count: 1, repositories: [{ full_name: `${account.login}/garden`, default_branch: 'main', private: false, fork: false, owner: { login: account.login, id: account.id } }] });
+  }
+  const contents = /^\/repos\/([^/]+\/[^/]+)\/contents\/(.+)$/.exec(url.pathname);
+  if (contents) {
+    const key = `${contents[1]}:${decodeURI(contents[2])}`;
+    const existing = repoFiles.get(key);
+    if (method === 'GET') {
+      return existing ? json(200, { sha: existing.sha, content: Buffer.from(existing.content, 'utf8').toString('base64'), encoding: 'base64' }) : json(404, { message: 'Not Found' });
+    }
+    if (method === 'PUT') {
+      const body = JSON.parse(String(init?.body)) as { content: string; sha?: string };
+      if (existing && body.sha !== existing.sha) return json(409, { message: 'sha does not match' });
+      if (!existing && body.sha) return json(422, { message: 'sha was supplied for a new file' });
+      const sha = `sha-${++fileSeq}`;
+      repoFiles.set(key, { sha, content: Buffer.from(body.content, 'base64').toString('utf8') });
+      puts.push(key);
+      return json(201, { commit: { sha, html_url: `https://github.com/${contents[1]}/commit/${sha}` } });
+    }
   }
   throw new Error(`unexpected GitHub call ${method} ${url.pathname}`);
 }) as typeof fetch;
 
-/* ── a stand-in github_connections table ──────────────────────────────── */
+/* ── stand-in github_connections and github_commits tables ───────────── */
 
 type Row = Record<string, unknown> & { user_id: string; installation_id: number };
 const table = new Map<string, Row>();
+// github_commits rows by id, in the order they were inserted.
+type CommitRow = Record<string, unknown> & { id: string; user_id: string; path: string; status: string; seq: number };
+const commitRows = new Map<string, CommitRow>();
+let commitSeq = 0;
 // Hides rows from the pre-check only, to stand for a second account whose
 // upsert lands between the check and the write.
 let raceWindow = false;
+// The database not answering in time: every call rejects as withTimeout would.
+let dbTimeout = false;
+// The database answering with an error instead of rows, everywhere or for one table.
+let dbError = false;
+let failingTable: string | null = null;
 
 function query(name: string) {
-  const filters: ((row: Row) => boolean)[] = [];
+  const filters: ((row: Record<string, unknown>) => boolean)[] = [];
   let upsertRow: Row | null = null;
+  let insertRow: Record<string, unknown> | null = null;
+  let updateValues: Record<string, unknown> | null = null;
+  let deleting = false;
   let head = false;
   let columns = '*';
   let single = false;
+  let ordered = false;
   const run = () => {
-    if (name === 'github_commits') return { data: null, error: null, count: 0 };
+    if (dbError || failingTable === name) return { data: null, error: { code: 'XX000', message: 'stand-in database error' }, count: null };
+    if (name === 'github_commits') {
+      if (insertRow) {
+        const id = `commit-${++commitSeq}`;
+        const row = { attempts: 0, status: 'queued', ...insertRow, id, seq: commitSeq } as unknown as CommitRow;
+        commitRows.set(id, row);
+        return { data: { ...row }, error: null };
+      }
+      const matching = [...commitRows.values()].filter((row) => filters.every((filter) => filter(row)));
+      if (updateValues) {
+        for (const row of matching) Object.assign(row, updateValues);
+        return { data: null, error: null };
+      }
+      if (deleting) {
+        for (const row of matching) commitRows.delete(row.id);
+        return { data: null, error: null };
+      }
+      if (head) return { data: null, error: null, count: matching.length };
+      if (ordered) matching.sort((a, b) => a.seq - b.seq);
+      return { data: matching.map((row) => ({ ...row })), error: null };
+    }
     if (upsertRow) {
       const incoming = upsertRow;
       const clash = [...table.values()].some((row) => row.installation_id === incoming.installation_id && row.user_id !== incoming.user_id);
       if (clash) return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "github_connections_installation_id_key"' } };
       table.set(incoming.user_id, { ...table.get(incoming.user_id), ...incoming });
+      return { data: null, error: null };
+    }
+    if (updateValues) {
+      for (const row of table.values()) if (filters.every((filter) => filter(row))) Object.assign(row, updateValues);
+      return { data: null, error: null };
+    }
+    if (deleting) {
+      for (const row of [...table.values()]) if (filters.every((filter) => filter(row))) table.delete(row.user_id);
       return { data: null, error: null };
     }
     const hidePeers = raceWindow && columns === 'user_id';
@@ -144,10 +225,18 @@ function query(name: string) {
     select(selected: string, options?: { head?: boolean }) { columns = selected; head = Boolean(options?.head); return builder; },
     eq(column: string, value: unknown) { filters.push((row) => row[column] === value); return builder; },
     neq(column: string, value: unknown) { filters.push((row) => row[column] !== value); return builder; },
+    in(column: string, values: unknown[]) { filters.push((row) => values.includes(row[column])); return builder; },
+    order() { ordered = true; return builder; },
     limit() { return builder; },
     maybeSingle() { single = true; return builder; },
+    single() { single = true; return builder; },
+    insert(row: Record<string, unknown>) { insertRow = row; return builder; },
+    update(values: Record<string, unknown>) { updateValues = values; return builder; },
+    delete() { deleting = true; return builder; },
     upsert(row: Row, options: { onConflict: string }) { assert.equal(options.onConflict, 'user_id'); upsertRow = row; return builder; },
-    then<A, B>(resolve: (value: ReturnType<typeof run>) => A, reject?: (reason: unknown) => B) { return Promise.resolve(run()).then(resolve, reject); },
+    then<A, B>(resolve: (value: ReturnType<typeof run>) => A, reject?: (reason: unknown) => B) {
+      return Promise.resolve().then(() => { if (dbTimeout) throw new UpstreamTimeoutError(); return run(); }).then(resolve, reject);
+    },
   };
   return builder;
 }
@@ -279,13 +368,50 @@ async function main() {
   assert.equal(table.has(accountC), false, 'nothing is stored for an organisation installation');
   assert.ok(![...table.values()].some((row) => row.installation_id === ORGANISATION_INSTALLATION), 'no account holds the organisation installation');
 
-  // 12. Rate limits are each learner's own, with an address backstop that
+  // 12. A database that does not answer in time is the service busy for a
+  //     moment: 503 upstream_timeout, which the client may retry, not a 500.
+  dbTimeout = true;
+  const busyRead = await call('github-connection', accountA, 'GET');
+  const busySync = await call('github-sync', accountA, 'POST');
+  dbTimeout = false;
+  assert.equal(busyRead.statusCode, 503, 'a timed-out connection read is a 503');
+  assert.equal(errorCode(busyRead.body), 'upstream_timeout');
+  assert.equal(busySync.statusCode, 503, 'a timed-out sync is a 503');
+  assert.equal(errorCode(busySync.body), 'upstream_timeout');
+
+  // 13. GitHub not answering: an outage page is a GitHub error (502), and a
+  //     call our timer aborted is GitHub busy for a moment (503), never a 500.
+  const accountD = 'aaaaaaaa-0000-4000-8000-00000000d004';
+  table.set(accountD, { user_id: accountD, installation_id: STRANGER_INSTALLATION, account_login: STRANGER.login, account_id: STRANGER.id, repo_full_name: null, default_branch: null, status: 'pending_repo', last_error: null, last_commit_at: null });
+  reposAnswer = 'html';
+  const outage = await call('github-repo', accountD, 'POST', { repoFullName: `${STRANGER.login}/garden` });
+  reposAnswer = 'timeout';
+  const slow = await call('github-repo', accountD, 'POST', { repoFullName: `${STRANGER.login}/garden` });
+  reposAnswer = 'normal';
+  assert.equal(outage.statusCode, 502, 'an outage page from GitHub is a 502');
+  assert.equal(errorCode(outage.body), 'github_error');
+  assert.equal(slow.statusCode, 503, 'a GitHub call that timed out is a 503');
+  assert.equal(errorCode(slow.body), 'upstream_timeout');
+
+  // 14. Every page of the installation's repositories is offered: the 101st
+  //     can be picked, not refused as a repository the app cannot reach.
+  manyRepos = true;
+  const listed = await call('github-connection', accountD, 'GET');
+  const picked = await call('github-repo', accountD, 'POST', { repoFullName: `${STRANGER.login}/garden-100` });
+  manyRepos = false;
+  assert.equal((listed.body as { repositories?: unknown[] }).repositories?.length, 101, 'the picker lists repositories past the first page');
+  assert.equal(picked.statusCode, 200, `a repository on the second page can be picked (${JSON.stringify(picked.body)})`);
+  assert.equal(table.get(accountD)?.repo_full_name, `${STRANGER.login}/garden-100`);
+  table.delete(accountD);
+
+  // 15. Rate limits are each learner's own, with an address backstop that
   //     holds a class: every seat of a class behind one address spends its
   //     whole connect and sync budget without a 429, one learner past their
   //     budget is refused, and the next learner at that address is not.
   const cases = [
     { op: 'github-connect-start', per: RATE_LIMITS.githubConnect, net: 1 },
     { op: 'github-sync', per: RATE_LIMITS.githubSync, net: 2 },
+    { op: 'github-repo', per: RATE_LIMITS.githubRepo, net: 3 },
   ];
   // The development auth fallback logs a warning on every call; a few hundred
   // of them would bury the report.
@@ -314,6 +440,70 @@ async function main() {
     console.log = log;
   }
   assert.deepEqual(refusals, [], `a class of ${SHARED_NETWORK_SEATS} behind one address met 429s`);
+
+  // 16. A newer pass of a task supersedes its file still waiting in the
+  //     queue: the repository ends with the newest code, written once, and an
+  //     older file is never written over it afterwards.
+  const accountE = 'aaaaaaaa-0000-4000-8000-00000000e005';
+  const gardenRepo = `${STRANGER.login}/garden`;
+  table.set(accountE, { user_id: accountE, installation_id: STRANGER_INSTALLATION, account_login: STRANGER.login, account_id: STRANGER.id, repo_full_name: gardenRepo, default_branch: 'main', status: 'broken', last_error: null, last_commit_at: null });
+  const task = CODING_TASKS.find((one) => one.track === 'javascript')!;
+  const taskFile = `${gardenRepo}:${gardenPathFor(task)}`;
+  const pass = (code: string) => afterCodingPass(supabase, { userId: accountE, task, code, passedCount: 3, totalCount: 3, firstPass: false, codeChanged: true });
+  assert.equal((await pass('const answer = 1;'))?.status, 'queued', 'a pass while the connection is broken waits');
+  assert.equal((await pass('const answer = 2;'))?.status, 'queued');
+  table.get(accountE)!.status = 'active';
+  assert.equal((await pass('const answer = 3;'))?.status, 'committed', 'the newest pass is written');
+  assert.match(repoFiles.get(taskFile)?.content ?? '', /const answer = 3;/, 'the repository keeps the newest code, not an older queued copy');
+  assert.equal(puts.filter((key) => key === taskFile).length, 1, 'the superseded copies are never written');
+  assert.equal([...commitRows.values()].filter((row) => row.user_id === accountE && row.status === 'queued').length, 0, 'nothing of the task is left waiting');
+
+  //     Copies queued before this rule (or by two passes in one batch): a
+  //     retry writes only the newest of each file.
+  const accountF = 'aaaaaaaa-0000-4000-8000-00000000f006';
+  table.set(accountF, { ...table.get(accountE)!, user_id: accountF, installation_id: 555_006 });
+  INSTALLATIONS[555_006] = { ...INSTALLATIONS[STRANGER_INSTALLATION], id: 555_006 };
+  const queuedFile = `${gardenRepo}:javascript/99-queued.js`;
+  for (const content of ['older copy\n', 'newer copy\n']) {
+    const id = `commit-${++commitSeq}`;
+    commitRows.set(id, { id, seq: commitSeq, user_id: accountF, task_id: 'js-queued', path: 'javascript/99-queued.js', content, message: 'm', attempts: 0, status: 'queued' });
+  }
+  const retried = await retryQueued(supabase, accountF);
+  assert.equal(repoFiles.get(queuedFile)?.content, 'newer copy\n', 'a retry leaves the newest queued copy in the repository');
+  assert.equal(puts.filter((key) => key === queuedFile).length, 1, 'a retry writes one commit per file, not one per queued copy');
+  assert.equal(retried.remaining, 0, 'the older copy is not left waiting');
+
+  // 17. A connection the database could not read is a failed garden write,
+  //     never "not connected", which would ask a connected learner to connect.
+  dbError = true;
+  const unread = await pass('const answer = 4;');
+  dbError = false;
+  assert.equal(unread?.status, 'failed', 'a failed connection read reports the garden write as failed');
+
+  // 18. A queue the database would not read is an error on Sync and on the
+  //     card, never "nothing was waiting" while a file still waits.
+  failingTable = 'github_commits';
+  const unreadSync = await call('github-sync', accountF, 'POST');
+  const unreadCard = await call('github-connection', accountF, 'GET');
+  failingTable = null;
+  assert.equal(unreadSync.statusCode, 500, `a sync that could not read the queue is an error (${JSON.stringify(unreadSync.body)})`);
+  assert.equal(unreadCard.statusCode, 500, `a status that could not count the queue is an error (${JSON.stringify(unreadCard.body)})`);
+
+  // 19. A disconnect the database refused leaves the learner connected with
+  //     their queue; one that went through removes both.
+  table.get(accountE)!.status = 'broken';
+  assert.equal((await pass('const answer = 5;'))?.status, 'queued');
+  const waiting = () => [...commitRows.values()].filter((row) => row.user_id === accountE && row.status === 'queued').length;
+  failingTable = 'github_connections';
+  const refusedDisconnect = await call('github-disconnect', accountE, 'POST');
+  failingTable = null;
+  assert.equal(refusedDisconnect.statusCode, 500, 'a disconnect the database refused is an error');
+  assert.ok(table.has(accountE), 'the learner is still connected');
+  assert.equal(waiting(), 1, 'a failed disconnect keeps the queued file');
+  const disconnected = await call('github-disconnect', accountE, 'POST');
+  assert.equal(disconnected.statusCode, 200);
+  assert.ok(!table.has(accountE), 'the connection is gone');
+  assert.equal([...commitRows.values()].filter((row) => row.user_id === accountE).length, 0, 'the queue is gone with it');
 
   console.log('GitHub garden connect passed: the code is required and exchanged once, only the installation\'s own GitHub account can connect it, an organisation installation is refused, no user token is kept, one installation belongs to one devShark account, and connect and sync limits are each learner\'s own.');
 }

@@ -5,13 +5,22 @@
 
 import { QueryClient } from '@tanstack/react-query';
 
+/** A failed read gets one more try when the failure may pass: a dropped
+ * connection, a timeout or a server error. An answer in the 4xx range is the
+ * server's word and comes back the same: signed out, not allowed, not found,
+ * Premium opens this (402), or rate limited, where a retry at once only spends
+ * the budget that refused it. */
+function retryQuery(failures: number, error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  return failures < 1 && !(typeof status === 'number' && status >= 400 && status < 500);
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60_000,
       gcTime: 5 * 60_000,
-      // A 402 is an answer (Premium opens this), not a transient failure.
-      retry: (failures, error) => (error as { status?: unknown } | null)?.status !== 402 && failures < 1,
+      retry: retryQuery,
       refetchOnWindowFocus: false,
     },
   },

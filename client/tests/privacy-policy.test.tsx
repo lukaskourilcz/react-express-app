@@ -18,11 +18,11 @@ const proto = HTMLDialogElement.prototype as unknown as { showModal?: () => void
 proto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
 proto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
 
-function renderPolicy() {
+function renderPolicy(entry = '/privacy') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/privacy']}>
+      <MemoryRouter initialEntries={[entry]}>
         <LanguageProvider>
           <CookieConsent />
           <PrivacyPage />
@@ -94,6 +94,22 @@ describe('the privacy policy', () => {
     const dialog = await screen.findByRole('dialog', { hidden: true });
     await waitFor(() => expect(dialog).toHaveAttribute('open'));
     expect(within(dialog).getByRole('switch', { name: 'Analytics' })).toBeChecked();
+  });
+
+  it('scrolls to a linked section, and keeps the policy on screen for a malformed link', () => {
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) { scrolled.push(this.id); };
+    try {
+      const first = renderPolicy('/privacy#cookies');
+      expect(scrolled).toEqual(['cookies']);
+      first.unmount();
+      renderPolicy('/privacy#%E0%A4%A');
+      expect(screen.getByRole('heading', { level: 1, name: 'Privacy policy' })).toBeInTheDocument();
+      expect(scrolled).toEqual(['cookies']);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 
   it('shows the banner compact on the policy, so it never hides the text', () => {
