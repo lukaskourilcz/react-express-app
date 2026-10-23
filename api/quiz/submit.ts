@@ -226,6 +226,16 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const gradeKey = session.scope === 'challenge'
     ? `${session.attemptId}:${validated[0].questionId}`
     : session.attemptId;
+  // The question bank and the learner's review states do not depend on the
+  // one-time claim, so they load while it is taken. Nothing is graded or
+  // recorded until the claim has answered; a failed load is answered where it
+  // is awaited, below, and the handler here only keeps it from counting as
+  // unhandled while the claim is in flight.
+  const loading = Promise.all([
+    getEffectiveQuestionsById(subject),
+    auth && session.scope !== 'challenge' ? loadReviewStates(serviceSupabase, auth.sub, subject) : Promise.resolve([]),
+  ]);
+  loading.catch(() => {});
   const claim = await claimSubmission({
     gradeKey,
     attemptId: session.attemptId,
@@ -246,7 +256,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // nor against the learner, it earns no proof, and it is reported back so
   // the result screen can say why the total is short. The key stays sealed
   // either way; nothing here reveals it.
-  const questionsById = await getEffectiveQuestionsById(subject);
+  const [questionsById, reviewStates] = await loading;
   const voided = validated.filter(({ questionId }) => !questionsById.has(questionId)).map(({ questionId }) => questionId);
   const gradable = validated.filter(({ questionId }) => questionsById.has(questionId));
 
@@ -327,7 +337,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // concept, idempotent on the attempt id, and never a source of XP: review
   // reuses the existing reward rules and grants nothing of its own.
   if (auth && session.scope !== 'challenge') {
-    const states = await loadReviewStates(serviceSupabase, auth.sub, subject);
     await recordConceptReviews(
       serviceSupabase,
       {
@@ -347,7 +356,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           }];
         }),
       },
-      states,
+      reviewStates,
     );
   }
 
