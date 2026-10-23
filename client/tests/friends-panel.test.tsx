@@ -192,6 +192,31 @@ describe('double presses on a request', () => {
   });
 });
 
+describe('the discoverable switch', () => {
+  it('shows each new value while it saves, and stores the last one', async () => {
+    serve();
+    let release!: () => void;
+    const gate = new Promise<void>((done) => { release = done; });
+    const puts: unknown[] = [];
+    server.use(http.put('*/api/user/friends-handle', async ({ request }) => {
+      const body = await request.json() as { discoverable: boolean };
+      puts.push(body);
+      if (puts.length === 1) await gate;
+      return HttpResponse.json(body);
+    }));
+    renderPanel();
+    const box = await screen.findByRole('checkbox');
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    expect(box).not.toBeChecked();
+    fireEvent.click(box);
+    expect(box).toBeChecked();
+    release();
+    await waitFor(() => expect(puts).toEqual([{ discoverable: false }, { discoverable: true }]));
+    await new Promise((done) => setTimeout(done, 50));
+  });
+});
+
 describe('your sharkname on the Friends tab', () => {
   it('says what friends add you by, and sends you to the Overview card to change it', async () => {
     serve();

@@ -142,24 +142,50 @@ function HandleCard({
   onEditSharkname,
 }: {
   state: HandleState | null;
-  onChanged: () => void;
+  onChanged: () => Promise<void> | void;
   onEditSharkname?: () => void;
 }) {
   const t = useT();
   const inputId = useId();
   const [error, setError] = useState<string | null>(null);
+  // The values being saved, shown until the read after the saves lands: the
+  // controls are bound to the server's state, so without them the box ticked
+  // a moment ago sprang back, and a second click sent the same change again.
+  // The controls stay enabled (disabling one drops its focus), and a change
+  // made while a save runs follows it, so the last choice is the one stored.
+  type Change = { discoverable?: boolean; country?: string };
+  const [shown, setShown] = useState<Change>({});
+  const queued = useRef<Change | null>(null);
+  const sending = useRef(false);
 
-  const toggleDiscoverable = async (next: boolean) => {
-    setError(null);
-    try { await setDiscoverable(next); onChanged(); }
-    catch (err) { setError(friendlyError(err)); }
+  const send = async () => {
+    sending.current = true;
+    try {
+      while (queued.current) {
+        const next = queued.current;
+        queued.current = null;
+        try {
+          if (next.discoverable !== undefined) await setDiscoverable(next.discoverable);
+          if (next.country !== undefined) await setCountry(next.country);
+        } catch (err) {
+          setError(friendlyError(err));
+          queued.current = null;
+        }
+      }
+      await onChanged();
+    } finally {
+      sending.current = false;
+      setShown({});
+    }
   };
-
-  const chooseCountry = async (next: string) => {
+  const save = (change: Change) => {
     setError(null);
-    try { await setCountry(next); onChanged(); }
-    catch (err) { setError(friendlyError(err)); }
+    setShown((current) => ({ ...current, ...change }));
+    queued.current = { ...queued.current, ...change };
+    if (!sending.current) void send();
   };
+  const shownCountry = shown.country ?? state?.country ?? '';
+  const shownDiscoverable = shown.discoverable ?? state?.discoverable ?? false;
 
   // 249 codes named and sorted in English. Memoised because that is 249 Intl
   // lookups and a collated sort.
@@ -188,12 +214,12 @@ function HandleCard({
           <div className="fr-row fr-row--country">
             <label className="fr-label" htmlFor={`${inputId}-country`}>{t('friends.countryLabel')}</label>
             <span className="fr-country">
-              <CountryFlag code={state.country} size={20} />
+              <CountryFlag code={shownCountry || null} size={20} />
               <select
                 id={`${inputId}-country`}
                 className="fr-select"
-                value={state.country ?? ''}
-                onChange={(event) => void chooseCountry(event.target.value)}
+                value={shownCountry}
+                onChange={(event) => save({ country: event.target.value })}
               >
                 <option value="">{t('friends.countryNone')}</option>
                 {countries.map((country) => (
@@ -206,8 +232,8 @@ function HandleCard({
           <label className="fr-check">
             <input
               type="checkbox"
-              checked={state.discoverable}
-              onChange={(event) => void toggleDiscoverable(event.target.checked)}
+              checked={shownDiscoverable}
+              onChange={(event) => save({ discoverable: event.target.checked })}
             />
             <span>
               {t('friends.discoverable')}
