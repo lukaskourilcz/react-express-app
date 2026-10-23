@@ -14,7 +14,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Popover } from '@astryxdesign/core/Popover';
 import { AppToast } from './ui/AppToast';
-import SignInButton from './SignInButton';
+import SignInButton, { focusSignInAfterSignOut } from './SignInButton';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
@@ -70,7 +70,11 @@ function AuthButton() {
   };
   const handleLogout = () => {
     setMenuOpen(false);
-    void signOut().catch(() => setAuthError(t('auth.signOutFailed')));
+    focusSignInAfterSignOut();
+    void signOut().catch(() => {
+      focusSignInAfterSignOut(false);
+      setAuthError(t('auth.signOutFailed'));
+    });
   };
 
   if (isLoading) {

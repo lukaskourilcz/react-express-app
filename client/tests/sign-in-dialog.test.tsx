@@ -246,8 +246,13 @@ describe('the sign-in dialog', () => {
     act(() => { vi.advanceTimersByTime(30_000); });
     const ready = within(dialog).getByRole('button', { name: 'Send the email again' });
     expect(ready).toBeEnabled();
+    // The live region waits on the page, empty: one that arrives with its
+    // words is not read out.
+    const region = within(dialog).getAllByRole('status').find((element) => element.classList.contains('ss-auth__status'));
+    expect(region).toBeEmptyDOMElement();
     fireEvent.click(ready);
     expect(await within(dialog).findByText('Sent again. Check your inbox.')).toHaveAttribute('role', 'status');
+    expect(within(dialog).getByText('Sent again. Check your inbox.')).toBe(region);
     expect(calls('/resend')[0].body).toMatchObject({ type: 'signup', email: 'ada@example.com' });
     expect(within(dialog).getByRole('button', { name: 'Send again in 60s' })).toBeDisabled();
 
@@ -335,6 +340,58 @@ describe('the sign-in dialog', () => {
     expect(within(dialog).getByRole('heading', { name: 'Sign in to devShark' })).toBeInTheDocument();
   });
 
+  it('sends one sign-in, one account and one reset link for a press that lands twice', async () => {
+    server.use(
+      http.post(`${AUTH}/token`, () => authError(400, 'invalid_credentials', 'Invalid login credentials')),
+      http.post(`${AUTH}/signup`, () => gotrueOk(emailUser({ confirmed: false }))),
+      http.post(`${AUTH}/recover`, () => gotrueOk({})),
+    );
+    const { dialog } = await openDialog();
+    type(field(dialog, 'Email'), 'ada@example.com');
+    type(field(dialog, 'Password'), 'correct horse battery');
+    // A double click, or Enter twice: both presses run before React draws the
+    // first one's busy state.
+    const twice = () => act(() => {
+      const form = dialog.querySelector('form')!;
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    twice();
+    await within(dialog).findByRole('alert');
+    expect(calls('/token')).toHaveLength(1);
+
+    signUpTab(dialog);
+    type(field(dialog, 'Password'), 'correct horse battery');
+    twice();
+    await within(dialog).findByRole('heading', { name: 'Check your inbox' });
+    expect(calls('/signup')).toHaveLength(1);
+
+    press(dialog, 'Use a different email');
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Sign in' }));
+    press(dialog, 'Forgot password?');
+    twice();
+    await within(dialog).findByRole('heading', { name: 'Check your inbox' });
+    expect(calls('/recover')).toHaveLength(1);
+  });
+
+  it('keeps a late answer for a form the learner left off the form they moved to', async () => {
+    let answer = () => {};
+    server.use(http.post(`${AUTH}/token`, () => new Promise<Response>((resolve) => {
+      answer = () => resolve(authError(400, 'invalid_credentials', 'Invalid login credentials'));
+    })));
+    const { dialog } = await openDialog();
+    type(field(dialog, 'Email'), 'ada@example.com');
+    type(field(dialog, 'Password'), 'wrong password');
+    press(dialog, 'Sign in');
+    await waitFor(() => expect(calls('/token')).toHaveLength(1));
+    // The learner moves to Create account while the sign-in is still out.
+    signUpTab(dialog);
+    await act(async () => { answer(); });
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Create account' })).toBeEnabled());
+    expect(within(dialog).getByRole('heading', { name: 'Create your devShark account' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+  });
+
   it('closes on its close button and gives focus back to what opened it', async () => {
     const { dialog } = await openDialog();
     press(dialog, 'Close');
@@ -383,5 +440,27 @@ describe('Continue with Google in the dialog', () => {
     expect(within(dialog).getByRole('button', { name: 'Continue with Google' })).toBeEnabled();
     // The banner sits under the Google button, above the email form.
     expect(alert.compareDocumentPosition(field(dialog, 'Email')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe("the header's Log in", () => {
+  it('takes the focus when it replaces the account button a Log out removed, and only then', async () => {
+    const [{ LanguageProvider }, { default: SignInButton, focusSignInAfterSignOut }] = await Promise.all([
+      import('../src/i18n/LanguageContext'),
+      import('../src/components/SignInButton'),
+    ]);
+    const header = (signedIn: boolean) => (
+      <LanguageProvider>{signedIn ? <button type="button">Account</button> : <SignInButton />}</LanguageProvider>
+    );
+    const view = render(header(true));
+    screen.getByRole('button', { name: 'Account' }).focus();
+    focusSignInAfterSignOut();
+    view.rerender(header(false));
+    expect(screen.getByRole('button', { name: 'Log in' })).toHaveFocus();
+    // Drawn again later, with no Log out pressed, it leaves the focus alone.
+    view.rerender(header(true));
+    screen.getByRole('button', { name: 'Account' }).focus();
+    view.rerender(header(false));
+    expect(screen.getByRole('button', { name: 'Log in' })).not.toHaveFocus();
   });
 });

@@ -6,6 +6,20 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { runCodeTests, warmRunner, TYPE_CHECK_TIMEOUT_MS, COMPILE_TIMEOUT_MS } from '../src/coding/runner/run-tests';
 import { RUN_TIMEOUT_MS, TIMEOUT_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 
+// The worker's compiler, with a checker that runs out of stack on any real
+// code (a type that keeps recursing). The compiler itself is never loaded.
+vi.mock('typescript', () => ({ default: {} }));
+vi.mock('../../shared/coding-ts-check', async (original) => ({
+  ...(await original<typeof import('../../shared/coding-ts-check')>()),
+  createTypeScript: () => ({
+    check: (code: string) => {
+      if (code) throw new RangeError('Maximum call stack size exceeded');
+      return { codeErrors: [], typeTests: [] };
+    },
+    toJavaScript: (code: string) => code,
+  }),
+}));
+
 type Script = (worker: FakeWorker) => void;
 let script: Script = () => {};
 let started = 0;
@@ -85,4 +99,17 @@ it('loads the runner ahead of the first Run, unless the browser asks to save dat
   vi.stubGlobal('navigator', { ...navigator, connection: { saveData: true } });
   warmRunner('typescript')();
   expect(started).toBe(1);
+});
+
+// A checker that ran out of stack reported the raw RangeError as the
+// learner's code throwing, with the hint for a throw; the server and the
+// runner's own clock both call it a stopped type check.
+it('names a checker that ran out of stack a stopped type check, as Submit does', async () => {
+  const posted: Record<string, unknown>[] = [];
+  vi.stubGlobal('postMessage', (message: Record<string, unknown>) => { posted.push(message); });
+  await import('../src/coding/runner/worker');
+  const onmessage = (self as unknown as { onmessage: (event: { data: unknown }) => Promise<void> }).onmessage;
+  await onmessage({ data: { track: 'typescript', code: 'type Loop<T> = Loop<[T]>;', calls: ['f()'], expectations: [1], typeTests: [] } });
+  expect(posted.map((message) => message.phase)).toEqual(['compiling', 'checking', 'done']);
+  expect(posted[posted.length - 1]).toMatchObject({ codeError: TYPE_CHECK_STOPPED_MESSAGE, timedOut: true, check: null, results: [] });
 });

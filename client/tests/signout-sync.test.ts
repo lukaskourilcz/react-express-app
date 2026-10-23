@@ -200,3 +200,19 @@ describe('a store on screen', () => {
     expect(screen.getByText('nobody')).toBeTruthy();
   });
 });
+
+describe('learning-path drafts kept for an account and changed by hand', () => {
+  it('puts back only the text drafts when the account signs in again', async () => {
+    const { forgetOthersKeptDrafts } = await import('../src/lib/accountData');
+    const text = 'devshark:path:draft:enrollment-1:activity-1';
+    const object = 'devshark:path:draft:enrollment-1:activity-2';
+    localStorage.setItem('devshark:path:kept:v1', JSON.stringify({
+      userId: 'user-1',
+      drafts: { [text]: '{"code":"kept"}', [object]: { code: 'not text' } },
+    }));
+    forgetOthersKeptDrafts('user-1');
+    expect(localStorage.getItem(text)).toBe('{"code":"kept"}');
+    expect(localStorage.getItem(object)).toBeNull();
+    expect(localStorage.getItem('devshark:path:kept:v1')).toBeNull();
+  });
+});

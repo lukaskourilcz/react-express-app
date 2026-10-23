@@ -71,6 +71,10 @@ const SLOW_ERASURE: Account = { id: '1a2b3c4d-0000-4000-8000-000000000012', toke
 const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE];
 // A token presented while Supabase Auth answers 500 (not one of ACCOUNTS).
 const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 'auth-is-down', email: 'down@example.invalid', confirmed: true };
+// Tokens presented while Supabase Auth does not answer at all (the connection
+// drops), and while it answers 429 to its own rate limit.
+const AUTH_UNREACHABLE: Account = { ...AUTH_DOWN, token: 'auth-unreachable' };
+const AUTH_THROTTLED: Account = { ...AUTH_DOWN, token: 'auth-throttled' };
 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
@@ -82,6 +86,9 @@ let claimFails = false;
 let healthReadFails = false;
 /** Token checks Supabase Auth answered, so a test can count a request's. */
 let authChecks = 0;
+/** How a read of the auth event log answers: normally, failing, or as a
+ * table the migration has not created yet. */
+let authEventsRead: 'ok' | 'down' | 'missing' = 'ok';
 const SLOW_REPORT = 'stand-in: answer after the timeout';
 // An admin question save with this text answers after the timeout too.
 const SLOW_QUESTION = 'stand-in: save after the timeout';
@@ -117,6 +124,8 @@ async function startStandIns() {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
       // Supabase Auth itself failing, for any token.
       if (token === AUTH_DOWN.token) return send(500, { message: 'stand-in auth is down' });
+      if (token === AUTH_UNREACHABLE.token) { req.socket.destroy(); return; }
+      if (token === AUTH_THROTTLED.token) return send(429, { message: 'stand-in: request rate limit reached' });
       const account = ACCOUNTS.find((one) => one.token === token);
       if (!account) return send(401, { message: 'invalid token' });
       return send(200, {
@@ -163,6 +172,8 @@ async function startStandIns() {
       setTimeout(() => send(200, []), 5_500);
       return;
     }
+    if (url.pathname === '/rest/v1/auth_events' && req.method === 'GET' && authEventsRead === 'down') return send(500, { code: '08006', message: 'stand-in: connection failure' });
+    if (url.pathname === '/rest/v1/auth_events' && req.method === 'GET' && authEventsRead === 'missing') return send(404, { code: 'PGRST205', message: "Could not find the table 'public.auth_events' in the schema cache" });
     const filters = Object.fromEntries([...url.searchParams.entries()].filter(([, value]) => value.startsWith('eq.')).map(([key, value]) => [key, value.slice(3)]));
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
     if (healthReadFails && url.pathname === '/rest/v1/quiz_submissions' && url.searchParams.get('select') === 'grade_key') return send(500, { code: '42501', message: 'permission denied for table quiz_submissions' });
@@ -408,6 +419,17 @@ async function main() {
     const role = await fulfilment(ROLE_ADMIN);
     assert.equal(role.statusCode, 200, `the admin role works without a confirmed address (${JSON.stringify(role.body)})`);
     console.log('PASS verified caller: the admin allow-list counts a confirmed address, the role still works');
+    // Supabase Auth that is down refused nobody: the admin hears that, not 403.
+    const gateDown = await fulfilment(AUTH_DOWN);
+    assert.equal(gateDown.statusCode, 503, `an Auth outage at the admin gate is not "not an admin" (${JSON.stringify(gateDown.body)})`);
+    assert.equal(errorCode(gateDown), 'auth_unavailable');
+    // A fulfilment write verifies its token for the write limit and the gate
+    // once: an unknown item is refused after the gate.
+    authChecks = 0;
+    const stockWrite = await user('fulfilment', { method: 'POST', account: ROLE_ADMIN, body: { op: 'stock', sku: 'not-an-item' } });
+    assert.equal(stockWrite.statusCode, 400, `the admin passed the gate (${JSON.stringify(stockWrite.body)})`);
+    assert.equal(authChecks, 1, 'an admin write asks Supabase Auth once, for the rate limit and the gate alike');
+    console.log('PASS verified caller: the admin gate answers 503 during an Auth outage and reuses the verified token');
 
     // The fulfilment op takes the admin bucket before the gate, GET included.
     // With the clock still: the bucket refills a token a second.
@@ -656,6 +678,17 @@ async function main() {
     assert.equal(leapDay.statusCode, 200, `a leap day is a day (${JSON.stringify(leapDay.body)})`);
     console.log('PASS verified caller: a daily board refuses a date that is no calendar day');
 
+    // A learning-preference write verifies its token for the per-account
+    // limit, and the op reads the caller through lib/auth.ts's tryAuth:
+    // Supabase Auth is asked once for both.
+    authChecks = 0;
+    const preferenceSave = await user('learning-preference', { method: 'PUT', account: A, body: { schemaVersion: 1, baseTrack: 'frontend', specialization: null } });
+    // The stand-in stores nothing, so the op stops after its first read; the
+    // caller was verified by then.
+    assert.notEqual(preferenceSave.statusCode, 401, JSON.stringify(preferenceSave.body));
+    assert.equal(authChecks, 1, 'a learning-preference write asks Supabase Auth once, for the rate limit and the op alike');
+    console.log('PASS verified caller: a learning-preference write verifies its token once');
+
     // A board routine that does not answer in time is the database busy, not
     // a fault: 503, which the client may retry, rather than 500.
     const slowBoard = await call(leaderboard as Handler, { query: { period: 'category', category: 'javascript', min_attempts: String(SLOW_BOARD_MIN_ATTEMPTS) } });
@@ -786,10 +819,17 @@ async function main() {
       assert.equal(down.statusCode, 503, `${query.resource}: a sign-in service that is down is not an invalid session (${JSON.stringify(down.body)})`);
       assert.equal(errorCode(down), 'auth_unavailable');
     }
+    // No answer, or Auth's own rate limit, decides nothing about the token
+    // either: supabase-js reports the first with status 0, and both read 401.
+    for (const account of [AUTH_UNREACHABLE, AUTH_THROTTLED]) {
+      const undecided = await call(questions as Handler, { account, query: { resource: 'due' } });
+      assert.equal(undecided.statusCode, 503, `${account.token}: Supabase Auth that did not decide is not an invalid session (${JSON.stringify(undecided.body)})`);
+      assert.equal(errorCode(undecided), 'auth_unavailable');
+    }
     const refusedToken = await call(questions as Handler, { account: { ...A, token: 'not-a-token' }, query: { resource: 'due' } });
     assert.equal(refusedToken.statusCode, 401, 'a token Supabase refuses is still 401');
     assert.equal(errorCode(refusedToken), 'unauthorized');
-    console.log('PASS verified caller: Today\'s due list and a review keep 503 when Supabase Auth is down, and 401 for a refused token');
+    console.log('PASS verified caller: Today\'s due list and a review keep 503 when Supabase Auth is down, unreachable or throttled, and 401 for a refused token');
 
     // ── a quiz submit whose one-time claim cannot be taken ───────────────
     claimFails = true;
@@ -850,14 +890,25 @@ async function main() {
 
     // ── an account made with an email and password ──────────────────────
     seen.length = 0;
+    authChecks = 0;
     const event = await user('authevent', { method: 'POST', account: EMAIL, body: {} });
     assert.equal(event.statusCode, 200, JSON.stringify(event.body));
+    assert.equal(authChecks, 1, 'a sign-in report asks Supabase Auth once, for the rate limit and the log alike');
     const logged = reads('/rest/v1/auth_events').find((one) => one.method === 'POST')?.body as Row | undefined;
     assert.deepEqual(
       { user_id: logged?.user_id, email: logged?.email, provider: logged?.provider },
       { user_id: EMAIL.id, email: EMAIL.email, provider: 'email' },
       'a sign-in with a password is logged with its provider',
     );
+    // The /dev Logs tab: a log that could not be read is an error with Retry,
+    // not an empty log that looks like nobody signed in. Before the migration
+    // there is no log, and that stays empty.
+    const { listAuthEvents } = await import('../lib/auth-events-store');
+    authEventsRead = 'down';
+    await assert.rejects(listAuthEvents(), 'a failed read of the auth log is not an empty log');
+    authEventsRead = 'missing';
+    assert.deepEqual(await listAuthEvents(), [], 'no auth log table yet reads as no events');
+    authEventsRead = 'ok';
     seen.length = 0;
     const named = await user('leaderboard-visibility', { method: 'PUT', account: EMAIL, body: { visible: true } });
     assert.equal(named.statusCode, 200, JSON.stringify(named.body));
@@ -868,11 +919,20 @@ async function main() {
       'without a Google identity the boards get no name and no picture, and never the address',
     );
     seen.length = 0;
+    authChecks = 0;
     const deleted = await user('delete-account', { method: 'DELETE', account: EMAIL, body: { confirmation: 'DELETE' } });
     assert.equal(deleted.statusCode, 200, `an email account deletes like any other (${JSON.stringify(deleted.body)})`);
+    assert.equal(authChecks, 1, 'a deletion asks Supabase Auth once, for the rate limit and the deletion alike');
     assert.deepEqual(reads('/rest/v1/rpc/delete_user_data').map((one) => (one.body as Row).p_user_id), [EMAIL.id, EMAIL.id], 'its data is erased, before and after the identity');
     assert.equal(seen.filter((one) => one.method === 'DELETE' && one.path === `/auth/v1/admin/users/${EMAIL.id}`).length, 1, 'and its sign-in identity is deleted');
     console.log('PASS verified caller: an email and password account signs in, stays unnamed on boards, and deletes');
+
+    // A sign-in report while Supabase Auth is down says so; 401 would say the
+    // session ended.
+    const eventDown = await user('authevent', { method: 'POST', account: AUTH_DOWN, body: {} });
+    assert.equal(eventDown.statusCode, 503, `a sign-in report during an Auth outage is not an invalid session (${JSON.stringify(eventDown.body)})`);
+    assert.equal(errorCode(eventDown), 'auth_unavailable');
+    console.log('PASS verified caller: a sign-in report verifies its token once and keeps 503 during an Auth outage');
 
     const slowErasure = await user('delete-account', { method: 'DELETE', account: SLOW_ERASURE, body: { confirmation: 'DELETE' } });
     assert.equal(slowErasure.statusCode, 503, `an erasure that timed out answers 503 like every other timeout, not 504 (${JSON.stringify(slowErasure.body)})`);
