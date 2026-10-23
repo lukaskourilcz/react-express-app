@@ -30,8 +30,7 @@
 .ss-premium-plan__action { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: auto; padding-top: 0.75rem; }
 .ss-premium-plan__action > * { max-width: 100%; }
 .ss-premium-unreachable { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
-.ss-premium-plans > .ss-info-note,
-.ss-premium-plans > .ss-premium-note { margin-top: 0.85rem; }
+.ss-premium-plans > .ss-info-note { margin-top: 0.85rem; }
 
 /* The small print before paying: plain text, never hidden behind a toggle. */
 .ss-premium-smallprint {
