@@ -62,6 +62,9 @@
    actions beside it; players are plain 56px rows with hairlines. */
 .play-lobby { display: flex; flex-direction: column; gap: 20px; width: 100%; padding: 24px; }
 .play-lobby__head { display: flex; flex-direction: column; gap: 8px; }
+/* The browser's h2 margin put 17px more above 'Lobby' than the panel's
+   padding; the head's gap spaces it. */
+.play-lobby__head h2 { margin: 0; }
 .play-lobby__count {
   margin-left: auto;
   border-radius: 999px;
