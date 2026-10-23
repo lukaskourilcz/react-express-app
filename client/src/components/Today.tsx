@@ -1,6 +1,6 @@
 import { planTopics } from '../../../shared/progression';
 import { learnerProfileOf } from '../lib/trackPref';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { DayChangeNote } from './DayChangeNote';
@@ -25,7 +25,7 @@ import { HELD_READ, lazyPart, readOnce, settled, useFirstData } from '../lib/rou
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
 import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
-import { nextUtcDayStart } from '../lib/utcDay';
+import { useUtcDay } from '../lib/utcDay';
 import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
@@ -121,33 +121,8 @@ function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number
 
 /** The UTC day the plan is for, moved on when 00:00 UTC passes. Read once,
  * a Today left open overnight, or brought back from the background the next
- * day, kept yesterday's target, its count of levels done and its reviews. A
- * background tab's timer may wait, so a return to the tab reads the day too. */
-function usePlanDay(): string {
-  const [day, setDay] = useState(masteryDayKey);
-  useEffect(() => {
-    let timer = 0;
-    const arm = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        setDay(masteryDayKey());
-        arm();
-      }, Math.max(1_000, nextUtcDayStart() - Date.now() + 1_000));
-    };
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
-      setDay(masteryDayKey());
-      arm();
-    };
-    arm();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, []);
-  return day;
-}
+ * day, kept yesterday's target, its count of levels done and its reviews. */
+const usePlanDay = (): string => useUtcDay(masteryDayKey);
 
 /** The structure and, signed in, the plan, the three sections' code and what
  * they read, in the cache before the first render. The sections used to
