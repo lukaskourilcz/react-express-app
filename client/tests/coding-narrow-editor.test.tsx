@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
@@ -48,22 +48,27 @@ const mount = (id = task.id) => render(
 beforeEach(() => { sessionStorage.clear(); narrowScreen(); });
 afterEach(() => { sessionStorage.clear(); });
 
-it('waits for a bigger screen by default, and says truthfully when code is saved', () => {
+it('waits for a bigger screen by default in one note with its one button, and keeps the code (coding-14)', () => {
   mount();
-  expect(screen.getByText('This challenge needs an editor, so it is waiting for a bigger screen.')).toBeVisible();
-  // Code is saved on Run and Submit only; there is no autosave to promise.
-  expect(screen.getByText(/Your code is saved when you press Run or Submit/)).toBeVisible();
+  const note = screen.getByText('This task works best on a bigger screen. Your code is kept.').closest('.cd-note')!;
+  expect(note).toBeVisible();
+  expect(note).toHaveClass('cd-note--warn');
+  // The decision sits inside the note; nothing promises an autosave.
+  expect(within(note as HTMLElement).getByRole('button', { name: 'Use the editor here' })).toBeVisible();
   expect(screen.queryByText(/anything you have written is saved/)).toBeNull();
   expect(screen.getByLabelText('Test editor')).not.toBeVisible();
   expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
+  // Hint, Solution and Report wait for the editor.
+  expect(screen.queryByRole('button', { name: /Hint|Solution|More actions|Report/ })).toBeNull();
+  expect(document.querySelectorAll('.cd-note')).toHaveLength(1);
 });
 
 it('opens the editor with Run and Submit on a narrow screen when the learner asks, and keeps that choice for the session', () => {
   mount();
-  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   const editor = screen.getByLabelText('Test editor');
   expect(editor).toBeVisible();
-  expect(screen.queryByText('This challenge needs an editor, so it is waiting for a bigger screen.')).toBeNull();
+  expect(screen.queryByText('This task works best on a bigger screen. Your code is kept.')).toBeNull();
   expect(screen.getByRole('button', { name: 'Run' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Submit' })).toBeVisible();
   // The button that was pressed is gone; focus lands on the pane that replaced it.
@@ -74,7 +79,7 @@ it('opens the editor with Run and Submit on a narrow screen when the learner ask
   cleanup();
   mount('js-narrow-editor-next');
   expect(screen.getByLabelText('Test editor')).toBeVisible();
-  expect(screen.queryByRole('button', { name: 'Use the editor on this screen' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Use the editor here' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Submit' })).toBeVisible();
 });
 
@@ -86,9 +91,9 @@ it('loads no runner while the screen waits for a bigger one, and loads it once t
       <CodingWorkbench initialCode={null} task={{ ...task, track: 'typescript' }} session="test-session" locked={null} signedIn mode="lesson" />
     </LanguageProvider></MemoryRouter>,
   );
-  expect(screen.getByText('This challenge needs an editor, so it is waiting for a bigger screen.')).toBeVisible();
+  expect(screen.getByText('This task works best on a bigger screen. Your code is kept.')).toBeVisible();
   expect(warmRunner).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   expect(warmRunner).toHaveBeenCalledWith('typescript');
 });
 
@@ -99,7 +104,7 @@ it('loads no formatter while the screen waits for a bigger one, and formats once
   mount();
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
   expect(formatCode).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
   expect(formatCode).toHaveBeenCalled();
 });
@@ -124,7 +129,7 @@ it('offers the editor beside a puzzle, and an earlier choice of the editor opens
   expect(screen.getByLabelText('Test editor')).not.toBeVisible();
   // The puzzle needs no runner (V3-4).
   expect(warmRunner).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   expect(warmRunner).toHaveBeenCalledWith('javascript');
   const editor = screen.getByLabelText('Test editor');
   expect(editor).toBeVisible();
@@ -148,8 +153,8 @@ it('lets no shortcut run or submit the hidden code while a puzzle or the wait st
   fireEvent.keyDown(check, { key: 'Enter', metaKey: true });
   cleanup();
   mount();
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor on this screen' }), { key: 'Enter', ctrlKey: true, shiftKey: true });
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor on this screen' }), { key: 'Enter', ctrlKey: true });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor here' }), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor here' }), { key: 'Enter', ctrlKey: true });
   expect(submitCoding).not.toHaveBeenCalled();
   expect(runCodeTests).not.toHaveBeenCalled();
 });

@@ -386,7 +386,7 @@
 @media (max-width: 1023px) and (pointer: coarse) {
   .cd-pane--editor .cd-editor .cm-editor { font-size: 16px; }
 }
-/* The pane takes focus when "Use the editor on this screen" replaces the
+/* The pane takes focus when "Use the editor here" replaces the
    waiting note, and shows it the way the verdict card does. */
 .cd-pane--editor:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; }
 .cd-editor-label { font-weight: 650; font-size: 0.92rem; }
@@ -418,6 +418,9 @@
 
 .cd-note { margin: 0; padding: 10px 12px; border-radius: var(--radius-inner); background: var(--ss-info-soft); font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
 .cd-note--warn { background: var(--ss-warning-soft); }
+/* The waiting state below 1024px: one note with its one button inline. */
+.cd-wait { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.cd-wait p { margin: 0; flex: 1 1 14rem; }
 .cd-note--error { background: var(--ss-error-soft); }
 
 /* tabs */

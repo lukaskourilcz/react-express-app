@@ -1108,7 +1108,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <TermsBar texts={[task.prompt, task.title]} domain={glossaryDomainFor(task.track)} />
       {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
       {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{task.api.note}</p>}
-      {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
+      {/* Not while the task waits for a bigger screen: there is nothing to
+          run there yet (UX audit coding-14). */}
+      {!signedIn && mode === 'section' && !pendingOnDesktop && <p className="cd-note">{t('coding.signInHint')}</p>}
     </BriefZone>
   );
 
@@ -1229,12 +1231,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   kept exactly as it is, and nothing about this marks it done.
                   Waiting is the default, never the only way: the editor works
                   here too, just with less room. */}
-              <p className="cd-note cd-note--warn" role="status">{t('coding.pendingDesktop')}</p>
-              <p className="cd-shortcuts">{t('coding.pendingDesktopNote')}</p>
-              <div className="cd-actions">
+              {/* One note and its one decision (UX audit coding-14). Hint,
+                  Solution and Report wait for the editor: without it they
+                  had nothing to act on. */}
+              <div className="cd-note cd-note--warn cd-wait" role="status">
+                <p>{t('coding.pendingDesktop')}</p>
                 <Button variant="secondary" onClick={chooseEditorHere} label={t('coding.pendingDesktopUseEditor')} />
               </div>
-              {actionBar}
             </section>
           )}
 
