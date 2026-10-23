@@ -56,11 +56,14 @@ export function withRequestContext<T>(
       // A refusal of locked content is an answer, not a failure.
       if (error instanceof PremiumRequiredError && !res.headersSent) return jsonPremiumRequired(res, error);
       if (error instanceof ServiceUnavailableError && !res.headersSent) return jsonError(res, 503, error.code, error.message);
+      // Log the status the caller gets: an escaped AuthError answers its own
+      // 401 or 503, and a refused token is a warning, not a server fault.
+      const status = error instanceof AuthError ? error.status : 500;
       logEvent('request', {
-        level: 'error',
+        level: status >= 500 ? 'error' : 'warn',
         method: req.method ?? 'UNKNOWN',
         path: req.url?.split('?')[0] ?? 'unknown',
-        status: 500,
+        status,
         category: error instanceof AuthError ? error.code : error instanceof Error ? error.name : 'unknown',
       });
       if (res.headersSent) return;

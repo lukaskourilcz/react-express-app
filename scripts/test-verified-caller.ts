@@ -545,6 +545,36 @@ async function main() {
     assert.equal(errorCode(timedOut), 'upstream_timeout');
     console.log('PASS verified caller: a Supabase timeout answers 503 upstream_timeout');
 
+    // ── what an escaped error logs ───────────────────────────────────────
+    const { AuthError } = await import('../lib/auth');
+    const escapedLogs = async (thrown: Error) => {
+      const lines: Row[] = [];
+      const original = console.log;
+      console.log = (line: unknown) => {
+        try { lines.push(JSON.parse(String(line)) as Row); } catch { original(line); }
+      };
+      const res = mockResponse();
+      try {
+        await http.withRequestContext(
+          { method: 'GET', headers: { 'x-forwarded-for': nextAddress() }, query: {}, url: '/api/escaped' } as never,
+          res as never,
+          () => { throw thrown; },
+        );
+      } finally {
+        console.log = original;
+      }
+      return { res, failure: lines.find((line) => line.route === 'request' && 'level' in line) };
+    };
+    const refused = await escapedLogs(new AuthError(401, 'unauthorized', 'Sign in again'));
+    assert.equal(refused.res.statusCode, 401);
+    assert.deepEqual({ level: refused.failure?.level, status: refused.failure?.status }, { level: 'warn', status: 401 },
+      'a refused token is logged as the 401 it answers, not as a 500 error');
+    const authDown = await escapedLogs(new AuthError(503, 'auth_unavailable', 'Sign-in is unavailable'));
+    assert.equal(authDown.res.statusCode, 503);
+    assert.deepEqual({ level: authDown.failure?.level, status: authDown.failure?.status }, { level: 'error', status: 503 },
+      'Auth being down is an error logged with the 503 it answers');
+    console.log('PASS verified caller: an escaped AuthError is logged with the status it answers');
+
     // ── Supabase Auth down ───────────────────────────────────────────────
     for (const query of [{ resource: 'due' }, { resource: 'review', count: '5', categories: 'javascript' }] as Record<string, string>[]) {
       const down = await call(questions as Handler, { account: AUTH_DOWN, query });
