@@ -110,7 +110,6 @@ import { handleLessonRead } from '../../lib/learn-lessons/serve';
 //   GET  /api/quiz/roadmap?resource=progress       → the signed-in user's progress
 //   POST /api/quiz/roadmap?resource=answer         → grade one first answer
 //   POST /api/quiz/roadmap?resource=complete       → atomically record progress
-//   PUT  /api/quiz/roadmap                         → save non-progression account extras
 //   GET  /api/quiz/roadmap?resource=learning-path-catalog → published path manifests
 //   POST /api/quiz/roadmap?resource=learning-path-start   → open one path activity
 //   POST /api/quiz/roadmap?resource=learning-path-submit  → grade and record it
@@ -224,7 +223,7 @@ async function playableResponse(input: {
   };
 }
 
-/* ──── per-user progress (GET ?resource=progress, PUT) ──────────────────── */
+/* ──── per-user progress (GET ?resource=progress) ───────────────────────── */
 
 interface Entry {
   passed: boolean;
@@ -240,8 +239,8 @@ type TopicProgress = { levels: Record<string, Entry>; checkpoints: Record<string
 type ProgressBlob = Record<string, TopicProgress>;
 
 // Skill-check unlocks are server-authoritative. Legacy wallet/inventory fields
-// remain readable so existing accounts do not break, but browser PUTs may not
-// mint balances, inventory, or learning unlocks.
+// remain readable so existing accounts do not break; nothing the browser sends
+// writes balances, inventory or learning unlocks.
 interface InventoryBlob {
   owned: string[];
   ring: string | null;
@@ -427,13 +426,7 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
   const stored = sanitizeExtra(current.data?.extra);
   const extra = { ...stored, unlocked: withGrantedTopics(stored.unlocked, email, ownerEmail) };
 
-  if (req.method === 'GET') {
-    return res.json({ data: (current.data?.data as ProgressBlob) ?? {}, extra });
-  }
-
-  // Learning progress and all stored extras are authoritative. The client may
-  // request a sync, but it cannot write entitlements or currency snapshots.
-  return res.json({ ok: true, data: sanitize(current.data?.data), extra });
+  return res.json({ data: (current.data?.data as ProgressBlob) ?? {}, extra });
 }
 
 async function handleSkillCheck(req: VercelRequest, res: VercelResponse) {
@@ -1546,13 +1539,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  // Per-user progress sub-resource (auth-gated): GET ?resource=progress, or PUT.
-  // The PUT branch is deliberately generic, so it is guarded by the
-  // learning-path check above rather than left to catch everything.
-  if (req.method === 'PUT' || (req.method === 'GET' && req.query.resource === 'progress')) {
+  // Per-user progress sub-resource (auth-gated): GET ?resource=progress. The
+  // server writes progress itself, on each completion. A PUT that used to sit
+  // here answered with this read and wrote nothing, so it answers 405 now.
+  if (req.method === 'GET' && req.query.resource === 'progress') {
     try {
-      if (req.method === 'PUT' && !(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapMutationAddress, RATE_LIMITS.roadmapMutation))) return;
-      if (req.method === 'GET' && !(await limitRead(req, res))) return;
+      if (!(await limitRead(req, res))) return;
       return await handleProgress(req, res);
     } catch {
       return jsonError(res, 500, 'internal_error', 'Internal error');
@@ -1560,7 +1552,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET, POST, PUT');
+    res.setHeader('Allow', 'GET, POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 

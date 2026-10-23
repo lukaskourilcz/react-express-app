@@ -2368,7 +2368,7 @@ async function challengeSelectionContracts() {
  * CODE-8, PROF-7). Each route below charged one person's budget to the whole
  * address, so the pupil past it got 429: a quiz, the due list, the daily
  * challenge, the question of the day, a Challenge batch or answer, placement,
- * a Learn answer, completion or progress sync, a coding task, Submit, reveal
+ * a Learn answer or completion, a coding task, Submit, reveal
  * or draft save, a flashcard, a question report. Each now takes a class-sized address bucket,
  * then the caller's own. Run through the real handlers: thirty signed-in
  * pupils behind one address all get through, one pupil hammering is still
@@ -2383,7 +2383,7 @@ async function classroomLimitContracts() {
   type Route = {
     name: string;
     handler: Handler;
-    method: 'GET' | 'POST' | 'PUT';
+    method: 'GET' | 'POST';
     query: Record<string, string>;
     body?: Record<string, unknown>;
     /** What one person may do in a full bucket; before the split, the whole address. */
@@ -2419,7 +2419,6 @@ async function classroomLimitContracts() {
     { name: 'a Learn answer', handler: roadmapHandler, method: 'POST', query: { resource: 'answer' }, body: { sessionId: 'x' }, ...learnAnswer },
     { name: 'a Learn completion', handler: roadmapHandler, method: 'POST', query: { resource: 'complete' }, body: { sessionId: 'x' }, ...learnComplete },
     { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
-    { name: 'a progress sync', handler: roadmapHandler, method: 'PUT', query: {}, body: {}, perPerson: 20, own: 'roadmapMutation', address: 'roadmapMutationAddress' },
     { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
     // A Submit's own budget is per task (owner decision 9), so it carries a
     // session for one; with no code it is refused after the limits.

@@ -436,6 +436,16 @@ async function main() {
     }
     console.log('PASS verified caller: personal answers are private, no-store; public ones keep their headers');
 
+    // ── the retired progress PUT ─────────────────────────────────────────
+    // It answered with the progress read and wrote nothing; the server writes
+    // progress itself on each completion. Retired, it reads nothing either.
+    seen.length = 0;
+    const progressPut = await call(roadmap as Handler, { method: 'PUT', account: A, body: { data: {}, extra: { unlocked: ['react'], wallets: { webdev: { balance: 999 } } } } });
+    assert.equal(progressPut.statusCode, 405, `a progress PUT is refused (${JSON.stringify(progressPut.body)})`);
+    assert.equal(progressPut.headers.allow, 'GET, POST', 'and the route names the methods it serves');
+    assert.deepEqual(reads('/rest/v1/roadmap_progress'), [], 'and the progress row is neither read nor written');
+    console.log('PASS verified caller: the retired progress PUT answers 405 and touches no progress row');
+
     // ── reads a script can drive ─────────────────────────────────────────
     const lookup = (account: Account) => user('friends-lookup', { account, query: { handle: 'shark_fan' } });
     assert.equal((await lookup(A)).statusCode, 200);
