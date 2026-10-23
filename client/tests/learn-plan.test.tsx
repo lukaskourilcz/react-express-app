@@ -836,14 +836,14 @@ describe('a level on the shared question parts', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
     const start = await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 });
     // The intro keeps the chrome: nothing is live yet.
-    expect(seen.at(-1) ?? false).toBe(false);
+    expect(seen[seen.length - 1] ?? false).toBe(false);
     fireEvent.click(start);
-    await waitFor(() => expect(seen.at(-1)).toBe(true));
+    await waitFor(() => expect(seen[seen.length - 1]).toBe(true));
     fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
     await screen.findByRole('heading', { name: 'Level complete' });
     // The result brings the chrome back.
-    expect(seen.at(-1)).toBe(false);
+    expect(seen[seen.length - 1]).toBe(false);
   });
 
   it('ends on a result with one primary in the shared action row', async () => {
@@ -883,7 +883,7 @@ describe('a level on the shared question parts', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Continue' }));
       await waitFor(() => expect(document.getElementById('lesson-question')).toHaveFocus());
       const shell = document.getElementById('lesson-question')!.closest('.ss-question');
-      expect(scrolled.at(-1)).toBe(shell);
+      expect(scrolled[scrolled.length - 1]).toBe(shell);
     } finally {
       rect.mockRestore();
       delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
