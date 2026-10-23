@@ -484,13 +484,41 @@
 /* ── Learn sections (components/learn/*): the switcher, the section line and
    its one action, the dimmed rail state, and the empty section. Tokens only. */
 .rm-section-switcher { margin: 4px 0 12px; max-width: 100%; }
-/* At 360px the three names do not fit; the switcher scrolls inside its own
-   box (the page never does), and the open section is kept in view. */
+/* Should the names ever outgrow the row above 640px, the switcher scrolls
+   inside its own box (the page never does), and the open section is kept in
+   view. */
 .rm-section-switcher__scroll { max-width: 100%; overflow-x: auto; padding: 2px; }
 /* The control keeps its natural width and each name stays on one line, so a
    narrow screen scrolls the switcher rather than squeezing the names. */
 .rm-section-switcher [role='radiogroup'] { width: max-content; }
 .rm-section-switcher .astryx-segmented-control-item { white-space: nowrap; flex-shrink: 0; }
+/* Each item draws its name and percent in Astryx's icon slot (the label is
+   the accessible name). The slot is sized for an 18px icon; it takes its
+   text's size instead. */
+.rm-section-switcher .astryx-segmented-control-item > span {
+  width: auto !important;
+  height: auto !important;
+}
+.rm-switcher-item { display: inline-flex; align-items: center; gap: 0.35em; }
+/* Under 640px the three sections are a vertical list of full-width 44px
+   rows, name left and percent right (UX audit learn-20; the audit's 600px is
+   raised to 640px because the three names need 590px plus the gutters). */
+@media (max-width: 639px) {
+  .rm-section-switcher__scroll { overflow-x: visible; }
+  .rm-section-switcher [role='radiogroup'] {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .rm-section-switcher .astryx-segmented-control-item {
+    width: 100%;
+    justify-content: flex-start !important;
+  }
+  .rm-section-switcher .astryx-segmented-control-item > span { flex: 1 1 auto; }
+  .rm-switcher-item { width: 100%; justify-content: space-between; gap: 12px; }
+  .rm-switcher-item__sep { display: none; }
+  .rm-switcher-item__percent { font-variant-numeric: tabular-nums; }
+}
 .rm-section-header { margin: 0 0 14px; display: grid; gap: 8px; justify-items: start; }
 .rm-section-line,
 .rm-section-note {

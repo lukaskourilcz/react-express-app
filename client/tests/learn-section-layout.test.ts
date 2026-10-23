@@ -26,3 +26,14 @@ describe('the section header (learn-08)', () => {
     expect(declared(base, '.rm-section-header', 'grid-template-columns')).toBe('');
   });
 });
+
+describe('the section switcher on a phone (learn-20)', () => {
+  it('is a vertical list of full-width rows under 640px, name left and percent right', () => {
+    const narrow = mediaRules(addSheet('roadmap'), 'max-width: 639px');
+    expect(declared(narrow, ".rm-section-switcher [role='radiogroup']", 'flex-direction')).toBe('column');
+    expect(declared(narrow, ".rm-section-switcher [role='radiogroup']", 'width')).toBe('100%');
+    expect(declared(narrow, '.rm-section-switcher .astryx-segmented-control-item', 'width')).toBe('100%');
+    expect(declared(narrow, '.rm-switcher-item', 'justify-content')).toBe('space-between');
+    expect(declared(narrow, '.rm-switcher-item__sep', 'display')).toBe('none');
+  });
+});

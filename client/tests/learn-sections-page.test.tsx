@@ -298,6 +298,28 @@ describe('the Learn header (UX audit learn-01)', () => {
   });
 });
 
+describe('the section switcher (UX audit learn-20)', () => {
+  it('draws each name and percent apart under one accessible name, and moves with Up and Down', async () => {
+    answer();
+    await mountAt('/learn/web-developer');
+    const web = await screen.findByRole('radio', { name: 'Web Developer · 0%' });
+    expect(web.querySelector('.rm-switcher-item__name')).toHaveTextContent('Web Developer');
+    expect(web.querySelector('.rm-switcher-item__percent')).toHaveTextContent('0%');
+    const radios = screen.getAllByRole('radio').filter((radio) => radio.closest('.rm-section-switcher'));
+    expect(radios).toHaveLength(3);
+    act(() => web.focus());
+    fireEvent.keyDown(web, { key: 'ArrowDown' });
+    expect(radios[1]).toHaveFocus();
+    fireEvent.keyDown(radios[1], { key: 'ArrowUp' });
+    expect(web).toHaveFocus();
+    fireEvent.keyDown(web, { key: 'ArrowUp' });
+    expect(radios[2]).toHaveFocus();
+    // Focus moves; nothing opens.
+    expect(screen.getByTestId('probe-path')).toHaveTextContent('/learn/web-developer');
+    expect(web).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
 describe('a section without a plan', () => {
   it('asks a visitor to sign in, and dims nothing', async () => {
     answer();

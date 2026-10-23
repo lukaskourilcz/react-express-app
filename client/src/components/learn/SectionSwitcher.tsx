@@ -5,8 +5,15 @@
 // selection on focus is ignored), and Enter, Space or a click open the focused
 // section through the item's onClick. The hint that says so is each item's
 // description, which screen readers read with the item.
+//
+// Under 640px the three sections are a vertical list of full-width 44px rows,
+// the name on the left and the percent on the right (UX audit learn-20), so a
+// phone shows all three without scrolling. Each item's name is its
+// accessible label ("Web Developer · 8%"); the visible name and percent are
+// drawn as two parts so the list can set them apart. Up and Down move along
+// the list as Left and Right do.
 
-import { useEffect, useRef, type FocusEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Button } from '@astryxdesign/core/Button';
@@ -69,9 +76,21 @@ export function SectionSwitcher({ value, items, onActivate }: {
     if (item) keepInView(event.currentTarget, item);
   };
 
+  // The control moves with Left and Right only; stacked on a phone, Up and
+  // Down are the arrows a list answers to. Focus moves, nothing opens.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const radios = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]:not([aria-disabled="true"])')];
+    const at = radios.findIndex((radio) => radio === document.activeElement);
+    if (at < 0) return;
+    event.preventDefault();
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    radios[(at + step + radios.length) % radios.length].focus();
+  };
+
   return (
     <div className="rm-section-switcher">
-      <div className="rm-section-switcher__scroll" ref={scrollerRef} onFocus={onFocus}>
+      <div className="rm-section-switcher__scroll" ref={scrollerRef} onFocus={onFocus} onKeyDown={onKeyDown}>
         <SegmentedControl
           value={value}
           onChange={browseOnly}
@@ -83,6 +102,18 @@ export function SectionSwitcher({ value, items, onActivate }: {
               key={id}
               value={id}
               label={percent === null ? name : learnText('learn.switcher.item', { name, percent })}
+              isLabelHidden
+              icon={(
+                <span className="rm-switcher-item">
+                  <span className="rm-switcher-item__name">{name}</span>
+                  {percent !== null && (
+                    <>
+                      <span className="rm-switcher-item__sep">·</span>
+                      <span className="rm-switcher-item__percent">{percent}%</span>
+                    </>
+                  )}
+                </span>
+              )}
               aria-describedby="learn-switcher-hint"
               onClick={() => {
                 if (id !== value) onActivate(id);
