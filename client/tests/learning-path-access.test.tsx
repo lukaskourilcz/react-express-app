@@ -55,6 +55,7 @@ const state = vi.hoisted(() => ({
   signIn: vi.fn(),
   guest: false,
   readPrefix: false,
+  guidedComplete: false,
 }));
 
 vi.mock('../src/lib/auth', () => ({
@@ -83,7 +84,7 @@ vi.mock('../src/lib/trackPref', async (importOriginal) => ({
 vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const progressFor = (pathId: string) => ({
-    enrollment: null, modules: state.passedActivity ? [{ moduleId: `${pathId}-m02`, activities: [{ activityId: state.passedActivity, state: 'verified_pass' }] }] : [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: false,
+    enrollment: null, modules: state.passedActivity ? [{ moduleId: `${pathId}-m02`, activities: [{ activityId: state.passedActivity, state: 'verified_pass' }] }] : [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: state.guidedComplete,
     // FDE's modules require three written pieces; `noArtifacts` stands in for
     // a path with none.
     artifacts: pathId === 'fde' && !state.noArtifacts ? { submitted: 1, total: 3 } : { submitted: 0, total: 0 },
@@ -165,6 +166,7 @@ beforeEach(() => {
   state.signIn.mockReset();
   state.guest = false;
   state.readPrefix = false;
+  state.guidedComplete = false;
   server.use(http.get('*/api/user/learning-path-reward', () => HttpResponse.json({ eligible: false, claimed: false, orderId: null })));
 });
 
@@ -268,6 +270,25 @@ describe('the path page', () => {
     expect(within(progress).getByText('1 of 3 submitted')).toBeInTheDocument();
     expect(within(progress).getByText(/^All 3 are required to complete the path\./)).toBeInTheDocument();
     expect(within(progress).queryByText('Portfolio self-reviewed')).toBeNull();
+  });
+
+  // UX audit learn-14: the card names the guided path and its state, and the
+  // 'not a certification' disclaimer is said once, in the non-goals list.
+  it('labels the line Guided path with its state, without repeating the disclaimer', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const card = screen.getByRole('heading', { name: 'Where you are' }).closest('section') as HTMLElement;
+    const line = within(card).getByText('Guided path').parentElement as HTMLElement;
+    expect(line).toHaveTextContent('Guided path◐In progress');
+    expect(card).not.toHaveTextContent(/certification|completed/i);
+  });
+
+  it('says Completed once the server marks the guided path complete', async () => {
+    state.guidedComplete = true;
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const card = screen.getByRole('heading', { name: 'Where you are' }).closest('section') as HTMLElement;
+    expect(within(card).getByText('Guided path').parentElement).toHaveTextContent('Guided path✓Completed');
   });
 
   it('shows no written-piece line on a path without any', async () => {

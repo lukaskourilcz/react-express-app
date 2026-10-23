@@ -37,6 +37,8 @@ export const pathsEn = {
   'paths.diagnosticItems': '{percent}% · Items assessed: {count}',
   'paths.diagnosticRetakeNote': 'Results without per-question evidence are not assessed. You can take the diagnostic again; areas it does not cover remain unassessed.',
   'paths.openDiagnostic': 'Open the diagnostic',
+  'paths.guidedPath': 'Guided path',
+  'paths.guidedPath.completed': 'Completed',
   'paths.action.signIn': 'Sign in to start',
   'paths.action.startModule': 'Start module',
   'paths.action.continueTo': 'Continue: {title}',

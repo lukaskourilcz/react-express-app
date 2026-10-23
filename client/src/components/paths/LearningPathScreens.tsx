@@ -448,9 +448,19 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
       {progress.data && (
         <section className="lp-card lp-completion">
           <h2>{t('paths.progressTitle')}</h2>
+          {/* 'Guided path' and its state (UX audit learn-14): the content's
+              completion label ('… guided path completed') read as a claim
+              beside an 'In progress' badge. */}
           <div className="lp-completion__line">
-            <span className="lp-completion__label">{manifest.completionLabel}</span>
-            <StateBadge state={progress.data.guidedComplete ? 'verified_pass' : 'in_progress'} />
+            <span className="lp-completion__label">{pathCopy['paths.guidedPath']}</span>
+            {progress.data.guidedComplete ? (
+              <span className="lp-state lp-state--verified_pass">
+                <span className="lp-state__glyph" aria-hidden="true">✓</span>
+                {pathCopy['paths.guidedPath.completed']}
+              </span>
+            ) : (
+              <StateBadge state="in_progress" />
+            )}
           </div>
           {inventory.artifacts > 0 && (
             <>
@@ -469,7 +479,6 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               {enrollment && <PortfolioExport key={`${userId}:${enrollment.enrollmentId}`} manifest={manifest} enrollmentId={enrollment.enrollmentId} states={states} />}
             </>
           )}
-          <p className="lp-completion__note">{t('paths.completionNote')}</p>
         </section>
       )}
 
