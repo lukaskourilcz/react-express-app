@@ -1013,6 +1013,15 @@ async function tierContracts() {
     await handleEntitlement({ method: 'GET', headers: { authorization: 'Bearer contract' }, query: { user_id: 'contract-free-account' } } as never, plan as never, before039 as never);
     assert.equal(plan.statusCode, 200, 'op=entitlement answers before 039');
     assert.equal((plan.body as { tier: string }).tier, 'free');
+    // A plan the database cannot read is unknown, not free and not a fault.
+    const planDown = mockResponse();
+    await handleEntitlement(
+      { method: 'GET', headers: { authorization: 'Bearer contract' }, query: { user_id: 'contract-free-account' } } as never,
+      planDown as never,
+      { rpc: async () => ({ data: null, error: { code: '08006', message: 'connection failure' } }) } as never,
+    );
+    assert.equal(planDown.statusCode, 503, 'a failed plan read answers 503, which the client retries');
+    assert.equal((planDown.body as { error: { code: string } }).error.code, 'entitlement_unavailable');
     const grant = mockResponse();
     await handleAdminEntitlements(
       { method: 'POST', headers: {}, query: {}, body: { action: 'grant', userId: 'contract-owner-account', validUntil: null, note: 'contract' } } as never,

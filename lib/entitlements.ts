@@ -64,8 +64,10 @@ export async function handleEntitlement(req: VercelRequest, res: VercelResponse,
   if (error) {
     // Before migration 039 nobody can hold a grant, so every account is free.
     if (isRpcMissing(error)) return res.json(FREE);
-    logEvent({ status: 500, kind: 'entitlement', reason: 'db_error' });
-    return jsonError(res, 500, 'db_error', 'Could not load your plan');
+    // The plan is unknown, not free: a 503 the client retries, with the copy
+    // the tier gate uses for the same failure (lib/access.ts).
+    logEvent({ status: 503, kind: 'entitlement', reason: 'db_error' });
+    return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
   }
   const body = toEntitlementResponse(data);
   logEvent({ status: 200, kind: 'entitlement', tier: body.tier, source: body.source });
