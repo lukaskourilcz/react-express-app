@@ -8,7 +8,7 @@
 // ones.
 
 import { createServiceClient, withTimeout } from './http';
-import { getEffectiveQuestionsById } from './questions-store';
+import { getQuestionsForHistoryById } from './questions-store';
 
 const supabase = createServiceClient();
 const TABLE = 'question_reports';
@@ -51,9 +51,11 @@ export async function listReports(limit = 300): Promise<AdminReport[]> {
   );
   if (error) throw new Error(error.message);
 
-  const effective = await getEffectiveQuestionsById();
+  // The merged set before the eligibility gate: a reported question is often
+  // retired or withheld because of the report, and still has a summary.
+  const known = await getQuestionsForHistoryById();
   const summaryFor = (id: string): string | null => {
-    const q = effective.get(id);
+    const q = known.get(id);
     return q ? summarize(q.question) : null;
   };
 

@@ -71,6 +71,8 @@ const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
 const seen: Seen[] = [];
+/** A Learn question the eligibility gate retires, reported before it was. */
+const RETIRED_REPORTED = 'rm-js-21';
 /** While true, the one-time quiz claim fails as an unreachable database would. */
 let claimFails = false;
 /** Token checks Supabase Auth answered, so a test can count a request's. */
@@ -155,6 +157,9 @@ async function startStandIns() {
       if (rpc.endsWith('leaderboard') || rpc === 'friend_lookup') return send(200, []);
       return send(200, null);
     }
+    if (url.pathname === '/rest/v1/question_reports' && req.method === 'GET') {
+      return send(200, [{ id: 'report-retired', question_id: RETIRED_REPORTED, reason: 'incorrect-answer', detail: null, reporter_sub: null, created_at: '2026-10-01T10:00:00Z' }]);
+    }
     if (url.pathname.startsWith('/rest/v1/')) {
       const single = String(req.headers.accept ?? '').includes('vnd.pgrst.object');
       if (url.pathname === '/rest/v1/user_handles' && req.method === 'GET') return send(200, single ? { leaderboard_name_mode: 'nickname' } : []);
@@ -233,6 +238,8 @@ async function main() {
       { default: challenge },
       { default: submit },
       { default: questions },
+      reportsStore,
+      questionsStore,
     ] = await Promise.all([
       import('../api/user/[op]'),
       import('../api/quiz/roadmap'),
@@ -247,6 +254,8 @@ async function main() {
       import('../api/quiz/challenge'),
       import('../api/quiz/submit'),
       import('../api/quiz/questions'),
+      import('../lib/reports-store'),
+      import('../lib/questions-store'),
     ]);
 
     type Handler = (req: never, res: never) => unknown;
@@ -547,6 +556,13 @@ async function main() {
       claimFails = false;
     }
     console.log('PASS verified caller: a quiz submit whose one-time claim fails answers 503');
+
+    // ── the admin's report list ──────────────────────────────────────────
+    assert.equal((await questionsStore.getWithheldQuestions()).get(RETIRED_REPORTED), 'retired', 'the fixture is a question the gate withholds');
+    const [retiredReport] = await reportsStore.listReports();
+    assert.equal(retiredReport?.questionId, RETIRED_REPORTED);
+    assert.ok(retiredReport.questionSummary, 'a report on a question retired since still shows what the question was');
+    console.log('PASS verified caller: the admin report list summarises a reported question the gate has retired');
 
     // ── question reports ─────────────────────────────────────────────────
     seen.length = 0;
