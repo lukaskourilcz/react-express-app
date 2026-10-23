@@ -5,6 +5,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { codingListCopy } from '../../i18n/translations.codingLists';
 import { useAuth } from '../../lib/auth';
 import { accountEpoch } from '../../lib/accountData';
 import { FadeFinCta, Kicker, SwimCta } from '../landing/LandingKit';
@@ -249,8 +250,8 @@ function PremiumRuleNote({ challenges }: { challenges: readonly { stages: readon
   const stages = freeStagesOf(challenges);
   const paths = challenges.some((challenge) => challenge.short);
   const note = stages === null
-    ? t('premium.pathsRule')
-    : paths ? t('premium.pathsProjectsRule', { stages }) : t('premium.projectsRule', { stages });
+    ? codingListCopy('premium.pathsRule')
+    : paths ? codingListCopy('premium.pathsProjectsRule', { stages }) : codingListCopy('premium.projectsRule', { stages });
   return <p className="ss-premium-note cd-projects__rule"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
 }
 
@@ -309,7 +310,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
       const resumeId = evolvingResume(challenge, passed);
       const laterLocked = laterLockedIn(challenge);
       // The verb says where the learner stands: nothing done, part done, all done.
-      const actionKey = completed === challenge.stages.length ? 'coding.evolving.review' : completed > 0 ? 'coding.continue' : 'coding.evolving.start';
+      const action = completed === challenge.stages.length ? codingListCopy('coding.evolving.review') : completed > 0 ? t('coding.continue') : codingListCopy('coding.evolving.start');
       return <article key={challenge.id} className="cd-project" tabIndex={index >= LIST_FOLD ? -1 : undefined} aria-labelledby={`${challenge.id}-name`}>
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
@@ -322,7 +323,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
           <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}{laterLocked && <> <Badge variant="neutral" label={t('premium.badge')} /></>}</p>
         </div>
         {/* The quieter fin: the page's one SwimCta is its next challenge. */}
-        <FadeFinCta label={t(actionKey)} finLeft="62%" finSize={26} accent="var(--brand-accent)" onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
+        <FadeFinCta label={action} finLeft="62%" finSize={26} accent="var(--brand-accent)" onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
     })}</div>
     {foldable && (
@@ -331,7 +332,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
         className="cd-projects__more"
         aria-expanded={showAll}
         aria-controls={listId}
-        label={showAll ? t('coding.evolving.showFewer') : t('coding.evolving.showAll', { n: challenges.length })}
+        label={showAll ? codingListCopy('coding.evolving.showFewer') : codingListCopy('coding.evolving.showAll', { n: challenges.length })}
         onClick={() => {
           focusFirstHidden.current = !showAll;
           setOpenList(showAll ? null : listId);
@@ -648,7 +649,7 @@ export function CodingTrackScreen() {
                 setParams(next, { replace: true });
               }}
             >
-              <option value="all">{t('coding.filter.anyStatus')}</option>
+              <option value="all">{codingListCopy('coding.filter.anyStatus')}</option>
               <option value="open">{t('coding.status.open')}</option>
               <option value="passed">{t('coding.status.passed')}</option>
               <option value="saved">{t('coding.filter.saved')}</option>

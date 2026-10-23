@@ -9,6 +9,7 @@ import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
+import { codingListCopy } from '../../i18n/translations.codingLists';
 import { useAdvanceSession, usePracticeSession, useStartSession } from '../../coding/practice';
 import { ApiError } from '../../lib/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
@@ -176,7 +177,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
       <div className="cd-run__head">
         <div className="cd-run__intro">
           <h2 id="cd-run-title" className="cd-run__title">{t('coding.run.title')}</h2>
-          {!open && <p className="cd-run__lead">{t('coding.run.lead')}</p>}
+          {!open && <p className="cd-run__lead">{codingListCopy('coding.run.lead')}</p>}
         </div>
         {collapsible && !open && (
           <Button
@@ -185,7 +186,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
             aria-expanded={showBody}
             aria-controls={bodyId}
             onClick={() => setExpanded((value) => !value)}
-            label={t(showBody ? 'coding.run.hide' : 'coding.run.open')}
+            label={codingListCopy(showBody ? 'coding.run.hide' : 'coding.run.open')}
           />
         )}
       </div>
