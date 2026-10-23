@@ -162,7 +162,7 @@ export function PremiumCheckoutPage() {
     }
   };
 
-  return <Page title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
+  return <Page kicker={t('billing.kicker')} title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
     <section className="ss-info-card ss-billing-card ss-checkout-card" ref={card}>
       {billing.failed ? <><Banner status="error" title={t('premium.page.unreachable')} /><Button label={t('profile.plan.retry')} onClick={billing.retry} /></>
         : loading ? <p role="status">{t('billing.checkout.loading')}</p> : !validPlan ? <Banner status="error" title={t('billing.checkout.choosePlan')} />
