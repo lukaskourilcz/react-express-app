@@ -402,6 +402,19 @@ describe('the daily challenge', () => {
     expect(hits).toEqual(['daily']);
   });
 
+  it('drops the daily set’s request when the learner leaves while it loads', async () => {
+    let signal: AbortSignal | null = null;
+    server.use(http.get('*/api/quiz/daily', ({ request }) => {
+      signal = request.signal;
+      return new Promise<Response>(() => {});
+    }));
+    const view = renderQuiz();
+    fireEvent.click(await screen.findByRole('button', { name: /today’s challenge/i }));
+    await waitFor(() => expect(signal).not.toBeNull());
+    view.unmount();
+    await waitFor(() => expect(signal!.aborted).toBe(true));
+  });
+
   it('is hidden when the /dev switch turns it off', async () => {
     server.use(http.get('*/api/settings', () => HttpResponse.json({ ...DEFAULT_CONFIG, features: { ...DEFAULT_CONFIG.features, dailyChallenge: false } })));
     renderQuiz();

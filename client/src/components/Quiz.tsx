@@ -266,6 +266,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const questionTextRef = useRef<HTMLDivElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
+  // Leaving the page drops a quiz, review or daily set still loading.
+  useEffect(() => () => fetchAbortRef.current?.abort(), []);
   // One submit at a time. `submitting` reaches the next handler only after a
   // render, and a second Enter or click in that gap sent the answer set
   // twice: the result was recorded, announced and counted twice.
@@ -459,6 +461,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   );
 
   const startDailyChallenge = useCallback(async () => {
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
     leaveScreen();
     setLastStart({ mode: 'daily' });
     setStop(null);
@@ -467,8 +472,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     capture('quiz_started', { mode: 'daily' });
     const startedAt = Date.now();
     try {
-      const data = await getDailyChallenge();
+      const data = await getDailyChallenge(controller.signal);
       await holdLoadingScreen(startedAt);
+      if (controller.signal.aborted) return;
       // Already submitted today: the grader would refuse a second run.
       if (data.completed) {
         setStop('daily-done');
@@ -490,6 +496,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setMode('daily');
       setState('in-progress');
     } catch (err) {
+      if (controller.signal.aborted) return;
       setError(friendlyError(err));
       setState('error');
     }
