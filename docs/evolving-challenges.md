@@ -214,7 +214,11 @@ exists only while it holds one of them. The editor's desktop minimum height is
 480px. Below 1024px the puzzle or the pending note takes the editor's place
 and carries the brief and the action bar. The keyboard shortcuts are not
 printed: Ctrl+Enter runs, Ctrl+Shift+Enter submits, and Escape then Tab leaves
-the editor, and the editor's accessible description says so.
+the editor, and the editor's accessible description says so. Both shortcuts do
+nothing while a puzzle or the pending note replaces the editor, or inside a form
+or dialog in the workbench (the skip note, the report dialog, a confirmation).
+Prettier, behind Format, loads only while the editor is on screen. Each
+revealed hint takes the focus, so a screen reader reads it.
 Stage-specific references are part of the existing Resources tab, alongside
 technique documentation. Hint labels are "Hint" before the first reveal and
 "Next hint" afterwards. When Hint or Solution is unavailable the button stays
