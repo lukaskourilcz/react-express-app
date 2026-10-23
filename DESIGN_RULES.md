@@ -236,8 +236,10 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
 - In-place mutations keep their control visible, disable duplicate actions,
   and use an action/status label from `t()`. Do not replace a whole editor
   with a page loader during submission or draft saving.
-- Use `SwimCta` for prominent actions outside the homepage too (coding Submit,
-  evolving Continue, collection practice). Use `FadeFinCta` for a quieter fin.
+- Use `SwimCta` for a screen's one prominent action outside the homepage too
+  (coding Submit, the Coding home's next challenge, collection practice). Use
+  `FadeFinCta` for a quieter fin, such as an evolving project's or path's row
+  action, labelled Start, Continue or Review by its progress.
   Keyboard focus gets the same affordance as hover; disabled actions do not
   swim. Keep a native button and an accessible name.
 - Reduced motion freezes all travel and ambient loops; opacity alone may
