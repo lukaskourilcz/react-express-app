@@ -1,6 +1,7 @@
 // The solo quiz (Quiz.tsx) and the results that wait to be saved
 // (PendingQuizResults). Invented question fixtures; the wire shapes are the
 // real ones from api/quiz/questions, daily, submit and api/user/stats.
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -200,6 +201,27 @@ describe('touch targets', () => {
       expect(button.style.height).toBe('44px');
       expect(button.closest('.ss-question-header__tools')).not.toBeNull();
     }
+  });
+});
+
+describe('the setup screen (UX audit U2)', () => {
+  it('opens on the Page header, stacks Questions over Difficulty, and starts with the one SwimCta md', async () => {
+    renderQuiz();
+    const start = await screen.findByRole('button', { name: /start quiz/i });
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Build your quiz.');
+    expect(headings[0].closest('.ss-info-page__header')).not.toBeNull();
+    // Each setting is a full-width group of its own, label above its pills.
+    const groups = [...document.querySelectorAll('.quiz-setup__settings > .quiz-setup__group')];
+    expect(groups.map((group) => group.firstElementChild?.textContent)).toEqual(['Questions', 'Difficulty']);
+    expect(groups.map((group) => group.querySelector('[role="radiogroup"]')?.getAttribute('aria-labelledby'))).toEqual(['quiz-count-label', 'quiz-difficulty-label']);
+    expect(start).toHaveClass('ss-swim-cta--md');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    // The empty error line takes no space until it has something to say.
+    const css = readFileSync(new URL('../src/components/Quiz.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.quiz-setup__error:empty \{ display: none; \}/);
+    expect(css).toMatch(/\.quiz-setup \{[^}]*max-width: var\(--ss-width-task\)/);
   });
 });
 

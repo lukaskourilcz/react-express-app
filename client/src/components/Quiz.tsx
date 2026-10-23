@@ -60,6 +60,7 @@ import {
   QuestionHeader,
   QuestionHint,
   QuestionIconButton,
+  QuestionPageHeader,
   QuestionShell,
   ReportFlagIcon,
 } from './question';
@@ -901,16 +902,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       transition: 'border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease',
     });
     return (
-      <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
-        {/* Editorial header: kicker + wave tick + Manrope title + subline. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-          <Kicker as="h1" className="ss-section-title">
-            {t('quiz.buildTitle')}
-          </Kicker>
-          <p style={{ margin: 0, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
-        </div>
+      <div className="ss-pop quiz-setup">
+        {/* The question area's one editorial header (UX audit U2,
+            questions-19): the Page h1, so setup reads like Daily. */}
+        <QuestionPageHeader title={t('quiz.buildTitle')} lead={t('quiz.buildSubtitle')} />
 
-        <div className="ss-panel" style={{ position: 'relative', overflow: 'hidden', padding: 24, display: 'flex', flexDirection: 'column', gap: 20, borderRadius: 'var(--radius-page)' }}>
+        <div className="ss-panel quiz-setup__panel">
           {/* Categories as accent pills. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -936,14 +933,18 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 </button>
               </span>
             )}
-            <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-error)' }}>
+            {/* Takes no line until it has something to say, so the next
+                section is the panel's one 20px gap below (questions-15). */}
+            <div id="categories-error" role="alert" className="quiz-setup__error">
               {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
             </div>
           </div>
 
-          {/* Questions + Difficulty. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 20, position: 'relative' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Questions, then Difficulty: each full width, so each is one
+              row of pills under its label (questions-15). Side by side,
+              Difficulty wrapped to two rows in half the panel. */}
+          <div className="quiz-setup__settings">
+            <div className="quiz-setup__group">
               <span id="quiz-count-label" style={labelStyle}>{t('quiz.questionsLegend')}</span>
               <RadioCardGroup value={questionCount} onChange={(value) => setQuestionCount(Number(value))} labelledBy="quiz-count-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {config.quiz.countOptions.map((count, index) => (
@@ -953,7 +954,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 ))}
               </RadioCardGroup>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="quiz-setup__group">
               <span id="quiz-difficulty-label" style={labelStyle}>{t('quiz.difficulty')}</span>
               <RadioCardGroup value={difficultyMode} onChange={(value) => setDifficultyMode(value as DifficultyMode)} labelledBy="quiz-difficulty-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {DIFFICULTY_VALUES.map((value, index) => {
@@ -971,11 +972,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
           </div>
 
-          {/* Start — swim-through CTA. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', position: 'relative' }}>
+          {/* Start: the screen's one primary, SwimCta md. */}
+          <div className="quiz-setup__start">
             {/* aria-disabled, not disabled: with no category it stays in the
                 Tab order, and pressing it names what is missing. */}
-            <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} unavailable={selectedCategories.length === 0} describedBy="categories-error" size="lg" />
+            <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} unavailable={selectedCategories.length === 0} describedBy="categories-error" size="md" />
           </div>
         </div>
 

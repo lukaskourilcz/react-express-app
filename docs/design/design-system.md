@@ -103,6 +103,8 @@ Every question screen draws through the shared parts in `client/src/components/q
 
 **QuestionFeedback** (`QuestionFeedback.tsx`). The graded verdict: an Astryx `Banner` (`status` success, error or info; `title` the verdict in words; `description` the explanation) in normal flow directly under the answer list and the hint, inside the panel, never positioned over the answers and with no shadow of its own. `children` sit under the verdict (Save as Shark Card). It takes focus when it appears (`autoFocus`, default `true`), so a screen reader reads it; pass `autoFocus={false}` when the runner moves focus to its Continue with `QuestionActions focusPrimary`. The ref is the feedback block. The answers do not move, because content is only added below them; a long explanation scrolls the page.
 
+**QuestionPageHeader** (`QuestionPageHeader.tsx`). The editorial header of a question area's setup or info screen (Quiz setup, Challenge setup, Daily, Today, Shark Cards): the `Page` header markup (`.ss-info-page__header`: fin, kicker line drawn even when empty, `h1` at `--ss-type-title`, one lead line), so these screens share one h1 size and position with every `Page`. Props: `kicker`, `title`, `lead`, `titleRef`. A live run has no editorial header: its `h1` is the QuestionHeader's.
+
 A run's composition, top to bottom: `QuestionShell` › `QuestionHeader` › question block › `AnswerOptionList` › `QuestionHint` › `QuestionFeedback` (once graded), then `QuestionActions` under the panel. Quiz (`client/src/components/Quiz.tsx`) is the reference.
 
 ## Layout and density
