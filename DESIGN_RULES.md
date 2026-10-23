@@ -350,6 +350,22 @@ their props), never drawn again by hand.
   verdict and explanation in normal flow below the list, inside the panel,
   and it takes focus when it appears. Nothing on a question screen is
   absolutely positioned over the answers.
+- **A live run hides the site chrome.** An active Quiz and a live Challenge
+  run report it through `onActiveChange`, and `App.tsx` hides the header and
+  footer on that route; their setup, result and error screens bring them
+  back, and so does a page that fails. With no nav on screen, the run's
+  `QuestionHeader` carries its own way out: an Exit icon button that asks
+  first in an `AlertDialog`.
+- **A setup screen is laid out like the Quiz setup.** One `--ss-width-task`
+  column: the h1 and lead above one panel, the choices in it with a Select
+  all / Deselect all link on their label row, then the one `SwimCta` md.
+  Anything else (the Challenge's top scores) sits under the panel as a short
+  list, never in a side column beside it. A stat row does not repeat what the
+  lead already says.
+- **A page says each fact once.** /daily's day is the kicker over its h1, and
+  its lead says once that nothing is recorded. /today opens on a visible h1
+  with the day's count on the same row, and a card line that would be the
+  same on every card in a section is left out.
 - **A card deck is a question screen too.** Shark Cards keep the route
   column but use the shared Page header and the one `QuestionActions` row
   (Previous and Next together on the left). Their one filled primary is the
