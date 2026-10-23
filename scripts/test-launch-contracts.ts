@@ -2367,7 +2367,7 @@ async function challengeSelectionContracts() {
  * address, so the pupil past it got 429: a quiz, the due list, the daily
  * challenge, the question of the day, a Challenge batch or answer, placement,
  * a Learn answer, completion or progress sync, a coding task, Submit, reveal
- * or draft save, a flashcard. Each now takes a class-sized address bucket,
+ * or draft save, a flashcard, a question report. Each now takes a class-sized address bucket,
  * then the caller's own. Run through the real handlers: thirty signed-in
  * pupils behind one address all get through, one pupil hammering is still
  * refused while a classmate is not, and guests still share their address's
@@ -2424,6 +2424,9 @@ async function classroomLimitContracts() {
     { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: encodeCodingSession({ taskId: freeTask.id, track: freeTask.track, userId: null }) }, perPerson: 30, own: 'codingSubmit', address: 'codingSubmitAddress' },
     { name: 'a coding reveal', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-reveal' }, body: { session: 'x' }, perPerson: 10, own: 'codingReveal', address: 'codingRevealAddress' },
     { name: 'a flashcard write', handler: flashcardsHandler, method: 'POST', query: {}, body: { subject: 'webdev', question_id: 'q1', question: 'Q?', correct_answer: 'A' }, perPerson: 20, own: 'flashcardMutation', address: 'flashcardMutationAddress' },
+    // A class reporting a confusing question shared three reports, and the
+    // fourth pupil got 429. With no reason it is refused after the limits.
+    { name: 'a question report', handler: submitHandler, method: 'POST', query: { resource: 'report' }, body: { question_id: 'q1' }, perPerson: 3, own: 'questionReport', address: 'questionReportAddress' },
   ];
 
   // 1. Thirty pupils behind one address, each with an account, together send

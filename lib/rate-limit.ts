@@ -96,7 +96,12 @@ export const RATE_LIMITS = {
   // A signed-in leaderboard read skips the CDN (it carries the learner's own
   // rank), so it gets a bucket; the anonymous board is cached and needs none.
   leaderboardPersonal: { key: 'leaderboard_personal', capacity: 30, refillPerSecond: 30 / 60 },
+  // A question report, in two tiers like the writes below: the address bucket
+  // holds a class behind one NAT, which used to share three reports and got
+  // 429 on the fourth; `questionReport` is then the verified account's own,
+  // or the address's for a reporter without one, the rate it had before.
   questionReport: { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 },
+  questionReportAddress: { key: 'question_report_address', capacity: SHARED_NETWORK_SEATS * 3, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 3600 },
   // Every write to `api/user/[op].ts`, in two tiers like play's: an address
   // backstop that holds a class behind one NAT, then `userMutation` keyed by
   // the verified account. A caller without an account keeps `userMutation` by

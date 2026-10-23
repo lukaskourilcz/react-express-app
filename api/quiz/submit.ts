@@ -11,9 +11,9 @@ import {
   type DecodedQuizSession,
 } from '../../lib/quiz-tokens';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing, ServiceUnavailableError } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing, ServiceUnavailableError, tryAuthOnce } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { subjectForCategory } from '../../shared/subject-catalog';
 import { deploymentSubjectIds } from '../../lib/product-scope';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
@@ -384,8 +384,9 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 // Anonymous posts are allowed; when a token is present the verified sub is
 // recorded so reporter_sub can't be forged.
 async function handleReport(req: VercelRequest, res: VercelResponse) {
-  // Anonymous inserts allowed, so throttle per-IP against spam.
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.questionReport))) return;
+  // Anonymous inserts allowed, so throttle against spam: a class-sized
+  // address bucket, then the reporter's account, or the address for a guest.
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.questionReportAddress, RATE_LIMITS.questionReport))) return;
 
   if (!serviceSupabase) {
     return jsonError(res, 503, 'not_configured', 'Reporting backend is not configured');
@@ -393,7 +394,7 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
 
   let reporter_sub: string | null = null;
   try {
-    const auth = await tryAuth(req);
+    const auth = await tryAuthOnce(req);
     if (auth) reporter_sub = auth.sub;
   } catch (e) {
     if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
