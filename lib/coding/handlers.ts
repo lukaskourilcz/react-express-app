@@ -31,8 +31,8 @@ import { classifyFailure, failureHint, isSyntaxError, jsonKind } from '../../sha
 import { afterCodingPass } from '../github-garden';
 import { approachesFor } from './approaches';
 import { evolvingPassed, evolvingStage, evolvingUnlocked } from '../../shared/evolving';
-import { codingContent, type GatedContent } from '../../shared/tiers';
-import { refuseLocked } from '../access';
+import { codingContent, contentTier, type GatedContent } from '../../shared/tiers';
+import { refuseLocked, resolveTier, serverContentIndex } from '../access';
 import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
 import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
@@ -252,7 +252,12 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   let draftUpdatedAt: string | null = null;
   let locked: CodingTaskResponse['locked'] = null;
   let passedIds: ReadonlySet<string> = new Set();
+  const gated = linkedSession ? codingSessionContent(task, linkedSession) : codingContent(task.id);
   if (userId && supabase) {
+    // Premium content asks for the plan below in any case. The question goes
+    // out now, beside the progress reads, and the gate reads the answer the
+    // request remembers (a failure is asked again there and answered 503).
+    if (contentTier(gated, serverContentIndex()) === 'premium') void resolveTier(userId).catch(() => undefined);
     try {
       const [rows, cleared, draftRow] = await Promise.all([
         loadProgressRows(supabase, userId),
@@ -290,7 +295,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   // Premium opens the rest of the catalogue; a guest and a free account are
   // refused it with 402. A task already passed stays open for review whatever
   // the tier.
-  if (await refuseLocked(res, userId, linkedSession ? codingSessionContent(task, linkedSession) : codingContent(task.id), { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
+  if (await refuseLocked(res, userId, gated, { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
   if (linkedSession) locked = null;
 
   const play = playable(task);
