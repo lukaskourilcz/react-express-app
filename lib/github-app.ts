@@ -206,9 +206,22 @@ export interface RepoInfo {
   owner: { login: string; id: number };
 }
 
+const REPOS_PER_PAGE = 100;
+/** An installation on every repository of an account can list hundreds. */
+const MAX_REPO_PAGES = 10;
+
+/** Every repository the installation reaches, page by page: an installation
+ * on "All repositories" of an account with more than a hundred would
+ * otherwise hide the rest from the picker and refuse them as `bad_repo`. */
 export async function listInstallationRepos(token: string): Promise<RepoInfo[]> {
-  const data = await gh<{ repositories: RepoInfo[] }>('/installation/repositories?per_page=100', { token });
-  return data.repositories ?? [];
+  const repositories: RepoInfo[] = [];
+  for (let page = 1; page <= MAX_REPO_PAGES; page++) {
+    const data = await gh<{ repositories?: RepoInfo[] }>(`/installation/repositories?per_page=${REPOS_PER_PAGE}&page=${page}`, { token });
+    const batch = data.repositories ?? [];
+    repositories.push(...batch);
+    if (batch.length < REPOS_PER_PAGE) break;
+  }
+  return repositories;
 }
 
 export async function getFile(token: string, repo: string, path: string, branch: string): Promise<{ sha: string; content: string } | null> {

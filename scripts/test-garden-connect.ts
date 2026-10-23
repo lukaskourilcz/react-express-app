@@ -66,6 +66,8 @@ let oauthAnswer: 'normal' | 'server_error' = 'normal';
 // How the repository listing answers: as GitHub does, with an outage page
 // from a proxy in front of it, or not before our timer aborts the call.
 let reposAnswer: 'normal' | 'html' | 'timeout' = 'normal';
+// The stranger's installation on "All repositories" of an account with 101.
+let manyRepos = false;
 const calls: string[] = [];
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -113,6 +115,12 @@ globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) =>
     const id = Number(/ghs_installation_(\d+)/.exec(headers.get('authorization') ?? '')?.[1]);
     const account = INSTALLATIONS[id]?.account;
     if (!account) return json(401, { message: 'Bad credentials' });
+    if (manyRepos && id === STRANGER_INSTALLATION) {
+      const all = Array.from({ length: 101 }, (_, index) => ({ full_name: `${account.login}/garden-${index}`, default_branch: 'main', private: true, fork: false, owner: { login: account.login, id: account.id } }));
+      const perPage = Number(url.searchParams.get('per_page')) || 30;
+      const page = Number(url.searchParams.get('page')) || 1;
+      return json(200, { total_count: all.length, repositories: all.slice((page - 1) * perPage, page * perPage) });
+    }
     return json(200, { total_count: 1, repositories: [{ full_name: `${account.login}/garden`, default_branch: 'main', private: false, fork: false, owner: { login: account.login, id: account.id } }] });
   }
   throw new Error(`unexpected GitHub call ${method} ${url.pathname}`);
@@ -131,6 +139,7 @@ let dbTimeout = false;
 function query(name: string) {
   const filters: ((row: Row) => boolean)[] = [];
   let upsertRow: Row | null = null;
+  let updateValues: Record<string, unknown> | null = null;
   let head = false;
   let columns = '*';
   let single = false;
@@ -141,6 +150,10 @@ function query(name: string) {
       const clash = [...table.values()].some((row) => row.installation_id === incoming.installation_id && row.user_id !== incoming.user_id);
       if (clash) return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "github_connections_installation_id_key"' } };
       table.set(incoming.user_id, { ...table.get(incoming.user_id), ...incoming });
+      return { data: null, error: null };
+    }
+    if (updateValues) {
+      for (const row of table.values()) if (filters.every((filter) => filter(row))) Object.assign(row, updateValues);
       return { data: null, error: null };
     }
     const hidePeers = raceWindow && columns === 'user_id';
@@ -154,6 +167,7 @@ function query(name: string) {
     neq(column: string, value: unknown) { filters.push((row) => row[column] !== value); return builder; },
     limit() { return builder; },
     maybeSingle() { single = true; return builder; },
+    update(values: Record<string, unknown>) { updateValues = values; return builder; },
     upsert(row: Row, options: { onConflict: string }) { assert.equal(options.onConflict, 'user_id'); upsertRow = row; return builder; },
     then<A, B>(resolve: (value: ReturnType<typeof run>) => A, reject?: (reason: unknown) => B) {
       return Promise.resolve().then(() => { if (dbTimeout) throw new UpstreamTimeoutError(); return run(); }).then(resolve, reject);
@@ -313,9 +327,19 @@ async function main() {
   assert.equal(errorCode(outage.body), 'github_error');
   assert.equal(slow.statusCode, 503, 'a GitHub call that timed out is a 503');
   assert.equal(errorCode(slow.body), 'upstream_timeout');
+
+  // 14. Every page of the installation's repositories is offered: the 101st
+  //     can be picked, not refused as a repository the app cannot reach.
+  manyRepos = true;
+  const listed = await call('github-connection', accountD, 'GET');
+  const picked = await call('github-repo', accountD, 'POST', { repoFullName: `${STRANGER.login}/garden-100` });
+  manyRepos = false;
+  assert.equal((listed.body as { repositories?: unknown[] }).repositories?.length, 101, 'the picker lists repositories past the first page');
+  assert.equal(picked.statusCode, 200, `a repository on the second page can be picked (${JSON.stringify(picked.body)})`);
+  assert.equal(table.get(accountD)?.repo_full_name, `${STRANGER.login}/garden-100`);
   table.delete(accountD);
 
-  // 14. Rate limits are each learner's own, with an address backstop that
+  // 15. Rate limits are each learner's own, with an address backstop that
   //     holds a class: every seat of a class behind one address spends its
   //     whole connect and sync budget without a 429, one learner past their
   //     budget is refused, and the next learner at that address is not.
