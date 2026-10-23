@@ -245,8 +245,9 @@
    an opacity of 0.72 blended the line to #809098, 3.3:1 (P1.8). */
 .rm-topic-progress {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 0 6px;
   font-size: 0.66rem;
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -260,6 +261,7 @@
   background-color: var(--color-background-muted);
 }
 .rm-topic-pill[data-locked='true'] .rm-topic-glyph { filter: grayscale(1); }
+.rm-topic-count { white-space: nowrap; }
 .rm-topic-lock { display: inline-grid; place-items: center; flex-shrink: 0; color: var(--color-text-secondary); }
 
 /* Count of paths still locked, in the skill-check row beside the action it

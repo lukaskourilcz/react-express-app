@@ -113,7 +113,7 @@ export function SectionRail({
                   {/* Without the structure (its request failed) the level
                       count is unknown: an open topic shows no figure. */}
                   {state === 'open'
-                    ? levelCounts[topic] === undefined ? null : t('roadmap.progress', { done: passedLevelCount(progress, topic), total: levelCounts[topic] })
+                    ? levelCounts[topic] === undefined ? null : <span className="rm-topic-count">{t('roadmap.progress', { done: passedLevelCount(progress, topic), total: levelCounts[topic] })}</span>
                     : state === 'dimmed' ? learnText('learn.rail.notJoined') : null}
                 </span>
               </span>
