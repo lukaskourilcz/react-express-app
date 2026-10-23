@@ -303,6 +303,45 @@ describe('the timeout strike', () => {
   });
 });
 
+describe('focus at time up', () => {
+  it('goes to the verdict\'s button when the clock disabled the focused Submit', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let timeouts = 0;
+    api.grade = (body) => {
+      if (Object.values(body.answers)[0] === -1) timeouts += 1;
+      return null;
+    };
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('radio', { name: 'right' }));
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    submit.focus();
+    const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+    // A browser drops the focus of a control that disables itself; jsdom
+    // keeps it, so the test drops it as the browser would.
+    // (jsdom's blur() ignores a disabled element, so the focus is moved to a
+    // stand-in that is then removed, which leaves it on the page.)
+    const fixup = new MutationObserver(() => {
+      if (!(document.activeElement instanceof HTMLButtonElement && document.activeElement.disabled)) return;
+      const standIn = document.createElement('span');
+      standIn.tabIndex = -1;
+      document.body.append(standIn);
+      standIn.focus();
+      standIn.remove();
+    });
+    fixup.observe(document.body, { attributes: true, attributeFilter: ['disabled'], subtree: true });
+    let second = 0;
+    while (timeouts === 0 && second < 95) {
+      await tick(1000);
+      second += 1;
+    }
+    await screen.findByText('Time ran out. One strike.');
+    await settle();
+    fixup.disconnect();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Next question|See result/ }));
+  });
+});
+
 describe('the run reward', () => {
   async function strikeOut(correctFirst = 0) {
     for (let n = 0; n < correctFirst; n += 1) {

@@ -326,6 +326,21 @@ export default function Challenge() {
     if (phase === 'playing' && current) questionRef.current?.focus({ preventScroll: true });
   }, [phase, current]);
 
+  // The verdict's button takes the focus the clock took away. At time up the
+  // focused answer or Submit disables itself, and the browser drops the focus
+  // to the page, where a keyboard learner could not reach Next without
+  // tabbing back through the page. Focus anywhere else is left alone.
+  const actionsRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!lastResult) return;
+    const active = document.activeElement as HTMLElement | null;
+    const lost = !active || active === document.body || !active.isConnected || active.matches(':disabled');
+    if (!lost) return;
+    actionsRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
+    // Next is disabled while the next questions load: it is focused when
+    // they have, if the focus is still nowhere.
+  }, [lastResult, refilling]);
+
   const livesLeft = MAX_LIVES - livesLost;
 
   /* ─── leaderboard ───────────────────────────────────────────── */
@@ -1118,7 +1133,7 @@ export default function Challenge() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
+      <div ref={actionsRef} style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
         {!lastResult ? (
           <Button
             variant="primary"
