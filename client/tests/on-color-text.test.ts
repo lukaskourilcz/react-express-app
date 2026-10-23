@@ -58,6 +58,13 @@ describe('theme tokens for text on the accent and on success', () => {
     expect(contrastRatio('#22c55e', '#0b141b')).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('pairs --ss-on-error-text with --ss-error-text for a wrong pick\'s chip in both themes', () => {
+    expect(theme).toContain('--ss-error-text: light-dark(#b91c1c, #fca5a5);');
+    expect(theme).toContain('--ss-on-error-text: light-dark(#ffffff, #0b141b);');
+    expect(contrastRatio('#b91c1c', '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio('#fca5a5', '#0b141b')).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('leaves no fixed white text colour on the surfaces P1.3 fixed', () => {
     const files = [
       '../src/components/Today.css',

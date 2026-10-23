@@ -158,7 +158,11 @@
   font-weight: 700;
 }
 .ss-answer-option[data-tone='success'] .ss-answer-option__mark { color: var(--ss-success-strong); }
-.ss-answer-option[data-tone='error'] .ss-answer-option__mark { color: var(--ss-error); }
+/* A wrong pick says so in its chip too, not only in its row: the selection
+   green on a red row read as a right answer at a glance. The mark uses the
+   error text colour, which holds 4.5:1 on the soft red. */
+.ss-answer-option[data-tone='error'] .ss-answer-option__mark { color: var(--ss-error-text); }
+.ss-answer-option[data-tone='error'][data-selected='true'] .ss-answer-option__key { background: var(--ss-error-text); color: var(--ss-on-error-text); }
 
 /* ——— QuestionHint ——— */
 /* One reserved line under the answers in every state: hiding the words never
