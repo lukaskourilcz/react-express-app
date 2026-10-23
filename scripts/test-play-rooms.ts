@@ -53,6 +53,11 @@ const UNIQUE: Record<string, string[][]> = {
   user_handles: [['user_id']],
 };
 let clock = 0;
+/** Errors the database answers once each: the next request with this method
+ * and path gets the status and body instead of its rows. A 500, because
+ * supabase-js retries a read that met a 503. */
+const faults: Array<{ method: string; path: string; status: number; body: Row }> = [];
+const DB_DOWN = { code: 'XX000', details: null, hint: null, message: 'the database could not answer' };
 /** The arguments of every match_scoreboard call, in order. */
 const scoreboardCalls: Row[] = [];
 
@@ -147,6 +152,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       return;
     }
     res.end(JSON.stringify({ id: user.id, aud: 'authenticated', role: 'authenticated', email: user.email, app_metadata: {}, user_metadata: {}, identities: user.identities }));
+    return;
+  }
+
+  const fault = faults.findIndex((one) => one.method === req.method && one.path === url.pathname);
+  if (fault >= 0) {
+    const [one] = faults.splice(fault, 1);
+    res.statusCode = one.status;
+    res.end(JSON.stringify(one.body));
     return;
   }
 
@@ -546,6 +559,21 @@ async function main() {
       const peek = await call('three', 'GET', 'distribution', { code: [code, code], q: '0' });
       assert.equal(peek.statusCode, 400, 'the distribution refuses it too');
       assert.equal((await call('one', 'GET', 'state', { code: 'X'.repeat(17) })).statusCode, 400, 'a code longer than any room code is refused');
+
+      // 9. A room the database could not read is not a room that is gone: a
+      //    404 would tell the player to leave a room that is still running.
+      for (const [who, method, action, input] of [
+        ['one', 'POST', 'answer', { code, question_idx: 0, selected_idx: 0 }],
+        ['three', 'GET', 'distribution', { code, q: '0' }],
+        ['three', 'POST', 'heartbeat', { code }],
+      ] as const) {
+        faults.push({ method: 'GET', path: '/rest/v1/matches', status: 500, body: DB_DOWN });
+        const failed = await call(who, method, action, input);
+        assert.equal(failed.statusCode, 503, `${action} answers 503 when the room cannot be read (${JSON.stringify(failed.body)})`);
+        assert.equal(failed.body.error.code, 'backend_unavailable');
+      }
+      assert.equal(faults.length, 0, 'every injected failure was met');
+      assert.equal((await call('three', 'POST', 'heartbeat', { code })).statusCode, 200, 'the room is still there');
     }
 
     // 5. The Play switch turns every action off, rooms already open included.

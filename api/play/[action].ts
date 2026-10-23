@@ -691,7 +691,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
 
   const code = body.code.toUpperCase();
   try {
-    const { data: match } = await withTimeout(
+    const { data: match, error: matchError } = await withTimeout(
       supabase!
         .from('matches')
         .select('id, mode, subject, host_id, status, current_index, questions, question_started_at, question_duration_s, revealed_idx')
@@ -699,6 +699,8 @@ async function answer(req: VercelRequest, res: VercelResponse) {
         .in('subject', deploymentSubjectIds())
         .maybeSingle(),
     );
+    // A failed read is no missing room: a 404 tells the player the room is gone.
+    if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (match.status !== 'running')
       return jsonError(res, 409, 'bad_state', 'Match is not in progress');
@@ -878,10 +880,11 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'q (question index) required');
 
   try {
-    const { data: match } = await withTimeout(
+    const { data: match, error: matchError } = await withTimeout(
       supabase!.from('matches').select('id, host_id, mode, status').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
 
+    if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (sub !== match.host_id) {
       return jsonError(res, 403, 'forbidden', 'Only the host can view distribution');
@@ -929,9 +932,10 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
 
   const code = body.code.toUpperCase();
   try {
-    const { data: match } = await withTimeout(
+    const { data: match, error: matchError } = await withTimeout(
       supabase!.from('matches').select('id, host_id, status').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
+    if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (match.host_id !== sub)
       return jsonError(res, 403, 'forbidden', 'Only the host can send heartbeats');
