@@ -90,9 +90,9 @@ export { ASSESSMENT_QUESTION_COUNT };
 const PROGRESS_KEY = 'devquiz:roadmap:v2';
 const UNLOCKS_KEY = 'devquiz:roadmap:unlocks:v1';
 // Progress lives on the same function as the rest of the roadmap (to stay within
-// Vercel's Hobby 12-function limit): GET ?resource=progress to read, PUT to save.
+// Vercel's Hobby 12-function limit). The server writes it itself, on each
+// completion; the browser only reads it.
 const PROGRESS_GET = '/api/quiz/roadmap?resource=progress';
-const PROGRESS_PUT = '/api/quiz/roadmap';
 
 export interface Entry {
   /** Latches true once passed. */
@@ -503,49 +503,21 @@ export interface AccountExtras {
   inventories: Record<string, SyncedInventory>;
 }
 
-// tokens.ts and shop.ts each register a getter here so this module can PUT
-// the whole synced blob in one request without importing them (which would
-// create a cycle: shop -> roadmap -> shop).
-let accountExtrasSource: (() => AccountExtras) | null = null;
+// tokens.ts and shop.ts register their merge here, so this module hands
+// them the account's wallets and inventories without importing them (which
+// would create a cycle: shop -> roadmap -> shop).
 let onAccountExtrasReceived: ((extras: AccountExtras) => void) | null = null;
 
-export function registerAccountExtras(
-  source: () => AccountExtras,
-  onReceive: (extras: AccountExtras) => void,
-): void {
-  accountExtrasSource = source;
+export function registerAccountExtras(onReceive: (extras: AccountExtras) => void): void {
   onAccountExtrasReceived = onReceive;
-}
-
-function readAccountExtras(): AccountExtras {
-  return accountExtrasSource?.() ?? { wallets: {}, inventories: {} };
-}
-
-/** PUT the current (or given) local progress + unlocks + per-subject wallets + inventories. */
-export async function pushProgressToServer(
-  progress: RoadmapProgress = readProgress(),
-  extraUnlocks: RoadmapTopic[] = readExtraUnlocks(),
-): Promise<void> {
-  const account = readAccountExtras();
-  await apiFetch(PROGRESS_PUT, {
-    method: 'PUT',
-    body: JSON.stringify({
-      data: progress,
-      extra: {
-        unlocked: extraUnlocks,
-        wallets: account.wallets,
-        inventories: account.inventories,
-      },
-    }),
-  });
 }
 
 // On sign-in: pull the account's progress + per-subject wallets/inventories,
 // merge each with whatever is on this device (progress and unlocks: the
 // account's, as the server holds them; balances: per-subject max — tokens can
 // only grow; owned items: per-subject union; equipped items: server wins if
-// valid, otherwise local; retired doubleXp data is cleared), store the result
-// locally, and push it back so both sides agree. A legacy account blob (one
+// valid, otherwise local; retired doubleXp data is cleared) and store the
+// result locally. Nothing is sent back. A legacy account blob (one
 // pre-split wallet/inventory, no per-subject maps) is attributed to the
 // active subject — the same rule the local stores use when migrating.
 //
@@ -632,7 +604,5 @@ async function syncOnce(epoch: number): Promise<void> {
 
     onAccountExtrasReceived({ wallets, inventories });
   }
-  // No PUT follows: the server keeps progress, unlocks and extras itself and
-  // answers a progress PUT with the same read as this GET, so sending one
-  // after every sign-in only spent the address's roadmap write budget.
+  // No write follows: the server keeps progress, unlocks and extras itself.
 }

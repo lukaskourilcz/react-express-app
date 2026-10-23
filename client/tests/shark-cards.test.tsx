@@ -222,7 +222,6 @@ describe('a wrong Learn answer', () => {
         }
         return HttpResponse.json(STRUCTURE);
       }),
-      http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: {}, extra: { unlocked: [] } })),
       http.post('*/api/quiz/roadmap', () => HttpResponse.json({ selectedIndex: 0, correctAnswer: 1, isCorrect: false, explanation: 'The title element names the page.' })),
       http.get('*/api/user/*', ({ request }) => new URL(request.url).searchParams.get('op') === 'learning-path-enrollment'
         ? HttpResponse.json({ enrollments: [] })

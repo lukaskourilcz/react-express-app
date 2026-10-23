@@ -59,7 +59,6 @@ function answer(htmlProgress: Record<string, unknown>, refused: string[] = []) {
       }
       return HttpResponse.json(STRUCTURE as never);
     }),
-    http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: { html: htmlProgress }, extra: { unlocked: [] } })),
     http.post('*/api/quiz/roadmap', ({ request }) => {
       const resource = new URL(request.url).searchParams.get('resource');
       if (resource === 'answer') return HttpResponse.json({ selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: 'Because it is first.' });

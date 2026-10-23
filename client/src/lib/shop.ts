@@ -108,21 +108,12 @@ const readInventory = (subject: SubjectId = getSubject()): Inventory =>
 
 const inventoryStore = createStore<InventoryMap>(readInventories);
 
-/** Snapshot of every subject's inventory, for the account-sync merge. */
-export function getInventoriesSnapshot(): Record<string, Inventory> {
-  const out: Record<string, Inventory> = {};
-  for (const [k, v] of Object.entries(readInventories())) {
-    if (v) out[k] = v;
-  }
-  return out;
-}
-
+// The account keeps its inventory and sends it with each progress read
+// (mergeInventoriesFromServer below). A change here is this device's alone:
+// it used to send a progress PUT, which wrote nothing and only re-read it.
 function writeInventory(subject: SubjectId, next: Inventory): void {
   writeJSON(INVENTORY_KEY, { ...readInventories(), [subject]: next });
   inventoryStore.emit();
-  // Push to the account so purchases + equipped cosmetics survive a device
-  // switch. Debounced with the token wallet in tokens.ts.
-  scheduleAccountSync();
 }
 
 /**
@@ -147,22 +138,6 @@ export function mergeInventoriesFromServer(server: Record<string, Inventory>): v
   }
   writeJSON(INVENTORY_KEY, merged);
   inventoryStore.emit();
-}
-
-let syncTimer: ReturnType<typeof setTimeout> | null = null;
-function scheduleAccountSync(): void {
-  if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => {
-    syncTimer = null;
-    void import('./roadmap').then((m) => m.pushProgressToServer().catch(() => {}));
-  }, 800);
-}
-
-export function flushInventorySyncNow(): void {
-  if (syncTimer) {
-    clearTimeout(syncTimer);
-    syncTimer = null;
-  }
 }
 
 /** Live inventory of the ACTIVE subject (re-renders on change). */

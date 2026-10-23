@@ -129,7 +129,6 @@ function answer(options: Answers = {}) {
       }
       return HttpResponse.json((options.structure ?? STRUCTURE) as never);
     }),
-    http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: options.progress ?? {}, extra: { unlocked: options.unlocked ?? [] } })),
     http.post('*/api/quiz/roadmap', ({ request }) => {
       const resource = new URL(request.url).searchParams.get('resource');
       if (resource === 'answer') return options.answer?.() ?? HttpResponse.json({ selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: 'Because it is first.' });

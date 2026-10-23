@@ -38,7 +38,6 @@ function answer(structure: unknown, progress: unknown) {
       if (resource === 'learning-path-catalog') return HttpResponse.json({ versions: {}, paths: [] });
       return HttpResponse.json(structure as never);
     }),
-    http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: progress, extra: { unlocked: [] } })),
     http.get('*/api/user/*', ({ request }) => new URL(request.url).searchParams.get('op') === 'entitlement'
       ? HttpResponse.json(FREE)
       : HttpResponse.json({ error: { code: 'not_found', message: 'Not found' } }, { status: 404 })),

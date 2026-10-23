@@ -57,18 +57,12 @@ import('./lib/roadmap').then(({ registerAccountExtras }) => {
     });
   });
   Promise.all([import('./lib/tokens'), import('./lib/shop')]).then(([tok, sh]) => {
-    registerAccountExtras(
-      () => ({
-        wallets: tok.getWalletsSnapshot(),
-        inventories: sh.getInventoriesSnapshot(),
-      }),
-      (server) => {
-        // Per subject: max-merge balances; union owned; server-wins on
-        // equipped cosmetics remain valid; retired booster data is cleared.
-        tok.mergeBalancesFromServer(server.wallets);
-        sh.mergeInventoriesFromServer(server.inventories);
-      },
-    );
+    registerAccountExtras((server) => {
+      // Per subject: max-merge balances; union owned; server-wins on
+      // equipped cosmetics remain valid; retired booster data is cleared.
+      tok.mergeBalancesFromServer(server.wallets);
+      sh.mergeInventoriesFromServer(server.inventories);
+    });
   });
 });
 
