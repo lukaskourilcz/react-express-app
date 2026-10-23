@@ -179,6 +179,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* Its label stays on one line beside the locked-topics note, however long
+     the note runs (verification round 1: it wrapped to 'Skill / check'). */
+  flex-shrink: 0;
+  white-space: nowrap;
   min-height: var(--ss-control-height);
   padding: 0 18px;
   border: 0;
