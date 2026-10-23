@@ -6,6 +6,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
+import { accountEpoch } from '../../lib/accountData';
 import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
@@ -707,7 +708,9 @@ export function CodingTaskScreen() {
     }
   }, [learnSession, task.data, taskId]);
   const [attempt, setAttempt] = useState(0);
-  const [refreshDraft, setRefreshDraft] = useState<{ taskId: string; code: string } | null>(null);
+  // The code kept across a refresh of the brief belongs to the account it
+  // was typed under: after a sign-out the editor does not reopen on it.
+  const [refreshDraft, setRefreshDraft] = useState<{ taskId: string; code: string; epoch: number } | null>(null);
   const [completedTask, setCompletedTask] = useState<string | null>(null);
   const workbench = useWorkbench(track !== null, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
@@ -842,7 +845,7 @@ export function CodingTaskScreen() {
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
   const previousLocal = stage?.previous ? deviceDraft(stage.previous) : null;
-  const initialCode = (refreshDraft?.taskId === taskId ? refreshDraft.code : null) ?? choice.code ?? (stage && previousLocal !== null
+  const initialCode = (refreshDraft?.taskId === taskId && refreshDraft.epoch === accountEpoch() ? refreshDraft.code : null) ?? choice.code ?? (stage && previousLocal !== null
     ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
@@ -877,7 +880,7 @@ export function CodingTaskScreen() {
             onVerdict={onVerdict}
             onRefreshTask={async (code) => {
               keepDeviceDraft(data.task.id, code, draftBase, draftEpoch);
-              setRefreshDraft({ taskId: data.task.id, code });
+              setRefreshDraft({ taskId: data.task.id, code, epoch: accountEpoch() });
               const refreshed = await task.refetch();
               if (refreshed.error) throw refreshed.error;
             }}

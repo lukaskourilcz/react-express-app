@@ -44,11 +44,12 @@ vi.mock('../src/coding/api', () => ({
   useCodingTask: () => ({ data: mocks.response, refetch: mocks.refetch }),
 }));
 vi.mock('../src/coding/CodingWorkbench', () => ({
-  CodingWorkbench: ({ initialCode, task, onDraft, onEdit }: CodingWorkbenchProps) => {
+  CodingWorkbench: ({ initialCode, task, onDraft, onEdit, onRefreshTask }: CodingWorkbenchProps) => {
     const [code, setCode] = useState(initialCode ?? task.starter);
     return <>
       <textarea aria-label="Code" value={code} onChange={(event) => { setCode(event.target.value); onEdit?.(event.target.value); }} />
       <button onClick={() => onDraft?.(code)}>Run</button>
+      <button onClick={() => void onRefreshTask?.(code)}>Load the latest brief</button>
     </>;
   },
 }));
@@ -494,6 +495,24 @@ it('reads the task again on a sign-out, and leaves none of the account’s code 
   view.refetch();
   expect(screen.getByLabelText('Code')).toHaveValue('// starter');
   expect(screen.queryByText(/the account’s code/)).toBeNull();
+});
+
+// The code carried over a refresh of the brief stayed in the screen's
+// memory, and the editor opened on it again after a sign-out, for whoever
+// used the device next.
+it('does not reopen the code kept over a brief refresh after a sign-out', async () => {
+  serve(null, null);
+  const view = mount();
+  fireEvent.change(screen.getByLabelText('Code'), { target: { value: '// the account’s code' } });
+  mocks.refetch.mockImplementationOnce(async () => ({ error: null }) as never);
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Load the latest brief' })));
+  serve(null, null);
+  view.refetch();
+  expect(screen.getByLabelText('Code')).toHaveValue('// the account’s code');
+  act(() => { clearAccountData(); mocks.signedIn = false; });
+  serve(null, null);
+  view.refetch();
+  expect(screen.getByLabelText('Code')).toHaveValue('// starter');
 });
 
 it('never opens code kept for another account', () => {
