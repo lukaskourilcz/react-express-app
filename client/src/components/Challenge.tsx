@@ -251,6 +251,10 @@ export default function Challenge() {
   // Retry asks for the batch again under the same run.
   const [refillError, setRefillError] = useState<string | null>(null);
   const [refilling, setRefilling] = useState(false);
+  // One move to the next question at a time, held until that question has
+  // rendered. A second press of Next before then popped another one, and the
+  // question between them was skipped unseen.
+  const advancingRef = useRef(false);
   // The picks sent for the question on screen, in order. The server grades a
   // question once: when the response to a graded pick is lost, another pick
   // (or the timeout) is refused as already graded, and sending the earlier
@@ -381,6 +385,9 @@ export default function Challenge() {
     setClockNow(shownAt);
   }, [clearStrikeRetry, timeLimitS]);
 
+  // The question a Next press moved to is on screen: the next press is its own.
+  useEffect(() => { advancingRef.current = false; }, [current]);
+
   /* ─── game flow ─────────────────────────────────────────────── */
 
   const startRun = useCallback(async () => {
@@ -426,44 +433,52 @@ export default function Challenge() {
         setPhase('gameover');
         return;
       }
-      if (refilling) return;
-      const generation = runGeneration.current;
-      // Eagerly refill so the next question is ready before we render it.
-      const remaining = buffer.current?.queue.length ?? 0;
-      if (remaining <= LOW_BATCH_THRESHOLD && !topupInFlight.current) {
-        // fire-and-forget; the next pop below uses whatever's available
-        void ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
-      }
-      let next = popNext();
-      let failure: string | null = null;
-      if (!next) {
-        // Buffer ran dry while topping up — await it.
-        setRefilling(true);
-        try {
-          failure = await ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
-        } finally {
-          setRefilling(false);
+      if (advancingRef.current) return;
+      advancingRef.current = true;
+      let moved = false;
+      try {
+        const generation = runGeneration.current;
+        // Eagerly refill so the next question is ready before we render it.
+        const remaining = buffer.current?.queue.length ?? 0;
+        if (remaining <= LOW_BATCH_THRESHOLD && !topupInFlight.current) {
+          // fire-and-forget; the next pop below uses whatever's available
+          void ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
         }
-        if (generation !== runGeneration.current) return;
-        next = popNext();
+        let next = popNext();
+        let failure: string | null = null;
+        if (!next) {
+          // Buffer ran dry while topping up — await it.
+          setRefilling(true);
+          try {
+            failure = await ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
+          } finally {
+            setRefilling(false);
+          }
+          if (generation !== runGeneration.current) return;
+          next = popNext();
+        }
+        if (!next) {
+          // Offline, rate limited or a server fault. The run, its score and
+          // its proofs stay; the graded card stays up and Retry asks again.
+          setRefillError(failure ?? t('challenge.noQuestions'));
+          return;
+        }
+        setRefillError(null);
+        showQuestion(next);
+        moved = true;
+        // Cap the seen-ids list so a long run doesn't grow the `exclude`
+        // query string without bound. The server caps at 500 already; we keep
+        // the most recent 300 client-side to keep `advance` and the request
+        // payload light.
+        const shown = next.question.id;
+        setSeenIds((prev) => [...prev, shown].slice(-300));
+        setSelected(null);
+        setLastResult(null);
+      } finally {
+        if (!moved) advancingRef.current = false;
       }
-      if (!next) {
-        // Offline, rate limited or a server fault. The run, its score and
-        // its proofs stay; the graded card stays up and Retry asks again.
-        setRefillError(failure ?? t('challenge.noQuestions'));
-        return;
-      }
-      setRefillError(null);
-      showQuestion(next);
-      // Cap the seen-ids list so a long run doesn't grow the `exclude`
-      // query string without bound. The server caps at 500 already; we keep
-      // the most recent 300 client-side to keep `advance` and the request
-      // payload light.
-      setSeenIds((prev) => [...prev, next!.question.id].slice(-300));
-      setSelected(null);
-      setLastResult(null);
     },
-    [ensureBufferTopUp, popNext, refilling, seenIds, showQuestion, t],
+    [ensureBufferTopUp, popNext, seenIds, showQuestion, t],
   );
 
   // Record the server's grade for the question on screen. A question retired

@@ -548,6 +548,19 @@ describe('a double press', () => {
     expect(api.submits).toHaveLength(1);
     expect(screen.getByText('Score').nextElementSibling).toHaveTextContent('1');
   });
+
+  it('moves on one question, so none is skipped unseen', async () => {
+    await mount();
+    await start();
+    expect(shownQuestion()).toBe('Batch 1 question 1?');
+    await answer('right');
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+      fireEvent.click(screen.getByRole('button', { name: /Next question|Submit/ }));
+    });
+    await settle();
+    expect(shownQuestion()).toBe('Batch 1 question 2?');
+  });
 });
 
 describe('the ranked clock', () => {
