@@ -339,6 +339,11 @@ coming back. The tokens and the map are in
   tile and in the next-step card, whose button then says 'See Premium'
   rather than 'Continue'. An empty section sits on the column's left edge
   with one row of next steps, not a centred card.
+- **A summary on request goes below what it sums up.** Evidence, counts and
+  other recaps of a page's content follow that content as one closed
+  disclosure (`.lp-disclosure`), not a long section before it. A row that is
+  in its default state says nothing about it; a recorded state is a glyph
+  with its words for a screen reader (UX audit U4, #576).
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
 
 ## 11. One question system
