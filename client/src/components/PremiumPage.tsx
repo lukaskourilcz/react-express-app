@@ -41,8 +41,7 @@ import PlanLine from './PlanLine';
 import PremiumCheckoutButton from './PremiumCheckoutButton';
 import PremiumVoucher from './PremiumVoucher';
 import ComparisonTable from './landing/ComparisonTable';
-import { PremiumIncludes, PremiumSmallPrint, premiumVars, type RenderLink } from './PremiumFacts';
-import { redemptionOpen, useGameConfig } from '../lib/gameConfig';
+import { PremiumSmallPrint, premiumVars, type RenderLink } from './PremiumFacts';
 import { useLaunchOffer } from '../lib/launchOffer';
 import { LaunchOfferNote, OfferAmount } from './LaunchOffer';
 import type { LaunchOfferDisplay } from '../../../shared/launch-offer';
@@ -58,7 +57,9 @@ const FAQ: readonly FaqItem[] = [
   { q: 'premium.page.faq.cancelQ', a: 'premium.page.faq.cancelA', link: { to: '/premium/cancel', label: 'legal.link.cancel' } },
   { q: 'premium.page.faq.progressQ', a: 'premium.page.faq.progressA' },
   { q: 'premium.page.faq.invoiceQ', a: 'premium.page.faq.invoiceA' },
-  { q: 'premium.page.faq.refundQ', a: 'premium.page.faq.refundA', link: { to: '/premium/cancel?action=withdraw', label: 'legal.link.cancel' } },
+  // Its own label (UX audit money-03): it opens the withdrawal, not the
+  // cancellation, so it does not repeat the cancel answer's link.
+  { q: 'premium.page.faq.refundQ', a: 'premium.page.faq.refundA', link: { to: '/premium/cancel?action=withdraw', label: 'premium.page.faq.refundLink' } },
   { q: 'premium.page.faq.switchQ', a: 'premium.page.faq.switchA' },
   { q: 'premium.page.faq.dataQ', a: 'premium.page.faq.dataA', link: { to: '/privacy', label: 'legal.link.privacy' } },
 ];
@@ -108,12 +109,11 @@ export default function PremiumPage() {
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const billing = useBilling();
-  const config = useGameConfig();
   const plan = useEntitlement();
   const vars = premiumVars();
   const offer = useLaunchOffer();
   const faq = offer ? [OFFER_FAQ, ...FAQ] : FAQ;
-  const ids = { plans: useId(), smallPrint: useId(), includes: useId(), faq: useId(), current: useId() };
+  const ids = { plans: useId(), smallPrint: useId(), faq: useId(), current: useId() };
 
   useEffect(() => capture('premium_page_viewed', { product: CURRENT_PRODUCT.id }), []);
 
@@ -162,9 +162,12 @@ export default function PremiumPage() {
 
         {!voucherLeads && <PremiumVoucher billingClosed={false} inline />}
 
-        <PremiumIncludes t={t} headingId={ids.includes} redemptionOpen={redemptionOpen(config)} />
-
-        <ComparisonTable showCta={false} showOfferNote={false} />
+        {/* The table is the one statement of what Premium opens (UX audit
+            money-03, shell-public-06): it has the project and FDE rows the
+            'Premium includes' list had, so the list stays in the upgrade sheet
+            only. Embedded, it drops its 'Plans' kicker and its VAT subtitle:
+            the plan cards and 'Before you pay' say VAT where the price is. */}
+        <ComparisonTable embedded showCta={false} showOfferNote={false} />
 
         <section className="ss-premium-faq" aria-labelledby={ids.faq}>
           <h2 id={ids.faq} className="ss-premium-section-title">{t('premium.page.faqTitle')}</h2>

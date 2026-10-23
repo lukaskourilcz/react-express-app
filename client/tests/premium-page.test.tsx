@@ -163,6 +163,23 @@ describe('/premium', () => {
     expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
   });
 
+  // UX audit money-03 and shell-public-06: what Premium opens is said once,
+  // by the table, and VAT is said by the prices and 'Before you pay' only.
+  it('states what Premium opens once, in the table, without a second kicker or VAT line', () => {
+    serve();
+    renderAt('/premium', <PremiumPage />);
+    expect(screen.queryByRole('heading', { name: 'Premium includes' })).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByRole('rowheader', { name: 'Projects and short paths' })).toBeInTheDocument();
+    expect(screen.queryByText('Plans')).toBeNull();
+    expect(screen.queryByText('Prices exclude VAT. Applicable VAT is added at checkout.')).toBeNull();
+    // The refund answer's link names the withdrawal, not the cancellation.
+    const refund = screen.getByText('Can I withdraw and get my money back?').closest('details')!;
+    expect(within(refund).getByRole('link', { name: 'Withdraw and get a refund' })).toHaveAttribute('href', '/premium/cancel?action=withdraw');
+    const cancel = screen.getByText('How do I cancel?').closest('details')!;
+    expect(within(cancel).getByRole('link', { name: 'Open the cancellation page' })).toHaveAttribute('href', '/premium/cancel');
+  });
+
   it('answers six questions in native disclosures', () => {
     serve();
     const { container } = renderAt('/premium', <PremiumPage />);

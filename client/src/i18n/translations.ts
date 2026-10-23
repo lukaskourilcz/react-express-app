@@ -1471,6 +1471,7 @@ export const en = {
   'premium.page.faq.invoiceA': 'Yes. Stripe emails a receipt for every payment, and Manage billing in your profile lists your invoices as PDFs.',
   'premium.page.faq.refundQ': 'Can I withdraw and get my money back?',
   'premium.page.faq.refundA': 'Yes, within 14 days of your first payment, once per account. Choose Withdraw from the contract on the cancellation page and we refund that payment in full; Premium ends at once. After 14 days, or once the refund has been used, the same page cancels at the end of the paid period.',
+  'premium.page.faq.refundLink': 'Withdraw and get a refund',
   'premium.page.faq.switchQ': 'Can I switch between monthly and yearly?',
   'premium.page.faq.switchA': 'Yes. Choose Manage billing in your profile and pick the other plan. Stripe shows the new price and when it starts before you confirm.',
   'premium.page.faq.dataQ': 'Do you sell my data?',
