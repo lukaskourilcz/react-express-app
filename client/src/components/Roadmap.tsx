@@ -907,8 +907,9 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
       </button>
     </div>
   );
-  // The section header offers the join as a filled button (SectionHeader's
-  // `joinable`); a gate under it then keeps its own action secondary.
+  // The section header offers the join as the one filled primary
+  // (SectionHeader's `joinable`); the gate's action or the next-step card's
+  // button under it then stays secondary.
   const headerJoins = section !== 'web-developer' && !authLoading && isAuthenticated && hasPlan && !isMember;
   const topicDone = passedLevelCount(progress, topic);
   const continueBarred = !!continueLevel && isBarred(lockOf({ kind: 'learn-level', topic, level: continueLevel.level }));
@@ -1080,14 +1081,24 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
                 <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
               </div>
             </div>
-            {continueLevel && (
+            {/* In a section the learner has not joined, a topic it shares
+                with their plan is open here too, but the header's join is
+                the screen's one primary, so this action is a secondary. */}
+            {continueLevel && (headerJoins ? (
+              <AxButton
+                variant="secondary"
+                label={continueBarred ? learnText('learn.overview.seePremium') : t('roadmap.continue')}
+                aria-describedby="rm-overview-step"
+                onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })}
+              />
+            ) : (
               <SwimCta
                 label={continueBarred ? learnText('learn.overview.seePremium') : t('roadmap.continue')}
                 describedBy="rm-overview-step"
                 dir={-1}
                 onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })}
               />
-            )}
+            ))}
           </div>
 
           {/* Reads the node colours: white = not started, amber = cleared,

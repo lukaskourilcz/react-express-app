@@ -19,6 +19,7 @@ import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/Segme
 import { Button } from '@astryxdesign/core/Button';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
+import { SwimCta } from '../landing/LandingKit';
 import { learnText, type LearnKey } from '../../i18n/translations.learn';
 import type { LearnSectionId } from '../../../../shared/learn-sections';
 
@@ -214,13 +215,15 @@ export function SectionHeader({
     } else {
       const labelKey: LearnKey = section === 'forward-deployed-engineer' && fde?.pathOpen ? 'learn.join.fdeStart' : 'learn.join.add';
       const barred = section === 'forward-deployed-engineer' && !!fde?.pathOpen && fde.barred;
+      // The join is the screen's one filled primary, the shared SwimCta md;
+      // the map's own actions under it turn secondary (Roadmap's
+      // `headerJoins`). While it saves it stays focusable and says so.
       action = (
         <>
-          <Button
-            variant="primary"
+          <SwimCta
             label={saving ? learnText('learn.join.saving') : learnText(labelKey)}
-            isLoading={saving}
-            isDisabled={!online}
+            unavailable={saving}
+            disabled={!online}
             onClick={() => {
               if (!saving) onJoin();
             }}

@@ -406,6 +406,29 @@ describe('a topic Premium opens, on a free account (UX audit learn-22)', () => {
   });
 });
 
+describe('one primary in a section the learner has not joined', () => {
+  it('keeps the join as the one SwimCta, and the card of a shared open topic turns secondary', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer({ javascript: { levels: Object.fromEntries(levels(5).map(({ level: n }) => [String(n), { passed: true }])), checkpoints: {} } });
+    await mountAt('/learn/software-engineer?topic=git');
+    const join = await screen.findByRole('button', { name: 'Add it to your plan' });
+    expect(join).toHaveClass('ss-swim-cta');
+    // Git is shared with Web Developer, so it is open here with its card.
+    const card = (await screen.findByText('Git is part of Premium')).closest('.rm-overview-card') as HTMLElement;
+    const see = within(card).getByRole('button', { name: 'See Premium', description: 'Git is part of Premium' });
+    expect(see).not.toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    fireEvent.click(see);
+    expect(sheets.calls).toEqual([{ kind: 'learn-level', ref: expect.anything() }]);
+
+    // Once joined, the header has no action and the card's button is the primary.
+    fireEvent.click(join);
+    expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
+    await waitFor(() => expect(within(card).getByRole('button', { name: 'See Premium' })).toHaveClass('ss-swim-cta'));
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+  });
+});
+
 describe('a section without a plan', () => {
   it('asks a visitor to sign in, and dims nothing', async () => {
     answer();

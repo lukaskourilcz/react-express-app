@@ -83,7 +83,8 @@
 @media (max-width: 560px) {
   .rm-overview-card { flex-wrap: wrap; row-gap: 12px; padding: 14px 16px; }
   .rm-overview-copy { flex: 1 1 0; margin-right: 0; }
-  .rm-overview-card > .ss-swim-cta { flex: 1 0 100%; }
+  .rm-overview-card > .ss-swim-cta,
+  .rm-overview-card > .astryx-button { flex: 1 0 100%; }
 }
 .rm-path-scroll { width: 100%; overflow-x: auto; overflow-y: hidden; }
 .rm-path-canvas { width: 100%; min-width: 620px; }
