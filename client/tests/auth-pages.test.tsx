@@ -147,6 +147,8 @@ describe('/auth/confirmed', () => {
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Send a new link' }));
     expect(screen.getByText('Enter your email address.')).toBeInTheDocument();
+    // Focus goes to the field, which reads its message out with it.
+    expect(screen.getByLabelText('Email')).toHaveFocus();
     type('Email', 'ada@example.com');
     fireEvent.click(screen.getByRole('button', { name: 'Send a new link' }));
     expect(await status(/still needs confirming/)).toHaveTextContent('If ada@example.com still needs confirming, a new link is on its way.');
@@ -200,9 +202,12 @@ describe('/reset-password', () => {
     type('New password', 'short');
     fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
     expect(screen.getByText('Use at least 8 characters.')).toBeInTheDocument();
+    expect(screen.getByLabelText('New password')).toHaveFocus();
     type('New password', 'a much longer passphrase');
     type('Confirm new password', 'a much longer passphrasf');
     expect(screen.getByText('The two passwords don’t match.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
+    expect(screen.getByLabelText('Confirm new password')).toHaveFocus();
     expect(calls('/user').filter((one) => one.method === 'PUT')).toEqual([]);
 
     type('Confirm new password', 'a much longer passphrase');

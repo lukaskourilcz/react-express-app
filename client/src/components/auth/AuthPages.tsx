@@ -59,6 +59,7 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
   // Read at once, as the sign-in dialog's is: a second press in the same task
   // sent a second email, which Supabase refused beside the first one's "sent".
   const sending = useRef(false);
+  const emailInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<AuthFailure | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -70,7 +71,12 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
     if (sending.current || wait > 0) return;
     setSubmitted(true);
     setFailure(null);
-    if (problem) return;
+    // To the field that says what is wrong, as the sign-in dialog does: its
+    // message is read with it.
+    if (problem) {
+      emailInput.current?.focus();
+      return;
+    }
     sending.current = true;
     setBusy(true);
     const outcome = purpose === 'confirm' ? await resendConfirmation(email, returnTo) : await sendPasswordReset(email);
@@ -96,6 +102,7 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
           value={email}
           onChange={(value) => { setEmail(value); setFailure(null); }}
           error={submitted ? fieldMessage(problem) : null}
+          inputRef={emailInput}
         />
         {failure && <FailureBanner failure={failure} />}
         {/* On the page before it has words: a live region that arrives
@@ -203,6 +210,8 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
+  const passwordInput = useRef<HTMLInputElement>(null);
+  const againInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<AuthFailure | null>(null);
   const problem = newPasswordProblem(password);
   const mismatch = again !== password ? 'passwordMismatch' as const : null;
@@ -212,7 +221,14 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
     if (saving.current) return;
     setSubmitted(true);
     setFailure(null);
-    if (problem || mismatch || !again) return;
+    if (problem) {
+      passwordInput.current?.focus();
+      return;
+    }
+    if (mismatch || !again) {
+      againInput.current?.focus();
+      return;
+    }
     saving.current = true;
     setBusy(true);
     const outcome = await updatePassword(password);
@@ -232,6 +248,7 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
           error={submitted ? fieldMessage(problem) : null}
           hint={t('auth.password.rule', { min: PASSWORD_MIN_LENGTH })}
           autoComplete="new-password"
+          inputRef={passwordInput}
         />
         <PasswordField
           label={t('auth.password.confirmLabel')}
@@ -239,6 +256,7 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
           onChange={(value) => { setAgain(value); setFailure(null); }}
           error={submitted && !problem ? fieldMessage(again ? mismatch : 'passwordRequired') : null}
           autoComplete="new-password"
+          inputRef={againInput}
         />
         {failure && <FailureBanner failure={failure} />}
         <div className="ss-info-actions" style={{ marginTop: 0 }}>
