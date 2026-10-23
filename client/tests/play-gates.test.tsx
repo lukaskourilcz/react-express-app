@@ -51,7 +51,9 @@ describe('Play gates (social-account-16)', () => {
     const buttons = panel!.querySelectorAll('button');
     expect(buttons).toHaveLength(1);
     const signIn = screen.getByRole('button', { name: 'Sign in' });
-    expect(signIn).toHaveClass('ss-action');
+    // The panel's action row gives it the 44px page-action type, no class.
+    expect(signIn.parentElement).toHaveClass('ss-state-panel__actions');
+    expect(signIn).not.toHaveClass('ss-action');
     expect(signIn).toHaveAttribute('aria-haspopup', 'dialog');
     expect(screen.queryByRole('button', { name: 'Log in' })).toBeNull();
     fireEvent.click(signIn);
@@ -62,6 +64,6 @@ describe('Play gates (social-account-16)', () => {
     await mount('/play', false);
     const heading = screen.getByRole('heading', { level: 1, name: 'Live games are switched off' });
     expect(heading.closest('.ss-state-panel')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Back' })).toHaveClass('ss-action');
+    expect(screen.getByRole('button', { name: 'Back' }).parentElement).toHaveClass('ss-state-panel__actions');
   });
 });

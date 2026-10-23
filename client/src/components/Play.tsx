@@ -107,7 +107,7 @@ function PlayUnavailable() {
   const t = useT();
   return (
     <StatePanel level={1} title={t('play.unavailableTitle')} body={t('play.unavailableBody')}>
-      <Button variant="primary" className="ss-action" label={t('common.back')} onClick={() => navigate('/')} />
+      <Button variant="primary" label={t('common.back')} onClick={() => navigate('/')} />
     </StatePanel>
   );
 }
@@ -118,7 +118,7 @@ function PlaySignIn() {
   const t = useT();
   return (
     <StatePanel level={1} title={t('play.signInTitle')} body={t('play.signInBody')}>
-      <Button variant="primary" className="ss-action" label={t('authPage.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+      <Button variant="primary" label={t('authPage.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
     </StatePanel>
   );
 }
