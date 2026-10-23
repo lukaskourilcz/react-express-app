@@ -565,6 +565,16 @@ describe('double presses', () => {
     await screen.findByText('Next one?');
     expect(api.controlMatch).toHaveBeenCalledTimes(1);
   });
+
+  it('creates one room for a double click on Create', async () => {
+    let release!: () => void;
+    api.createMatch.mockImplementation(() => new Promise((done) => { release = () => done({ id: 'm1', code: 'ABC123', mode: 'multiplayer', status: 'lobby' }); }));
+    await mount('/play');
+    const create = await screen.findByRole('button', { name: /Create/ });
+    act(() => { create.click(); create.click(); });
+    expect(api.createMatch).toHaveBeenCalledTimes(1);
+    await act(async () => { release(); });
+  });
 });
 
 describe('the room clock', () => {

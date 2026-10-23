@@ -163,6 +163,9 @@ export function PlayLanding() {
     );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
+  // Set at the press itself: `loading` disables the buttons a render later,
+  // after a double click has already sent its second create (a second room).
+  const busyRef = useRef(false);
   const [playOff, setPlayOff] = useState(false);
 
   if (!config.features.multiplayer || playOff) return <PlayUnavailable />;
@@ -192,7 +195,8 @@ export function PlayLanding() {
   }
 
   const handleCreate = async () => {
-    if (!user?.id) return;
+    if (!user?.id || busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setLoading('create');
     try {
@@ -213,17 +217,19 @@ export function PlayLanding() {
       if (isPlayOff(err)) setPlayOff(true);
       else setError(friendlyError(err));
     } finally {
+      busyRef.current = false;
       setLoading(null);
     }
   };
 
   const handleJoin = async () => {
-    if (!user?.id) return;
+    if (!user?.id || busyRef.current) return;
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) {
       setError(t('play.enterCode'));
       return;
     }
+    busyRef.current = true;
     setError(null);
     setLoading('join');
     try {
@@ -237,6 +243,7 @@ export function PlayLanding() {
       if (isPlayOff(err)) setPlayOff(true);
       else setError(friendlyError(err));
     } finally {
+      busyRef.current = false;
       setLoading(null);
     }
   };
