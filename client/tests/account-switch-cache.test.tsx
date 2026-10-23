@@ -60,7 +60,7 @@ describe('an account change empties the query cache before the next account draw
     mount();
     emit('SIGNED_IN', session('ada'));
     await seed('ada coins');
-    expect(drawn.at(-1)).toEqual(['ada', 'ada coins']);
+    expect(drawn[drawn.length - 1]).toEqual(['ada', 'ada coins']);
 
     emit('SIGNED_IN', session('bob'));
     expect(drawn.filter(([id]) => id === 'bob').length).toBeGreaterThan(0);
@@ -73,7 +73,7 @@ describe('an account change empties the query cache before the next account draw
     emit('SIGNED_IN', session('ada'));
     await seed('ada coins');
 
-    expect(drawn.at(-1)).toEqual(['ada', 'ada coins']);
+    expect(drawn[drawn.length - 1]).toEqual(['ada', 'ada coins']);
     emit('SIGNED_OUT', null);
     const signedOut = drawn.slice(drawn.findIndex(([id, data]) => id === 'ada' && data !== undefined) + 1)
       .filter(([id]) => id === null);
