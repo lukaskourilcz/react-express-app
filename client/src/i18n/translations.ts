@@ -760,7 +760,7 @@ export const en = {
   // explains the topic. The collectible card packs are retired.
   'sharkCards.title': 'Shark Cards',
   'sharkCards.kicker': 'Saved questions',
-  'sharkCards.lead': 'Questions you missed and saved: answer each in your head, then turn the card for the answer and why.',
+  'sharkCards.lead': 'Questions you missed and saved. Turn a card for the answer.',
   'sharkCards.save': 'Save as a Shark Card',
   'sharkCards.savedButton': 'Saved as Shark Card',
   'sharkCards.open': 'Open Shark Cards',
