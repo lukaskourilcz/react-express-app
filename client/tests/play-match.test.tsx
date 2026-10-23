@@ -114,6 +114,33 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+describe('the Play page (social-account-12)', () => {
+  it('has one filled primary, Create, and Join turns primary only once the field holds a whole code', async () => {
+    await mount('/play');
+    const create = await screen.findByRole('button', { name: 'Create multiplayer match' });
+    expect(create).toHaveClass('ss-swim-cta', 'ss-swim-cta--md');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+
+    const join = () => screen.getByRole('button', { name: /^Join/ });
+    const secondary = join().className;
+    fireEvent.change(screen.getByLabelText('Match code'), { target: { value: 'abc12' } });
+    expect(join().className).toBe(secondary);
+    fireEvent.change(screen.getByLabelText('Match code'), { target: { value: 'abc123' } });
+    expect(join().className).not.toBe(secondary);
+  });
+
+  it('labels the question count above its toggles, like the time limit', async () => {
+    await mount('/play');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    for (const name of ['Questions', 'Time limit']) {
+      const group = screen.getByRole('group', { name });
+      // The visible label is the line right above the group's own box.
+      const box = group.closest('.play-time-limit') ?? group;
+      expect(box.previousElementSibling).toHaveTextContent(name);
+    }
+  });
+});
+
 describe('a timed question', () => {
   it('closes its options at 0 s and reads the room once just after the clock runs out', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });

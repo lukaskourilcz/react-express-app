@@ -653,7 +653,7 @@ export const en = {
   'play.multiplayerFfa': 'Multiplayer (free-for-all)',
   'play.classroom': 'Classroom',
   'play.multiplayer': 'Multiplayer',
-  'play.questions': 'questions',
+  'play.questions': 'Questions',
   'play.creating': 'Creating…',
   'play.createMultiplayer': 'Create multiplayer match',
   'play.createClassroom': 'Create classroom match',
