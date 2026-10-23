@@ -306,8 +306,13 @@ function ProfileBody({
         <StreakCard stats={stats} />
 
         {/* On desktop the cards split into two columns so the profile lands close
-            to one viewport instead of one long scroll. On mobile they stack. */}
+            to one viewport instead of one long scroll; on mobile they stack.
+            The learning column (career, track, advisor, GitHub garden) is the
+            left one and the account column (saved questions, your name,
+            account) the right one, so both end within about 100px of each
+            other at 1280 (UX audit social-account-03). */}
         <Grid columns={{ minWidth: 360, max: 2 }} gap={2} align="start" width="100%">
+          <div className="de-profile-column" data-column="learning">
           <VStack gap={2}>
             <CareerCard
               totals={{ quizzes: totalQuizzes, questions: totalQuestions, correct: totalCorrect, average: averageScore }}
@@ -316,8 +321,14 @@ function ProfileBody({
             {/* One card owns the track: the paths card, which carries the
                 joined Learn sections, the specialization and the picker. */}
             <LearningPathsCard />
-          </VStack>
 
+            <AdvisorCard />
+
+            <GithubGardenCard />
+          </VStack>
+          </div>
+
+          <div className="de-profile-column" data-column="account">
           <VStack gap={2}>
             {bookmarkedQuestions.length > 0 && (
               <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
@@ -352,12 +363,6 @@ function ProfileBody({
               </div>
             )}
 
-            {/* The advisor sits in the right column, above the GitHub garden,
-                so the two columns end at about the same height. */}
-            <AdvisorCard />
-
-            <GithubGardenCard />
-
             {/* One 'Your name' panel: the sharkname, then what friends see and
                 what leaderboards show, side by side and independent
                 (social-account-04). */}
@@ -365,6 +370,7 @@ function ProfileBody({
 
             <AccountDeletionCard />
           </VStack>
+          </div>
         </Grid>
         </VStack></div>)}
       </VStack>
