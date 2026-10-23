@@ -105,6 +105,24 @@ it('draws every rank as a number, with a heavier disc for the top three', async 
   expect(within(first).getByText('80%')).toBeVisible();
 });
 
+it('asks for the new day\'s Today board once 00:00 UTC has passed, not the day the screen opened on', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  try {
+    vi.setSystemTime(new Date('2026-10-23T23:59:30Z'));
+    const seen = recordRequests(); await mount();
+    await screen.findByText('Workshop learner');
+    fireEvent.click(screen.getByRole('radio', { name: 'Today' }));
+    await waitFor(() => expect(last(seen).get('period')).toBe('daily'));
+    expect(last(seen).get('date')).toBe('2026-10-23');
+    vi.setSystemTime(new Date('2026-10-24T00:00:30Z'));
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(last(seen).get('date')).toBe('2026-10-24'));
+    expect(last(seen).get('period')).toBe('daily');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it('keeps the all-time board one click away, and filters it by topic', async () => {
   const seen = recordRequests(); await mount();
   await screen.findByText('Workshop learner');

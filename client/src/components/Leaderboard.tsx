@@ -47,6 +47,7 @@ import type {
 } from '../lib/play';
 import { visibleCategoryOptionsFor, categoryLabelKey } from '../lib/categories';
 import { useActiveSubject, categoriesForSubject } from '../lib/subjects';
+import { nextUtcDayStart } from '../lib/utcDay';
 import './Leaderboard.css';
 
 type Tab = '30d' | 'month' | 'all' | 'today';
@@ -70,6 +71,36 @@ interface Row {
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** The UTC day the Today board is for, moved on when 00:00 UTC passes (as
+ * Today's plan day is). Read once at mount, a board left open past midnight
+ * kept asking for yesterday's board under "Today". A background tab's timer
+ * may wait, so a return to the tab reads the day too. */
+function useBoardDay(): string {
+  const [day, setDay] = useState(today);
+  useEffect(() => {
+    let timer = 0;
+    const arm = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        setDay(today());
+        arm();
+      }, Math.max(1_000, nextUtcDayStart() - Date.now() + 1_000));
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setDay(today());
+      arm();
+    };
+    arm();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+  return day;
+}
 
 // The last board that loaded, per board, so opening this screen offline still
 // shows something true with its age beside it. A per-viewer convenience: it
@@ -154,7 +185,7 @@ function Leaderboard() {
   // '' is "All topics". The filter applies to the 30-day and all-time boards.
   const [category, setCategory] = useState('');
   const [windowUnavailable, setWindowUnavailable] = useState(false);
-  const [date] = useState(today);
+  const date = useBoardDay();
 
   const subjectCategories = categoriesForSubject(subject.id);
   const request: LeaderboardRequest =
