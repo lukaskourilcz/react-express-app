@@ -6,6 +6,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingHome, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import type { CodingProgressResponse } from '../../shared/coding-api';
 import { CODING_INDEX } from '../../shared/coding-index';
+import { listedChallenges } from '../../shared/evolving';
 import type { Tier } from '../../shared/tiers';
 
 // The Coding home's next-challenge card, in each state a reload goes through.
@@ -149,4 +150,24 @@ it('counts each technique the way the list it opens does', () => {
     expect(count, href).toBe(`${shown} challenges in ${heading}`);
     list.unmount();
   }
+});
+
+// UX audit coding-05: one SwimCta on the page (the next challenge), and every
+// project or path row says where the learner stands with the quieter fin.
+it('keeps one SwimCta and labels each row Start, Continue or Review by its progress', () => {
+  const [untouched, partial, complete] = listedChallenges({ category: 'debugging' });
+  const tasks = Object.fromEntries([
+    [partial.stages[0], { status: 'passed' }],
+    ...complete.stages.map((id) => [id, { status: 'passed' }]),
+  ]);
+  state.progress = { data: { tasks, due: [], javascriptLevelsCleared: 0 } as unknown as CodingProgressResponse, isLoading: false, isError: false, refetch: () => {} };
+  const { container } = mount();
+  expect(container.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+  expect(card().querySelector('.ss-swim-cta')).not.toBeNull();
+  const row = (title: string) => screen.getByRole('heading', { level: 3, name: title }).closest('article')!;
+  expect(within(row(untouched.title)).getByRole('button', { name: 'Start' })).not.toHaveClass('ss-swim-cta');
+  expect(within(row(partial.title)).getByRole('button', { name: 'Continue' })).not.toHaveClass('ss-swim-cta');
+  expect(within(row(complete.title)).getByRole('button', { name: 'Review' })).not.toHaveClass('ss-swim-cta');
+  // A Premium account sees no Premium rule anywhere on the page.
+  expect(screen.queryByText(/come with the free plan/)).toBeNull();
 });

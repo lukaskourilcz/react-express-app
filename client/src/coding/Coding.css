@@ -76,7 +76,8 @@
 .cd-stage-meter { display: flex; gap: 4px; }
 .cd-stage-meter span { flex: 1; height: 5px; border-radius: 2px; background: var(--color-border-strong); }
 .cd-stage-meter span[data-complete="true"] { background: var(--brand-accent); }
-.cd-project .ss-swim-cta { min-width: 112px; }
+.cd-project .ss-fin-button { min-width: 112px; }
+.cd-projects__rule { margin: 14px 0 0; max-width: 40ch; }
 .cd-fullstack-feature { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; padding: clamp(24px, 4vw, 44px); background: var(--color-background-muted); color: inherit; text-decoration: none; border-radius: var(--radius-container); }
 .cd-fullstack-feature h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-top: 12px; }
 .cd-fullstack-feature p { color: var(--color-text-secondary); line-height: 1.7; max-width: 50ch; }
@@ -101,7 +102,7 @@
   .cd-track-entry + .cd-track-entry { border-left: 0; border-top: 1px solid var(--ss-card-line); }
   .cd-project { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; padding-block: 18px; }
   .cd-project__progress { grid-column: 2; grid-row: 2; }
-  .cd-project .ss-swim-cta { grid-column: 3; grid-row: 1 / 3; min-width: 0; padding-inline: 12px !important; }
+  .cd-project .ss-fin-button { grid-column: 3; grid-row: 1 / 3; min-width: 0; padding-inline: 14px !important; }
   .cd-stack-path { justify-content: flex-start; }
 }
 

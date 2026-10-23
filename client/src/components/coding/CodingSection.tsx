@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { accountEpoch } from '../../lib/accountData';
-import { Kicker } from '../landing/LandingKit';
+import { FadeFinCta, Kicker, SwimCta } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import { useWorkbench, useWarmWorkbench } from '../../coding/loadWorkbench';
@@ -20,7 +20,6 @@ import { CategoryGlyph } from '../ui/techIcons';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import { evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, listedChallenges, type EvolvingCategory } from '../../../../shared/evolving';
 import { prepareEvolvingDraft } from '../../../../shared/coding-fullstack-support';
-import { SwimCta } from '../landing/LandingKit';
 import {
   CODING_DIFFICULTIES,
   CODING_SECTION_TRACKS,
@@ -217,12 +216,37 @@ const TaskRow = memo(function TaskRow({ task, status, premium = 'open', saved, o
  * come with it. The numbers are the index's projected flags, so they are
  * shared/tiers.ts's rule: stages 1, 2 and 3 of a ten-stage project, 1 and 2
  * of a FullStack app, level 1 of a short path, always the first ones. */
+function freeStages(stages: readonly string[]): { count: number; list: string } {
+  const free = stages.flatMap((id, index) => (INDEX_BY_ID.get(id)?.free ? [index + 1] : []));
+  return { count: free.length, list: free.length > 1 ? `${free.slice(0, -1).join(', ')} and ${free[free.length - 1]}` : String(free[0] ?? 1) };
+}
+
 function PremiumStagesNote({ stages, short }: { stages: readonly string[]; short: boolean }) {
   const { t } = useLanguage();
-  const free = stages.flatMap((id, index) => (INDEX_BY_ID.get(id)?.free ? [index + 1] : []));
-  const list = free.length > 1 ? `${free.slice(0, -1).join(', ')} and ${free[free.length - 1]}` : String(free[0] ?? 1);
-  const note = short ? t('premium.levelsNote') : t(free.length > 1 ? 'premium.stagesNote' : 'premium.stageNote', { stages: list });
+  const { count, list } = freeStages(stages);
+  const note = short ? t('premium.levelsNote') : t(count > 1 ? 'premium.stagesNote' : 'premium.stageNote', { stages: list });
   return <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
+}
+
+/** The free-plan stages of a list of projects, as "1, 2 and 3", or null when
+ * the list holds no long project. Every long project in one list opens the
+ * same opening stages (shared/tiers.ts), so the first one speaks for all. */
+function freeStagesOf(challenges: readonly { stages: readonly string[]; short?: boolean }[]): string | null {
+  const project = challenges.find((challenge) => !challenge.short);
+  return project ? freeStages(project.stages).list : null;
+}
+
+/** The Premium rule of one list, said once in its intro rather than under
+ * every row (UX audit coding-05): level 1 of a path, the opening stages of a
+ * project, or both when the list holds both. */
+function PremiumRuleNote({ challenges }: { challenges: readonly { stages: readonly string[]; short?: boolean }[] }) {
+  const { t } = useLanguage();
+  const stages = freeStagesOf(challenges);
+  const paths = challenges.some((challenge) => challenge.short);
+  const note = stages === null
+    ? t('premium.pathsRule')
+    : paths ? t('premium.pathsProjectsRule', { stages }) : t('premium.projectsRule', { stages });
+  return <p className="ss-premium-note cd-projects__rule"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
 }
 
 /* ── /coding ──────────────────────────────────────────────────────────── */
@@ -257,16 +281,22 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
     return () => observer.disconnect();
   }, [scrollable, category, track]);
   if (challenges.length === 0) return null;
+  // On a free account the stages after the opening ones read "Premium". The
+  // rule is said once, in the intro; each row keeps only its badge.
+  const laterLockedIn = (challenge: (typeof challenges)[number]) => challenge.stages.some((id) => isBarred(premiumOf(id)));
+  const anyLocked = challenges.some(laterLockedIn);
   return <section className="cd-projects" aria-labelledby={titleId}>
     <div className="cd-projects__intro">
     <Kicker as="h2" id={titleId}>{t(titleKey)}</Kicker>
     <p className="cd-lead">{t(bodyKey)}{(bodyKey === 'coding.evolving.body' || bodyKey === 'coding.evolving.pathsBody') && !authLoading && !isAuthenticated && <> {t('coding.evolving.signIn')}</>}</p>
+    {anyLocked && <PremiumRuleNote challenges={challenges} />}
     </div>
     <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
-      // The opening stages come with the free plan; on a free account the stages after them read "Premium".
-      const laterLocked = challenge.stages.some((id) => isBarred(premiumOf(id)));
+      const laterLocked = laterLockedIn(challenge);
+      // The verb says where the learner stands: nothing done, part done, all done.
+      const actionKey = completed === challenge.stages.length ? 'coding.evolving.review' : completed > 0 ? 'coding.continue' : 'coding.evolving.start';
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
@@ -276,10 +306,10 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
         </div>
         <div className="cd-project__progress">
           <div className="cd-stage-meter" aria-hidden>{challenge.stages.map(id => <span key={id} data-complete={evolvingPassed(id, passed)} />)}</div>
-          <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}</p>
-          {laterLocked && <PremiumStagesNote stages={challenge.stages} short={challenge.short === true} />}
+          <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}{laterLocked && <> <Badge variant="neutral" label={t('premium.badge')} /></>}</p>
         </div>
-        <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
+        {/* The quieter fin: the page's one SwimCta is its next challenge. */}
+        <FadeFinCta label={t(actionKey)} finLeft="62%" finSize={26} accent="var(--brand-accent)" onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
     })}</div>
   </section>;
