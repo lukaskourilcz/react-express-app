@@ -52,6 +52,11 @@ describe('the Coding lists', () => {
   it('keep the planner a hairline row of at least 44px, not a card (coding-08)', () => {
     expect(rule('.cd-run')).toContain('border-block: 1px solid var(--ss-card-line)');
     expect(rule('.cd-run__head')).toContain('min-height: 44px');
+    // 64px collapsed: two 9px paddings, the 44px head and two hairlines, with
+    // the title and lead set tight enough to fit beside the 44px button.
+    expect(rule('.cd-run')).toContain('padding-block: 9px');
+    expect(rule('.cd-page .cd-run__title')).toContain('line-height: 1.3');
+    expect(rule('.cd-run__lead')).toContain('line-height: 1.4');
   });
 
   it('never scroll a project list inside the page (coding-09)', () => {
