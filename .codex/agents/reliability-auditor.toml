@@ -18,10 +18,10 @@ Process:
    - React error boundary at the route level? (`client/src/components/ErrorBoundary.tsx`)
    - Loading states tied to actual request lifecycle, not booleans set imperatively?
 3. **API resilience** (`api/*.ts`):
-   - Timeouts on outbound DB calls?
+   - Timeouts on outbound DB calls? `withTimeout` (`lib/http.ts`) rejects with `UpstreamTimeoutError`, which must reach the client as 503 `upstream_timeout`; flag any handler `catch` that turns it into 500.
    - Idempotency on `submit` (replay-safe)?
    - Structured error responses (`{ error: { code, message } }`) vs free-form strings?
-   - HTTP status codes correct (400 vs 401 vs 500)?
+   - HTTP status codes correct (400 vs 401 vs 500 vs 503)? An Auth outage must not answer 401, which tells a signed-in learner their session ended.
 4. **Data integrity:**
    - Counter updates atomic? `total_quizzes++` over read-modify-write is racy → recommend Postgres function or `UPDATE ... SET total_quizzes = total_quizzes + 1`.
    - Streak logic on `last_quiz_date` boundary — what about timezones?
