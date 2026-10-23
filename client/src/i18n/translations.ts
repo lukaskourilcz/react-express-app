@@ -1388,6 +1388,7 @@ export const en = {
   'billing.checkout.monthly': 'Continue with monthly',
   'billing.checkout.annual': 'Continue with yearly',
   'billing.checkout.signIn': 'Sign in to continue',
+  'billing.checkout.signedOut': 'You pay on the account you sign in with, and you come back to this plan.',
   'billing.checkout.soon': 'Premium opens soon',
   'billing.checkout.title': 'Complete your Premium subscription',
   'billing.checkout.lead': 'Review your plan, then enter payment details securely with Stripe.',

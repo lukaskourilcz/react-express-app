@@ -31,11 +31,22 @@
    to show (no plan chosen, billing unreachable) it is an inline note and its
    button, not a card around them (canvas, then one panel). */
 .ss-checkout-card:has(.astryx-banner) { padding: 0; border: 0; background: none; box-shadow: none; }
-/* The card's own actions (Try again, Sign in to continue, Continue to secure
-   payment) are page actions: the .ss-action type, at their own width like
-   'Back to plans' below them, not stretched across the card (shell-public-02). */
+/* The card's own Try again is a page action: the .ss-action type, at its own
+   width, not stretched across the card (shell-public-02). */
 .ss-checkout-card > .ss-action { align-self: flex-start; }
-.ss-checkout-price { margin: 0; font-size: 1.35rem; }
+/* The card's flex gap sets the rhythm: .ss-info-card p margins on top of it
+   left 40-66px between five short items (UX audit money-04). */
+.ss-info-card.ss-checkout-card p { margin: 0; }
+/* The plan summary is the /premium plan card's markup (.ss-premium-plan in
+   PremiumPage.css) without a card of its own: the h2 is its name. */
+.ss-checkout-plan h2 { margin: 0; font: 750 1.05rem var(--font-family-heading); }
+/* One footer row: the ghost Back to plans on the left, the step's primary on
+   the right at its own width. Below 600px the primary stacks full width
+   above the ghost. */
+.ss-checkout-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.25rem; }
+@media (max-width: 599px) {
+  .ss-checkout-actions { flex-direction: column-reverse; align-items: stretch; }
+}
 .ss-checkout-form[data-ready="true"] { min-height: 320px; }
 /* Focus lands on the form's box when it opens, so Tab goes on into Stripe's
    fields; the box itself needs no ring. */
