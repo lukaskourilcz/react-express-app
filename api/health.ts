@@ -5,23 +5,21 @@ const service = createServiceClient();
 
 type DependencyStatus = 'ok' | 'down' | 'unconfigured';
 
-/** Read one row of `table` on the service connection within 1.5 s. */
+/** Read one row of `table` on the service connection within 1.5 s. A check
+ * that fails is logged with its reason, whether the read threw or answered an
+ * error, so the 503 a monitor sees has a line in the logs saying why. */
 async function dependencyStatus(dependency: string, table: string, column: string): Promise<DependencyStatus> {
   if (!service) return 'unconfigured';
+  let reason: string;
   try {
     const { error } = await withTimeout(service.from(table).select(column).limit(1), 1500);
-    return error ? 'down' : 'ok';
+    if (!error) return 'ok';
+    reason = error.code || 'query_error';
   } catch (error) {
-    if (dependency === 'database') {
-      logEvent('health', {
-        level: 'error',
-        category: 'dependency_check',
-        dependency,
-        reason: error instanceof Error ? error.message : 'unknown',
-      });
-    }
-    return 'down';
+    reason = error instanceof Error ? error.message : 'unknown';
   }
+  logEvent('health', { level: 'error', category: 'dependency_check', dependency, reason });
+  return 'down';
 }
 
 /**

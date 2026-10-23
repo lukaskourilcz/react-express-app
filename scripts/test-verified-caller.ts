@@ -79,6 +79,7 @@ const seen: Seen[] = [];
 const RETIRED_REPORTED = 'rm-js-21';
 /** While true, the one-time quiz claim fails as an unreachable database would. */
 let claimFails = false;
+let healthReadFails = false;
 /** Token checks Supabase Auth answered, so a test can count a request's. */
 let authChecks = 0;
 const SLOW_REPORT = 'stand-in: answer after the timeout';
@@ -164,6 +165,7 @@ async function startStandIns() {
     }
     const filters = Object.fromEntries([...url.searchParams.entries()].filter(([, value]) => value.startsWith('eq.')).map(([key, value]) => [key, value.slice(3)]));
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
+    if (healthReadFails && url.pathname === '/rest/v1/quiz_submissions' && url.searchParams.get('select') === 'grade_key') return send(500, { code: '42501', message: 'permission denied for table quiz_submissions' });
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname)?.[1];
     if (rpc) {
       if (rpc === 'claim_quiz_submission' && claimFails) return send(500, { code: '08006', message: 'stand-in: connection failure' });
@@ -530,6 +532,29 @@ async function main() {
       assert.match(res.headers['cache-control'] ?? '', expected, `${label} keeps its own header`);
     }
     console.log('PASS verified caller: personal answers are private, no-store; public ones keep their headers');
+
+    // A health check the database answers with an error is logged with the
+    // reason, as a check that throws is: a 503 with no line saying why sent
+    // the owner to guess which dependency failed.
+    {
+      const lines: Row[] = [];
+      const original = console.log;
+      healthReadFails = true;
+      console.log = (line: unknown) => {
+        try { lines.push(JSON.parse(String(line)) as Row); } catch { original(line); }
+      };
+      let down: Response;
+      try {
+        down = await call(health as Handler, {});
+      } finally {
+        console.log = original;
+        healthReadFails = false;
+      }
+      assert.equal(down.statusCode, 503, `a failing service-role read is degraded (${JSON.stringify(down.body)})`);
+      const logged = lines.find((line) => line.route === 'health' && line.dependency === 'service_role');
+      assert.deepEqual({ level: logged?.level, reason: logged?.reason }, { level: 'error', reason: '42501' }, 'and logged with its reason');
+    }
+    console.log('PASS verified caller: a failed health check is logged with its reason');
 
     // ── the retired progress PUT ─────────────────────────────────────────
     // It answered with the progress read and wrote nothing; the server writes
