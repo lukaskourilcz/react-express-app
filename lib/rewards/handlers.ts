@@ -652,9 +652,12 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
   const signature = req.headers['x-payment-signature'];
   const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {});
   const expected = createHmac('sha256', secret).update(raw).digest('hex');
-  const given = typeof signature === 'string' ? signature : '';
-  const ok = given.length === expected.length
-    && timingSafeEqual(Buffer.from(given, 'utf8'), Buffer.from(expected, 'utf8'));
+  // Compared as bytes: a header of 64 non-ASCII characters has the length of
+  // the hex digest in characters but not in bytes, and timingSafeEqual throws
+  // on buffers of different lengths, which answered 500.
+  const given = Buffer.from(typeof signature === 'string' ? signature : '', 'utf8');
+  const wanted = Buffer.from(expected, 'utf8');
+  const ok = given.length === wanted.length && timingSafeEqual(given, wanted);
   if (!ok) {
     logEvent({ status: 401, kind: 'webhook_rejected' });
     return jsonError(res, 401, 'bad_signature', 'Signature did not verify');

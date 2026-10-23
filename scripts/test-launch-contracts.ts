@@ -35,7 +35,7 @@ import {
 } from '../lib/quiz-tokens';
 import { checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
-import { webhookDecision } from '../lib/rewards/handlers';
+import { handlePaymentWebhook, webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
 import roadmapHandler from '../api/quiz/roadmap';
@@ -5919,6 +5919,37 @@ async function main() {
     assert.deepEqual(webhookDecision({ type: 'payment.refunded' }, paid), { action: 'cancel' }, 'a refund may cancel a paid order');
     assert.deepEqual(webhookDecision({ type: 'payment.refunded' }, { ...paid, state: 'shipped' }), { action: 'ignore', reason: 'stale' });
     assert.deepEqual(webhookDecision({ type: 'something.else' }, awaiting), { action: 'ignore', reason: 'unhandled' });
+  }
+
+  // ── the payment webhook itself, against a stand-in database ─────────────
+  {
+    const realEnv = { secret: process.env.PAYMENT_WEBHOOK_SECRET, provider: process.env.PAYMENT_PROVIDER };
+    process.env.PAYMENT_WEBHOOK_SECRET = 'contract-webhook-secret';
+    process.env.PAYMENT_PROVIDER = 'contract-pay';
+    const touched: string[] = [];
+    const db = {
+      from: (table: string) => {
+        touched.push(`from:${table}`);
+        const link = { select: () => link, eq: () => link, maybeSingle: async () => ({ data: null, error: null }) };
+        return link;
+      },
+      rpc: async (fn: string) => { touched.push(`rpc:${fn}`); return { data: true, error: null }; },
+    };
+    const deliver = async (body: unknown, signature: string) => {
+      const res = mockResponse();
+      await handlePaymentWebhook({ method: 'POST', headers: { 'x-payment-signature': signature }, query: {}, body } as never, res as never, db as never);
+      return res;
+    };
+    try {
+      // 64 characters, as long as the hex digest, but 128 bytes: the
+      // constant-time comparison threw on the unequal buffers.
+      const wide = await deliver({ type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'ref' }, 'é'.repeat(64));
+      assert.equal(wide.statusCode, 401, 'a signature with the digest length in characters but not in bytes is refused, not a 500');
+      assert.deepEqual(touched, [], 'and nothing is read');
+    } finally {
+      if (realEnv.secret === undefined) delete process.env.PAYMENT_WEBHOOK_SECRET; else process.env.PAYMENT_WEBHOOK_SECRET = realEnv.secret;
+      if (realEnv.provider === undefined) delete process.env.PAYMENT_PROVIDER; else process.env.PAYMENT_PROVIDER = realEnv.provider;
+    }
   }
 
   // ── lesson figures (#183) ───────────────────────────────────────────────
