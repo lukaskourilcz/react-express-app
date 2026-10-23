@@ -334,3 +334,7 @@ their props), never drawn again by hand.
   number chip, the brand accent for the selection (never a track colour), no
   border or radius of a runner's own. A graded row says what it is in text
   and glyph as well as colour: "✓ Correct answer" and "✕ Your pick".
+- **One action row.** `QuestionActions` sits 16px under the panel: the
+  secondaries on the left, the one primary (`SwimCta` md) on the right. On a
+  phone the primary is the last row at full width and the secondaries share
+  the row above, so the next step is in the same place on every runner.

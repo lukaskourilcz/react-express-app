@@ -3,3 +3,4 @@
 // documents their props and rules.
 export { QuestionShell, type QuestionShellProps } from './QuestionShell';
 export { AnswerOptionList, type AnswerOptionListProps, type AnswerGrade } from './AnswerOptionList';
+export { QuestionActions, type QuestionActionsProps, type QuestionPrimaryAction } from './QuestionActions';
