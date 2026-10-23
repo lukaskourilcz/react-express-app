@@ -1084,24 +1084,24 @@ export default function Challenge() {
 
       {/* Feedback overlay: a floating card that sits over the answer options
           so the grade doesn't push the layout around. The live region stays
-          on the page and the card is drawn inside it: a live region drawn
-          together with its words, as the card was, is not read. */}
-      <div aria-live="assertive">
-      {lastResult && (
-        <div
-          style={{
-            position: 'absolute',
-            left: isMobile ? 8 : 16,
-            right: isMobile ? 8 : 16,
-            bottom: isMobile ? 68 : 72,
-            zIndex: 5,
-            maxHeight: '48vh',
-            overflowY: 'auto',
-            borderRadius: 'var(--radius-container)',
-            backgroundColor: 'var(--color-background-surface)',
-            boxShadow: 'var(--shadow-high)',
-          }}
-        >
+          on the page and becomes the card while a verdict shows: a live
+          region drawn together with its words, as the card was, is not read. */}
+      <div
+        aria-live="assertive"
+        style={lastResult ? {
+          position: 'absolute',
+          left: isMobile ? 8 : 16,
+          right: isMobile ? 8 : 16,
+          bottom: isMobile ? 68 : 72,
+          zIndex: 5,
+          maxHeight: '48vh',
+          overflowY: 'auto',
+          borderRadius: 'var(--radius-container)',
+          backgroundColor: 'var(--color-background-surface)',
+          boxShadow: 'var(--shadow-high)',
+        } : undefined}
+      >
+        {lastResult && (
           <Banner
             status={lastResult.notCounted ? 'info' : lastResult.isCorrect ? 'success' : 'error'}
             title={
@@ -1117,8 +1117,7 @@ export default function Challenge() {
             }
             description={lastResult.explanation || undefined}
           />
-        </div>
-      )}
+        )}
       </div>
 
       {!lastResult && strikeWaiting && (
