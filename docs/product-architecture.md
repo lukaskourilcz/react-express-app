@@ -1054,7 +1054,10 @@ second scheduler. Both are pure with the clock injected; persistence is
 service-role routine. Only independent retrieval lengthens an interval: a
 hinted, revealed or recognition-shaped answer holds the rung it already
 earned. Review grants no XP of its own and never widens the pool it draws
-from. See `docs/practice-scheduling.md`.
+from. When the learner's review states cannot be read, a session still runs
+as if none were stored, but the submit records no concept review, since each
+next state builds on the one read (`loadReviewStates` answers null). See
+`docs/practice-scheduling.md`.
 
 `shared/curation.ts` owns what the product may *say* about its content: the
 two gates (relevance out of ten, quality out of five, both required) and the
@@ -1566,30 +1569,63 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   Offline or on a 5xx, supabase-js keeps the session, so `lib/auth.tsx` removes
   the stored session and its code verifier itself, forgets the account's data
   and signs the page out. Signing out everywhere needs the server and reports a
-  failure. `clearAccountData` moves an account epoch, and a progress sync that
-  started before it writes nothing.
+  failure. `clearAccountData` writes any draft still waiting
+  (`beforeAccountChange`), then moves an account epoch (`accountEpoch`), and
+  work that started before it (a progress sync, an XP sync, a level
+  completion, a Challenge reward) writes and announces nothing.
+- **Progress is read, never sent.** The server writes Learn progress itself on
+  each completion. The browser pulls it at sign-in and when Today or a map
+  asks (`GET /api/quiz/roadmap?resource=progress`, `syncProgressWithServer`,
+  one request in flight per account) and sends nothing back; a PUT there
+  answers 405.
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
-  every answer before the handler runs; the public ones (the boards, settings,
-  the Learn map, health) set their own.
+  every answer before the handler runs, and the public reads set their own:
+  the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,
+  s-maxage=60, stale-while-revalidate=300`, so the CDN shares it; a lesson
+  `public, max-age=300, s-maxage=86400` with its ETag; the curation coverage
+  `public, s-maxage=60, stale-while-revalidate=300`; settings and the
+  Challenge board `public, s-maxage=15, stale-while-revalidate=60`. Health
+  answers `no-store`.
 - **Grants by address.** The admin allow-list, the owner's granted Learn paths
   and the owner's private categories count an email only once Supabase has
   confirmed it (`confirmedEmail` in `lib/auth.ts`), as billing does. The admin
   role in `app_metadata` needs no email.
-- **Read limits.** The wallet, badges and a friend lookup in `api/user/[op].ts`
-  and the Learn plan, progress and steps take `limitRead`
+- **Read limits.** The wallet, badges, a friend lookup, the sharkname
+  (`friends-handle`) and the board name (`leaderboard-name`) GETs in
+  `api/user/[op].ts` and the Learn plan, progress and steps take `limitRead`
   (`lib/rate-limit.ts`): an address bucket that holds a class behind one NAT,
   then the verified account's own (120 a minute). A guest has the address
   bucket alone, which the Learn map and the leaderboard take too. The
   fulfilment op takes the admin bucket before its gate, GET included.
+- **Class-sized writes.** `enforceClassRateLimit` takes an address bucket
+  sized for a class behind one NAT, then the caller's own bucket (the
+  verified account, or the address for a caller without one). Question
+  reports use it (`questionReportAddress`, then `questionReport`: three, then
+  one every three minutes), so a class can report more than three questions
+  at once.
 - **One-time claims.** `claimOnce` (one grade per placement round, one check
   per design walkthrough) is held in Upstash. Where Upstash is configured, a
   claim it cannot record is answered 503 `claim_unavailable` and nothing is
-  graded; only without Upstash does an instance's memory hold it.
+  graded; only without Upstash does an instance's memory hold it. A quiz
+  submit's own claim (`claim_quiz_submission`) answers the same 503 when the
+  database cannot take it.
+- **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
+  has not settled in time with `UpstreamTimeoutError`, a
+  `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which
+  it may retry, instead of 500. `withRequestContext` logs every 503 at level
+  error, and an escaped `AuthError` with the 401 or 503 it answers.
+- **Text with U+0000.** Postgres text and JSONB cannot store it, so a coding
+  draft, a learning-path draft or artifact, a Shark Card and a question
+  report holding it answer 400 before any write.
+- **Game settings.** A failed settings read serves the instance's last known
+  settings, or the defaults when it has none, and logs the failure, so a
+  database blip never turns back on a feature the owner switched off.
 
 ## Account erasure
 
 `DELETE /api/user/delete-account` ends any live Stripe subscription first and
-stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
+stops with 503 if Stripe cannot be reached. A database call that times out
+answers 503 `upstream_timeout`, and any other failure 500. It then calls `delete_user_data`,
 the one routine that erases every table holding an account id (restated last
 in `supabase/supabase-schema-060.sql`, which covers the voucher redemptions,
 merchandise, the month's XP ledger `user_xp_days`, the question hours
