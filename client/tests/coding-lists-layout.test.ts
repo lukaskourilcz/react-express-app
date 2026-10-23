@@ -59,6 +59,11 @@ describe('the Coding lists', () => {
     expect(rule('.cd-run')).toContain('padding-block: 9px');
     expect(rule('.cd-page .cd-run__title')).toContain('line-height: 1.3');
     expect(rule('.cd-run__lead')).toContain('line-height: 1.4');
+    // A phone keeps the button beside the title, with the lead under both.
+    expect(rule('.cd-run__head', '@media (max-width: 560px)')).toContain('grid-template-columns: minmax(0, 1fr) auto');
+    expect(rule('.cd-run__intro', '@media (max-width: 560px)')).toContain('display: contents');
+    expect(rule('.cd-run__toggle', '@media (max-width: 560px)')).toContain('grid-row: 1; grid-column: 2');
+    expect(rule('.cd-run__lead', '@media (max-width: 560px)')).toContain('grid-column: 1 / -1');
   });
 
   it('never scroll a project list inside the page (coding-09)', () => {

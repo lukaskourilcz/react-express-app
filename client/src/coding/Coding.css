@@ -707,8 +707,15 @@
 .cd-page .cd-run__title { margin: 0; font-family: var(--font-family-heading); font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
 .cd-run__lead { margin: 0; font-size: 0.9rem; line-height: 1.4; color: var(--color-text-secondary); }
 .cd-run__toggle { flex: none; }
+/* A phone: the title and "Plan a run" share the first line and the lead
+   runs under both, so the collapsed row is 84px at 390px rather than 114px
+   with the button on a line of its own. */
 @media (max-width: 560px) {
-  .cd-run__head { flex-wrap: wrap; }
+  .cd-run__head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; }
+  .cd-run__intro { display: contents; }
+  .cd-page .cd-run__title { grid-row: 1; grid-column: 1; overflow-wrap: anywhere; }
+  .cd-run__lead { grid-row: 2; grid-column: 1 / -1; }
+  .cd-run__toggle { grid-row: 1; grid-column: 2; }
 }
 .cd-run__form { display: grid; gap: 16px; }
 .cd-run__field { display: grid; gap: 8px; }
