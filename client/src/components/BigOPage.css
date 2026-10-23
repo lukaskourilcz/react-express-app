@@ -11,4 +11,5 @@
 .bo-table caption { font-weight: 600; text-align: left; padding-bottom: 12px; }
 .bo-table th, .bo-table td { padding: 12px 8px; border-bottom: 1px solid var(--color-border); }
 .bo-table td:nth-last-child(-n+2) { font-variant-numeric: tabular-nums; }
-.bo-cta { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.bo-next { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--color-border); }
+.bo-next h2 { margin: 0; font-size: 1.25rem; }

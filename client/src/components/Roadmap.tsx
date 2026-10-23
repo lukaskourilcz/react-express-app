@@ -1,7 +1,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
+import { BigOLessons } from './learn/BigOLessons';
 import { retirementOf } from '../../../shared/retired-content';
 import { Text } from '@astryxdesign/core/Text';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -1862,10 +1863,24 @@ function SkillCheckRunner({
 export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
   const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
-  const [level, setLevel] = useState<1 | 2 | null>(null);
+  // /big-o's "Start lesson 1" opens a lesson directly (?lesson=1, UX audit
+  // learn-19): the lesson's reading is the first screen, and the parameter is
+  // dropped so Back and a reload land on the introduction.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const asked = new URLSearchParams(location.search).get('lesson');
+  const [level, setLevel] = useState<1 | 2 | null>(() => (asked === '1' ? 1 : asked === '2' ? 2 : null));
   const [generation, setGeneration] = useState(0);
   const [reading, setReading] = useState(true);
   const before = useRef(0);
+  useEffect(() => {
+    if (asked === null) return;
+    if (level !== null) {
+      preloadLessonRunner();
+      before.current = computeLearningXp(getRoadmapProgress());
+    }
+    navigate({ pathname: location.pathname, hash: location.hash }, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival
   const lesson = useQuery({
     queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
     enabled: level !== null && !reading,
@@ -1894,18 +1909,9 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
         if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
       }} /></LessonStage>;
   }
-  // The route shell sets the width. Lesson 1 is the one SwimCta md and lesson
-  // 2 a secondary, both 44px (UX audit learn-04).
-  return <div className="de-page">
-    <h1>{t('bigO.pathTitle')}</h1>
-    <p>{t('bigO.pathLead')}</p>
-    <div className="ss-info-actions">
-      <SwimCta label={t('bigO.firstLesson')} onClick={() => open(1)} />
-      <AxButton variant="secondary" label={t('bigO.secondLesson')} onClick={() => open(2)} />
-    </div>
-    {/* The shared text link (44px, brand accent), not the browser's own blue. */}
-    <p className="ss-text-links"><Link to="/big-o">{t('bigO.backToGuide')}</Link></p>
-  </div>;
+  // The route shell sets the width. The Learn header, then lesson 1 as the one
+  // SwimCta md and lesson 2 a secondary, both 44px (UX audit learn-04, -15, -19).
+  return <BigOLessons onOpen={open} />;
 }
 
 export default Roadmap;

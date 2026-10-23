@@ -2317,13 +2317,14 @@ export const en = {
   'bigO.sorting': 'Sort items with an efficient comparison sort',
   'bigO.quadratic': 'Compare every pair of items',
   'bigO.simplify': 'Keep the part that grows fastest: two full scans are still O(n), and n² + n becomes O(n²). Usually we compare the worst case. Big O does not tell you the exact speed of a small input.',
-  'bigO.practiceTitle': 'Try it yourself',
+  'bigO.freeLessons': 'Two free lessons',
+  'bigO.startLesson': 'Start lesson 1',
   'bigO.pathTitle': 'Big O introduction',
-  'bigO.pathLead': 'Two short lessons: Complexity Basics, then Big O and Growth. Both are free and open to beginners, with no Skill Check required.',
-  'bigO.practiceLink': 'Open the free Big O learning path',
-  'bigO.firstLesson': '1. Complexity Basics',
-  'bigO.secondLesson': '2. Big O and Growth',
-  'bigO.backToGuide': 'Back to the Big O guide',
+  'bigO.pathLead': 'Free and open to beginners, with no Skill Check required.',
+  'bigO.firstLesson': 'Complexity Basics',
+  'bigO.secondLesson': 'Big O and Growth',
+  'bigO.lessonOf': 'Lesson {n} of {total}',
+  'bigO.guide': 'Big O guide',
 } as const;
 
 export type TranslationKey = keyof typeof en;

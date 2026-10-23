@@ -193,7 +193,7 @@ for (const theme of ['light', 'dark'] as const) {
       return route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'local fixture' } } });
     });
     await page.goto('/learn/big-o');
-    await page.getByRole('button', { name: '1. Complexity Basics' }).click();
+    await page.getByRole('button', { name: 'Complexity Basics', exact: true }).click();
     await expect(page.locator('.lp-lesson')).toBeVisible();
     expect(attempts).toBe(0);
     for (const width of [360, 390, 430, 768, 1024, 1280, 1440]) {
