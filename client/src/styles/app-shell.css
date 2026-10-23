@@ -670,7 +670,7 @@
   --font-weight-medium: 600;
 }
 
-/* A component's own toolbar (the coding action bar, a runner's icon row):
+/* A component's own toolbar (the coding action bar):
    36px buttons and segmented items on a mouse, each with a 44px hit area
    drawn by ::before (both are already position: relative in Astryx); the
    footer's compact toggles share the hit area. Text fields stay 44px
