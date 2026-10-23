@@ -315,6 +315,10 @@ describe('the question screen (UX audit U2)', () => {
     expect(submit).not.toBeDisabled();
     expect(submit).toHaveAttribute('aria-disabled', 'true');
     expect(submit).toHaveAccessibleDescription('Answer 2 more to submit');
+    // Said in sight too, under the action row, not only to a screen reader.
+    const why = screen.getByText('Answer 2 more to submit');
+    expect(why).toHaveClass('quiz-submit-why');
+    expect(why.style.position).toBe('');
     fireEvent.click(submit);
     expect(screen.getByText('Question a?')).toBeInTheDocument();
   });

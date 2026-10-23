@@ -17,7 +17,6 @@ import { CloseIcon } from './ui/icons';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { accountEpoch } from '../lib/accountData';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
-import { visuallyHidden } from '../theme/MuiTheme';
 import {
   visibleCategoryOptionsFor,
   categoryLabelKey,
@@ -1286,27 +1285,34 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </>
         }
         actions={
-          <QuestionActions
-            secondary={
-              <Button
-                variant="secondary"
-                label={t('quiz.previous')}
-                onClick={handlePrevious}
-                isDisabled={currentIndex === 0}
-              />
-            }
-            primary={
-              isLast
-                ? {
-                  label: submitting ? t('quiz.submitting') : t('quiz.submitQuiz'),
-                  onClick: submitPressed,
-                  disabled: submitting,
-                  unavailable: !allAnswered,
-                  describedBy: !allAnswered ? 'quiz-submit-why' : undefined,
-                }
-                : { label: t('quiz.next'), onClick: handleNext }
-            }
-          />
+          <>
+            <QuestionActions
+              secondary={
+                <Button
+                  variant="secondary"
+                  label={t('quiz.previous')}
+                  onClick={handlePrevious}
+                  isDisabled={currentIndex === 0}
+                />
+              }
+              primary={
+                isLast
+                  ? {
+                    label: submitting ? t('quiz.submitting') : t('quiz.submitQuiz'),
+                    onClick: submitPressed,
+                    disabled: submitting,
+                    unavailable: !allAnswered,
+                    describedBy: !allAnswered ? 'quiz-submit-why' : undefined,
+                  }
+                  : { label: t('quiz.next'), onClick: handleNext }
+              }
+            />
+            {/* Why Submit reads unavailable, in sight under it: the old
+                disabled button said so in a hover tooltip. */}
+            {isLast && !allAnswered && (
+              <p id="quiz-submit-why" className="quiz-submit-why">{t('quiz.answerMore', { count: remaining })}</p>
+            )}
+          </>
         }
       >
         <AnswerOptionList
@@ -1322,9 +1328,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           next={!isLast ? 'continue' : allAnswered ? 'submit' : undefined}
         />
       </QuestionShell>
-      {isLast && !allAnswered && (
-        <span id="quiz-submit-why" style={visuallyHidden}>{t('quiz.answerMore', { count: remaining })}</span>
-      )}
 
       <AppToast
         open={!!snack}
