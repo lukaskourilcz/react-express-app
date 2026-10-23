@@ -63,3 +63,17 @@ describe('the classroom page', () => {
     expect(screen.getByText(/the host controls question progress/)).toBe(container.querySelector('.ss-info-page__header p'));
   });
 });
+
+describe('page actions', () => {
+  it('draws the header sign-in button as a page action', async () => {
+    const { default: SignInButton } = await import('../src/components/SignInButton');
+    renderIn(<SignInButton />);
+    expect(screen.getByRole('button', { name: 'Log in' })).toHaveClass('astryx-button', 'ss-action');
+  });
+
+  it('puts the Page actions in the shared action row, which carries the page-action type', () => {
+    const { container } = renderIn(<NotFoundPage />);
+    const buttons = container.querySelectorAll('.ss-info-actions .astryx-button');
+    expect(buttons).toHaveLength(2);
+  });
+});

@@ -68,6 +68,15 @@ describe('control heights on every pointer', () => {
     expect(declared(coarse, '.astryx-text-input', 'min-height')).toBe('');
   });
 
+  it.each(['.astryx-button.ss-action', '.ss-info-actions .astryx-button', '.ss-auth__actions .astryx-button'])(
+    'gives %s the page-action type through Astryx\u2019s own variables',
+    (selector) => {
+      expect(declared(topLevel, selector, '--spacing-3')).toBe('20px');
+      expect(declared(topLevel, selector, '--text-label-size')).toBe('1rem');
+      expect(declared(topLevel, selector, '--font-weight-medium')).toBe('600');
+    },
+  );
+
   it('drops toolbar controls inside .ss-compact to 36px on a fine pointer only', () => {
     expect(declared(fine, '.ss-compact .astryx-button', 'min-height')).toBe('var(--ss-control-height-compact)');
     expect(declared(fine, '.ss-compact .astryx-segmented-control-item', 'min-height')).toBe('var(--ss-control-height-compact)');

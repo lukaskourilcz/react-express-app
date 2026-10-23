@@ -133,6 +133,19 @@ describe('the sign-in dialog', () => {
     expect(seen).toEqual([]);
   });
 
+  // UX audit U1 (#573): the dialog's actions are page actions (44px, 16px
+  // text, through .ss-action and the shared .astryx-button floor), and its
+  // close button is an Astryx button, so the same floor makes it 44x44 on a
+  // mouse too (tests/touch-and-motion.test.ts holds the floor).
+  it('draws Google and the submit as page actions and closes with a floored button', async () => {
+    const { dialog } = await openDialog();
+    expect(within(dialog).getByRole('button', { name: 'Continue with Google' })).toHaveClass('astryx-button', 'ss-action');
+    const submit = dialog.querySelector('button[type="submit"]');
+    expect(submit).toHaveClass('astryx-button', 'ss-action');
+    expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveClass('astryx-button');
+    for (const tab of within(dialog).getAllByRole('radio')) expect(tab.closest('.astryx-segmented-control-item')).not.toBeNull();
+  });
+
   it('checks the fields before asking Supabase, and says what is wrong under each', async () => {
     const { dialog } = await openDialog();
     press(dialog, 'Sign in');

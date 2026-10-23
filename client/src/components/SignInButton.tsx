@@ -34,5 +34,6 @@ export default function SignInButton() {
     const active = document.activeElement;
     if (!active || active === document.body) ref.current?.focus();
   }, []);
-  return <Button ref={ref} variant="secondary" size="md" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />;
+  // A page action like any other (UX audit shell-public-02): 44px, 16px/600.
+  return <Button ref={ref} variant="secondary" size="md" className="ss-action" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />;
 }

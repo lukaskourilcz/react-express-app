@@ -661,6 +661,22 @@
   min-height: var(--ss-control-height) !important;
 }
 
+/* A page action (UX audit shell-public-02): the 44px floor above plus one
+   type: 20px inline padding and 16px/600 text, on the pill the Apple layer
+   gives every button. Set through Astryx's own custom properties (its button
+   reads --spacing-3, --text-label-size and --font-weight-medium), so no
+   !important. Every button in the shared action rows (.ss-info-actions on
+   the Page screens, .ss-auth__actions in the sign-in dialog) gets it; a
+   page action elsewhere takes className="ss-action". A small in-row utility
+   (a Retry inside a note) does not. */
+.astryx-button.ss-action,
+.ss-info-actions .astryx-button,
+.ss-auth__actions .astryx-button {
+  --spacing-3: 20px;
+  --text-label-size: 1rem;
+  --font-weight-medium: 600;
+}
+
 /* A component's own toolbar (the coding action bar, a runner's icon row):
    36px controls on a mouse, each with a 44px hit area drawn by ::before.
    Astryx buttons and segmented items are already position: relative; the

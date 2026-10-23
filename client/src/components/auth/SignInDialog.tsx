@@ -288,6 +288,7 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
                   <Button
                     variant="secondary"
                     size="lg"
+                    className="ss-action"
                     icon={<GoogleIcon />}
                     label={busy === 'google' ? t('auth.dialog.googleBusy') : t('auth.dialog.google')}
                     isLoading={busy === 'google'}
@@ -340,6 +341,7 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
                   type="submit"
                   variant="primary"
                   size="lg"
+                  className="ss-action"
                   label={submitLabel(view, busy === 'submit', t)}
                   isLoading={busy === 'submit'}
                   isDisabled={busy !== null && busy !== 'submit'}
