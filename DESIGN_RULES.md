@@ -343,3 +343,6 @@ their props), never drawn again by hand.
   status on the first row and tags plus 44px icon buttons (hint, report,
   exit) on the second. The question text and code span the whole panel; no
   icon sits beside them.
+- **One keyboard hint, on a reserved line.** `QuestionHint` says "Press 1–4
+  to {select|answer} · Enter to {continue|submit}" under the answers, on a
+  desktop with a fine pointer only. Grading hides its words, never its line.

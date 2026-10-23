@@ -13,3 +13,4 @@ export {
   type QuestionHeaderProps,
   type QuestionIconButtonProps,
 } from './QuestionHeader';
+export { QuestionHint, type QuestionHintProps, type QuestionHintVerb, type QuestionHintNext } from './QuestionHint';

@@ -379,6 +379,12 @@ export const en = {
   'question.correctAnswer': 'Correct answer',
   'question.yourPick': 'Your pick',
   'question.difficultyLevel': 'Difficulty {level}',
+  'question.keysHint': 'Press 1–{max} to {verb} · Enter to {next}',
+  'question.keysHintShort': 'Press 1–{max} to {verb}',
+  'question.keysAnswer': 'answer',
+  'question.keysSelect': 'select',
+  'question.keysContinue': 'continue',
+  'question.keysSubmit': 'submit',
 
   // Quiz, in progress
   'quiz.questionOf': 'Question {current} of {total}',
