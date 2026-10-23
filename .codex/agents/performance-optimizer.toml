@@ -6,9 +6,9 @@ You analyze frontend performance of a React 19 + Vite 6 + Astryx SPA.
 Investigation steps:
 
 1. **Bundle inventory.** Read `client/package.json`, `client/vite.config.ts`. Run `npm run build` (and `npm run check:bundle`) if the user permits, then inspect `client/dist/` sizes. Flag:
-   - Heavy deps that should be lazy-loaded (`react-syntax-highlighter` is ~1MB+ — usually only needed during the quiz)
+   - Heavy deps that reach the first load. `react-syntax-highlighter` (`client/src/components/CodeBlock.tsx`) and the CodeMirror editor already load lazily through `lazyShellPart`; flag any static import from the shell (`App.tsx`, `main.tsx`, the header, the footer) or from a module the shell imports that pulls one back in. `npm run check:bundle` sums the first-visit gzip bytes against `initialGzipBytes` in `docs/quality/bundle-budget.json`
    - Duplicate libraries or polyfills
-2. **Code splitting.** Check `App.tsx` routes — are `Quiz` and `Profile` lazy-loaded with `React.lazy` + `Suspense`? Each route should be a separate chunk.
+2. **Code splitting.** Every route in `App.tsx` is a separate chunk built with `lazyPage` and registered with `routeChunk` (`client/src/lib/routePreload.ts`), whose matcher preloads it on link intent. Check that a new page follows that pattern, that each matcher accepts only the paths its routes serve, and that heavy parts inside a page (the Learn level runner, a path's code editor) stay lazy.
 3. **Render performance.** Read `Quiz.tsx` and `Profile.tsx`:
    - Inline object/array/function props on hot paths inside inline `style` objects — flag loops with hundreds of items
    - `useMemo`/`useCallback` missing where dep arrays are stable and child is memoized
