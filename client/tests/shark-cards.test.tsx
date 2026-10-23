@@ -172,8 +172,8 @@ describe('the Shark Cards deck', () => {
 
   it('asks a signed-out visitor to sign in, and reads nothing', async () => {
     await mount(<Flashcards />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Sign in to keep Shark Cards' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in to save questions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('offers a retry when the cards cannot load', async () => {
@@ -215,7 +215,51 @@ describe('/collection', () => {
       );
     });
     expect(screen.getByRole('heading', { level: 1, name: 'Saved coding challenges' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Log in' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+  });
+
+  it('names the open shelf once: the h1 and its tab, with no kicker and no repeat in the sign-in panel (social-account-10)', async () => {
+    const { container } = render(<Collection />, { wrapper });
+    expect(screen.getByRole('heading', { level: 1, name: 'Shark Cards' })).toBeInTheDocument();
+    expect(container.querySelector('.ss-kicker')).toBeNull();
+    expect(screen.getByText('Questions you missed and saved. Turn a card for the answer.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Sign in to save questions' })).toBeInTheDocument();
+    expect(screen.getByText('Your cards stay with your account on every device.')).toBeInTheDocument();
+    // The h1 and the selected tab; nothing else on the screen says it.
+    expect(screen.getAllByText(/Shark Cards/)).toHaveLength(2);
+  });
+
+  it('keeps one filled primary: the open tab is secondary with aria-current, the other ghost, and the gate owns the primary', async () => {
+    const { container } = render(<Collection />, { wrapper });
+    const open = screen.getByRole('button', { name: 'Shark Cards' });
+    expect(open).toHaveAttribute('aria-current', 'page');
+    expect(open).toHaveAttribute('data-variant', 'secondary');
+    const other = screen.getByRole('button', { name: 'Coding challenges' });
+    expect(other).not.toHaveAttribute('aria-current');
+    expect(other).toHaveAttribute('data-variant', 'ghost');
+    const primaries = container.querySelectorAll('button[data-variant="primary"]');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveTextContent('Sign in');
+  });
+
+  it('gives both tabs the same sign-in panel under the page header, with one primary Sign in (social-account-16)', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/collection?tab=challenges']}>
+          <LanguageProvider><Collection /></LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Saved coding challenges' })).toBeInTheDocument();
+    expect(screen.getByText('From the task pages, with your last code.')).toBeInTheDocument();
+    const panel = container.querySelector('.ss-state-panel')!;
+    expect(within(panel as HTMLElement).getByRole('heading', { level: 2, name: 'Sign in to save challenges' })).toBeInTheDocument();
+    const signIn = within(panel as HTMLElement).getByRole('button', { name: 'Sign in' });
+    expect(signIn).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(panel.querySelector('.ss-state-panel__actions')?.firstElementChild).toBe(signIn);
+    // The body does not name the shelf a fourth time (social-account-10).
+    expect(within(panel as HTMLElement).getByText('Your list stays with your account on every device.')).toBeInTheDocument();
   });
 });
 

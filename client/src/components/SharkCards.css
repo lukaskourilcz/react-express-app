@@ -16,21 +16,15 @@
 .sc-missed__question { font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
 
 /* ── states without cards ───────────────────────────────────────────────── */
-/* The sign-in, empty and error states sit in the shared 640px task column, as
-   Play's gates do (UX audit social-account-01). */
-.sc-state {
-  display: flex; flex-direction: column; align-items: center; gap: 1rem;
-  width: 100%; max-width: var(--ss-width-task); margin: 0 auto; padding: 2rem 1.5rem;
-  background: var(--color-background-surface); border-radius: var(--radius-container); text-align: center;
-}
-.sc-state__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+/* The sign-in, empty and error states use the shared StatePanel
+   (components/ui/StatePanel.css), in the 640px task column
+   (UX audit social-account-16). */
 
 /* ── the deck ───────────────────────────────────────────────────────────── */
 /* The deck fills the route's 800px column on /cards and on /collection, so
    the page header, the tabs and the card share one left edge and the deck is
    one width on both routes (UX audit social-account-05). */
 .sc-deck { display: flex; flex-direction: column; gap: 1.25rem; width: 100%; }
-.sc-deck__header { display: flex; flex-direction: column; gap: 0.35rem; }
 .sc-deck__body { display: flex; flex-direction: column; gap: 0.85rem; }
 .sc-deck__position { margin: 0; font-size: var(--ss-type-label); font-weight: 700; letter-spacing: 0.04em; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .sc-deck__controls { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.75rem; align-items: center; }

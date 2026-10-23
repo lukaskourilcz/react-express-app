@@ -130,3 +130,22 @@ describe('signing out on every device', () => {
     expect(screen.getByRole('button', { name: 'Sign out on all devices' })).toBeEnabled();
   });
 });
+
+describe('the Account card layout (social-account-07)', () => {
+  it('puts each action on one settings row whose title does not repeat its button', async () => {
+    plan({ ...FREE, billingAccount: false, subscriptionLive: false });
+    const { container } = renderCard(<AccountDeletionCard />);
+    const panel = container.querySelector('.ss-panel') as HTMLElement;
+    // Plain panel stock, like the other Profile cards.
+    expect(panel.style.background).toBe('');
+    const rows = Array.from(panel.querySelectorAll('.de-setting-row')) as HTMLElement[];
+    expect(rows).toHaveLength(2);
+    const [devices, deletion] = rows;
+    expect(within(devices).getByRole('heading', { level: 3, name: 'All devices' })).toBeInTheDocument();
+    expect(within(devices).getByRole('button', { name: 'Sign out on all devices' })).toBeInTheDocument();
+    expect(within(deletion).getByRole('heading', { level: 3, name: 'Delete account' })).toBeInTheDocument();
+    expect(within(deletion).getByRole('button', { name: 'Delete my account' })).toBeInTheDocument();
+    // 'Sign out on all devices' is said once, on the button.
+    expect(within(panel).getAllByText('Sign out on all devices')).toHaveLength(1);
+  });
+});

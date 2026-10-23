@@ -32,7 +32,7 @@ async function mount(page: ReactNode) {
 describe('the page heading', () => {
   it('is an h1 on /cards signed out', async () => {
     await mount(<Flashcards />);
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Sign in to keep Shark Cards');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Sign in to save questions');
   });
 
   it('is an h1 on /cards with no cards yet', async () => {

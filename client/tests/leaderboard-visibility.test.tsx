@@ -5,12 +5,14 @@ import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
-import { LeaderboardVisibilityCard } from '../src/components/Profile';
+import SharknameCard from '../src/components/SharknameCard';
 import LeaderboardVisibilitySwitch from '../src/components/LeaderboardVisibilitySwitch';
 import { server } from './mocks/server';
 
-// Profile owns the leaderboard name and photo controls. The board only reads
-// the saved preference; tests/leaderboard.test.tsx verifies that boundary.
+// Profile owns the leaderboard name and photo controls, in the 'Your name'
+// panel beside what friends see (SharknameCard, social-account-04). The board
+// only reads the saved preference; tests/leaderboard.test.tsx verifies that
+// boundary.
 const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false } }));
 vi.mock('../src/lib/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/auth')>()), useAuth: () => auth.value }));
 afterEach(() => { auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false }; });
@@ -40,29 +42,60 @@ function recordPuts(fail = false) {
   }));
   return puts;
 }
+/** The friends half of the panel: a sharkname and no Google name. */
+function serveFriends() {
+  const identityPuts: unknown[] = [];
+  server.use(
+    http.get('*/api/user/friends-handle', () => HttpResponse.json({ handle: 'sleepySharkie1', discoverable: true, country: null, canChangeAt: null })),
+    http.get('*/api/user/identity', () => HttpResponse.json({ showRealName: false, showPhoto: false, realName: 'Pat Example', photo: null })),
+    http.put('*/api/user/identity', async ({ request }) => {
+      identityPuts.push(await request.json());
+      return HttpResponse.json({ showRealName: true, showPhoto: false, realName: 'Pat Example', photo: null });
+    }),
+  );
+  return identityPuts;
+}
+const boardColumn = () => screen.findByRole('radiogroup', { name: /Leaderboards show/ });
+
 describe('independent leaderboard names', () => {
-  it('defaults to a shark nickname and has no opt-out switch', async () => {
-    serveSetting(); renderWith(<LeaderboardVisibilityCard />);
-    expect(await screen.findByRole('radio', { name: /Shark nickname/ })).toBeChecked();
-    expect(screen.getByText('Choose how your results appear. This does not change what friends see.')).toBeInTheDocument();
+  it('defaults to the sharkname and has no opt-out switch', async () => {
+    serveSetting(); renderWith(<LeaderboardVisibilitySwitch />);
+    expect(await screen.findByRole('radio', { name: /Sharkname/ })).toBeChecked();
+    expect(screen.getByText('Next to your results on every board.')).toBeInTheDocument();
+    // The sharkname option does not print the name the field already shows.
+    expect(screen.queryByText('sleepySharkie1')).toBeNull();
     expect(screen.getByRole('switch', { name: 'Show my photo on leaderboards' })).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'Show my name and photo on leaderboards' })).toBeNull();
   });
-  it('saves either name from the Profile card', async () => {
-    serveSetting(); const puts = recordPuts();
-    renderWith(<LeaderboardVisibilityCard />);
-    const account = await screen.findByRole('radio', { name: /Account name/ });
+  it('saves either name from the Profile panel, beside what friends see and independent of it', async () => {
+    serveSetting(); const puts = recordPuts(); const identityPuts = serveFriends();
+    renderWith(<SharknameCard />);
+    expect(await screen.findByRole('heading', { name: 'Your name' })).toBeInTheDocument();
+    const board = await boardColumn();
+    const friends = await screen.findByRole('radiogroup', { name: /Friends see/ });
+    // Both columns sit in the one panel's column grid.
+    expect(board.closest('.sn-columns')).toBe(friends.closest('.sn-columns'));
+    const account = within(board).getByRole('radio', { name: /Account name/ });
     await waitFor(() => expect(account).toBeEnabled());
     fireEvent.click(account);
     await waitFor(() => expect(puts).toEqual([{ mode: 'account' }]));
     await waitFor(() => expect(account).toBeChecked());
-    fireEvent.click(screen.getByRole('radio', { name: /Shark nickname/ }));
+    // What friends see did not move.
+    expect(within(friends).getByRole('radio', { name: /Sharkname/ })).toBeChecked();
+    expect(identityPuts).toEqual([]);
+    fireEvent.click(within(board).getByRole('radio', { name: /Sharkname/ }));
     await waitFor(() => expect(puts).toEqual([{ mode: 'account' }, { mode: 'nickname' }]));
     await waitFor(() => expect(account).not.toBeChecked());
+
+    // And the friends column saves only its own setting.
+    fireEvent.click(within(friends).getByRole('radio', { name: /Account name/ }));
+    await waitFor(() => expect(identityPuts).toEqual([{ showRealName: true }]));
+    expect(puts).toEqual([{ mode: 'account' }, { mode: 'nickname' }]);
+    expect(within(board).getByRole('radio', { name: /Sharkname/ })).toBeChecked();
   });
   it('keeps the stored choice and announces a failed save', async () => {
     serveSetting('account'); const puts = recordPuts(true); renderWith(<LeaderboardVisibilitySwitch />);
-    const nickname = await screen.findByRole('radio', { name: /Shark nickname/ });
+    const nickname = await screen.findByRole('radio', { name: /Sharkname/ });
     await waitFor(() => expect(nickname).toBeEnabled()); fireEvent.click(nickname);
     expect(await screen.findByRole('alert')).toHaveTextContent('Your leaderboard setting wasn’t saved. Try again.');
     expect(puts).toEqual([{ mode: 'nickname' }]);
@@ -75,7 +108,7 @@ describe('independent leaderboard names', () => {
     const alert = await screen.findByRole('alert'); fail = false;
     fireEvent.click(within(alert).getByRole('button', { name: /retry/i }));
     expect(await screen.findByRole('radio', { name: /Account name/ })).toBeDisabled();
-    expect(screen.getByRole('radio', { name: /Shark nickname/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /Sharkname/ })).toBeChecked();
   });
 
   it('writes a save that lands after an account change to the account that made it', async () => {
@@ -100,11 +133,11 @@ describe('independent leaderboard names', () => {
     fireEvent.click(account);
     auth.value = { user: { id: 'user-2' }, isAuthenticated: true, isLoading: false };
     view.rerender(tree());
-    expect(await screen.findByText('otherShark2')).toBeInTheDocument();
+    expect(await screen.findByText('Other Person')).toBeInTheDocument();
     release();
     await waitFor(() => expect(client.isMutating()).toBe(0));
-    expect(screen.getByText('otherShark2')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Shark nickname/ })).toBeChecked();
+    expect(screen.getByText('Other Person')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Sharkname/ })).toBeChecked();
     expect(client.getQueryData(['leaderboard-name', 'user-1'])).toMatchObject({ mode: 'account' });
   });
 

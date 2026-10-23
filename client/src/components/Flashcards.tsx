@@ -13,8 +13,6 @@
 // a pack.
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heading } from '@astryxdesign/core/Heading';
-import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
@@ -31,8 +29,9 @@ import { renderQuestion } from './CodeBlock';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { AppToast } from './ui/AppToast';
-import { IconTile, BookmarkIcon, BookIcon } from './ui/icons';
-import { Kicker } from './landing/LandingKit';
+import { BookmarkIcon, BookIcon } from './ui/icons';
+import { StatePanel } from './ui/StatePanel';
+import { PageHeader } from './ui/PageHeader';
 import './DeepEndScreens.css';
 import './SharkCards.css';
 
@@ -56,20 +55,6 @@ function StudyLink({ card, t }: { card: Flashcard; t: TFn }) {
       <BookIcon size={18} />
       <span>{label}</span>
     </Link>
-  );
-}
-
-/** A centred panel for the states that have no cards to show. */
-function StatePanel({ level, title, body, children }: { level: 1 | 2; title: string; body: string; children?: React.ReactNode }) {
-  return (
-    <div className="sc-state ss-raised ss-pop">
-      <IconTile size={48}>
-        <BookmarkIcon size={22} />
-      </IconTile>
-      <Heading level={level} justify="center">{title}</Heading>
-      <Text type="body" color="secondary" justify="center">{body}</Text>
-      {children && <div className="sc-state__actions">{children}</div>}
-    </div>
   );
 }
 
@@ -156,8 +141,8 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
 
   if (!isAuthenticated) {
     return (
-      <StatePanel level={heading} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')}>
-        <Button variant="primary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+      <StatePanel level={heading} icon={<BookmarkIcon size={22} />} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')}>
+        <Button variant="primary" label={t('collection.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
       </StatePanel>
     );
   }
@@ -184,7 +169,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   if (!card) {
     return (
       <>
-        <StatePanel level={heading} title={t('sharkCards.emptyTitle')} body={t('sharkCards.emptyBody')}>
+        <StatePanel level={heading} icon={<BookmarkIcon size={22} />} title={t('sharkCards.emptyTitle')} body={t('sharkCards.emptyBody')}>
           <Button variant="primary" label={t('sharkCards.emptyQuiz')} onClick={() => navigate('/quiz')} />
           <Button variant="secondary" label={t('sharkCards.emptyLearn')} onClick={() => navigate('/learn')} />
         </StatePanel>
@@ -197,11 +182,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   return (
     <div className="sc-deck">
       {!embedded && (
-        <header className="sc-deck__header">
-          <Kicker>{t('sharkCards.kicker')}</Kicker>
-          <Heading level={1}>{t('sharkCards.title')}</Heading>
-          <Text type="supporting" color="secondary">{t('sharkCards.lead')}</Text>
-        </header>
+        <PageHeader title={t('sharkCards.title')} lead={t('sharkCards.lead')} />
       )}
 
       <section className="sc-deck__body" aria-labelledby={positionId} onKeyDown={onDeckKey}>
