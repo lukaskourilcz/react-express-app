@@ -166,6 +166,9 @@ function StepsView({ body }: { body: Extract<Figure['body'], { kind: 'steps' }> 
   const t = useT();
   const [index, setIndex] = useState(0);
   const frame = body.frames[Math.min(index, body.frames.length - 1)];
+  // A sequence with no frames has nothing to step through; the figure's words
+  // still carry it. Reading `frame.cells` threw and took the lesson with it.
+  if (!frame) return null;
 
   return (
     <div className="ss-figure__steps">
