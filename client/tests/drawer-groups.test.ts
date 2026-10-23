@@ -24,6 +24,7 @@ describe('the mobile drawer', () => {
     expect(app).toMatch(/className="ss-drawer-settings"[\s\S]{0,200}<SettingsToggles className="ss-drawer-link" \/>/);
     expect(declared(top, '.ss-drawer-settings', 'margin-top')).toBe('auto');
     expect(declared(top, '.ss-drawer-link', 'min-height')).toBe('var(--ss-control-height)');
-    expect(declared(mediaRules(sheet, 'max-width: 1023px'), '.ss-footer-settings', 'display')).toBe('none');
+    // Scoped to the footer, so it outranks the footer's own display: flex below it.
+    expect(declared(mediaRules(sheet, 'max-width: 1023px'), '.ss-brand-footer .ss-footer-settings', 'display')).toBe('none');
   });
 });

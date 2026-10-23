@@ -160,7 +160,7 @@
 .ss-drawer-group__label { margin: 4px 16px 2px; font: 700 var(--ss-type-label) var(--font-family-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-secondary); }
 .ss-drawer-link:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: -2px; }
 @media (max-width: 1023px) {
-  .ss-footer-settings { display: none; }
+  .ss-brand-footer .ss-footer-settings { display: none; }
 }
 
 /* Fixed-height app root (dvh tracks the collapsing mobile URL bar). */

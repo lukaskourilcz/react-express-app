@@ -77,9 +77,12 @@ test('Sign in and Create account are the same height, so the dialog does not mov
   await localAuth(page);
   const { dialog } = await openDialog(page);
   const google = dialog.getByRole('button', { name: 'Continue with Google' });
+  // Measured once the dialog's opening has finished.
+  await settled(page);
   const signIn = { dialog: await dialog.boundingBox(), google: await google.boundingBox() };
   await dialog.getByRole('radio', { name: 'Create account' }).click();
   await expect(dialog.getByText('At least 8 characters.')).toBeVisible();
+  await settled(page);
   const signUp = { dialog: await dialog.boundingBox(), google: await google.boundingBox() };
   expect(signUp.dialog?.height).toBeCloseTo(signIn.dialog?.height ?? 0, 0);
   expect(signUp.dialog?.y).toBeCloseTo(signIn.dialog?.y ?? 0, 0);
