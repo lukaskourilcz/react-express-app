@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Kicker, SwimCta } from './landing/LandingKit';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMediaQuery } from '../lib/useMediaQuery';
+import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -146,6 +146,10 @@ export function PlayLanding() {
   const { t } = useLanguage();
   const config = useGameConfig();
   const isDesktop = useMediaQuery('(min-width: 900px)');
+  // Below 600px the topic pills fold behind one 44px "Topics: all" row, so
+  // Create is not a full screen below the mode choice (social-account-13).
+  const foldTopics = useIsMobile();
+  const timeLimitId = useId();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'ffa' | 'classroom'>(() =>
@@ -250,6 +254,23 @@ export function PlayLanding() {
     }
   };
 
+  // The same pills open on wide screens and inside the fold on a phone.
+  const topicPills = (
+    <div role="group" aria-label={t('play.categories')} className="play-topics__pills">
+      {categoryOptions.map((cat) => (
+        <TopicPill
+          category={cat.value}
+          selected={selectedCategories.includes(cat.value)}
+          onClick={() => toggleCategory(cat.value)}
+          key={cat.value}
+        />
+      ))}
+    </div>
+  );
+  const clearTopics = selectedCategories.length > 0 && (
+    <Button variant="ghost" label={t('play.clear')} onClick={() => setSelectedCategories([])} />
+  );
+
   return (
     <div className="de-page">
       <VStack gap={3}>
@@ -304,42 +325,40 @@ export function PlayLanding() {
                 </RadioCardGroup>
               </VStack>
 
-              <VStack gap={1}>
-                <HStack justify="between" align="center">
-                  <Text type="label" weight="bold" color="secondary">
-                    {t('play.categories')}
+              {foldTopics ? (
+                <details className="play-topics">
+                  <summary className="play-topics__summary">
+                    {selectedCategories.length === 0
+                      ? t('play.topicsAll')
+                      : t('play.topicsSelected', { count: selectedCategories.length })}
+                  </summary>
+                  <div className="play-topics__body">
+                    {topicPills}
+                    {clearTopics}
+                  </div>
+                </details>
+              ) : (
+                <VStack gap={1}>
+                  <HStack justify="between" align="center">
+                    <Text type="label" weight="bold" color="secondary">
+                      {t('play.categories')}
+                    </Text>
+                    {clearTopics}
+                  </HStack>
+                  {topicPills}
+                  <Text type="supporting" size="xsm" color="secondary">
+                    {selectedCategories.length === 0
+                      ? t('play.allCategoriesHint')
+                      : t('play.categoriesSelected', { count: selectedCategories.length })}
                   </Text>
-                  {selectedCategories.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      label={t('play.clear')}
-                      onClick={() => setSelectedCategories([])}
-                    />
-                  )}
-                </HStack>
-                <div
-                  role="group"
-                  aria-label={t('play.categories')}
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
-                >
-                  {categoryOptions.map((cat) => {
-                    const selected = selectedCategories.includes(cat.value);
-                    return (
-                      <TopicPill category={cat.value} selected={selected} onClick={() => toggleCategory(cat.value)} key={cat.value} />
-                    );
-                  })}
-                </div>
-                <Text type="supporting" size="xsm" color="secondary">
-                  {selectedCategories.length === 0
-                    ? t('play.allCategoriesHint')
-                    : t('play.categoriesSelected', { count: selectedCategories.length })}
-                </Text>
-              </VStack>
+                </VStack>
+              )}
 
               {/* Question count and time limit: each with its label above, at
                   the shared 44px control height, side by side from 900px
-                  (UX audit social-account-12). */}
+                  (UX audit social-account-12). The time limit is one 44px
+                  select, as the Leaderboard's topic filter, so it never wraps
+                  a lone "No limit" onto a second row (social-account-13). */}
               <div style={{ display: 'flex', flexDirection: isDesktop ? 'row' : 'column', flexWrap: 'wrap', gap: '16px 32px' }}>
                 <VStack gap={1}>
                   <Text type="label" weight="bold" color="secondary">
@@ -358,21 +377,21 @@ export function PlayLanding() {
                 </VStack>
 
                 <VStack gap={1}>
-                  <Text type="label" weight="bold" color="secondary">
-                    {t('play.timeLimit')}
-                  </Text>
-                  <div className="play-time-limit" style={{ display: 'flex', flexWrap: 'wrap' }}>
-                    <ToggleButtonGroup
-                      label={t('play.timeLimit')}
-                      type="single"
-                      value={String(durationS)}
-                      onChange={(v) => v && setDurationS(Number(v))}
-                    >
-                      {config.play.durationOptionsS.map((n) => (
-                        <ToggleButton key={n} value={String(n)} label={formatDuration(n, t)} />
-                      ))}
-                    </ToggleButtonGroup>
-                  </div>
+                  <label htmlFor={timeLimitId}>
+                    <Text type="label" weight="bold" color="secondary">
+                      {t('play.timeLimit')}
+                    </Text>
+                  </label>
+                  <select
+                    id={timeLimitId}
+                    className="ss-select play-time-select"
+                    value={String(durationS)}
+                    onChange={(event) => setDurationS(Number(event.target.value))}
+                  >
+                    {config.play.durationOptionsS.map((n) => (
+                      <option key={n} value={String(n)}>{formatDuration(n, t)}</option>
+                    ))}
+                  </select>
                 </VStack>
               </div>
 

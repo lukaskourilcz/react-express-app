@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -160,12 +160,36 @@ describe('the Play page (social-account-12)', () => {
   it('labels the question count above its toggles, like the time limit', async () => {
     await mount('/play');
     await screen.findByRole('button', { name: 'Create multiplayer match' });
-    for (const name of ['Questions', 'Time limit']) {
-      const group = screen.getByRole('group', { name });
-      // The visible label is the line right above the group's own box.
-      const box = group.closest('.play-time-limit') ?? group;
-      expect(box.previousElementSibling).toHaveTextContent(name);
-    }
+    // The visible label is the line right above each control.
+    expect(screen.getByRole('group', { name: 'Questions' }).previousElementSibling).toHaveTextContent('Questions');
+    expect(screen.getByLabelText('Time limit').previousElementSibling).toHaveTextContent('Time limit');
+  });
+
+  it('keeps the topic pills open on a wide screen, and folds them behind one 44px "Topics: all" row on a phone (social-account-13)', async () => {
+    await mount('/play');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    expect(document.querySelector('details.play-topics')).toBeNull();
+    expect(screen.getByRole('group', { name: 'Topics' })).toBeVisible();
+    cleanup();
+
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query.includes('max-width: 599'), media: query, onchange: null,
+      addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+    }));
+    const sheet = playSheet();
+    await mount('/play');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    const fold = document.querySelector('details.play-topics') as HTMLDetailsElement;
+    expect(fold.open).toBe(false);
+    const summary = fold.querySelector('summary')!;
+    expect(summary).toHaveTextContent('Topics: all');
+    expect(getComputedStyle(summary).minHeight).toBe('var(--ss-control-height)');
+    // The fold holds the same pills, and names the choice once one is made.
+    fold.open = true;
+    fireEvent.click(within(fold).getByRole('button', { name: 'JavaScript' }));
+    expect(summary).toHaveTextContent('Topics: 1 selected');
+    expect(within(fold).getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+    sheet.remove();
   });
 });
 
@@ -895,17 +919,25 @@ describe('narrow screens and headings', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Play live');
   });
 
-  // At 320px the time limit's one row ran 53px past the "Host a game" card.
-  it('lets the time limit wrap, and gives a category chip a 44px floor on touch', async () => {
+  // At 320px the time limit's one row ran 53px past the "Host a game" card,
+  // and at 390 it dropped "No limit" onto a row of its own: it is one 44px
+  // select now (social-account-13).
+  it('draws the time limit as one 44px select, and gives a category chip a 44px floor on touch', async () => {
     const sheet = addSheet('deepEnd');
     await mount('/play');
-    const group = await screen.findByRole('group', { name: 'Time limit' });
-    expect(getComputedStyle(group).flexWrap).toBe('wrap');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    const select = screen.getByLabelText('Time limit');
+    expect(select.tagName).toBe('SELECT');
+    expect(select).toHaveClass('ss-select');
+    expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['30s', '1 min', '2 min', '5 min', 'No limit']);
+    fireEvent.change(select, { target: { value: '0' } });
+    expect(select).toHaveValue('0');
     const chip = screen.getByRole('button', { name: 'JavaScript' });
     expect(chip).toHaveClass('ss-topic-pill');
     expect(chip).toHaveAttribute('aria-pressed');
     addSheet('appShell');
     expect(getComputedStyle(chip).minHeight).toBe('44px');
+    expect(getComputedStyle(select).minHeight).toBe('44px');
     sheet.ownerNode?.remove();
   });
 });
