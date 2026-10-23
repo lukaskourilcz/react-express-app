@@ -869,6 +869,8 @@ describe('focus mode', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exit run' }));
     fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Leave run' }));
     expect(await screen.findByRole('button', { name: 'Start' })).toBeInTheDocument();
+    // The intro's h1 takes the focus the Leave button had.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Biggest Shark Challenge' })));
     expect(last(active)).toBe(false);
     await settle();
     expect(api.completions).toEqual([]);

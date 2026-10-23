@@ -936,12 +936,7 @@ export const en = {
 
   // Biggest Shark Challenge
   'challenge.title': 'Biggest Shark Challenge',
-  'challenge.kicker': 'Challenge',
   'challenge.description': 'Answer as many questions as you can. Three wrong answers end the run; each question has 90 seconds.',
-  'challenge.todaySet': "today's set",
-  'challenge.finsStat': 'fins',
-  'challenge.perQuestion': 'per question',
-  'challenge.todayBoard': "Today's board",
   'challenge.noChampion': 'No one has set a score yet. Be the first.',
   'challenge.boardUnavailable': 'The top scores could not be loaded. You can still play.',
   'challenge.rewardPending': 'Your verified reward is saved and will sync when the connection returns.',

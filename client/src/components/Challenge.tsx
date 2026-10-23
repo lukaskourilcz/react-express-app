@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Kicker } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -44,6 +43,7 @@ import {
   QuestionHeader,
   QuestionHint,
   QuestionIconButton,
+  QuestionPageHeader,
   QuestionShell,
   ReportFlagIcon,
 } from './question';
@@ -326,6 +326,14 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
     window.addEventListener('focus', retry);
     return () => { window.removeEventListener('online', retry); window.removeEventListener('focus', retry); };
   }, [syncRewards, user?.id]);
+  // Back on the intro from a run (Exit, or Back after the game over), the h1
+  // takes the focus the pressed button had.
+  const introHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const leftIntro = useRef(false);
+  useEffect(() => {
+    if (phase !== 'intro') { leftIntro.current = true; return; }
+    if (leftIntro.current) introHeadingRef.current?.focus();
+  }, [phase]);
   // Focus target when the run ends, so AT users hear the transition.
   const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
   // Each new question takes the focus. Start unmounts with the intro, and
@@ -795,47 +803,62 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
   );
 
   if (phase === 'intro') {
+    const allTopics = topics.length === availableTopics.length;
     return (
-      <div className="de-page de-challenge-grid ss-pop">
-        <section className="de-hero-panel">
-          <VStack gap={3}>
-            <VStack gap={1}>
-              <Kicker as="h1" className="ss-section-title">{t('challenge.title')}</Kicker>
-              <Text type="large" color="secondary">{t('challenge.description')}</Text>
-            </VStack>
-            <div className="de-stat-row">
-              <div className="de-stat"><strong>{MAX_LIVES}</strong><span>{t('challenge.finsStat')}</span></div>
-              <div className="de-stat"><strong>{timeLimitS} s</strong><span>{t('challenge.perQuestion')}</span></div>
+      // The Quiz setup's layout (UX audit U2, questions-10): one 640px column,
+      // the h1 and lead above one panel of topic pills and Start, and the top
+      // scores as a short list under it instead of a half-empty side column.
+      <div className="ss-pop challenge-setup">
+        <QuestionPageHeader title={t('challenge.title')} lead={t('challenge.description')} titleRef={introHeadingRef} />
+
+        <div className="ss-panel challenge-setup__panel">
+          <div className="challenge-setup__group">
+            <div className="challenge-setup__label-row">
+              <span id="challenge-topics-label" className="challenge-setup__label">{t('challenge.topics')}</span>
+              <span className="ss-text-links">
+                <button type="button" onClick={() => setTopics(allTopics ? [] : availableTopics)}>
+                  {allTopics ? t('quiz.deselectAll') : t('quiz.selectAll')}
+                </button>
+              </span>
             </div>
-            <fieldset className="ss-topic-picker">
-              <legend>{t('challenge.topics')}</legend>
-              <div className="ss-topic-pills">
-                {availableTopics.map(category => <TopicPill key={category} category={category} selected={topics.includes(category)} onClick={() => setTopics(old => old.includes(category) ? old.filter(value => value !== category) : [...old, category])} />)}
-              </div>
-              {topics.length === 0 && <p role="status">{t('challenge.noTopics')}</p>}
-            </fieldset>
-            <HStack gap={2} align="center" wrap="wrap">
-              <SwimCta label={t('challenge.startButton')} dir={-1} disabled={topics.length === 0} onClick={() => void startRun()} />
-            </HStack>
-          </VStack>
+            <div role="group" aria-labelledby="challenge-topics-label" className="ss-topic-pills">
+              {availableTopics.map(category => <TopicPill key={category} category={category} selected={topics.includes(category)} onClick={() => setTopics(old => old.includes(category) ? old.filter(value => value !== category) : [...old, category])} />)}
+            </div>
+            {/* Takes no line until it has something to say. */}
+            <p id="challenge-topics-why" role="status" className="challenge-setup__error">
+              {topics.length === 0 ? t('challenge.noTopics') : ''}
+            </p>
+          </div>
+          {/* Start: the screen's one primary. With no topic it stays in the
+              Tab order and says why under the pills. */}
+          <div className="challenge-setup__start">
+            <SwimCta
+              label={t('challenge.startButton')}
+              dir={1}
+              size="md"
+              unavailable={topics.length === 0}
+              describedBy="challenge-topics-why"
+              onClick={() => void startRun()}
+            />
+          </div>
+        </div>
+
+        <section className="challenge-setup__board" aria-labelledby="challenge-top-scores">
+          <h2 id="challenge-top-scores" className="challenge-setup__board-title">{t('challenge.topScores')}</h2>
+          {boardLoading ? (
+            <Text color="secondary">…</Text>
+          ) : boardQuery.isError ? (
+            <Banner
+              status="warning"
+              title={t('challenge.boardUnavailable')}
+              endContent={<Button variant="ghost" label={t('quiz.retry')} onClick={() => void boardQuery.refetch()} />}
+            />
+          ) : board && board.top.length > 0 ? (
+            <LeaderboardList board={{ ...board, top: board.top.slice(0, 5) }} />
+          ) : (
+            <Text type="supporting" color="secondary">{t('challenge.noChampion')}</Text>
+          )}
         </section>
-        <aside className="ss-panel" style={{ padding: 20 }}>
-          <VStack gap={1.5}>
-            <Heading level={3}>{t('challenge.topScores')}</Heading>
-            {boardLoading ? (
-              <Text color="secondary">…</Text>
-            ) : boardQuery.isError ? (
-              <VStack gap={1}>
-                <Banner status="warning" title={t('challenge.boardUnavailable')} />
-                <Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={() => void boardQuery.refetch()} />
-              </VStack>
-            ) : board && board.top.length > 0 ? (
-              <LeaderboardList board={{ ...board, top: board.top.slice(0, 5) }} />
-            ) : (
-              <Text type="supporting" color="secondary">{t('challenge.noChampion')}</Text>
-            )}
-          </VStack>
-        </aside>
       </div>
     );
   }
@@ -1129,6 +1152,9 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
+            // Rank, name and score on one line: the score used to sit at the
+            // top of a row the 44px topic count made taller (questions-10).
+            alignItems: 'center',
             gap: 8,
             padding: '6px 0',
             borderBottom: i === board.top.length - 1 ? 'none' : '1px dashed var(--color-border)',
