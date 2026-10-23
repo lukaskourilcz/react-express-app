@@ -68,6 +68,8 @@ type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
 const seen: Seen[] = [];
 const SLOW_REPORT = 'stand-in: answer after the timeout';
+// A topic board asked with this minimum answers after the timeout too.
+const SLOW_BOARD_MIN_ATTEMPTS = 97;
 const upstashCommands: string[] = [];
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
@@ -116,6 +118,10 @@ async function startStandIns() {
     // A database too slow to answer within lib/http.ts's five seconds.
     if (url.pathname === '/rest/v1/question_reports' && (body as Row | undefined)?.detail === SLOW_REPORT) {
       setTimeout(() => send(201, [body]), 5_500);
+      return;
+    }
+    if (url.pathname === '/rest/v1/rpc/category_leaderboard' && (body as Row | undefined)?.p_min_attempts === SLOW_BOARD_MIN_ATTEMPTS) {
+      setTimeout(() => send(200, []), 5_500);
       return;
     }
     const filters = Object.fromEntries([...url.searchParams.entries()].filter(([, value]) => value.startsWith('eq.')).map(([key, value]) => [key, value.slice(3)]));
@@ -424,6 +430,13 @@ async function main() {
     const leapDay = await call(leaderboard as Handler, { query: { period: 'daily', date: '2028-02-29' } });
     assert.equal(leapDay.statusCode, 200, `a leap day is a day (${JSON.stringify(leapDay.body)})`);
     console.log('PASS verified caller: a daily board refuses a date that is no calendar day');
+
+    // A board routine that does not answer in time is the database busy, not
+    // a fault: 503, which the client may retry, rather than 500.
+    const slowBoard = await call(leaderboard as Handler, { query: { period: 'category', category: 'javascript', min_attempts: String(SLOW_BOARD_MIN_ATTEMPTS) } });
+    assert.equal(slowBoard.statusCode, 503, `a board whose routine timed out answers 503 (${JSON.stringify(slowBoard.body)})`);
+    assert.equal(errorCode(slowBoard), 'upstream_timeout');
+    console.log('PASS verified caller: a timed-out leaderboard answers 503');
 
     // ── this month's XP board (migration 056) ───────────────────────────
     // Shared and cached for a minute without a session; with one it is the

@@ -7,6 +7,7 @@ import {
   isRpcMissing,
   STATS_CATEGORIES,
   withRequestContext,
+  ServiceUnavailableError,
 } from '../lib/http';
 import {
   defaultDeploymentCategories,
@@ -167,6 +168,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'period must be "30d", "7d", "month", "global", "daily", or "category"');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
+    // A board routine that timed out is the database busy for a moment,
+    // which the client may retry: 503, as every other handler answers it.
+    if (err instanceof ServiceUnavailableError) {
+      logEvent({ status: 503, error: message });
+      return jsonError(res, 503, err.code, err.message);
+    }
     logEvent({ status: 500, error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
