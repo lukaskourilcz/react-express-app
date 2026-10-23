@@ -57,21 +57,21 @@ describe('the footer', () => {
   });
 });
 
-// UX audit shell-public-03: short visible labels so the row fits one line,
-// with the full action kept as the accessible name.
+// UX audit shell-public-03 and the closeout of #572: short labels so the row
+// fits one line, and each label is the button's whole accessible name, so
+// what a sighted user reads is what voice control and a screen reader hear
+// (WCAG 2.5.3, label in name).
 describe('the footer toggles', () => {
-  it('show short labels and keep the full action as the name', () => {
+  it('say what pressing them does, and the visible words are the whole name', () => {
     server.use(http.get('*/api/settings', () => HttpResponse.json({})));
     render(<BrandFooter />, { wrapper });
     const group = screen.getByRole('group', { name: 'Preferences' });
     const [theme, sound] = within(group).getAllByRole('button');
-    expect(theme).toHaveAccessibleName(/^Switch to (dark|light) mode$/);
-    expect(theme.textContent).toMatch(/^(Dark|Light) mode$/);
+    expect(theme).toHaveAccessibleName(/^(Dark|Light) mode$/);
     expect(sound).toHaveAccessibleName(/^Turn sound (on|off)$/);
-    expect(sound.textContent).toMatch(/^Sound (on|off)$/);
-    // Label in name (WCAG 2.5.3): the visible words are part of the name.
     for (const button of [theme, sound]) {
-      expect(button.getAttribute('aria-label')!.toLowerCase()).toContain(button.textContent!.toLowerCase());
+      expect(button).not.toHaveAttribute('aria-label');
+      expect(button).toHaveAccessibleName(button.textContent!);
     }
   });
 });
