@@ -6,6 +6,8 @@ import { handleCodingDraft, handleCodingSubmit, handleCodingReveal, handleCoding
 import { handleCodingBookmarks, canSaveCodingTask } from '../lib/coding/practice-handlers';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById } from '../lib/coding/active';
+import { codingContent, contentTier } from '../shared/tiers';
+import { serverContentIndex } from '../lib/access';
 
 const solved = 'const double=ns=>ns.map(n=>n*2)';
 
@@ -369,5 +371,40 @@ async function main() {
   assert.equal((await mutateBookmark({ op: 'save', taskId: higher.id, saved: false })).statusCode, 200);
   assert.equal(writes, 2, 'existing locked bookmarks can still be removed');
   console.log('Coding bookmarks passed: a star saved on system design is not listed.');
+
+  // A free account (a lapsed plan) submits a Premium task. When its passed
+  // tasks cannot be read, the gate cannot tell review from a new start: that
+  // is 503 entitlement_unavailable, the same as lib/access.ts answers, never
+  // the 402 upgrade sheet for work the learner may already have passed.
+  {
+    const premium = CODING_TASKS.find((task) => codingTaskById(task.id) && !task.id.endsWith('-start')
+      && contentTier(codingContent(task.id), serverContentIndex()) === 'premium')!;
+    assert.ok(premium, 'a Premium coding task exists');
+    const lapsed = encodeCodingSession({ taskId: premium.id, track: premium.track, userId: 'account-lapsed' });
+    const progressFor = (read: { data: unknown; error: unknown }) => ({
+      from: (table: string) => {
+        const chain = {
+          select: () => chain, eq: () => chain, in: () => chain,
+          maybeSingle: async () => ({ data: null, error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve(table === 'coding_progress' ? read : { data: [], error: null }),
+        };
+        return chain;
+      },
+      // Past the gate the verdict write finds no database, which is not the point here.
+      rpc: async () => ({ data: null, error: { code: '57014', message: 'stand-in has no routines' } }),
+    });
+    const submit = async (database: unknown, address: string) => {
+      const out = response();
+      await handleCodingSubmit({ ...request(lapsed, 'account-lapsed'), headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': address }, body: { session: lapsed, code: 'const x = 1;', hintsUsed: 0, user_id: 'account-lapsed' } } as never, out as never, database as never);
+      return out;
+    };
+    const unread = await submit(progressFor({ data: null, error: { code: '57014', message: 'statement timeout' } }), '203.0.113.81');
+    assert.deepEqual([unread.statusCode, errorCode(unread.body)], [503, 'entitlement_unavailable'], `an unreadable passed-tasks read is not "never passed" (${JSON.stringify(unread.body)})`);
+    const fresh = await submit(progressFor({ data: [], error: null }), '203.0.113.82');
+    assert.deepEqual([fresh.statusCode, errorCode(fresh.body)], [402, 'premium_required'], 'a Premium task never passed is still refused with 402');
+    const passed = await submit(progressFor({ data: [{ task_id: premium.id, status: 'passed' }], error: null }), '203.0.113.83');
+    assert.notEqual(passed.statusCode, 402, 'a Premium task already passed stays open for review');
+  }
+  console.log('Coding lapsed-plan gate passed: a failed passed-tasks read answers 503 entitlement_unavailable, not 402.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

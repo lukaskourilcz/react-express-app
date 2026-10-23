@@ -1,14 +1,20 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { LessonView, RichText } from '../src/components/learn/LessonBody';
 
-const runner = vi.hoisted(() => ({ signals: [] as (AbortSignal | undefined)[] }));
+const runner = vi.hoisted(() => ({
+  signals: [] as (AbortSignal | undefined)[],
+  finish: [] as ((logs: string[]) => void)[],
+}));
 vi.mock('../src/coding/runner/run-tests', () => ({
-  // A run that never finishes on its own, like a snippet with an endless loop.
+  // A run that never finishes on its own, like a snippet with an endless loop,
+  // unless a test finishes it through `runner.finish`.
   runCodeTests: ({ signal }: { signal?: AbortSignal }) => {
     runner.signals.push(signal);
-    return new Promise(() => {});
+    return new Promise((resolve) => {
+      runner.finish.push((logs) => resolve({ logs, codeError: null, runnerUnavailable: false }));
+    });
   },
 }));
 it('opens a case in Learn and keeps source links isolated in a new tab', () => {
@@ -76,4 +82,23 @@ it('keeps the lesson readable when a trace arrives without frames', () => {
   ] }} /></LanguageProvider>);
   expect(screen.getByText('The text around it still reads.')).toBeInTheDocument();
   expect(screen.queryByText('A trace')).toBeNull();
+});
+
+it('lets only the latest run of a lesson example paint its output', async () => {
+  runner.signals.length = 0;
+  runner.finish.length = 0;
+  const view = render(<LanguageProvider><LessonView lesson={{ id: 'double-run', title: 'Double run', sources: [], sections: [
+    { kind: 'example', language: 'javascript', caption: 'Print', code: 'console.log(1)', note: 'Nothing here is graded.' },
+  ] }} /></LanguageProvider>);
+  const button = screen.getByRole('button', { name: 'Run it' });
+  // Two presses inside one task: the disabled state has not reached the DOM yet.
+  act(() => { button.click(); button.click(); });
+  expect(runner.signals).toHaveLength(2);
+  expect(runner.signals[0]?.aborted).toBe(true);
+  expect(runner.signals[1]?.aborted).toBe(false);
+  await act(async () => { runner.finish[1](['newer']); });
+  expect(view.container.querySelector('.lp-example__output')).toHaveTextContent('newer');
+  await act(async () => { runner.finish[0](['older']); });
+  expect(view.container.querySelector('.lp-example__output')).toHaveTextContent('newer');
+  expect(screen.getByRole('button', { name: 'Run it' })).toBeEnabled();
 });

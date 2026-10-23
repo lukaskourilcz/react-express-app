@@ -183,7 +183,9 @@ async function taskCleared(supabase: SupabaseClient | null, userId: string, task
   const { data, error } = await withTimeout(
     supabase.from('coding_progress').select('task_id,status').eq('user_id', userId).in('task_id', ids),
   );
-  if (error) return false;
+  // A failed read is not "never passed": the tier gate answers it with 503
+  // entitlement_unavailable (lib/access.ts), not the upgrade sheet.
+  if (error) throw new Error(`coding_progress_unavailable: ${error.message}`);
   const passed = new Set(((data ?? []) as { task_id: string; status: string }[]).filter((row) => row.status === 'passed').map((row) => row.task_id));
   return evolvingPassed(taskId, passed);
 }

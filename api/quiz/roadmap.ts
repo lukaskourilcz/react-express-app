@@ -986,7 +986,9 @@ async function refuseLockedSession(
     cleared: async () => {
       if (!userId || !supabase) return false;
       const row = await withTimeout(supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle());
-      if (row.error) return false;
+      // A failed read is not "never passed": refuseLocked answers it with 503
+      // entitlement_unavailable, not the upgrade sheet for a passed level.
+      if (row.error) throw new Error(`progress_unavailable: ${row.error.message}`);
       return stepAlreadyPassed((row.data?.data as VerifiedProgress) ?? {}, session.topic!, step);
     },
   });

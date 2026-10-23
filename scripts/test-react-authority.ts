@@ -93,6 +93,30 @@ for(const appSource of [
 
 console.log('PASS React authority: DOM, intrinsics, modules, elements, synchronous/async assertions, detached rejections and long error text');
 
+// What the learner's code throws reaches the verdict through the sandbox's
+// guarded dump (lib/coding/sandbox.ts): a thrown string reads as itself, not
+// as an empty "compiling App: " or "Learner engine failed"; a thrown promise
+// or an error whose message getter throws still gives a verdict; and a long
+// message is cut where it leaves the engine.
+{
+  const renders=`import React from 'react';import {render} from '@testing-library/react';import App from './App';test('renders',()=>{render(<App/>);});`;
+  const top=await runReactSuite({suite:renders,appSource:`import React from 'react';throw 'top-level oops';\nexport default function App(){return null;}`});
+  assert.equal(top.compileError,'compiling App: top-level oops','a thrown string at the top level is the compile error');
+  const rendered=await runReactSuite({suite:renders,appSource:`import React from 'react';export default function App(){throw 'render oops';}`});
+  assert.equal(rendered.failed,1);
+  assert.match(rendered.cases[0].error??'',/render oops/,'a thrown string while rendering is the case error');
+  for(const attack of [`throw (async()=>{})();`,`const e=new Error('a');Object.defineProperty(e,'message',{get(){throw e;}});throw e;`,`throw {get message(){throw new Error('boom');},get name(){throw 1;}};`]) {
+    for(const appSource of [`import React from 'react';${attack}\nexport default function App(){return null;}`,`import React from 'react';export default function App(){${attack}}`]) {
+      const result=await runReactSuite({suite:renders,appSource});
+      assert.ok(result.compileError!==null||result.failed===1,`${appSource}: a hostile thrown value fails the run, not the grader`);
+      assert.doesNotMatch(JSON.stringify(result),/Lifetime not alive|QuickJSUseAfterFree/,appSource);
+    }
+  }
+  const flood=await runReactSuite({suite:renders,appSource:`import React from 'react';export default function App(){throw new Error('x'.repeat(5e6));}`});
+  assert.ok((flood.cases[0].error??'').length<=MAX_LOG_LINE_CHARS+LOG_LINE_CUT.length,'a five-megabyte message is cut');
+}
+console.log('PASS React authority: thrown strings, promises and hostile errors reach the verdict through the guarded dump');
+
 // The guest freezes every standard built-in before learner code runs
 // (lib/coding/realm-lockdown.ts). The list is checked against the names a
 // fresh realm of this Node has: SuppressedError, DisposableStack and

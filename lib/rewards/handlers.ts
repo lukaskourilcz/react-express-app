@@ -21,7 +21,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
 import { getGameSettings } from '../settings-store';
-import { requireAdmin } from '../admin-auth';
+import { adminSubject, requireAdmin } from '../admin-auth';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { refuseLocked } from '../access';
@@ -788,6 +788,25 @@ interface FulfilmentRow {
   [column: string]: unknown;
 }
 
+/** A routine refusal of an order change, answered as what it is; anything
+ * else is a fault, answered with the safe 500 and no database text. */
+function orderChangeRefused(
+  res: VercelResponse,
+  message: string | undefined,
+  conflict: { reason: RegExp; code: string; message: string },
+  fault: Record<string, unknown>,
+) {
+  if (/\bunknown_order\b/.test(message ?? '')) return jsonError(res, 404, 'not_found', 'No order with that id');
+  if (conflict.reason.test(message ?? '')) return jsonError(res, 409, conflict.code, conflict.message);
+  logEvent({ status: 500, ...fault, error: message });
+  return jsonError(res, 500, 'db_error', 'Could not update the order');
+}
+
+/** A carrier or tracking reference: at most `max` code points, so an emoji is
+ * never split, or null for anything but a string. */
+const fulfilmentText = (value: unknown, max: number): string | null =>
+  typeof value === 'string' ? Array.from(value).slice(0, max).join('') : null;
+
 /**
  * Operations: read the orders waiting to go out, hand them to the supplier,
  * record a shipment, and cancel or refund one. With Spreadshop (#229) the
@@ -807,6 +826,9 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.admin))) return;
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
+  // Who made a write, for its log line, as api/admin logs `by`: the verified
+  // admin account, or the legacy password, which names nobody.
+  const by = adminSubject(req) ?? 'legacy-password';
 
   if (req.method === 'GET') {
     // `queue` (the default) is the picking list: paid redemptions and claimed
@@ -898,7 +920,7 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
         return jsonError(res, 500, 'db_error', 'Could not save the cap');
       }
       const row = (set.data ?? {}) as { sku?: string; variant?: string; onHand?: number; reserved?: number };
-      logEvent({ status: 200, kind: 'merch_stock_set', sku: item.sku });
+      logEvent({ status: 200, kind: 'merch_stock_set', by, sku: item.sku });
       return res.json({
         stock: { sku: row.sku ?? item.sku, variant: row.variant ?? variant, onHand: Number(row.onHand ?? onHand), reserved: Number(row.reserved ?? 0) },
       });
@@ -914,16 +936,24 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
       );
       if (cancelled.error) {
         if (isRpcMissing(cancelled.error)) return migrationRequired(res);
-        return jsonError(res, 409, 'not_cancellable', cancelled.error.message ?? 'Could not cancel');
+        return orderChangeRefused(
+          res, cancelled.error.message,
+          { reason: /\border_not_cancellable\b/, code: 'not_cancellable', message: 'This order can no longer be cancelled' },
+          { kind: 'order_cancel_failed', by, orderId },
+        );
       }
-      logEvent({ status: 200, kind: 'order_cancelled_by_admin' });
+      logEvent({ status: 200, kind: 'order_cancelled_by_admin', by, orderId });
       return res.json({ outcome: String(cancelled.data ?? 'cancelled') });
     }
 
     const state = body.op === 'ship' ? 'shipped' : body.op === 'submit' ? 'submitted' : null;
     if (!state) return jsonError(res, 400, 'bad_request', 'Unknown operation');
-    const carrier = typeof body.carrier === 'string' ? body.carrier.slice(0, 60) : null;
-    const tracking = typeof body.trackingRef === 'string' ? body.trackingRef.slice(0, 120) : null;
+    const carrier = fulfilmentText(body.carrier, 60);
+    const tracking = fulfilmentText(body.trackingRef, 120);
+    // Postgres text cannot hold U+0000: refused here rather than raised there.
+    if (carrier?.includes('\u0000') || tracking?.includes('\u0000')) {
+      return jsonError(res, 400, 'bad_request', 'The carrier and tracking reference cannot contain a null character');
+    }
     const advanced = await withTimeout(
       supabase.rpc('advance_merch_order', {
         p_order_id: orderId, p_state: state, p_carrier: carrier, p_tracking: tracking,
@@ -931,9 +961,13 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
     );
     if (advanced.error) {
       if (isRpcMissing(advanced.error)) return migrationRequired(res);
-      return jsonError(res, 409, 'invalid_transition', advanced.error.message ?? 'Could not advance the order');
+      return orderChangeRefused(
+        res, advanced.error.message,
+        { reason: /\border_not_paid\b/, code: 'invalid_transition', message: 'The order is not paid, so it cannot move on yet' },
+        { kind: 'order_advance_failed', by, orderId, state },
+      );
     }
-    logEvent({ status: 200, kind: 'order_advanced', state });
+    logEvent({ status: 200, kind: 'order_advanced', by, orderId, state });
     return res.json({ applied: advanced.data === true });
   }
 

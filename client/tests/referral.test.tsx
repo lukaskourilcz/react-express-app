@@ -160,6 +160,22 @@ describe('Invite a friend', () => {
     expect(await screen.findByText('Link copied.')).toBeInTheDocument();
   });
 
+  it('says Link copied again on a second Copy, by emptying the status line first', async () => {
+    signIn();
+    routes();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true });
+    render(<ReferralInvite signedIn />, { wrapper });
+    await screen.findByLabelText('Your invite link');
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    const line = await screen.findByText('Link copied.');
+    const heard: string[] = [];
+    const watch = new MutationObserver(() => heard.push(line.textContent ?? ''));
+    watch.observe(line, { childList: true, characterData: true, subtree: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await waitFor(() => expect(heard).toEqual(['', 'Link copied.']));
+    watch.disconnect();
+  });
+
   it('selects the link when the clipboard refuses', async () => {
     signIn();
     routes();

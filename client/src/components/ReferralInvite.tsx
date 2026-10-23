@@ -5,7 +5,7 @@
 // is. The payment itself shows up in the ledger above ("Referral: a friend
 // finished their first level"). With invitations off, or migration 042 not yet
 // installed, the section does not render.
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { Kicker } from './landing/LandingKit';
@@ -15,6 +15,8 @@ import { inviteLink, useReferral } from '../lib/referral';
 import './Rewards.css';
 
 type CopyState = 'idle' | 'copied' | 'failed';
+/** How long the status line stays empty before it speaks again. */
+const SAY_AGAIN_MS = 100;
 
 async function copyText(value: string): Promise<boolean> {
   try {
@@ -33,6 +35,12 @@ export function ReferralInvite({ signedIn, restoring = false }: { signedIn: bool
   // Rewards, the one page that shows this, holds its first render for the read.
   const referral = useReferral(signedIn, { held: true });
   const [copy, setCopy] = useState<CopyState>('idle');
+  // Whether the status line holds its words. A second Copy set the same words
+  // again, which changes nothing a screen reader hears, so the line empties
+  // and speaks again a moment later.
+  const [spoken, setSpoken] = useState(false);
+  const speak = useRef(0);
+  useEffect(() => () => window.clearTimeout(speak.current), []);
   const field = useRef<HTMLInputElement>(null);
   const headingId = useId();
   const fieldId = useId();
@@ -54,6 +62,9 @@ export function ReferralInvite({ signedIn, restoring = false }: { signedIn: bool
     if (!link) return;
     const ok = await copyText(link);
     setCopy(ok ? 'copied' : 'failed');
+    setSpoken(false);
+    window.clearTimeout(speak.current);
+    speak.current = window.setTimeout(() => setSpoken(true), SAY_AGAIN_MS);
     // When the clipboard refuses, focus and select the link so the learner
     // can copy it with the keyboard or the context menu.
     if (!ok) {
@@ -101,7 +112,7 @@ export function ReferralInvite({ signedIn, restoring = false }: { signedIn: bool
               <Button variant="primary" label={t('rewards.invite.copy')} onClick={() => void onCopy()} />
             </div>
             <p id={statusId} className="rw-invite__status" role="status" aria-live="polite">
-              {copy === 'copied' ? t('rewards.invite.copied') : copy === 'failed' ? t('rewards.invite.copyFailed') : ''}
+              {!spoken ? '' : copy === 'copied' ? t('rewards.invite.copied') : copy === 'failed' ? t('rewards.invite.copyFailed') : ''}
             </p>
           </div>
           <ul className="rw-invite__counts">

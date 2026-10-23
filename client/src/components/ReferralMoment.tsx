@@ -10,7 +10,7 @@
 //   shared / copied / copy refused                a polite status line; a
 //                                                 refused copy shows the link
 //                                                 selected so it can be copied
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { useT } from '../i18n/LanguageContext';
 import { inviteLink, useReferral } from '../lib/referral';
@@ -19,11 +19,26 @@ import { canWebShare, captureShare, copyText, shareLink, type ShareSource } from
 import './ShareMoments.css';
 
 type Status = 'idle' | 'shared' | 'copied' | 'failed';
+/** How long the status line stays empty before it speaks again. */
+const SAY_AGAIN_MS = 100;
 
 export default function ReferralMoment({ signedIn, source }: { signedIn: boolean; source: Extract<ShareSource, 'learn_level' | 'challenge'> }) {
   const t = useT();
   const referral = useReferral(signedIn);
   const [status, setStatus] = useState<Status>('idle');
+  // Whether the status line holds its words. A second Copy set the same words
+  // again, which changes nothing a screen reader hears, so the line empties
+  // and speaks again a moment later. The refused-copy field follows `status`
+  // at once.
+  const [spoken, setSpoken] = useState(false);
+  const speak = useRef(0);
+  useEffect(() => () => window.clearTimeout(speak.current), []);
+  const say = (next: Status) => {
+    setStatus(next);
+    setSpoken(false);
+    window.clearTimeout(speak.current);
+    speak.current = window.setTimeout(() => setSpoken(true), SAY_AGAIN_MS);
+  };
   const field = useRef<HTMLInputElement>(null);
   const headingId = useId();
   const statusId = useId();
@@ -35,13 +50,13 @@ export default function ReferralMoment({ signedIn, source }: { signedIn: boolean
   const onShare = async () => {
     captureShare('referral', source, 'share');
     const outcome = await shareLink({ title: CURRENT_PRODUCT.brand, text: t('referral.moment.shareText', { n: data.coins ?? 0 }), url: link });
-    if (outcome !== 'cancelled') setStatus(outcome === 'shared' ? 'shared' : outcome === 'copied' ? 'copied' : 'failed');
+    if (outcome !== 'cancelled') say(outcome === 'shared' ? 'shared' : outcome === 'copied' ? 'copied' : 'failed');
   };
 
   const onCopy = async () => {
     captureShare('referral', source, 'copy');
     const ok = await copyText(link);
-    setStatus(ok ? 'copied' : 'failed');
+    say(ok ? 'copied' : 'failed');
     if (!ok) {
       // The field renders on the next paint; select it then.
       requestAnimationFrame(() => {
@@ -72,7 +87,7 @@ export default function ReferralMoment({ signedIn, source }: { signedIn: boolean
         />
       )}
       <p id={statusId} className="ss-share-moment__status" role="status" aria-live="polite">
-        {status === 'copied' ? t('rewards.invite.copied') : status === 'shared' ? t('referral.moment.shared') : status === 'failed' ? t('rewards.invite.copyFailed') : ''}
+        {!spoken ? '' : status === 'copied' ? t('rewards.invite.copied') : status === 'shared' ? t('referral.moment.shared') : status === 'failed' ? t('rewards.invite.copyFailed') : ''}
       </p>
     </section>
   );
