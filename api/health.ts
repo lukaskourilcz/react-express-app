@@ -22,6 +22,24 @@ async function dependencyStatus(dependency: string, table: string, column: strin
   return 'down';
 }
 
+// The probe is public, uncached and not rate limited, so a flood of it was a
+// flood of database reads: two per request. Requests that arrive while a check
+// is running share its answer instead of starting their own. Nothing is kept
+// after it settles, so every answer is still a fresh check.
+let running: Promise<[DependencyStatus, DependencyStatus]> | null = null;
+
+/** The database and service-role checks, run together (a monitor waits for
+ * the slower one only, not their sum: up to 3 s while the database hangs). */
+function checkDependencies(): Promise<[DependencyStatus, DependencyStatus]> {
+  running ??= Promise.all([
+    dependencyStatus('database', 'user_stats', 'id'),
+    dependencyStatus('service_role', 'quiz_submissions', 'grade_key'),
+  ]).finally(() => {
+    running = null;
+  });
+  return running;
+}
+
 /**
  * GET /api/health
  *
@@ -46,12 +64,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // Private learning tables intentionally grant nothing to anonymous callers.
   // Readiness checks run on the server's authorized connection too; requiring
   // an anonymous SELECT would report a healthy, private database as down.
-  // The two checks are independent, so a monitor waits for the slower one
-  // only, not their sum (up to 3 s while the database hangs).
-  const [supabaseStatus, privilegedStatus] = await Promise.all([
-    dependencyStatus('database', 'user_stats', 'id'),
-    dependencyStatus('service_role', 'quiz_submissions', 'grade_key'),
-  ]);
+  const [supabaseStatus, privilegedStatus] = await checkDependencies();
 
   const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
   const degraded = supabaseStatus === 'down' || privilegedStatus === 'down' ||

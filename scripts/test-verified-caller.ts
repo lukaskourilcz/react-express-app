@@ -556,6 +556,23 @@ async function main() {
     }
     console.log('PASS verified caller: a failed health check is logged with its reason');
 
+    // The probe is public and not rate limited: probes that arrive together
+    // share one check, so a flood of them is not a flood of database reads.
+    // Each answer is still fresh: the next probe checks again.
+    {
+      const before = { database: reads('/rest/v1/user_stats').length, serviceRole: reads('/rest/v1/quiz_submissions').length };
+      const together = await Promise.all([call(health as Handler, {}), call(health as Handler, {}), call(health as Handler, {})]);
+      for (const res of together) assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      assert.deepEqual(
+        { database: reads('/rest/v1/user_stats').length - before.database, serviceRole: reads('/rest/v1/quiz_submissions').length - before.serviceRole },
+        { database: 1, serviceRole: 1 },
+        'three probes at once read each dependency once',
+      );
+      await call(health as Handler, {});
+      assert.equal(reads('/rest/v1/user_stats').length - before.database, 2, 'a later probe checks again');
+    }
+    console.log('PASS verified caller: health probes that arrive together share one check');
+
     // ── the retired progress PUT ─────────────────────────────────────────
     // It answered with the progress read and wrote nothing; the server writes
     // progress itself on each completion. Retired, it reads nothing either.
