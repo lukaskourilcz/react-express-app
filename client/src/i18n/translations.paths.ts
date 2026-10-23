@@ -38,6 +38,8 @@ export const pathsEn = {
   'paths.diagnosticRetakeNote': 'Results without per-question evidence are not assessed. You can take the diagnostic again; areas it does not cover remain unassessed.',
   'paths.openDiagnostic': 'Open the diagnostic',
   'paths.action.signIn': 'Sign in to start',
+  'paths.action.startModule': 'Start module',
+  'paths.action.continueTo': 'Continue: {title}',
   'paths.activityKinds': 'Lessons explain the idea, concept checks confirm you followed it, code-reading questions test that you can follow someone else’s work, and the exercises are where you produce your own. Later modules bring earlier material back on purpose — a check you have seen before is the plan working, not the plan slipping.',
   'paths.optionalTitle': 'Optional: placement and bridges',
   'paths.optionalNote': 'Skippable. These recommend reading and never gate anything.',

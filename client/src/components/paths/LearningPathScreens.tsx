@@ -139,6 +139,7 @@ function ActivityRow({
   interactive,
   locked = false,
   compact = false,
+  next = false,
 }: {
   pathId: LearningPathId;
   locked?: boolean;
@@ -148,10 +149,12 @@ function ActivityRow({
   interactive: boolean;
   /** One 48px line (kind · title · minutes), without the summary: the hub. */
   compact?: boolean;
+  /** The module's next activity, marked with the accent edge (learn-13). */
+  next?: boolean;
 }) {
   const t = useT();
   const kind = t(`paths.kind.${activity.kind}` as never);
-  const className = compact ? 'lp-activity lp-activity--compact' : 'lp-activity';
+  const className = ['lp-activity', compact ? 'lp-activity--compact' : '', next ? 'lp-activity--next' : ''].filter(Boolean).join(' ');
   const body = (
     <>
       <span className="lp-activity__kind">{kind}</span>
@@ -988,14 +991,41 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       levels: dimension.levels as unknown as Record<string, string>,
     }));
   const shown = activity ?? open?.activity;
+  // The module's one primary (UX audit learn-13): the first activity that is
+  // neither passed nor self-reviewed, 'Start module' while nothing is recorded
+  // and 'Continue: <title>' after. It shows while the list is the screen; an
+  // open activity carries its own primary.
+  const started = Boolean(moduleProgress?.activities.some((one) => one.state !== 'not_started'));
+  const target = reachable
+    ? module.activities.find((one) => {
+        const state = states.get(one.id) ?? 'not_started';
+        return state !== 'verified_pass' && state !== 'self_reviewed';
+      })
+    : undefined;
+  const targetLocked = target ? activityLock(target.id, states.get(target.id) ?? 'not_started') : false;
+  const targetTitle = target ? titleWithoutKind(target.title, t(`paths.kind.${target.kind}` as never)) : '';
+  const ctaLabel = started
+    ? pathCopy['paths.action.continueTo'].replace('{title}', targetTitle.length > 32 ? `${targetTitle.slice(0, 31).trimEnd()}…` : targetTitle)
+    : pathCopy['paths.action.startModule'];
 
   return (
     <div className="lp-page">
       <header className="lp-head">
         <div className="lp-head__text">
-          <p className="lp-kicker">
-            <Link to={pathHref(pathId)}>{entry.manifest.title}</Link>
-          </p>
+          <div className="lp-head__kicker-row">
+            <p className="lp-kicker">
+              <Link to={pathHref(pathId)}>{entry.manifest.title}</Link>
+            </p>
+            <span className="lp-head__status">
+              {/* An off-loop module never completes, so "In progress" would
+                  read as unfinished for good. A module with no recorded
+                  evidence has not started, whatever the enrollment says. */}
+              {offLoop(module)
+                ? t('paths.module.optional')
+                : moduleProgress?.completed ? t('paths.module.complete')
+                  : started ? t('paths.module.inProgress') : t('paths.module.notStarted')}
+            </span>
+          </div>
           <h1>{module.title}</h1>
           <ul className="lp-module__outcomes">
             {module.outcomes.map((outcome, index) => (
@@ -1003,17 +1033,17 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             ))}
           </ul>
         </div>
-        <div className="lp-head__actions">
-          <span className="lp-module__meta">
-            {/* An off-loop module never completes, so "In progress" would
-                read as unfinished for good. A module with no recorded
-                evidence has not started, whatever the enrollment says. */}
-            {offLoop(module)
-              ? t('paths.module.optional')
-              : moduleProgress?.completed ? t('paths.module.complete')
-                : moduleProgress?.activities.some((one) => one.state !== 'not_started') ? t('paths.module.inProgress') : t('paths.module.notStarted')}
-          </span>
-        </div>
+        {target && !activityId && (
+          <div className="lp-head__actions">
+            <SwimCta
+              label={ctaLabel}
+              onClick={() => (targetLocked
+                ? openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${target.id}` })
+                : navigate(activityHref(pathId, module.id, target.id)))}
+            />
+            {targetLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
+          </div>
+        )}
       </header>
 
       {!isAuthenticated && (
@@ -1067,6 +1097,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               locked={activityLock(one.id, states.get(one.id) ?? 'not_started')}
               state={states.get(one.id) ?? 'not_started'}
               interactive={reachable}
+              next={one.id === target?.id}
             />
           ))}
         </ul>

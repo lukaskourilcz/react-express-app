@@ -51,6 +51,22 @@
 .lp-head__actions .ss-swim-cta,
 .lp-portfolio-export__actions .astryx-button { max-width: 100%; height: auto; min-height: 44px; white-space: normal; text-align: center; }
 
+/* The module page's kicker row: the path link, then the module's state as a
+   small badge beside it (UX audit learn-13), where the action used to be. */
+.lp-head__kicker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 4px; }
+.lp-head__kicker-row > .lp-kicker { margin: 0; }
+.lp-head__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ss-card-line);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 .lp-kicker {
   margin: 0 0 4px;
   font-size: 0.8rem;
@@ -180,6 +196,9 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
    screen reader, and the glyph's shape, not its colour, tells them apart. */
 .lp-activity__state { flex: none; display: inline-flex; justify-content: center; min-width: 1.25rem; font-size: 0.95rem; line-height: 1; color: var(--color-text-secondary); }
 .lp-activity__state--verified_pass { color: var(--ss-success-strong); font-weight: 700; }
+/* The module's next activity, the one its primary opens: a 3px accent edge
+   inside the row, so nothing shifts (UX audit learn-13). */
+.lp-activity--next { box-shadow: inset 3px 0 0 var(--brand-accent); }
 /* On the hub a row is one 48px line: kind · title · minutes. */
 .lp-activity--compact { flex-wrap: nowrap; min-height: 48px; padding-block: 8px; }
 .lp-activity--compact .lp-activity__title { flex: 1 1 auto; overflow-wrap: anywhere; }

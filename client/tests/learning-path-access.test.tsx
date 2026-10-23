@@ -387,14 +387,14 @@ describe('the module page status', () => {
     state.secondModule = true;
     state.enrollments = [enrolled('fde')];
     await modulePage('fde-m02');
-    expect(await screen.findByText('Not started', { selector: '.lp-module__meta' })).toBeInTheDocument();
+    expect(await screen.findByText('Not started', { selector: '.lp-head__status' })).toBeInTheDocument();
   });
   it('says In progress once an activity of the module has evidence', async () => {
     state.secondModule = true;
     state.passedActivity = 'fde-m02-l1-read';
     state.enrollments = [enrolled('fde')];
     await modulePage('fde-m02');
-    expect(await screen.findByText('In progress', { selector: '.lp-module__meta' })).toBeInTheDocument();
+    expect(await screen.findByText('In progress', { selector: '.lp-head__status' })).toBeInTheDocument();
   });
   it('claims no missing enrollment while the list loads', async () => {
     state.enrollmentsRead = 'loading';
@@ -432,10 +432,25 @@ describe('the module page status', () => {
     expect(row.querySelector('.lp-activity__title')).toHaveTextContent(/^Fde first lesson$/);
     expect(row.querySelector('.lp-activity__summary')).toBeInTheDocument();
   });
+  it('after Premium lapses, a locked module\'s primary asks for Premium instead of opening the activity', async () => {
+    state.tier = 'free';
+    state.secondModule = true;
+    state.enrollments = [enrolled('fde')];
+    await modulePage('fde-m02');
+    const actions = await waitFor(() => document.querySelector('.lp-head__actions') as HTMLElement);
+    expect(within(actions).getByText('Premium')).toBeInTheDocument();
+    fireEvent.click(within(actions).getByRole('button', { name: 'Start module' }));
+    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path-activity', ref: 'fde:fde-m02-l1-read' });
+  });
+  it('offers no primary to a learner who has not enrolled', async () => {
+    await modulePage('fde-m01');
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(document.querySelector('.lp-head__actions')).toBeNull();
+  });
   it('says Not started to a learner who has not enrolled', async () => {
     state.secondModule = true;
     await modulePage('fde-m02');
-    expect(await screen.findByText('Not started', { selector: '.lp-module__meta' })).toBeInTheDocument();
+    expect(await screen.findByText('Not started', { selector: '.lp-head__status' })).toBeInTheDocument();
   });
 });
 
