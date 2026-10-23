@@ -717,6 +717,19 @@ describe('double presses', () => {
   });
 });
 
+describe('joining by code', () => {
+  it('joins on Enter in the code field, once for a held key', async () => {
+    api.joinMatch.mockImplementation(() => new Promise(() => undefined));
+    await mount('/play');
+    const field = await screen.findByLabelText('Match code');
+    fireEvent.change(field, { target: { value: 'xyz789' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    await waitFor(() => expect(api.joinMatch).toHaveBeenCalledTimes(1));
+    expect(api.joinMatch).toHaveBeenCalledWith(expect.objectContaining({ code: 'XYZ789' }));
+  });
+});
+
 describe('the room clock', () => {
   // A device clock 31 s ahead of the server's. The server says what its clock
   // reads in every join and state response.

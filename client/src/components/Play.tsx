@@ -424,6 +424,9 @@ export function PlayLanding() {
                       value={joinCode}
                       placeholder="ABC123"
                       onChange={(v) => setJoinCode(v.toUpperCase())}
+                      // Enter in the code joins, as it would in a form; the
+                      // join's own ref guard keeps a held key to one join.
+                      onEnter={() => void handleJoin()}
                     />
                   </div>
                 </div>
