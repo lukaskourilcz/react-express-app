@@ -12,7 +12,7 @@ function rule(css: string, selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = css.match(new RegExp(`(?:^|[}\\s])${escaped}\\s*\\{([^}]*)\\}`, 'm'));
   if (!match) throw new Error(`no rule for ${selector}`);
-  return match[1];
+  return match[1].replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
 describe('pages fill the route width', () => {
