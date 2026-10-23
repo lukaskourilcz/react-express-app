@@ -689,8 +689,10 @@ async function main() {
 
     // ── an account made with an email and password ──────────────────────
     seen.length = 0;
+    authChecks = 0;
     const event = await user('authevent', { method: 'POST', account: EMAIL, body: {} });
     assert.equal(event.statusCode, 200, JSON.stringify(event.body));
+    assert.equal(authChecks, 1, 'a sign-in report asks Supabase Auth once, for the rate limit and the log alike');
     const logged = reads('/rest/v1/auth_events').find((one) => one.method === 'POST')?.body as Row | undefined;
     assert.deepEqual(
       { user_id: logged?.user_id, email: logged?.email, provider: logged?.provider },
@@ -712,6 +714,13 @@ async function main() {
     assert.deepEqual(reads('/rest/v1/rpc/delete_user_data').map((one) => (one.body as Row).p_user_id), [EMAIL.id, EMAIL.id], 'its data is erased, before and after the identity');
     assert.equal(seen.filter((one) => one.method === 'DELETE' && one.path === `/auth/v1/admin/users/${EMAIL.id}`).length, 1, 'and its sign-in identity is deleted');
     console.log('PASS verified caller: an email and password account signs in, stays unnamed on boards, and deletes');
+
+    // A sign-in report while Supabase Auth is down says so; 401 would say the
+    // session ended.
+    const eventDown = await user('authevent', { method: 'POST', account: AUTH_DOWN, body: {} });
+    assert.equal(eventDown.statusCode, 503, `a sign-in report during an Auth outage is not an invalid session (${JSON.stringify(eventDown.body)})`);
+    assert.equal(errorCode(eventDown), 'auth_unavailable');
+    console.log('PASS verified caller: a sign-in report verifies its token once and keeps 503 during an Auth outage');
 
     const slowErasure = await user('delete-account', { method: 'DELETE', account: SLOW_ERASURE, body: { confirmation: 'DELETE' } });
     assert.equal(slowErasure.statusCode, 503, `an erasure that timed out answers 503 like every other timeout, not 504 (${JSON.stringify(slowErasure.body)})`);

@@ -225,17 +225,15 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
 // browser session after Supabase confirms a real sign-in; the server derives the
 // (verified) user id, email and provider from the token — never trusting the
 // client for identity. Best-effort: a failure here must not break sign-in.
+// The token was verified for the rate limit already, so it is read from there;
+// a Supabase Auth outage keeps its 503 or 504 instead of reading as 401.
 async function authEvent(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  let auth;
-  try {
-    auth = await requireAuth(req);
-  } catch {
-    return jsonError(res, 401, 'unauthorized', 'Sign in required');
-  }
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
   const email = typeof auth.payload.email === 'string' ? auth.payload.email : null;
   const meta = (auth.payload.app_metadata ?? {}) as { provider?: unknown };
   const provider = typeof meta.provider === 'string' ? meta.provider : null;
