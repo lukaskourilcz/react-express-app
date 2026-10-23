@@ -3,7 +3,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { WaterlineProgress } from '../SharkFin';
 import { CloseIcon } from '../ui/icons';
-import { useT } from '../../i18n/LanguageContext';
+import { questionText as t } from '../../i18n/translations.question';
 import './question.css';
 
 /** Glyphs for the header's icon buttons: one stroke drawing, 20px. */
@@ -86,7 +86,6 @@ export interface QuestionHeaderProps {
  * the right. The question text and code below then span the whole panel.
  */
 export function QuestionHeader({ title, run, titleRef, progress, status, meta, difficulty, tools }: QuestionHeaderProps) {
-  const t = useT();
   const hasSecondRow = meta != null || difficulty != null || tools != null;
   return (
     <div className="ss-question-header">

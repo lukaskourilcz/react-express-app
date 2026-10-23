@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { RadioCardGroup, RadioCard } from '../ui/RadioCards';
-import { useT } from '../../i18n/LanguageContext';
+import { questionText as t } from '../../i18n/translations.question';
 import './question.css';
 
 export interface AnswerGrade {
@@ -44,7 +44,6 @@ export interface AnswerOptionListProps {
  * move along the column only, so a runner can keep Left/Right for questions.
  */
 export function AnswerOptionList({ options, value, onChange, onActivate, labelledBy, disabled, grade, renderOption, className }: AnswerOptionListProps) {
-  const t = useT();
   return (
     <RadioCardGroup
       value={value}

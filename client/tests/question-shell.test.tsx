@@ -8,7 +8,6 @@ import { createRef } from 'react';
 import { QuestionShell } from '../src/components/question';
 
 const css = readFileSync(new URL('../src/components/question/question.css', import.meta.url), 'utf8');
-const theme = readFileSync(new URL('../src/styles/astryx-theme.css', import.meta.url), 'utf8');
 
 function addSheet(): CSSStyleSheet {
   const style = document.createElement('style');
@@ -66,7 +65,7 @@ describe('QuestionShell', () => {
     expect(getComputedStyle(block).overflowY).toBe('auto');
     // No accent edge on the panel: one surface, the .ss-panel stock.
     expect(css).not.toMatch(/border-top:\s*4px/);
-    expect(theme).toMatch(/--ss-question-block-min:\s*200px/);
-    expect(theme).toMatch(/--ss-question-block-max:\s*40vh/);
+    expect(css).toMatch(/--ss-question-block-min:\s*200px/);
+    expect(css).toMatch(/--ss-question-block-max:\s*40vh/);
   });
 });

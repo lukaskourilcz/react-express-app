@@ -1,7 +1,19 @@
 /* The shared question parts (UX audit U2, #574). One shell, one header, one
    answer list, inline feedback, one hint line and one action row, so Quiz,
    Challenge, Daily, the Learn runner and Shark Cards draw a question the same
-   way. Sizes come from the question tokens in astryx-theme.css. */
+   way. */
+
+/* The question tokens. They live here, not in astryx-theme.css, so they ship
+   with the question screens' lazy chunks and the app shell carries none of
+   them. */
+:root {
+  --ss-question-block-min: 200px;
+  --ss-question-block-max: 40vh;
+  --ss-answer-row-min: 48px;
+  --ss-answer-gap: 8px;
+  --ss-answer-chip: 26px;
+  --ss-question-title-size: 1.25rem;
+}
 
 /* ——— QuestionShell ——— */
 .ss-question {

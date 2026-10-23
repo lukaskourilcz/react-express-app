@@ -375,17 +375,6 @@ export const en = {
   'difficulty.advanced.tip': 'Difficulty 3–5.',
   'difficulty.mixed.tip': 'Difficulty 1 to 5, shuffled.',
 
-  // Question screens: the shared parts in components/question/ (UX audit U2)
-  'question.correctAnswer': 'Correct answer',
-  'question.yourPick': 'Your pick',
-  'question.difficultyLevel': 'Difficulty {level}',
-  'question.keysHint': 'Press 1–{max} to {verb} · Enter to {next}',
-  'question.keysHintShort': 'Press 1–{max} to {verb}',
-  'question.keysAnswer': 'answer',
-  'question.keysSelect': 'select',
-  'question.keysContinue': 'continue',
-  'question.keysSubmit': 'submit',
-
   // Quiz, in progress
   'quiz.progressAria': 'Quiz progress',
   'quiz.questionCounter': 'Question {current} of {total}',

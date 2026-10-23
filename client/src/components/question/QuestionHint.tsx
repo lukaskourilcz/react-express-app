@@ -1,4 +1,4 @@
-import { useT } from '../../i18n/LanguageContext';
+import { questionText as t } from '../../i18n/translations.question';
 import './question.css';
 
 export type QuestionHintVerb = 'answer' | 'select';
@@ -24,7 +24,6 @@ export interface QuestionHintProps {
  * pointer only; its line is reserved in every state.
  */
 export function QuestionHint({ max, verb, next, hidden }: QuestionHintProps) {
-  const t = useT();
   const verbText = t(verb === 'answer' ? 'question.keysAnswer' : 'question.keysSelect');
   const text = next
     ? t('question.keysHint', { max, verb: verbText, next: t(next === 'submit' ? 'question.keysSubmit' : 'question.keysContinue') })

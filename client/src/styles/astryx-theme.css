@@ -51,15 +51,6 @@
      floors live in app-shell.css. */
   --ss-control-height: 44px;
   --ss-control-height-compact: 36px;
-  /* Question screens (UX audit U2, #574): the shared parts in
-     components/question/ read these, so every runner draws the same rows.
-     The shell itself is --ss-width-task wide. */
-  --ss-question-block-min: 200px;
-  --ss-question-block-max: 40vh;
-  --ss-answer-row-min: 48px;
-  --ss-answer-gap: 8px;
-  --ss-answer-chip: 26px;
-  --ss-question-title-size: 1.25rem;
 
   /* ————————————————————————— Brand: The Deep End —————————————————————————
      devShark's identity commits to the ocean the product already owns:

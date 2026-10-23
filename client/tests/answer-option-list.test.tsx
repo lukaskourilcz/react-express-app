@@ -81,9 +81,8 @@ describe('AnswerOptionList', () => {
     expect(css).toMatch(/min-height: var\(--ss-answer-row-min\)/);
     expect(css).toMatch(/width: var\(--ss-answer-chip\);\s*height: var\(--ss-answer-chip\);/);
     expect(css).toMatch(/\[data-selected='true'\] \{\s*border-color: var\(--brand-accent\);[^}]*background: var\(--brand-accent-soft\);/);
-    const theme = readFileSync(new URL('../src/styles/astryx-theme.css', import.meta.url), 'utf8');
-    expect(theme).toMatch(/--ss-answer-row-min:\s*48px/);
-    expect(theme).toMatch(/--ss-answer-gap:\s*8px/);
-    expect(theme).toMatch(/--ss-answer-chip:\s*26px/);
+        expect(css).toMatch(/--ss-answer-row-min:\s*48px/);
+    expect(css).toMatch(/--ss-answer-gap:\s*8px/);
+    expect(css).toMatch(/--ss-answer-chip:\s*26px/);
   });
 });

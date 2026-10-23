@@ -80,7 +80,7 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 
 ## Question screens
 
-Every question screen draws through the shared parts in `client/src/components/question/` (UX audit U2, #574), imported from its `index.ts`. Their sizes are tokens in `client/src/styles/astryx-theme.css`:
+Every question screen draws through the shared parts in `client/src/components/question/` (UX audit U2, #574), imported from its `index.ts`. Their sizes are tokens on `:root` in `client/src/components/question/question.css`, and their words are `question.*` keys in `client/src/i18n/translations.question.ts` (`questionText`), not in `astryx-theme.css` and `translations.ts`: only the question screens' lazy chunks load them, so the app shell carries none (`client/tests/question-copy.test.ts`). A runner's own words (`quiz.*`, `challenge.*`) stay where they are.
 
 | Token | Value | Used by |
 |---|---|---|
