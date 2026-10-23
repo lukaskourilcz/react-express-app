@@ -82,3 +82,20 @@ it('keeps a full brief that still runs past the frame scrollable from the keyboa
   expect(body).toHaveAttribute('tabindex', '0');
   expect(screen.getByRole('region', { name: 'Digit sum' })).toBe(body);
 });
+
+it('measures again when a note joins the brief, without re-subscribing on every render', async () => {
+  sizes(80, 120);
+  const view = (extra: boolean) => (
+    <LanguageProvider>
+      <BriefZone labelledBy="task-title" head={<h1 id="task-title">Digit sum</h1>}>
+        <p>Write digitSum(n).</p>
+        {extra && <p>Sign in to keep your progress.</p>}
+      </BriefZone>
+    </LanguageProvider>
+  );
+  const { rerender } = render(view(false));
+  expect(screen.queryByRole('button', { name: 'Show full brief' })).toBeNull();
+  sizes(200, 120);
+  rerender(view(true));
+  expect(await screen.findByRole('button', { name: 'Show full brief' })).toBeInTheDocument();
+});

@@ -33,17 +33,27 @@ export function BriefZone({ labelledBy, label, head, children, after }: BriefZon
   // brief that grows (a glossary term opened, earlier stages unfolded) gets
   // them as soon as it no longer fits. The full brief is measured too: inside
   // the frame it still stops where the editor's floor begins.
+  // Subscribed once per cap state, not on every render: the workbench renders
+  // on every keystroke, and re-measuring then would force a layout per key.
+  // A child added or removed (a note appearing) is seen by the mutation
+  // observer, a child growing (a term opened) by the resize observer.
   useLayoutEffect(() => {
     const node = body.current;
     if (!node) return;
     const measure = () => setOverflows(node.scrollHeight > node.clientHeight + 1);
     measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    Array.from(node.children).forEach((child) => observer.observe(child));
-    return () => observer.disconnect();
-  }, [expanded, children]);
+    const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    const observeAll = () => {
+      if (!resize) return;
+      resize.disconnect();
+      resize.observe(node);
+      Array.from(node.children).forEach((child) => resize.observe(child));
+    };
+    observeAll();
+    const mutation = typeof MutationObserver === 'undefined' ? null : new MutationObserver(() => { observeAll(); measure(); });
+    mutation?.observe(node, { childList: true });
+    return () => { resize?.disconnect(); mutation?.disconnect(); };
+  }, [expanded]);
 
   const capped = !expanded;
   const scrolls = overflows;
