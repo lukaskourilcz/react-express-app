@@ -1,70 +1,86 @@
-/* "Your sharkname" (SharknameCard.tsx). The Profile's card stock, the
- * Friends form controls (Friends.css: .fr-row, .fr-input, .fr-note), and one
- * new piece: the name plate, the sharkname in display type above its field.
+/* "Your name" (SharknameCard.tsx, UX audit social-account-04). The Profile's
+ * card stock, the Friends notes (Friends.css: .fr-note), the sharkname row
+ * and the two independent columns: 'Friends see' and 'Leaderboards show'.
  *
- * Motion: a roll flips a few names through the plate, then the last one
- * lands. Both are transform + opacity on the name alone, with the shared
- * duration tokens; reduced motion shows the landed name with no movement. */
+ * Motion: a roll flips a few names through the field's text, with no
+ * movement; reduced motion lands the name at once (SharknameCard.tsx). */
 
 .sn-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
   padding: 24px;
 }
 
 .sn-editor,
-.sn-see { display: flex; flex-direction: column; gap: 8px; }
+.sn-see { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 
-/* Long generated names wrap at their hyphens rather than running out of the
-   card at 320px; the min-height keeps one line's room while empty. */
-.sn-plate {
-  margin: 0;
-  min-height: 2.75rem;
-  padding: 8px 14px;
-  overflow: hidden;
+/* The field, Generate and Save on one 44px row. Below 600px the field takes
+   the row and the two buttons share the row under it, half each, so Save
+   never drops onto a line of its own (social-account-18). */
+.sn-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .sn-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sn-row > .sn-field { grid-column: 1 / -1; }
+  .sn-row > .astryx-button { width: 100%; }
+}
+
+/* One bordered field: the input and, for a numbered sharkname, its server
+   number after it in quieter type. Long generated names scroll inside the
+   input rather than running out of the card at 320px. */
+.sn-field {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: var(--ss-control-height);
   border-radius: var(--radius-element);
-  background: var(--color-background-muted);
-  border-bottom: 2px solid var(--brand-accent);
-  font-family: var(--font-family-heading, inherit);
-  font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.4rem);
-  font-weight: 750;
-  line-height: 1.3;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background);
+}
+.sn-field:focus-within { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.sn-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: calc(var(--ss-control-height) - 2px);
+  padding: 8px 12px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
   color: var(--color-text-primary);
-  overflow-wrap: anywhere;
+  font: inherit;
   font-variant-ligatures: none;
+  outline: none;
 }
-.sn-plate[data-empty='true'] { color: var(--color-text-secondary); font-weight: 600; }
-.sn-plate[data-rolling='true'] { color: var(--color-text-secondary); }
-.sn-plate__name { display: inline-block; }
-.sn-plate__name--flip { animation: sn-flip calc(var(--ss-motion-feedback) / 2) ease-out both; }
-.sn-plate__name--land { animation: sn-land var(--ss-motion-reveal) cubic-bezier(0.2, 0.8, 0.2, 1.15) both; }
-
-@keyframes sn-flip {
-  from { transform: translateY(-60%); opacity: 0.2; }
-  to { transform: none; opacity: 0.8; }
-}
-@keyframes sn-land {
-  from { transform: translateY(-35%); opacity: 0.3; }
-  to { transform: none; opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sn-plate__name--flip,
-  .sn-plate__name--land { animation: none; }
-}
-
-.sn-input { font-variant-ligatures: none; }
 .sn-input[readonly] { color: var(--color-text-secondary); }
+.sn-field__number {
+  flex: none;
+  padding-right: 12px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
 
 .sn-taken { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
-.sn-see {
-  gap: 14px;
-  padding-top: 12px;
+/* The two independent settings side by side, stacked below 600px. */
+.sn-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px 24px;
+  padding-top: 16px;
   border-top: 1px solid var(--ss-card-line);
 }
+@media (max-width: 600px) {
+  .sn-columns { grid-template-columns: minmax(0, 1fr); }
+}
+.sn-see { gap: 14px; }
+.sn-column__title { margin: 0; font-weight: 650; }
 
 .sn-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .sn-preview__who { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }

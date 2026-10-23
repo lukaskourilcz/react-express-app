@@ -11,10 +11,11 @@ import { hasSharkWord, numberedSharkname } from '../../shared/sharkname';
 import { isValidHandle } from '../../shared/handles';
 import { server } from './mocks/server';
 
-// "Your sharkname" on the Profile (SharknameCard): the handle friends add you
+// "Your name" on the Profile (SharknameCard): the sharkname friends add you
 // by, rolled with Generate (shared/sharkname.ts) and saved through
-// op=friends-handle, and what friends see of you, saved through op=identity
-// (migration 055).
+// op=friends-handle, what friends see of you, saved through op=identity
+// (migration 055), and beside it what leaderboards show
+// (tests/leaderboard-visibility.test.tsx covers that column).
 
 const ADA = { realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' };
 const LATER = new Date(Date.now() + 20 * 86_400_000).toISOString();
@@ -88,16 +89,24 @@ describe('your sharkname', () => {
     const { container } = renderCard();
     const input = await field();
     expect(input).toHaveValue('sleepySharkie');
+    // The number follows the field, once, and describes it.
+    const number = container.querySelector('.sn-field__number')!;
+    expect(number).toHaveTextContent('9007199254740993');
+    expect(input.getAttribute('aria-describedby')).toContain(number.id);
     fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
     const base = (input as HTMLInputElement).value;
-    expect(container.querySelector('.sn-plate')).toHaveTextContent(numberedSharkname(base, '9007199254740993'));
+    expect(screen.getByText(`New sharkname: ${numberedSharkname(base, '9007199254740993')}. Save to keep it.`)).toBeInTheDocument();
+    expect(number).toHaveTextContent('9007199254740993');
     expect(handlePuts).toEqual([]);
   });
   it('shows the current sharkname in the field', async () => {
     serve();
     renderCard();
     expect(await field()).toHaveValue('thirsty-sharkie');
-    expect(screen.getByRole('heading', { name: 'Your sharkname' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your name' })).toBeInTheDocument();
+    // The field shows the name; nothing prints it again above it, and the
+    // sharkname option does not repeat it either (social-account-04).
+    expect(screen.queryAllByText('thirsty-sharkie').map((node) => node.closest('.sn-preview'))).not.toContain(null);
     expect(screen.getByText('Friends add you by your sharkname. You can change it once every 30 days.')).toBeInTheDocument();
     // Nothing changed yet, so there is nothing to save.
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
@@ -133,24 +142,36 @@ describe('your sharkname', () => {
     expect(handlePuts).toEqual([{ base: 'finDeFiesta' }]);
   });
 
-  it('flips through names before it lands when motion is allowed, and Generate waits for it', async () => {
+  it('flips through names in the field before it lands when motion is allowed, and Generate waits for it', async () => {
     serve();
-    const { container } = renderCard();
+    renderCard();
     const input = await field();
     fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
-    expect(container.querySelector('.sn-plate')).toHaveAttribute('data-rolling', 'true');
+    expect(input).toHaveAttribute('data-rolling', 'true');
+    expect(input).toHaveAttribute('readonly');
     expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled();
-    await waitFor(() => expect(container.querySelector('.sn-plate')).not.toHaveAttribute('data-rolling'));
+    await waitFor(() => expect(input).not.toHaveAttribute('data-rolling'));
     const landed = (input as HTMLInputElement).value;
     expect(landed).not.toBe('thirsty-sharkie');
     expect(isValidHandle(landed)).toBe(true);
-    expect(container.querySelector('.sn-plate')).toHaveTextContent(landed);
     expect(screen.getByRole('button', { name: 'Generate' })).toBeEnabled();
   });
 
-  it('keeps the plate still under reduced motion', () => {
+  it('lands the name at once under reduced motion, with no flip and no animation', async () => {
+    reducedMotion(true);
+    serve();
+    renderCard();
+    const input = await field();
+    fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    expect(input).not.toHaveAttribute('data-rolling');
+    expect(input).not.toHaveValue('thirsty-sharkie');
+    expect(readSheet()).not.toMatch(/animation|@keyframes/);
+  });
+
+  it('keeps the field, Generate and Save on one row, and gives the buttons half a row each below 600px', () => {
     const css = readSheet();
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*{\s*\.sn-plate__name--flip,\s*\.sn-plate__name--land\s*{\s*animation: none;/);
+    expect(css).toMatch(/\.sn-row \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) auto auto;/);
+    expect(css).toMatch(/@media \(max-width: 600px\) \{\s*\.sn-row \{ grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\); \}\s*\.sn-row > \.sn-field \{ grid-column: 1 \/ -1; \}/);
   });
 
   it('offers another name when the one sent is taken', async () => {
@@ -205,14 +226,15 @@ describe('your sharkname', () => {
     renderCard();
     const input = await field();
     expect(input).toHaveValue('');
-    expect(screen.getByText('No sharkname yet')).toBeInTheDocument();
+    expect(input).toHaveAttribute('placeholder', 'e.g. thirstySharkie');
     expect(screen.getByText('Save a sharkname first, then choose what friends see.')).toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: /Friends see/ })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
     const rolled = (input as HTMLInputElement).value;
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByRole('radio', { name: /Your sharkname/ })).toBeChecked();
+    const friends = await screen.findByRole('radiogroup', { name: /Friends see/ });
+    expect(within(friends).getByRole('radio', { name: /Sharkname/ })).toBeChecked();
     expect(screen.getByText(`Saved. Your sharkname is ${rolled}.`)).toBeInTheDocument();
   });
 
@@ -257,16 +279,17 @@ describe('what friends see', () => {
   it('starts at the sharkname and initials, and switches to the name and photo', async () => {
     const { identityPuts } = serve();
     const { container } = renderCard();
-    const sharkname = await screen.findByRole('radio', { name: /Your sharkname/ });
+    const friends = await screen.findByRole('radiogroup', { name: /Friends see/ });
+    const sharkname = within(friends).getByRole('radio', { name: /Sharkname/ });
     expect(sharkname).toBeChecked();
     const preview = container.querySelector('.sn-preview')!;
     expect(preview).toHaveTextContent('Friends see you as');
     expect(preview.querySelector('.sn-preview__name')).toHaveTextContent('thirsty-sharkie');
     expect(preview.querySelector('.ss-initials-avatar')).toHaveTextContent('TS');
 
-    fireEvent.click(screen.getByRole('radio', { name: /Your name/ }));
+    fireEvent.click(within(friends).getByRole('radio', { name: /Account name/ }));
     await waitFor(() => expect(identityPuts).toEqual([{ showRealName: true }]));
-    await waitFor(() => expect(screen.getByRole('radio', { name: /Your name/ })).toBeChecked());
+    await waitFor(() => expect(within(friends).getByRole('radio', { name: /Account name/ })).toBeChecked());
     expect(preview.querySelector('.sn-preview__name')).toHaveTextContent('Ada Lovelace');
     expect(preview.querySelector('.ss-initials-avatar')).toHaveTextContent('AL');
 
@@ -282,7 +305,8 @@ describe('what friends see', () => {
   it('offers only the sharkname and initials to an account with no Google name or photo', async () => {
     serve({ identity: { realName: null, photo: null } });
     renderCard();
-    const name = await screen.findByRole('radio', { name: /Your name/ });
+    const friends = await screen.findByRole('radiogroup', { name: /Friends see/ });
+    const name = within(friends).getByRole('radio', { name: /Account name/ });
     expect(name).toBeDisabled();
     expect(screen.getByText('Your account has no Google name.')).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Show my photo to friends' })).toBeDisabled();

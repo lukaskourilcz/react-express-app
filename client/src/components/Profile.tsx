@@ -42,7 +42,6 @@ import { ShieldIcon, TrophyIcon, TargetIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
-import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { leaderboardVisibilityQuery } from '../lib/leaderboardVisibility';
 import SharknameCard from './SharknameCard';
 import { useEntitlement } from '../lib/entitlement';
@@ -359,11 +358,10 @@ function ProfileBody({
 
             <GithubGardenCard />
 
-            {/* Friends' identity and the independent leaderboard preferences
-                stay together in the Profile. */}
+            {/* One 'Your name' panel: the sharkname, then what friends see and
+                what leaderboards show, side by side and independent
+                (social-account-04). */}
             <SharknameCard focus={focusSharkname} onFocused={() => setFocusSharkname(false)} />
-
-            <LeaderboardVisibilityCard />
 
             <AccountDeletionCard />
           </VStack>
@@ -723,20 +721,6 @@ function AdvisorCard() {
           )}
         </VStack>
       </div>
-  );
-}
-
-/** The Profile's complete leaderboard name/photo preferences. Friends keep
- * their own independent identity settings in SharknameCard. */
-export function LeaderboardVisibilityCard() {
-  const t = useT();
-  return (
-    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
-      <VStack gap={1.5}>
-        <SectionLabel>{t('leaderboard.title')}</SectionLabel>
-        <LeaderboardVisibilitySwitch />
-      </VStack>
-    </div>
   );
 }
 

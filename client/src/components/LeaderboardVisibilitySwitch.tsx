@@ -1,4 +1,6 @@
-// The Profile card owns this account-name/shark-nickname choice.
+// 'Leaderboards show' in the Profile's 'Your name' panel (SharknameCard):
+// the sharkname or the account name, and the photo. Independent of what
+// friends see, which the column beside it sets.
 import { useState } from 'react';
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
 import { Switch } from '@astryxdesign/core/Switch';
@@ -27,7 +29,9 @@ export default function LeaderboardVisibilitySwitch() {
           setMode(value === 'account' ? 'account' : 'nickname', { onError: () => setMessage(t('leaderboard.visibility.saveFailed')) });
         }}
       >
-        <RadioListItem value="nickname" label={t('leaderboard.name.nickname')} description={setting?.nickname ?? '…'} />
+        {/* The nickname is the sharkname, which the Profile's field already
+            shows; the option does not print it again (social-account-04). */}
+        <RadioListItem value="nickname" label={t('leaderboard.name.nickname')} />
         <RadioListItem value="account" label={t('leaderboard.name.account')} description={setting?.accountName ?? t('leaderboard.name.unavailable')} isDisabled={!setting?.accountName} />
       </RadioList>
       <div className="lb-photo">
