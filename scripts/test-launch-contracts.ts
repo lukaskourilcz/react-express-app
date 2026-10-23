@@ -5216,6 +5216,11 @@ async function main() {
     assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country }).ok, false, `${country} is not an ISO 3166-1 code`);
   }
   assert.equal(validateAddress({ name: 'x'.repeat(200), line1: 'B', city: 'C', postalCode: 'D', country: 'CZ' }).ok, false);
+  // Postgres text refuses U+0000, so a field holding it made the order a 500.
+  for (const field of ['name', 'line1', 'line2', 'city', 'postalCode']) {
+    const nul = validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'CZ', [field]: 'X\u0000Y' });
+    assert.deepEqual(nul, { ok: false, field }, `U+0000 in ${field} is refused`);
+  }
 
   // Tokens follow verified XP only, and the rate is the documented one.
   assert.equal(tokensForVerifiedXp(100), 10);
