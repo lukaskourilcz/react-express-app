@@ -41,6 +41,14 @@ function boardLimit(raw: unknown): number {
   return LIMIT_STEPS.find((step) => step >= asked) ?? 200;
 }
 
+/** A real UTC calendar day in YYYY-MM-DD. The shape alone let 2026-02-30
+ * through to the routine, whose date cast then failed with a 500. */
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const day = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === value;
+}
+
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -54,8 +62,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // query string would make every read one of those.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
 
-  const period = (req.query.period as string) || 'global';
-  const dateParam = (req.query.date as string) || new Date().toISOString().slice(0, 10);
+  // A parameter repeated in the query string arrives as an array, which names
+  // no period and no date.
+  const period = req.query.period === undefined ? 'global' : typeof req.query.period === 'string' ? req.query.period || 'global' : '';
+  const dateParam = req.query.date === undefined ? new Date().toISOString().slice(0, 10) : typeof req.query.date === 'string' ? req.query.date || new Date().toISOString().slice(0, 10) : '';
   const limit = boardLimit(req.query.limit);
 
   try {
@@ -125,7 +135,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (period === 'daily') {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      if (!isCalendarDate(dateParam)) {
         return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
       }
       const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';

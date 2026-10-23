@@ -412,6 +412,19 @@ async function main() {
     }
     console.log('PASS verified caller: a leaderboard limit is one of a few sizes');
 
+    // A daily board names a real day: 2026-02-30 has the right shape, and the
+    // routine's date cast would fail on it. A period or date repeated in the
+    // query string names neither.
+    for (const query of [{ period: 'daily', date: '2026-02-30' }, { period: 'daily', date: '2026-13-01' }, { period: 'daily', date: ['2026-10-01', '2026-10-02'] }, { period: ['daily', 'global'] }] as Record<string, string>[]) {
+      seen.length = 0;
+      const refused = await call(leaderboard as Handler, { query });
+      assert.equal(refused.statusCode, 400, `${JSON.stringify(query)} is a bad request (${JSON.stringify(refused.body)})`);
+      assert.equal(reads('/rest/v1/rpc/daily_leaderboard_v2').length, 0, 'and asks no routine');
+    }
+    const leapDay = await call(leaderboard as Handler, { query: { period: 'daily', date: '2028-02-29' } });
+    assert.equal(leapDay.statusCode, 200, `a leap day is a day (${JSON.stringify(leapDay.body)})`);
+    console.log('PASS verified caller: a daily board refuses a date that is no calendar day');
+
     // ── this month's XP board (migration 056) ───────────────────────────
     // Shared and cached for a minute without a session; with one it is the
     // token's own line, never the account a query names, and private.
