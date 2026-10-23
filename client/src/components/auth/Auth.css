@@ -29,6 +29,10 @@
 .ss-auth__legal a:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .ss-auth__failure { display: flex; flex-direction: column; gap: 8px; }
 .ss-auth__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* "Already confirmed? Sign in" under the resend form: a sentence with a text
+   link, not a second button (UX audit shell-public-04). */
+.ss-auth__alt { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin: 0; font-size: var(--ss-type-compact); color: var(--color-text-secondary); }
+.ss-auth__alt .ss-text-links { display: inline-flex; margin: 0; }
 .ss-auth__status { margin: 0; font-size: var(--ss-type-compact); color: var(--color-text-primary); }
 /* The live region waits on the page empty. Out of the flex flow while it has
    no words, so it adds no gap, yet still in the accessibility tree (unlike

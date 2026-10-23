@@ -161,7 +161,15 @@ describe('/auth/confirmed', () => {
   it('opens the sign-in dialog from Sign in', async () => {
     await openPage('/auth/confirmed');
     expect(await h1()).toHaveTextContent('Confirm your email');
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    // One sign-in prompt (UX audit shell-public-04): not in the lead, and a
+    // text link inside the card under the resend form, not a button above it.
+    expect(screen.queryByText(/Already did\?/)).toBeNull();
+    const signIn = screen.getByRole('button', { name: 'Sign in' });
+    expect(signIn.closest('p')).toHaveTextContent('Already confirmed? Sign in');
+    const send = screen.getByRole('button', { name: 'Send a new link' });
+    expect(send.compareDocumentPosition(signIn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(signIn.closest('.ss-auth-page')).toBe(send.closest('.ss-auth-page'));
+    fireEvent.click(signIn);
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 

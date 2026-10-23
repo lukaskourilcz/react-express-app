@@ -1,4 +1,4 @@
-// The header's control for a signed-out visitor: "Log in", which opens the
+// The header's control for a signed-out visitor: "Sign in", which opens the
 // sign-in dialog (Google, or an email and password; lib/signInDialog.ts).
 //
 // It ships with the app shell instead of inside the lazy account widget
@@ -19,7 +19,7 @@ import { openSignIn } from '../lib/signInDialog';
 // a few seconds of a Log out and nothing else holds the focus.
 const FOCUS_WINDOW_MS = 5_000;
 let focusAfterSignOutUntil = 0;
-/** A Log out was pressed in the header: the Log in that replaces the account
+/** A Log out was pressed in the header: the Sign in that replaces the account
  * button takes the focus. `false` withdraws it (the Log out failed). */
 export function focusSignInAfterSignOut(on = true): void {
   focusAfterSignOutUntil = on ? Date.now() + FOCUS_WINDOW_MS : 0;

@@ -469,11 +469,11 @@ describe("the header's Log in", () => {
     screen.getByRole('button', { name: 'Account' }).focus();
     focusSignInAfterSignOut();
     view.rerender(header(false));
-    expect(screen.getByRole('button', { name: 'Log in' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveFocus();
     // Drawn again later, with no Log out pressed, it leaves the focus alone.
     view.rerender(header(true));
     screen.getByRole('button', { name: 'Account' }).focus();
     view.rerender(header(false));
-    expect(screen.getByRole('button', { name: 'Log in' })).not.toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Sign in' })).not.toHaveFocus();
   });
 });

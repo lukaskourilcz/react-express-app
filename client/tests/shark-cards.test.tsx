@@ -173,7 +173,7 @@ describe('the Shark Cards deck', () => {
   it('asks a signed-out visitor to sign in, and reads nothing', async () => {
     await mount(<Flashcards />);
     expect(screen.getByRole('heading', { level: 1, name: 'Sign in to keep Shark Cards' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('offers a retry when the cards cannot load', async () => {
@@ -215,7 +215,7 @@ describe('/collection', () => {
       );
     });
     expect(screen.getByRole('heading', { level: 1, name: 'Saved coding challenges' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Log in' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
   });
 });
 

@@ -328,7 +328,7 @@ describe('/premium/success', () => {
     serve();
     renderAt(`/premium/success?session_id=${SESSION}`, <PremiumSuccessPage />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Sign in to finish' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 });
 
@@ -410,7 +410,7 @@ describe('/premium/cancel', () => {
     expect(await screen.findByText(/This site cannot send the confirmation email yet\. To act on this address, sign in/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel my subscription now' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Sign in to finish' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('shows a signed-in owner exactly what happened, withdrawal included', async () => {

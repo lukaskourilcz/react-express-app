@@ -25,7 +25,7 @@ async function settled(page: Page): Promise<void> {
 
 async function openDialog(page: Page) {
   await page.goto('/');
-  const logIn = page.getByRole('button', { name: 'Log in', exact: true }).first();
+  const logIn = page.getByRole('button', { name: 'Sign in', exact: true }).first();
   await logIn.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
@@ -68,7 +68,7 @@ for (const theme of ['light', 'dark'] as const) {
   }
 }
 
-test('the keyboard reaches everything in order, Escape closes, and focus goes back to Log in', async ({ page }) => {
+test('the keyboard reaches everything in order, Escape closes, and focus goes back to Sign in', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await offlineApi(page);
@@ -147,7 +147,7 @@ test('signs in with an email and password and lands signed in on the same page',
     return route.fulfill({ status: 401, json: { code: 'bad_jwt', message: 'local test' } });
   });
   await page.goto('/leaderboard');
-  await page.getByRole('button', { name: 'Log in', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).first().click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Email', { exact: true }).fill('lazy-auth@example.test');
   await dialog.getByLabel('Password', { exact: true }).fill('wrong one');

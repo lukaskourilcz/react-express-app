@@ -335,7 +335,7 @@ export const en = {
   'footer.soundOff': 'Sound off',
 
   // Auth
-  'auth.logIn': 'Log in',
+  'auth.logIn': 'Sign in',
   'auth.logOut': 'Log out',
   'auth.signInFailed': 'Sign-in failed. Try again.',
   'auth.signOutFailed': 'Sign-out failed. Check your connection and try again.',
@@ -2182,7 +2182,7 @@ export const en = {
   // Email and password sign-in beside Google (owner decision 3, 1 Oct 2026):
   // the sign-in dialog, its errors, and the pages the confirmation and reset
   // links open (components/auth/).
-  'home.signIn': 'Sign in or create an account',
+  'home.signIn': 'Sign in',
   'auth.signedIn': 'You’re signed in.',
   'auth.dialog.signInTitle': 'Sign in to devShark',
   'auth.dialog.signUpTitle': 'Create your devShark account',
@@ -2260,10 +2260,11 @@ export const en = {
   'authPage.confirmTokenLead': 'Press the button to finish creating your account.',
   'authPage.confirmButton': 'Confirm my email',
   'authPage.confirmingButton': 'Confirming…',
-  'authPage.confirmVisitLead': 'Open the link in the email we sent you to finish creating your account. Already did? Sign in.',
+  'authPage.confirmVisitLead': 'Open the link in the email we sent you to finish creating your account.',
   'authPage.expiredTitle': 'This confirmation link has expired',
-  'authPage.expiredLead': 'Links work once and expire after a while. If you already confirmed your email, sign in. If not, ask for a new link.',
+  'authPage.expiredLead': 'Links work once and expire after a while. Ask for a new one below.',
   'authPage.signIn': 'Sign in',
+  'authPage.alreadyConfirmed': 'Already confirmed?',
   'authPage.resendTitle': 'Send a new confirmation link',
   'authPage.resendSubmit': 'Send a new link',
   'authPage.resendSent': 'If {email} still needs confirming, a new link is on its way.',

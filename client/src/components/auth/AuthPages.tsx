@@ -69,7 +69,7 @@ function linkState(
  * Supabase answers the same whether or not the address has an account, so
  * the sentence after sending says "if".
  */
-function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset'; returnTo?: string }) {
+function EmailLinkRequest({ purpose, returnTo, signIn = false }: { purpose: 'confirm' | 'reset'; returnTo?: string; signIn?: boolean }) {
   const t = useT();
   const fieldMessage = useFieldMessage();
   const [email, setEmail] = useState('');
@@ -133,6 +133,17 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
           <Button type="submit" variant="primary" label={label} isLoading={busy} isDisabled={busy || wait > 0} />
         </div>
       </form>
+      {/* The page's one way to sign in, under the form it is the other answer
+          to (UX audit shell-public-04): the lead no longer says it, and no
+          separate button sits above the card. */}
+      {signIn && (
+        <p className="ss-auth__alt">
+          {t('authPage.alreadyConfirmed')}{' '}
+          <span className="ss-text-links">
+            <button type="button" aria-haspopup="dialog" onClick={() => openSignIn({ view: 'signIn' })}>{t('authPage.signIn')}</button>
+          </span>
+        </p>
+      )}
     </section>
   );
 }
@@ -217,12 +228,7 @@ export function EmailConfirmedPage() {
       lead={t(expired ? 'authPage.expiredLead' : 'authPage.confirmVisitLead')}
     >
       {/* The sign-in dialog opens for a signed-out visitor only. */}
-      {!user && (
-        <div className="ss-info-actions" style={{ marginTop: 0 }}>
-          <Button variant="secondary" label={t('authPage.signIn')} onClick={() => openSignIn({ view: 'signIn' })} />
-        </div>
-      )}
-      <EmailLinkRequest purpose="confirm" returnTo={next !== '/' ? next : undefined} />
+      <EmailLinkRequest purpose="confirm" returnTo={next !== '/' ? next : undefined} signIn={!user} />
     </Page>
   );
 }

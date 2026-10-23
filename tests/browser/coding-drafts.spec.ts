@@ -167,7 +167,7 @@ test('a session that ends on its own keeps the code for the account, says so, an
 
   await sessionEnds(page);
   await expect(page.getByText('You were signed out — sign in to keep your code.')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('button', { name: 'Log in', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
   // The page is a guest's now, and shows none of the account's code.
   await expect.poll(() => shown(page)).not.toContain('twenty minutes');
   const note = page.locator('p.cd-note', { hasText: 'You were signed out, so the code for this task is kept for your account.' });
@@ -179,7 +179,7 @@ test('a session that ends on its own keeps the code for the account, says so, an
   // Nothing of it was sent as a guest's.
   expect(stand.saves.filter((save) => save.account === null)).toEqual([]);
 
-  await note.getByRole('button', { name: 'Log in' }).click();
+  await note.getByRole('button', { name: 'Sign in' }).click();
   await signInWithPassword(page, fakeUser.email);
   await expect.poll(() => shown(page), { timeout: 30_000 }).toContain('twenty minutes of work');
   await expect(note).toHaveCount(0);
@@ -197,7 +197,7 @@ test('another account signing in on that device never sees the kept code (decisi
   await sessionEnds(page);
   await expect(page.getByText('You were signed out — sign in to keep your code.')).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole('button', { name: 'Log in', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).first().click();
   await signInWithPassword(page, OTHER_USER.email);
   await expect(page.getByRole('button', { name: /^Account menu for/ })).toBeVisible({ timeout: 15_000 });
   expect(await stored(page, KEPT)).toBeNull();
