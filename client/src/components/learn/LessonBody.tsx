@@ -43,6 +43,31 @@ function lessonLinks(text: string): ReactNode[] {
   return nodes;
 }
 
+// Authored *emphasis* (UX audit learn-21): one word or phrase between single
+// asterisks that open after a space or an opening mark and close before a
+// non-word character, so `2 * n * 3`, `a*b` and a glob such as `s3:*` stay as
+// written. Only text outside code spans reaches this.
+const EMPHASIS = /(^|[\s([{"'“‘—–-])\*([^\s*](?:[^*\n]*[^\s*])?)\*(?![\w*])/g;
+
+function lessonEmphasis(text: string, segment: number): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let from = 0;
+  for (const match of text.matchAll(EMPHASIS)) {
+    const start = match.index! + match[1].length;
+    nodes.push(text.slice(from, start));
+    nodes.push(<em key={`em-${segment}-${start}`}>{match[2]}</em>);
+    from = match.index! + match[0].length;
+  }
+  if (from === 0) return [text];
+  nodes.push(text.slice(from));
+  return nodes;
+}
+
+/** Links first, then emphasis in the plain text between them. */
+function lessonInline(text: string): ReactNode[] {
+  return lessonLinks(text).flatMap((node, index) => (typeof node === 'string' ? lessonEmphasis(node, index) : [node]));
+}
+
 /** Match whole backtick runs so link examples stay literal in every text cell. */
 function InlineText({ text }: { text: string }) {
   const nodes: ReactNode[] = [];
@@ -61,15 +86,16 @@ function InlineText({ text }: { text: string }) {
       if (end - close === width) break;
     }
     if (close < 0) break;
-    nodes.push(<span key={`text-${from}`}>{lessonLinks(text.slice(from, open))}</span>);
+    nodes.push(<span key={`text-${from}`}>{lessonInline(text.slice(from, open))}</span>);
     nodes.push(<code key={`code-${open}`}>{text.slice(start, close)}</code>);
     from = end;
   }
-  nodes.push(<span key={`text-${from}`}>{lessonLinks(text.slice(from))}</span>);
+  nodes.push(<span key={`text-${from}`}>{lessonInline(text.slice(from))}</span>);
   return <>{nodes}</>;
 }
 
-/** Inline code and bounded authored links; text inside code is never parsed.
+/** Inline code, bounded authored links and *emphasis*; text inside code is
+ * never parsed.
  * Memoised on the text: a code or artifact brief sits beside the editor, which
  * re-renders on every keystroke, and re-parsing an unchanged brief each time
  * was wasted work. */
