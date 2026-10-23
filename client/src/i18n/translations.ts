@@ -1593,7 +1593,6 @@ export const en = {
   'coding.group.hooks': 'Hooks',
   'coding.group.rendering': 'Rendering',
   'coding.group.design': 'System design',
-  'coding.review.title': 'Due for review',
   'coding.progress': '{passed} of {total} passed',
   'coding.minutes': '{n} min',
   'coding.level': 'Level {n}',
@@ -2060,7 +2059,6 @@ export const en = {
   'today.pathSection': 'Learning paths',
   'today.pathResume': 'Continue {path}',
   'today.pathReason': 'Your next step on this path',
-  'dev.paths.title': 'Learning path readiness',
   // /dev → Vouchers (migration 045).
   'dev.vouchers.nav': 'Vouchers',
   'dev.vouchers.navDescription': 'Codes that open Premium',
