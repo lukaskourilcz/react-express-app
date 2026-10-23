@@ -801,7 +801,9 @@
 .ss-topic-article pre { max-width: 100%; overflow-x: auto; padding: 1rem; border-radius: var(--radius-inner); background: var(--color-background-muted); font-size: var(--ss-type-compact); }
 /* The guide's links take the app's accent link style, not the browser's blue,
    and its one action is the pill page action (UX audit shell-public-12). */
-.ss-topic-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+/* All guides sits 1rem above the kicker it belongs to, not a full section
+   gap (64px at 1280, ~100px to the kicker's text) as if it were a section. */
+.ss-topic-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: calc(1rem - var(--ss-space-section)); }
 .ss-topic-nav a, .ss-topic-links a, .ss-topic-article summary { min-height: 44px; align-content: center; }
 .ss-topic-links { display: grid; gap: 0.5rem; padding-left: 1.5rem; }
 .ss-topic-links a { display: inline-block; }

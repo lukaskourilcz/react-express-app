@@ -70,3 +70,10 @@ it('draws the practice link as the page action and the questions as details', ()
   expect(declared(rules, '.ss-topic-cta', 'font-weight')).toBe('600');
   expect(declared(rules, '.ss-topic-cta:hover', 'background')).toBe('var(--brand-accent-hover)');
 });
+
+// Verification round 1: All guides stood a whole section gap above the
+// kicker of the guide it leads out of.
+it('keeps All guides 1rem above the guide header, not a section gap away', () => {
+  const rules = [...addSheet('appShell').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+  expect(declared(rules, '.ss-topic-nav', 'margin-bottom')).toBe('calc(1rem - var(--ss-space-section))');
+});
