@@ -98,11 +98,11 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
           error={submitted ? fieldMessage(problem) : null}
         />
         {failure && <FailureBanner failure={failure} />}
-        {sentTo && (
-          <p className="ss-auth__status" role="status">
-            {withEmail(t(purpose === 'confirm' ? 'authPage.resendSent' : 'auth.sent.resetBody'), sentTo)}
-          </p>
-        )}
+        {/* On the page before it has words: a live region that arrives
+            with them is not read out. */}
+        <p className="ss-auth__status" role="status">
+          {sentTo && withEmail(t(purpose === 'confirm' ? 'authPage.resendSent' : 'auth.sent.resetBody'), sentTo)}
+        </p>
         <div className="ss-info-actions" style={{ marginTop: 0 }}>
           <Button type="submit" variant="primary" label={label} isLoading={busy} isDisabled={busy || wait > 0} />
         </div>

@@ -258,7 +258,9 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
               {withEmail(t(stage.purpose === 'confirm' ? 'auth.sent.confirmBody' : 'auth.sent.resetBody'), stage.email)}
             </p>
             <p className="ss-auth__note">{t('auth.sent.spamHint')}</p>
-            {resent && <p className="ss-auth__status" role="status">{t('auth.sent.resent')}</p>}
+            {/* On the page before it has words: a live region that arrives
+                with them is not read out. */}
+            <p className="ss-auth__status" role="status">{resent ? t('auth.sent.resent') : ''}</p>
             {formFailure && <FailureBanner failure={formFailure} />}
             <div className="ss-auth__actions">
               <ResendButton

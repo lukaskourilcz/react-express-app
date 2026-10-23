@@ -253,9 +253,14 @@ describe('/reset-password', () => {
     server.use(http.post(`${AUTH}/recover`, () => gotrueOk({})));
     await openPage('/reset-password');
     expect(await h1()).toHaveTextContent('Reset your password');
+    // The live region is on the page, empty, before it has anything to say:
+    // one that arrives with its words is not read out.
+    const region = screen.getAllByRole('status').find((element) => element.classList.contains('ss-auth__status'));
+    expect(region).toBeEmptyDOMElement();
     type('Email', 'ada@example.com');
     fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }));
     expect(await status(/has a devShark account/)).toHaveTextContent('If ada@example.com has a devShark account, we sent it a link to set a new password.');
+    expect(await status(/has a devShark account/)).toBe(region);
     expect(calls('/recover')[0].query.redirect_to).toBe('http://localhost:3000/reset-password');
   });
 

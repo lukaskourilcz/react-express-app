@@ -246,8 +246,13 @@ describe('the sign-in dialog', () => {
     act(() => { vi.advanceTimersByTime(30_000); });
     const ready = within(dialog).getByRole('button', { name: 'Send the email again' });
     expect(ready).toBeEnabled();
+    // The live region waits on the page, empty: one that arrives with its
+    // words is not read out.
+    const region = within(dialog).getAllByRole('status').find((element) => element.classList.contains('ss-auth__status'));
+    expect(region).toBeEmptyDOMElement();
     fireEvent.click(ready);
     expect(await within(dialog).findByText('Sent again. Check your inbox.')).toHaveAttribute('role', 'status');
+    expect(within(dialog).getByText('Sent again. Check your inbox.')).toBe(region);
     expect(calls('/resend')[0].body).toMatchObject({ type: 'signup', email: 'ada@example.com' });
     expect(within(dialog).getByRole('button', { name: 'Send again in 60s' })).toBeDisabled();
 
