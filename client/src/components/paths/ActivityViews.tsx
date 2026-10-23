@@ -403,12 +403,11 @@ export function CodeActivity({
     <div className="cd-page cd-workbench cd-workbench--activity ss-wide-page">
       <div className="cd-workbench__grid">
         <div className="cd-pane cd-pane--editor">
-          <BriefZone label={t('coding.brief.label')}>
-            <div className="lp-brief">
-              <RichText text={code.prompt} />
-            </div>
-            {code.complexityGuidance?.targetTime && <div className="cd-complexity"><span>{t('coding.complexity.desired', { complexity: code.complexityGuidance.targetTime })}</span><ComplexityInfo guidance={code.complexityGuidance} /></div>}
-            {fixtureNote !== undefined && (
+          {/* The fixture note says what "done" means, so it sits under the
+              capped prompt and is never cut off by the cap. */}
+          <BriefZone
+            label={t('coding.brief.label')}
+            after={fixtureNote !== undefined && (
               <div className="lp-notice lp-notice--info">
                 <span className="lp-notice__glyph" aria-hidden="true">
                   ℹ
@@ -419,6 +418,11 @@ export function CodeActivity({
                 </div>
               </div>
             )}
+          >
+            <div className="lp-brief">
+              <RichText text={code.prompt} />
+            </div>
+            {code.complexityGuidance?.targetTime && <div className="cd-complexity"><span>{t('coding.complexity.desired', { complexity: code.complexityGuidance.targetTime })}</span><ComplexityInfo guidance={code.complexityGuidance} /></div>}
           </BriefZone>
 
           <div className="cd-editor-slot">
