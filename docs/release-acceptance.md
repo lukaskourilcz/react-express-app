@@ -1,14 +1,14 @@
 # Release acceptance matrix
 
-## Current state (23 October 2026, after PR #566)
+## Current state (23 October 2026, after PR #571)
 
 This file is an append-style evidence ledger. Each dated entry records what someone checked that day, and later entries leave earlier ones as they were. The entries from 15 October back to 8 September sit at the top; from "2026-09-11 — eight free-tool recommendations" on, the file runs oldest to newest, so the newest entry is at the end.
 
 Released:
 
-- `main` is `1e2f8c68`, the merge of PR #566, the last of four code audits run on 22 and 23 October with `.claude/skills/section-code-audit/SKILL.md`: FDE (#563), Web Developer (#564), Software Engineer (#565), and Quiz, Play, Profile and Leaderboard (#566). Their four entries at the end of this file say what each one fixed and left open. Vercel deploys `main` to https://devshark.app.
+- `main` is the merge of PR #571, the last of eight code audits run on 22 and 23 October with `.claude/skills/section-code-audit/SKILL.md`: FDE (#563), Web Developer (#564), Software Engineer (#565), Quiz, Play, Profile and Leaderboard (#566), sign-in and the grading sandboxes (#570), rewards and billing (#568), admin, the public site, consent, the GitHub garden and plumbing (#569), and a leftovers round (#571). Every product area has now been audited once. The entries at the end of this file say what each one fixed and left open. Vercel deploys `main` to https://devshark.app.
 - The audits added no SQL migration and kept the twelve handlers. Supabase project `rvlybcjdpafwyeuojvhl` has every migration through 066 (`accept_learning_path_quota_result`); see "Migration 066 in production".
-- The initial load is 235,638 gzip bytes after #566, under the 241,651-byte budget in `docs/quality/bundle-budget.json`.
+- The initial load is 235,190 gzip bytes after #571 (235,638 after #566), under the 241,651-byte budget in `docs/quality/bundle-budget.json`.
 - The progress PUT on `/api/quiz/roadmap` is retired and answers 405. The browser only reads progress.
 - Learn has three sections: Web Developer, Software Engineer and Forward Deployed Engineer. DSA lives in Learn as the topics `dsa` and `dsa-advanced`. The standalone DSA path is retired, and `/roadmap/paths/dsa-foundations/*` answers 308 to `/learn/software-engineer?topic=dsa`.
 - The FDE path is built and merged (epics A to E are closed) but switched off: Production does not set `LEARNING_PATH_FDE_ENABLED`. No Vercel environment sets an FDE or marketing-export variable, so the OwnDashboard marketing export stays inactive too.
@@ -16,7 +16,7 @@ Released:
 - Merchandise stays paused behind `MERCH_ENABLED`, and Stripe billing (#221) is not live.
 - Content review totals live in the "Current state" section of `docs/audit/devshark-content-audit.md`.
 
-Every open item lives in `NEEDED.md`. The owner items there include switching the FDE path on (the entry "B14 FDE release verification — 22 October 2026" is the evidence), the Terms line that still promises "the FDE and DSA learning paths", failure alerts and an uptime monitor for #190, the decisions under #391, #236 and #221, and the product decisions the four audits raised. Nobody has run an authenticated walk-through on production or a preview, checked physical devices, or seen real learners' FDE data yet. The audits ran no browser, responsive or SQL tests themselves; CI runs those.
+Every open item lives in `NEEDED.md`. The owner items there include switching the FDE path on (the entry "B14 FDE release verification — 22 October 2026" is the evidence), the Terms line that still promises "the FDE and DSA learning paths", failure alerts and an uptime monitor for #190, the decisions under #391, #236 and #221, and the product decisions and migrations the audits raised. Nobody has run an authenticated walk-through on production or a preview, checked physical devices, or seen real learners' FDE data yet. The audits ran no browser, responsive or SQL tests themselves; CI runs those.
 
 Of the issues these entries name, only #190, #221, #236 and #391 are still open. A "remains open" or "pending" line about any other issue or PR records the state on that entry's date. On 22 October 2026 the owner dropped Cloudflare Turnstile (#202), the workbench handoff with the unmerged `claude/elegant-cori-h9cdgb` work (#208; the branch survives as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`), the StudyShark promo video and the October marketing plan (#239). Entries that mention them describe past work, not plans.
 
@@ -6199,3 +6199,68 @@ A last round fixed the cross-area leftovers the four section audits could not re
 - **Rooms:** abandoned rooms have no cleanup job, and rooms have no participant cap.
 - **Account data export:** there is no export of a learner's own data.
 - **Brittle matching:** two conflicts (`challenge_score_conflict`, `handle_taken`) are matched by message text, not by their own SQLSTATE.
+
+## Sign-in, accounts and grading sandboxes code review — 23 October 2026
+
+PR #570 (37 commits, merged as `aad48cb9`). Reviewers on auth server, auth client, sandbox server and sandbox client, a skeptic per group, a second round and the non-browser checks.
+
+**Fixed (server)**
+- **Auth outages:** a dropped connection, Auth's own 429 or an unreadable answer from Supabase Auth answers 503 `auth_unavailable` in `requireAuth`, the sign-in report and the admin gate. They answered 401 (and 403 at the admin gate).
+- **One token check per request:** `tryAuthOnce` memoises the result, and the admin gate, account deletion and the sign-in report reuse it.
+- **Entitlements fail closed:** a failed cleared-content read answers 503, not 402; a failed plan read answers 503, not 500; the admin view refuses to show "not Premium" for an unreadable plan. An admin grant to a non-UUID id answers 404, and a grant waits with 503 while Auth cannot say whether the account exists.
+- **Sandboxes:** a thrown promise, or a promise rejected with another promise, reports the code's error instead of "Lifetime not alive"; a type checker out of stack is a stopped type check; error text is capped; the React guest freezes `SuppressedError`, `DisposableStack` and `AsyncDisposableStack`; a grader thread that cannot run answers busy, not 500; a React VM out of time outside the learner's command is a runner outage, not a recorded timeout.
+
+**Fixed (client)**
+- A session that replaces another without a sign-out clears the previous account's data. A scanner-safe email link opened while another account is signed in no longer acts on it. "Your password is changed" shows only to the account that changed it. A boot session read past its deadline keeps the account supabase-js announced.
+- Ref guards on the dialog and email-link buttons; late answers stay off a form the learner left; live regions stay on the page; focus goes to the wrong field and to Log in after Log out.
+- A sign-in report lost to an outage is sent again; only text drafts are restored on sign-in; the React preview draws console lines in one batch; the guest sign-in nudge's card loads lazily.
+
+**Checks:** ci:parity, 15 steps passed (typecheck:api, typecheck:scripts, typecheck:tooling, check:unused, check:security, check:public, check:bundle, build, test:launch, test:coding-auth, test:grading-integrity, test:react-authority, test:fallbacks, test:client, test:coding). CI passed every job.
+
+**Left open (NEEDED.md):** `auth_events` has no unique key, so two first sign-ins at once can both log `register`; `entitlement_grants.user_id` has no foreign key; a React task's infinite loop runs in a same-site sandboxed frame.
+
+## Rewards, coins, shop, vouchers and billing code review — 23 October 2026
+
+PR #568 (52 commits, merged as `7d5e680a`). Reviewers on rewards server, rewards client, billing server and billing client. No prices, plans, launch-offer terms or checkout switches changed; `MERCH_ENABLED` stays false.
+
+**Fixed (server)**
+- **Webhooks:** the payment-webhook signature is compared as bytes, so a wide header answers 401 instead of a 500 the provider retries forever; a signed body that is not a JSON object answers 400; a Stripe delivery that lands while another applies is asked to retry; a body the runtime already read is used at once.
+- **Status codes:** database timeouts on billing and the cancel page answer 503; a duplicate provider reference answers 409; a repeated merchandise line, U+0000 in an address, voucher note or cancel-page email, an unknown cosmetic op and a voucher end date already past answer 400.
+- **Failed reads:** the wallet no longer reports "owns nothing" when the cosmetics read fails, and order lists no longer drop items or claimed packages.
+- **Races and speed:** a crown bought from two tabs answers "owned"; subscriptions are paged; a hung Stripe call and its retry fit in the ten-second limit; withdrawal reads run in parallel.
+
+**Fixed (client):** one press for Buy, Manage billing, Cancel and Redeem; a protection or redemption stays pending until the wallet read lands; late answers after an account change show nothing; Loading while the session is restored instead of "Sign in"; checkout focus and an always-present status line; 44px legal links; the launch-offer clock re-reads on visibility; the Rewards catalogue and purchase hooks left the main chunk.
+
+**Checks:** ci:parity, 12 steps passed (with test:billing). CI passed every job after a rerun of `coding`, whose first run timed out.
+
+**Left open (NEEDED.md):** `purchase_streak_protection` can debit before an UPDATE that matches no row; `purchase_cosmetic` checks ownership before taking the wallet lock; the `merch_order_items` SKU CHECK lacks `hoodie`; `upsert_provider_entitlement` has no version compare and `record_billing_event` returns one boolean; the payment-webhook HMAC over the raw body waits on the provider choice (#221).
+
+## Admin, public site, consent, GitHub garden and plumbing code review — 23 October 2026
+
+PR #569 (65 commits, merged as `1712d604`). Reviewers on admin and `/dev`, the public site, consent and the garden, and plumbing, with a read-only SQL review.
+
+**Fixed**
+- **Admin:** timeouts answer 503; U+0000, a non-UUID report id, a repeated `categories` parameter and an invalid option are refused (an invalid option used to move the correct answer); an unknown question id answers 404 instead of writing an orphan row; every console write logs the admin account; ref guards on voucher create, Save, merchandise actions and dismiss; bulk deletes wait out the admin rate limit and re-list what they did not reach; the console re-checks access on an account change and keeps unsaved edits across a re-read.
+- **Public site:** a malformed hash no longer breaks the legal pages; focus moves to the sample's verdict and the topic picker; fins stay still under reduced motion; the FDE outline loads when its section comes near; guide links stay in the app.
+- **Consent and monitoring:** Sentry scrubs query strings, fragments, e-mail addresses, tokens, request data and the user, and its init options moved to the lazy SDK chunk; PostHog sends each event when captured and identifies once per yes; a refused consent write clears the stored choice and cookie.
+- **GitHub garden:** timeouts answer 503; non-JSON outage pages are GitHub errors; repositories are paged; a newer pass supersedes queued copies; disconnect removes queued files only after the connection is gone; read failures say so; buttons are guarded against double presses, account changes and Back.
+- **Plumbing:** IPv6 callers are bucketed by /64; a failing Upstash is skipped for 15 s; health checks run together, share one probe and log every failure; queries never retry after a 4xx; a store change before a component subscribed still reaches it.
+
+**Checks:** ci:parity, 14 steps passed (with test:garden, test:performance and test:harness). CI passed every job after a rerun of `coding`, whose first run timed out after GitHub's cache restore stalled for ten minutes.
+
+**SQL review (read-only):** no RLS or `SECURITY DEFINER` problem that needs a migration.
+
+**Left open (NEEDED.md):** source maps of the main chunk are served publicly (pinned by `scripts/vercel-routing-contract.ts`); a cold instance whose first settings read fails serves the defaults.
+
+## Audit leftovers — 23 October 2026
+
+PR #571 (12 fixes) took the items the three audits above left because the file belonged to another branch.
+
+- A soft delete of a question is one upsert on `question_id`, so two deletes at once no longer race into 500.
+- A failed cleared read in the coding submit and in Learn answers 503 `entitlement_unavailable`, not 402.
+- The React grader reads what learner code throws through the sandbox's guarded `dumpThrown`, so a thrown string reads as itself and a hostile value cannot break the verdict.
+- Voucher and fulfilment writes log the admin account; fulfilment answers named routine errors as 404 or 409 and anything else as a generic 500, cuts carrier and tracking text by code point and refuses U+0000.
+- A second Run on a lesson example aborts the first; the toast's live region stays mounted; the query cache empties before the new account's first render; a second Copy of an invite link is announced again.
+
+**Checks:** ci:parity, 16 steps passed before and 9 after merging `main` (initial load 235,190 gzip bytes). Two items were not changed: the settings read already serves the last good copy, and `TRANSPILE_FAILED_MESSAGE` is not duplicated.
+
