@@ -163,7 +163,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   }
 
   if (deck.isError && !deck.data) {
-    return <ErrorRetry message={friendlyError(deck.error)} onRetry={() => void deck.refetch()} sx={{ maxWidth: 520, mx: 'auto' }} />;
+    return <ErrorRetry message={friendlyError(deck.error)} onRetry={() => void deck.refetch()} sx={{ maxWidth: 'var(--ss-width-task)', mx: 'auto' }} />;
   }
 
   const toastNode = (
