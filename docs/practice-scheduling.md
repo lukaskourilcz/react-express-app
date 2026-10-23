@@ -164,6 +164,13 @@ One row is written per concept per session, from the **worst** outcome in that
 session. A concept the learner got wrong once is not one they have retained,
 however many times they got it right afterwards in the same sitting.
 
+Each write sets a concept's stage from the state read before it. When
+`loadReviewStates` cannot read the stored states it returns `null`:
+`recordConceptReviews` then records nothing for that session and logs
+`record_skipped`, since a write built on an empty list would send every
+practised concept back to stage 0. A reader such as the due list treats `null`
+as an empty list, so the learner still gets a session.
+
 ## What is asserted
 
 `npm run test:launch` fails if any of these stops holding:

@@ -1,7 +1,7 @@
 name = "accessibility-auditor"
 description = "Use when checking WCAG / a11y of React components in the devShark web app. Covers semantic HTML, ARIA, keyboard navigation, focus management, color contrast, screen-reader labels for icon-only buttons, and form accessibility. Read-only — returns findings, does not edit files."
 developer_instructions = """
-You audit accessibility of React 19 + Astryx (Deep End v2) components against WCAG 2.1 AA.
+You audit accessibility of React 19 + Astryx (Deep End v2) components against WCAG 2.2 AA (the level `tests/browser/routes-axe.spec.ts` scans).
 
 Process:
 
@@ -13,12 +13,13 @@ Process:
    - Keyboard reachable (no `tabIndex={-1}`, no click-only handlers)
    - Visible focus indicator (focus tokens in `client/src/styles/astryx-theme.css`)
    - Disabled state announced (`aria-disabled` vs `disabled`)
+   - Touch target at least 44px tall
 3. **Color contrast.** Flag hard-coded hex values that bypass the semantic `--ss-*`/`--color-*` tokens and `var(--brand-accent)`. Recommend testing target ratio (4.5:1 body, 3:1 large/UI).
 4. **Quiz-specific concerns:**
    - Question/answer structure: is the question linked to its answer choices via `<fieldset>`/`<legend>` or `aria-labelledby`?
    - Code blocks (`react-syntax-highlighter`): readable by screen reader? Has language announced?
-   - Timed feedback / progress: `aria-live` region for score updates?
-   - Result screen: focus moved to result heading?
+   - Timed feedback / progress: is the `aria-live` region already on the page before its text changes? A live region mounted together with its words is not announced, and a page-wide one makes screen readers re-read everything.
+   - Result screen: focus moved to the result heading (which then needs no `aria-live` of its own)? When a control disables or replaces itself (Submit, Next on the last question, a timed-out answer), does focus move to the nearest working control or the verdict instead of falling to the page?
 5. **Routing / SPA concerns.** On route change, is focus moved or page title updated? Check `App.tsx` routes.
 6. **Forms.** Auth flows — labels associated with inputs, error messages linked via `aria-describedby`.
 

@@ -1,6 +1,6 @@
 ---
 name: section-code-audit
-description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564), Software Engineer (#565) and Quiz/Play/Profile/Leaderboard audits of 22–23 October 2026.
+description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564), Software Engineer (#565) and Quiz/Play/Profile/Leaderboard (#566) audits of 22–23 October 2026.
 ---
 
 # Section code audit
@@ -9,7 +9,7 @@ Use this when the owner asks for a code review of one area with "find and fix it
 
 ## 1. Map the area before you start
 
-List every file the area owns, then split them into **four disjoint groups** so parallel agents never edit the same file:
+List every file the area owns, then split them into **four disjoint groups** so parallel agents never edit the same file. For one Learn section, split by layer:
 
 | Group | What it holds |
 |---|---|
@@ -18,75 +18,86 @@ List every file the area owns, then split them into **four disjoint groups** so 
 | client-screens | the big screen components, their data hooks in `client/src/lib/`, the area's routes and lazy imports in `client/src/App.tsx` |
 | client-parts | smaller views, cards, dialogs, CSS, canvas/share/export helpers |
 
+An area made of several products splits by product instead, as Quiz, Play, Profile and Leaderboard did, and then needs a last round for the shared files (`lib/http.ts`, `lib/rate-limit.ts`, `App.tsx`) that no single group owned.
+
 Area maps known today (check them, files move):
 
-- **FDE**: `lib/learning-paths/*` (not `content/`, `solutions/`), `shared/learning-path*.ts`, `shared/learn-section*.ts`, `lib/learn-lessons/*`, `client/src/components/paths/*`, `client/src/lib/learningPaths.ts`, `learningPathWorkspace.ts`, `pathPortfolio.ts`, `shareCard.ts`, `client/src/components/learn/LessonBody.tsx`.
-- **Web Developer** (topics html, css, javascript, typescript, react, nextjs, nodejs, databases, git, general): `api/quiz/roadmap.ts` (Learn levels), `lib/roadmap.ts`, `lib/questions-store.ts`, `lib/quiz-tokens.ts`, `shared/progression.ts`, `shared/tiers.ts` (read, gate logic only), `client/src/components/Roadmap.tsx`, `client/src/components/learn/*`, the coding section (`lib/coding/handlers.ts`, `lib/coding/grade.ts`, `client/src/coding/*`, `client/src/components/coding/*`). Question banks `lib/roadmap-questions-*.ts` are content: leave them alone.
-- **Software Engineer** (dsa, dsa-advanced, algorithms, system-design, devops, security, databases, git, general): the same Learn and coding code as Web Developer, plus the DSA and algorithms tasks (`lib/coding/tasks/dsa*.ts`, `algorithms*`), `lib/coding/complexity.ts`, `client/src/coding/CodePuzzle.tsx`, `DesignRunner.tsx` (system design is hidden; review it, do not unhide it). Review only what Web Developer did not already cover.
-- **Quiz, Play, Profile, Leaderboard**: locate them with `grep -rn` on their routes in `client/src/App.tsx` and their `api/` operations; Play includes Classroom rooms and Realtime.
+- **FDE**: `lib/learning-paths/*` (not `content/`, `solutions/`), `shared/learning-path*.ts`, `shared/learn-section*.ts`, `lib/learn-lessons/*.ts`, `client/src/components/paths/*`, `client/src/lib/learningPaths.ts`, `learningPathWorkspace.ts`, `pathPortfolio.ts`, `shareCard.ts`, `client/src/components/learn/LessonBody.tsx`.
+- **Web Developer** (topics html, css, javascript, typescript, react, nextjs, nodejs, databases, git, general): `api/quiz/roadmap.ts` (Learn levels and the map), `lib/roadmap.ts`, `lib/questions-store.ts`, `lib/quiz-tokens.ts`, `shared/progression.ts`, `shared/tiers.ts` (read, gate logic only), `client/src/components/Roadmap.tsx` (the map), `client/src/components/learn/*` (`LessonRunner.tsx` runs a level), `client/src/lib/roadmap.ts`, and the coding section (`lib/coding/handlers.ts`, `practice-handlers.ts`, `grade.ts`, `client/src/coding/*`, `client/src/components/coding/*`). Question banks `lib/roadmap-questions-*.ts` are content: leave them alone.
+- **Software Engineer** (dsa, dsa-advanced, algorithms, system-design, devops, security, databases, git, general): the Web Developer code above, plus `lib/coding/complexity.ts`, `lib/coding/puzzles.ts`, `client/src/coding/CodePuzzle.tsx`, `DesignRunner.tsx` (system design is hidden; review it, do not unhide it), `client/src/components/ui/LessonFigure.tsx` with `shared/lesson-figures.ts`, and `/roadmap` (`client/src/components/CareerRoadmap.tsx`, `client/src/lib/tracks.ts`). The DSA and algorithms tasks (`lib/coding/tasks/dsa*.ts`, `algorithms.ts`) are content. Review only what Web Developer did not already cover.
+- **Quiz**: `api/quiz/submit.ts`, `questions.ts`, `challenge.ts`, `daily.ts`, `api/flashcards.ts`, `lib/reports-store.ts`, `lib/concept-review.ts`, `lib/challenge-store.ts`; in the client `Quiz.tsx`, `Challenge.tsx`, `DailyQuestionPage.tsx`, `Today.tsx`, `TypingRacer.tsx`, `Flashcards.tsx`, `PendingQuizResults.tsx`, `client/src/lib/pendingQuizReceipts.ts`, `pendingQuizReplay.ts`, `xp.ts`.
+- **Play**: `api/play/[action].ts`, `client/src/components/Play.tsx`, `client/src/lib/realtime.ts` (Classroom rooms included).
+- **Profile**: `api/user/[op].ts`, `lib/friends-handlers.ts`, `lib/leaderboard-identity.ts`, `lib/settings-store.ts`, `Profile.tsx`, `FriendsPanel.tsx`, `SharknameCard.tsx`, `client/src/lib/leaderboardVisibility.ts`.
+- **Leaderboard**: `api/leaderboard.ts`, `client/src/components/Leaderboard.tsx`, `client/src/lib/utcDay.ts`.
 
 Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, `scripts/test-*.ts`) and the SQL the handlers call before changing anything.
 
-## 2. What to look for (each found real in the FDE audit)
+## 2. What to look for (each one was found real in these audits)
 
-**Server**
-- Races on unique keys: two enrols or two first draft saves at once hit `23505` and answered 500. Map the conflict to the existing row or to the routine's own 409.
-- Validation that the SQL does again with a raise: out-of-range numbers (a revision over 1,000,000) and `pg_column_size` limits turned into 500s. Check every bound the routine checks before calling it, and map its raise to 400/413.
-- Sequential awaits that are independent: reading progress and diagnostics, or opening an attempt and reading the draft, one after the other. Run them with `Promise.all` *after* the ownership check, and keep any ordering that guards correctness (read after grading when concurrent submits must see each other).
-- Work repeated on every request: running the full content validator per request. Cache pure, content-only results per object in a `WeakMap`. Do not cache anything a test mutates in place.
-- Silent failures: an ignored error that changes what the learner sees must be logged with the request id, and the response must say so when `null` would be misread (`draftUnavailable: true`).
-- Untrusted JSON: read own keys only and keep only the expected primitive types (`[{}]` became `"[object Object]"`).
-- Validator gaps that only show on a live submission: fractional answer indexes, `NaN`/`Infinity` thresholds and weights, empty traces, blank captions. `NaN` passes every range test, so check `Number.isFinite` and `Number.isInteger` explicitly.
-- Hardcoded copies of shared constants (a `0.8` threshold): import the constant.
+**Server: failures and status codes**
+- Timeouts: `withTimeout` rejects with `UpstreamTimeoutError` (503 `upstream_timeout`). A handler's own catch-all must answer it as 503 (the `caughtError` helpers in `api/user/[op].ts` and `api/play/[action].ts`) or rethrow it, never turn it into 500. An Auth outage keeps its 503 or 504, because a 401 tells a signed-in learner their session ended.
+- Races on unique keys: two enrols or two first draft saves at once hit `23505` and answered 500. Map the conflict to the existing row or a 409 (`draft_conflict`), or 503 `draft_busy` when the other save is still running. For a new row (a room code), insert and retry on `23505` instead of reading first.
+- Bounds the SQL checks again with a raise: a revision over 1,000,000, a `pg_column_size` limit or a huge practice position became 500. Check or clamp every bound before the call, and map the routine's raise to 400 or 413.
+- Read errors treated as "nothing there": a failed passed-tasks read re-offered finished work, a failed draft read looked like no draft, a failed room read answered 404. Answer 503, or log it with the request id and flag it (`draftUnavailable: true` on a path start). A failed read that feeds a write must skip the write: a review-state read that returned `[]` reset every concept to its first stage. A failed settings read serves the last good copy.
+- An attempt that expired mid-request answers 409 `invalid_session`, and a one-time claim the database cannot take answers 503 `claim_unavailable`, never 500. Check auth before `claimOnce`: a refused token used up a placement round.
+- Rate limits for writes a class makes together: a class-sized address bucket plus a per-account bucket through `enforceClassRateLimit` (`questionReportAddress`, `questionReport`), or a class behind one NAT shares one person's budget.
+
+**Server: untrusted input**
+- Postgres text and JSONB refuse U+0000, so a draft, Shark Card or report holding it answered 500. Walk the values (not the JSON text, which would also catch code that spells `\u0000` out) and answer 400. Cut user text by code points (`Array.from`), not UTF-16 units, so an emoji is not split.
+- `NaN` passes every range test, and a fractional index never matches. Check `Number.isFinite` and `Number.isInteger` on thresholds, weights, answer indexes, figure levels and field caps, and refuse an option index past the options.
+- Query parameters can arrive as arrays (`?categories=a&categories=b`): read only a single string or refuse it; `.split()` on an array throws.
+- Arrays from the client: refuse entries of the wrong type with 400 (topic ids, puzzle line ids) instead of acting on the rest. Where free text is expected, keep string entries only, never `String(entry)` (`[{}]` became `"[object Object]"`).
+- Lookups by id on plain objects: use `Object.hasOwn` or a `Map`, or `constructor` and `__proto__` resolve to Object members (`puzzleFor('constructor')`).
+- Calendar dates: `2026-02-30` and year 0 parse in JavaScript and fail in Postgres. Booleans: refuse anything but `true` or `false`. Ids: refuse one longer than any real id before it reaches the database.
+
+**Server: speed**
+- Independent sequential awaits: run them with `Promise.all` *after* the ownership check, and keep any ordering that guards correctness (read after grading when concurrent submits must see each other). Start the reads a request needs while its one-time claim is taken, but grade only after the claim.
+- Reads that a later RPC already returns under its lock: take the value from the RPC (the first pass from `complete_verified_roadmap_attempt_v2`).
+- Work repeated per request or per call: cache pure, content-only results in a `WeakMap` keyed by the object or readonly list (the path validator, the coding ladder's tiers). Do not cache anything a test mutates in place. Compute an expensive sort key once before the sort.
+- Verify a token once per request: reuse the result the class rate limit already has.
+- Public responses the same for every caller: `max-age` alone keeps them out of the CDN. Add `s-maxage` and `stale-while-revalidate` when no caller data is in them (the Learn map: `public, max-age=60, s-maxage=60, stale-while-revalidate=300`).
+- Analysers over learner input (the complexity estimator): build no `RegExp` per input name, share one step budget across every pass, memoise per node, and answer "unknown" when the budget runs out. An uncertain answer must never lower XP. Snapshot every authored solution's report before and after a change to prove nothing else moved.
+- Fields, tokens or requests nothing reads: grep for a reader and remove both sides if there is none. The sealed `answerProof` cost up to fifty AES-GCM seals per submit; the progress PUT wrote nothing and answers 405 now.
+
+**Server: integrity**
 - Never let a response, log or projection carry answer keys, hidden tests or reference solutions.
-- One-time claims spent before auth: a placement round was claimed before the token was checked, so a refused token used the round up. Check auth before `claimOnce`.
-- Values the database cannot store: Postgres text and JSONB refuse U+0000, so a draft holding it answered 500. Walk the values (not the JSON text, which would also catch code that spells `\u0000` out) and answer 400. Cut user text by code points (`Array.from`), not UTF-16 units, so an emoji is not split.
-- Reads that a later RPC already returns under its lock: take the value from the RPC instead of a separate read (first pass from `complete_verified_roadmap_attempt_v2`).
-- Read errors treated as "nothing there": a failed passed-tasks read re-offered finished work; a failed draft read looked like no draft. Answer 503 or log and flag it.
-- Public responses the same for every caller: `max-age` alone keeps them out of the CDN. Add `s-maxage` and `stale-while-revalidate` when no caller data is in them.
-- Sorting with an expensive comparator: compute each key once before the sort.
-- Analysers over learner input (the complexity estimator): build no `RegExp` per input name, share one step budget across every pass, memoise per node, and answer "unknown" when the budget runs out. Make sure an uncertain answer never lowers XP. Snapshot every authored solution's report before and after a change to prove nothing else moved.
 - Shuffles that can return the answer: a dealt puzzle must never start solved. Redraw, and test the identity shuffle.
-- Lookups by id on plain objects: use `Object.hasOwn` (or a `Map`), or `constructor` and `__proto__` resolve to Object members.
-- Arrays from the client: refuse entries of the wrong type with 400 instead of filtering them out and accepting the rest.
-- Timeouts: `withTimeout` rejects with `UpstreamTimeoutError` (503 `upstream_timeout`). A handler's own catch-all must not turn it back into 500, and an Auth outage must not answer 401, because that tells a signed-in learner their session ended.
-- Query parameters can arrive as arrays (`?code=a&code=b`). Read them as one string, or refuse them; `.split()` on an array throws.
-- Failed reads that feed a write: a failed review-state read returned `[]`, and the submit then reset every concept to its first stage. Return `null` and skip the write.
-- Inserts that rely on a unique key: insert and retry on `23505` instead of check-then-insert.
-- Rate limits for writes a class makes together: use a class-sized address bucket plus a per-account bucket (`enforceClassRateLimit`).
-- Calendar input: `2026-02-30` and year 0 parse in JavaScript and fail in Postgres. Validate real dates.
-- Repeated work over the whole catalogue per call (`filter` over 769 tasks on each unlock check): index it once in a `WeakMap` keyed by the readonly list.
+- Hardcoded copies of shared constants (a `0.8` threshold): import the constant.
 
-**Client**
-- Lost keystrokes: debounced autosaves dropped on unmount, or routed to the activity just opened instead of the one left. Flush on unmount through a latest-callback ref, and route by the id the view was opened with.
-- Account changes: drafts kept across a voluntary sign-out leak to the next account; drafts wiped on an *involuntary* sign-out lose work. Keep per-account copies on session expiry only, check `accountEpoch()` before any late write or send, and register the flush with `beforeAccountChange`.
-- Device copies trusted blindly: validate the stored shape before use, and never delete a device copy because the server answered "unknown".
-- Late responses: a result that arrives after the learner moved on must not change the new screen. Use a token or ref per request, and abort fetches in effect cleanup.
-- Double submits: guard Start, Pause, Claim, Submit, Reveal, level completion (focus and visibilitychange can fire together) and answer keys with a ref, not only a disabled state. `isPending` reaches React a task later than the second click.
-- Loading versus "not started": do not offer "Start" while the enrollment list is loading or failed.
-- Expiry: a sealed attempt that expired must say so, not silently re-deal and wipe answers.
-- Re-render cost: memoise heavy, pure children (`LessonView`, rich-text parsing) only where they re-render per keystroke; check the memo's inputs are stable.
-- Bundle: a static import of the editor pulled CodeMirror (about 173 kB gzip) into a screen that rarely needs it. Load heavy parts with `lazyShellPart` + `Suspense` + `ShellPartBoundary`. Helpers only lazy screens use must not live in a module the main chunk imports.
-- Preloads: route prefix matchers must match only the routes that load that chunk.
-- Destructive buttons: Reset needs the workbench's inline confirmation, and focus must return to the opener.
-- Accessibility: no page-wide `aria-live` (screen readers re-read everything); move focus to the opened item and to each revealed hint; long code tokens must wrap at 200 % text and 360 px.
-- Canvas and downloads: `roundRect` is missing before Safari 16 and Firefox 112, so fall back to `arcTo`; zero the canvas after export (iOS caps canvas memory); attach the anchor before `click()` and revoke the object URL later.
-- Empty data: a trace with no frames threw and replaced the lesson with the error boundary. Stored progress read without a shape check (`new Set(object)`) crashed the Learn page.
-- Controlled inputs bound to the URL: React Router updates the URL in a transition, so a search box controlled by it dropped keystrokes. Keep local state and write the URL after.
-- Keyboard shortcuts must ignore keys from forms and dialogs inside the screen, and must not act on a hidden editor.
-- Workers and heavy idle warm-ups: stop a browser run when the learner leaves; skip idle preloads when `navigator.connection.saveData` is set.
-- `ShellPartBoundary` goes inside `Suspense`, as its doc comment says.
-- Focus on controls that disable or re-insert themselves: when Next on the last step, a moved list item or a replaced Submit button loses focus, move it to the nearest control that still works, or to the verdict.
-- Head tags: write `og:url` beside the canonical on client navigation, and treat a trailing slash as the same route.
-- Initial-chunk weight: strings and defaults nothing reads (fallback labels, dev tips) still ship. Delete them, and measure with `check:bundle`.
-- Touch targets: every button is at least 44px tall.
-- Realtime and polling: every subscribe returns a working unsubscribe, keep one poll in flight, and key a room component by code and account so moving between rooms remounts it.
+**Client: lost work and account changes**
+- Debounced autosaves dropped on unmount, or sent to the activity just opened instead of the one left. Flush on unmount through a latest-callback ref, and route by the id the view was opened with.
+- Drafts kept across a voluntary sign-out leak to the next account; drafts wiped on an *involuntary* sign-out lose work. Keep per-account copies on session expiry only, check `accountEpoch()` before any late write, send or announcement (a quiz grade, an XP sync, a Challenge reward), and register the flush with `beforeAccountChange`. Re-read a coding task when the learner signs out on it, so the editor does not keep their code.
+- Device copies and stored progress: check the shape before use (`new Set(object)` crashed the Learn page), and never delete a device copy because the server answered "unknown".
+
+**Client: late, double and stale actions**
+- Late responses must not change the screen the learner moved to. Use a token, ref or sequence number per request, abort fetches in effect cleanup, and let only the latest read draw (a lookup answered after the search box changed, an older XP sync).
+- Double submits: guard Start, Pause, Claim, Submit, Reveal, Next, level completion (focus and visibilitychange can fire together), friend actions and confirm dialogs with a ref, not only a disabled state. `isPending` reaches React a task later than the second click. Keep a row busy until the read that removes it lands.
 - Effects keyed on objects that auth replaces on every token refresh (`user`): depend on `user.id`.
 - Server state bound straight to a checkbox or select snaps back until the re-read lands: keep a local value and send saves from a queue.
-- Sequence numbers on list reads: only the latest read draws.
-- Dates that roll over: a page left open overnight must move to the new UTC day at midnight and when the tab becomes visible again.
-- Proofs, tokens or fields nothing decodes: grep for a reader, and remove both sides if there is none.
-- `aria-live` on a region mounted together with its content is not announced. Keep the live region on the page and change its text.
+- Realtime and polling: every subscribe returns a working unsubscribe, keep one poll in flight, and key a room component by code and account so moving between rooms remounts it.
+- Dates that roll over: a page left open overnight moves to the new UTC day at midnight and when the tab is visible again (`useUtcDay` in `client/src/lib/utcDay.ts`).
+- Controlled inputs bound to the URL: React Router updates the URL in a transition, so a search box controlled by it dropped keystrokes. Keep local state and write the URL after.
+
+**Client: states**
+- Do not offer "Start" while the enrollment list or the open run is loading or failed. Show a paused enrollment as paused, offer Try again when an activity fails to open, and say a sealed attempt expired instead of re-dealing it.
+- Empty data: a trace with no frames threw and replaced the lesson with the error boundary.
+- An offline copy belongs to its own tab or board, never the previous one.
+
+**Client: focus and accessibility**
+- No page-wide `aria-live` (screen readers re-read everything). A live region mounted with its words is not announced: keep it on the page and change its text. If the region wraps a visible card, let the region carry the card's styles while it has words (an empty wrapper around an absolutely positioned card has no box, and browser checks see it as hidden; this broke the Challenge release spec once).
+- Move focus to the opened item, each revealed hint, each new question and the verdict. When a control disables or re-inserts itself (Next on the last step, a moved list item, Submit replaced by the verdict, an answer at time up), move focus to the nearest control that still works.
+- Destructive buttons ask first: Reset uses the workbench's inline confirmation and returns focus to Reset; Remove friend uses `BrandedConfirmDialog` and moves focus to the list heading.
+- Every button is at least 44px tall. Tabs take one Tab stop and arrow keys. Enter in a lone input submits, as a form would.
+- Keyboard shortcuts ignore keys from forms and dialogs inside the screen and never act on a hidden editor.
+- Long code tokens wrap at 200 % text and 360 px. End a drag on `pointercancel`.
+
+**Client: loading and bundle**
+- Load heavy parts with `lazyShellPart` + `Suspense` + `ShellPartBoundary`, the boundary inside `Suspense` as its doc comment says. A static import of the editor pulled CodeMirror (about 173 kB gzip) into a screen that rarely needs it; the Learn level runner, a path's code editor and Prettier now load only when shown.
+- Helpers only lazy screens use must not live in a module the main chunk imports, and strings or defaults nothing reads still ship. Measure with `check:bundle`: the waiting-result sender loads only when a result waits.
+- Route preload matchers (`routes(...)` in `App.tsx`) match only the paths their routes serve. Skip intent preloads and idle warm-ups when `navigator.connection.saveData` is set, except a left mouse press.
+- Stop a browser run or worker when the learner leaves. Memoise heavy, pure children (`LessonView`, rich-text parsing) only where they re-render per keystroke, with stable inputs.
+- Canvas and downloads: `roundRect` is missing before Safari 16 and Firefox 112, so fall back to `arcTo`; zero the canvas after export (iOS caps canvas memory); attach the anchor before `click()` and revoke the object URL later.
+- Head tags: write `og:url` beside the canonical on client navigation, and read a trailing slash as the same route.
 
 ## 3. How to work
 
@@ -104,7 +115,7 @@ npm run -s ci:parity -- --only typecheck:api,typecheck:scripts,typecheck:tooling
 git diff --check origin/main...HEAD
 ```
 
-Add the area's own suites (`test:coding`, `test:coding-auth`, `test:billing` and so on) when the area touches them. Compare `check:bundle` with main's number: the initial load must not grow. On this 8-CPU machine a load average around 15 makes vitest time out; rerun a failing file alone before believing it. Then push, open one PR, wait for `verify` and `sql`, merge with a merge commit and record the result in `docs/release-acceptance.md`.
+Add the area's own suites (`test:coding`, `test:coding-auth`, `test:grading-integrity`, `test:billing` and so on) when the area touches them. Compare `check:bundle` with main's number: the initial load must not grow. On this 8-CPU machine a load average around 15 makes vitest time out; rerun a failing file alone before believing it. Then push, open one PR, wait for `verify` and `sql`, merge with a merge commit and record the result in `docs/release-acceptance.md`.
 
 ## 5. Finish
 

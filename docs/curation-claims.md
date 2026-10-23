@@ -24,7 +24,7 @@ All 769 issued coding tasks have a passing record. The 45 system-design tasks ar
 
 Retirement is not deletion. A withheld item stays in its source file and in `getQuestionsForHistoryById`, so an old attempt still finds its explanation and a report still finds its summary; every selector skips it. A retired question thins its own Learn level and never pulls a neighbour under another level's title. A level with fewer than three served questions is *unavailable*: on the map with its number, never a prerequisite, and stepped over by the shared unlock rules so nothing behind it becomes a dead end.
 
-An attempt that was open when its item was retired is handled explicitly: a quiz answer to the item is void (counted neither for nor against, no proof minted, reported in the result), a Learn attempt closes without a verdict and offers the level again, and a placement round voids the item and tops the run up to its budget.
+An attempt that was open when its item was retired is handled explicitly: a quiz answer to the item is void (counted neither for nor against and reported in the result), a Learn attempt closes without a verdict and offers the level again, and a placement round voids the item and tops the run up to its budget.
 
 ## A review applies to one exact version
 
@@ -67,7 +67,7 @@ No fallback sentence sounds better than the numbers.
 
 ## Where a learner meets this
 
-**Report a problem** sits in the quiz toolbar, the Learn view and the coding workbench (`client/src/components/ReportDialog.tsx`). A report carries the item id **and** the version that was on screen (migration 029), so a fix can be matched to the wording the learner saw. No account is needed.
+**Report a problem** sits in the quiz toolbar, the Learn view and the coding workbench (`client/src/components/ReportDialog.tsx`). A report carries the item id **and** the version that was on screen (migration 029), so a fix can be matched to the wording the learner saw. No account is needed. `enforceClassRateLimit` limits reports in two tiers: a class-sized bucket per address (`questionReportAddress`, 96 at once), then three at once per verified account, or per address for a guest (`questionReport`). A report whose id or detail holds U+0000 answers 400.
 
 ## What `npm run test:launch` asserts
 

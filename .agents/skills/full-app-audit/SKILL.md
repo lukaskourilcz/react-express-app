@@ -15,7 +15,7 @@ Goal: produce one prioritized punch-list covering UX, a11y, performance, scalabi
 
    - `ux-reviewer` — "Audit UX of all components in `client/src/components/`. Cover loading/empty/error states, mobile, Astryx/Deep End consistency (DESIGN_RULES.md), microcopy."
    - `accessibility-auditor` — "Audit WCAG 2.2 AA across all components and routes (`tests/browser/routes-axe.spec.ts` scans the signed-out routes). Cover semantic HTML, ARIA, keyboard, focus, contrast, SPA route changes."
-   - `performance-optimizer` — "Audit frontend perf — bundle, code splitting (Quiz/Profile lazy), `react-syntax-highlighter` weight, Vite manualChunks, render perf in Quiz.tsx."
+   - `performance-optimizer` — "Audit frontend perf — first-load weight against `npm run check:bundle`, the lazy route chunks and their preload matchers, heavy parts that must stay lazy (`react-syntax-highlighter`, the CodeMirror editor, the Learn level runner), Vite manualChunks, render perf in Quiz.tsx."
    - `scalability-auditor` — "Audit `api/`, `lib/` and `supabase/supabase-schema*.sql`. Cover cold starts, indexes, RLS-as-scan-risk, counter races, caching, rate limits and the twelve-handler budget."
    - `security-auditor` — "Audit the Supabase Auth flows (Google OAuth and email/password), RLS policies, API input validation, client-supplied trust, secrets, CORS, headers, deps."
    - `reliability-auditor` — "Audit failure modes — Supabase / Supabase Auth down, mid-quiz network drop, refresh, concurrent tabs, error boundaries, observability, idempotency."

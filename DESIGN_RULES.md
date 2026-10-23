@@ -170,7 +170,10 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   the next one can draw whole; the nav marks the destination at once and the
   waiting page fades back (`aria-busy`) only after 200ms. The route loader is
   for the first page of a visit. Links preload their page on hover, focus and
-  first touch (`lib/routePreload.ts`), and a page whose first render depends
+  first touch (`lib/routePreload.ts`), and only for a path one of the
+  `<Route>`s in `App.tsx` serves, so a deeper address that draws the 404 page
+  fetches no chunk. A browser that asks to save data preloads only on a left
+  mouse press, since the click that follows loads the same code. A page whose first render depends
   on account or structure data holds it with `useFirstData`
   (`lib/routeData.ts`, capped at 1.2s, and not at all offline) instead of
   drawing defaults and redrawing. The page's own query of a held read
@@ -218,8 +221,9 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   dialog: that reload opens it in the next document. A 402 nobody pressed
   for never reloads.
 - A part inside a page that loads its own code and is not in the page's hold
-  (the Learn workbench, the friends tab, a path's reward, the code
-  highlighter) fails alone. It is a `lazyShellPart` inside a
+  (the Learn level runner, which loads when a level opens, and the coding
+  workbench inside it, the friends tab, a path's reward, a path activity's
+  code editor, the code highlighter) fails alone. It is a `lazyShellPart` inside a
   `ShellPartBoundary`, and its fallback keeps the page: `ErrorRetry` in the
   part's place, or plain code for a code block. Nothing here uses `lazy`.
 - Motion's features chunk can fail too. `lib/motion.tsx` then marks

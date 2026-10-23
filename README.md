@@ -18,7 +18,7 @@ Current content comes from `shared/subject-catalog.ts`, `shared/coding-index.ts`
 - Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
 - A deterministic daily challenge and the timed Biggest Shark Challenge with leaderboards.
 - A public **question of the day** at `/daily` (and `/daily/<date>` for each day): one question a day, from a track that rotates by date (`shared/daily-question.ts`), with a server-graded "Check answer" that records nothing for anyone, and its own share image per day.
-- Sharing at the moment of success: the invite link after a first passed Learn level and after each Challenge run, and a downloadable result card (score or WPM and accuracy, and the date; never a name) for the Challenge and the typing racer. Every coding task and every day of the question of the day has its own link-preview image, drawn at build time (`client/src/og/ogImages.ts`).
+- Sharing at the moment of success: the invite link after a first passed Learn level and after each Challenge run, and a result card to share or download (the numbers on screen and the date; never a name) after a Challenge run, a finished Learn topic and a completed learning path (`ResultShareActions.tsx`). Every coding task and every day of the question of the day has its own link-preview image, drawn at build time (`client/src/og/ogImages.ts`).
 - Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, and QR sharing.
 - 30-day, all-time, daily and per-topic leaderboards; forgiving streaks (two free protections a month, spent on a missed day or in advance as a 48-hour shield); verified XP; ranks; and coins, earned from verified XP and milestones, that buy the crown and streak protections for every account and merchandise for Premium.
 - A read-only study advisor that names your weakest areas from your own results, and a touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
@@ -153,7 +153,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | `/api/quiz/submit` | One-time grading, result proofs, and reports |
 | `/api/quiz/daily` | UTC daily session; the public question of the day (`?qotd=<date|today>`) |
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
-| `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress; coding tasks, submissions, reports, and reveals; learning-path catalogue, activity start and submit |
+| `/api/quiz/roadmap` | Structure (the public Learn map, shared by the CDN for a minute), attempts, answers, completion, adaptive placement, the progress read (the retired progress PUT answers 405); coding tasks, submissions, reports, and reveals; learning-path catalogue, activity start and submit |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
 | `/api/leaderboard` | 30-day, all-time, daily, and category boards |
 | `/api/flashcards` | Shark Cards: save, list and remove the questions a learner saved |

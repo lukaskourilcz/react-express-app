@@ -15,11 +15,11 @@
 - Quiz setup, active text/code question, submit error, results and two-column review.
 - Learn sections (Web Developer, Software Engineer, Forward Deployed Engineer), locked/current/completed level, level lesson and figure, lesson feedback, skill check, missing structure.
 - Coding home, a track page, the workbench (editor, results, hints, solution), the narrow-screen puzzle or waiting state, a project's stage list and the FullStack screen.
-- The FDE path hub and an activity (lesson, check, code, artifact), with the switch on and off.
+- The FDE path hub and an activity (lesson, check, code, artifact, the Reset confirmation), with the switch on and off, and a paused enrollment (outline only, Resume).
 - Collection: saved questions and saved coding challenges.
 - Challenge intro, active timer, timeout, verified result, unavailable board.
 - Play signed out, host/join, room ticket/QR, lobby, live, reconnect/stale, results.
-- Profile no-progress/populated/delete failure.
+- Profile no-progress/populated/delete failure; the Friends tab with requests, the Remove-friend confirmation and a failed read with retry.
 - Leaderboard skeleton/empty/error/populated.
 - Flashcards signed out/empty/reveal/remove error.
 - Rewards (`/shop`) signed out/loading/error; coins and ledger; crown and streak protection owned/unaffordable/at cap. Merchandise is off (`MERCH_ENABLED`), so no merchandise state shows.

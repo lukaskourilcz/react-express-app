@@ -9,7 +9,8 @@ inside the Sandbox.
 ## Authority inside the VM
 
 The API converts learner TypeScript/JSX to ES2015 CommonJS without evaluating it
-(`react-transpile.ts`). Downlevelled async functions use the private learner
+(`react-transpile.ts`). The two fetch fixture modules are converted once per
+API instance and reused by every Submit. Downlevelled async functions use the private learner
 Promise kernel. The API uploads the guest bundle and an input containing compiled
 learner/fixture modules, trusted visible/hidden suite and random run nonce.
 
@@ -51,7 +52,10 @@ learner/fixture modules, trusted visible/hidden suite and random run nonce.
 A form that submits without preventing its default fails its case, matching the
 browser harness. Thrown values, including empty or unreadable errors, fail rather
 than become passes. A crash after the started marker is a learner error; failure
-before it remains an infrastructure outage. Learner components can of course
+before it remains an infrastructure outage. Code nested too deeply for the
+compiler to convert fails as a learner compile error before any VM is requested
+(`NESTED_TOO_DEEPLY` in `react-isolated.ts`), so the learner is not told to retry
+an outage. Learner components can of course
 change their rendered DOM, as any component under test can. The boundary prevents
 access to assertion/result authority; it is not a claim that every authored suite
 covers every possible incorrect solution or a platform penetration-test claim.

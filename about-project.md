@@ -12,7 +12,7 @@ Content counts come from `shared/subject-catalog.ts`, `shared/coding-index.ts` a
 - An auto-composed **Today** queue that folds carried-over work, due-for-review levels and new material into one daily plan.
 - Solo quizzes, a daily challenge, the survival Biggest Shark Challenge, live multiplayer and classroom rooms, and leaderboards that rank the last 30 days by default.
 - A public **question of the day** at `/daily`: one question a day from a track that rotates by date, checked on the server without an account and recorded nowhere. Each day has its own page (`/daily/<date>`) and share image.
-- Share moments: the invite link after a first passed Learn level and after a Challenge run, a result card from the Challenge and the typing racer, and a link-preview image per coding task.
+- Share moments: the invite link after a first passed Learn level and after a Challenge run, a result card after a Challenge run, a finished Learn topic and a completed learning path, and a link-preview image per coding task.
 - **Adaptive placement** that steps difficulty up and down over short rounds.
 - **Forgiving streaks** (two free protections a month, spent on a missed day or in advance as a 48-hour shield) and a read-only **study advisor**.
 - A **typing racer** and Shark Cards, the questions a learner saved to review.

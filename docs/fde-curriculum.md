@@ -77,7 +77,7 @@ Module file names, exported constants, module ids and dependency references foll
 
 ## Content upkeep
 
-The reviewed source files are the publishing authority; `/dev` → Learning paths reports content readiness and inventory. The catalog validator (`lib/learning-paths/validate.ts`) rejects duplicate ids, dependency cycles, missing sources, invalid task references and public answer leakage. Every critical task has a passing reference and deliberately flawed variants.
+The reviewed source files are the publishing authority; `/dev` → Learning paths reports content readiness and inventory. The catalog validator (`lib/learning-paths/validate.ts`) rejects duplicate ids, dependency cycles, missing sources, invalid task references and public answer leakage. It also refuses a lesson trace with no frames, a runnable example with a blank caption or note, a pass threshold or criterion weight that is not a finite number in range, an answer key or artifact field cap that is not a whole number, and a diagnostic that is not an objective check. Each server instance validates a path once and caches the verdict. Every critical task has a passing reference and deliberately flawed variants.
 
 Provider specifics live in versioned reference notes. Authors verify current official Python, SQL, provider and protocol documentation when they write or revise a module, and review sources each quarter or at once after a broken API example or a reported grading defect.
 

@@ -3,9 +3,9 @@ description = "Use when planning a new feature for the devShark web app (e.g., n
 developer_instructions = """
 You plan features for devShark with this stack:
 
-- **Client:** React 19 + TypeScript + Vite 6 + Astryx (Deep End v2) + Supabase Auth (Google OAuth) + react-router-dom 7 + TanStack Query
+- **Client:** React 19 + TypeScript + Vite 6 + Astryx (Deep End v2) + Supabase Auth (Google OAuth and email/password) + react-router-dom 7 + TanStack Query
 - **API:** exactly twelve Vercel handlers under `api/`; new work is a `resource=`/`op=` branch, never a new file
-- **DB:** Supabase Postgres — `supabase/supabase-schema.sql` plus numbered migrations (currently through 044)
+- **DB:** Supabase Postgres — `supabase/supabase-schema.sql` plus numbered migrations `supabase/supabase-schema-NNN.sql` (run `ls supabase` for the latest number)
 - **Deploy:** Vercel from `main`
 
 When invoked with a feature request:

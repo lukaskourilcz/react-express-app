@@ -9,15 +9,15 @@ Use with `shark-screen-implementation`, which owns the screen itself. This skill
 
 ## Register the page
 
-- Register every page's chunk with `routeChunk(matches, load)` from `client/src/lib/routePreload.ts`, using the `exact(...)` or `under(...)` matchers in `client/src/App.tsx`. A pointer resting on a link, a focus or a touch then starts the same import the route runs (`installIntentPreloading`), and a failed import is forgotten so the next attempt asks the network again.
+- Register every page's chunk with `routeChunk(matches, load)` from `client/src/lib/routePreload.ts`, using the `exact(...)` or `routes(...)` matchers in `client/src/App.tsx`. Pass `routes` the same patterns as the page's `<Route path>`s (`routes('/play/:code?')`, `routes('/coding/:track?', '/coding/:track/:taskId')`): it matches those shapes only, with a trailing slash read as the same route. Never match a whole prefix, which also preloads the chunk for deeper paths that draw the 404 page. A pointer resting on a link, a focus or a touch then starts the same import the route runs (`installIntentPreloading`), and a failed import is forgotten so the next attempt asks the network again. When the browser asks to save data, only a left mouse press preloads.
 - Build the page component with `lazyPage(load)` from `client/src/lib/routeRecovery.ts`, never `React.lazy`. React.lazy keeps a failed load for good; `lazyPage` renews it and checks for a newer build before the error reaches the boundary (the comment above `loadHome` in `App.tsx`). Several pages that share one chunk pick their export: `lazyPage(() => loadPaths().then((m) => ({ default: m.FdeModule })))`.
 - Add the `<Route>` inside the `<Routes>` in `App.tsx`, before `path="*"`. `RouteErrorBoundary` and the route `Suspense` already wrap every route there.
-- Give the path a title key in `ROUTE_TITLE_KEYS` in `client/src/lib/routeHead.ts`. A page that means something to one person (a checkout return, an email link) goes in `NOINDEX_PATHS` in `client/src/lib/publicMetadata.ts`.
+- Give the path a title key in `ROUTE_TITLE_KEYS` in `client/src/lib/routeHead.ts`. `applyRouteHead` reads `/quiz/` as `/quiz` and writes `og:url` beside the canonical, as the prerendered pages carry it. A page that means something to one person (a checkout return, an email link) goes in `NOINDEX_PATHS` in `client/src/lib/publicMetadata.ts`.
 
 ## Parts that fail alone
 
 - A lazy part of the shell outside the route boundary uses `lazyShellPart` and sits inside its own `Suspense` with a `ShellPartBoundary` inside it, as the account widget does in `App.tsx` (`<ShellPartBoundary fallback={(retry, busy) => <AccountRetry … />}>`). The boundary renders the part again on retry and reloads only on the learner's press (`client/src/components/ShellPartBoundary.tsx`).
-- A part inside a page that should fail without taking the page down (the Learn workbench, the friends tab, the code highlighter) also uses `lazyShellPart` with a `ShellPartBoundary` (the doc comment of `lazyShellPart`).
+- A part inside a page that should fail without taking the page down (the Learn level runner and its coding workbench, a path's code editor, the path shelf, the friends tab, the code highlighter) also uses `lazyShellPart` with a `ShellPartBoundary` (the doc comment of `lazyShellPart`).
 - A section the page's first-data hold loads with its reads uses `lazyPart` from `client/src/lib/routeData.ts`; it fails with its page.
 
 ## Copy and the bundle budget

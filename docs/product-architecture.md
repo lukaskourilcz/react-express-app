@@ -108,9 +108,12 @@ as "—" rather than 0.
 
 The server keeps UTC days. The streak card, Today's target, the done and
 empty panels, the daily challenge and the cleared-level tooltip say when the
-day changes on the learner's clock (`client/src/lib/utcDay.ts`). Reaching
-Today's target hands out nothing: the panel says the plan is complete and
-when the next day starts.
+day changes on the learner's clock (`client/src/lib/utcDay.ts`). Today's plan
+and the Leaderboard's Today board move on to the new day at 00:00 UTC and
+when the learner returns to the tab (`useUtcDay`), so a page left open
+overnight does not keep yesterday's target or board. Reaching Today's target
+hands out nothing: the panel says the plan is complete and when the next day
+starts.
 
 ### Question of the day
 
@@ -134,8 +137,8 @@ track in the served bank, options shuffled by the same seed, the answer
 sealed in a quiz session with scope `qotd`. A future date answers 404
 `qotd_not_yet`, so nobody reads tomorrow's question today.
 `api/quiz/submit.ts` grades a `qotd` session as if signed out, whoever sends
-it: no result receipt, answer proof, XP, streak day, leaderboard entry or
-concept-review record. Every read seals a fresh session and one check claims
+it: no result receipt, XP, streak day, leaderboard entry or concept-review
+record. Every read seals a fresh session and one check claims
 it, so the response is `private, no-store` and the page fetches it with
 `cache: 'no-store'`. After a claimed or expired session, "Load it again"
 starts the question over.
@@ -236,9 +239,11 @@ setting removes a name from a board.
 `month`, `global`, `category` and `daily`) to everyone with
 `public, s-maxage=60` and no `stale-while-revalidate`, so the CDN never serves
 a board older than a minute. A request with a Bearer token or `me=1` also gets
-the learner's own line and is answered `private, no-store`. A `limit` is
-served as the next of 10, 25, 50, 100 or 200 rows, and a read that reaches the
-function takes the address read bucket ("Sign-in, caching and limits").
+the learner's own line, takes the `leaderboardPersonal` bucket and is answered
+`private, no-store`. A `limit` is served as the next of 10, 25, 50, 100 or 200
+rows, and a read that reaches the function takes the address read bucket
+("Sign-in, caching and limits"). Today's `date` must be one calendar day
+(`YYYY-MM-DD`, year 0001 or later), sent once; anything else answers 400.
 
 `friend_list` orders friends by correct answers and accuracy, shows each
 friend's live streak by the streak rule, and marks a friend active today when
@@ -251,8 +256,10 @@ starting, and the run seals them; refills cannot change them. A completed run
 with a positive score saves itself under one run id, for a signed-in learner
 under the server identity above and for a guest under a generated name tied
 to the run. There is no name-entry form, and a zero score creates no score or
-guest name. The board shows a count of the run's topics with the topics in a
-tooltip, or a gold fin for a run over every available topic.
+guest name. A run already saved with another score, owner or topic set
+answers 409 `run_already_saved`, and the browser drops it from the results it
+still has to send. The board shows a count of the run's topics with the
+topics in a tooltip, or a gold fin for a run over every available topic.
 
 A known limit: a run submits its answer proofs from the client
 (`api/quiz/challenge.ts`), and without a server-side append-only attempt
@@ -296,6 +303,8 @@ transactional counter (`supabase/supabase-schema-063.sql`): a generated name
 is the camelCase base plus that number, the number survives a rename and is
 never reused, the API sends it as a string, and a preview roll allocates
 nothing. The Friends tab says what friends add you by and links to the card.
+Remove asks first ("Remove <name>?"), because it ends the friendship on both
+sides and only a new request undoes it.
 
 What friends see is two switches on `user_handles`, both off by default, set
 through `op=identity` (GET/PUT, signed in, PUT on the per-account write
@@ -322,6 +331,12 @@ from its verified identity, else its sharkname, else "Player" and four digits
 taken from the account id, the same in every room. The server ignores a name
 in the request body, and the client sends none, so no part of an email
 address reaches a room (`npm run test:launch`, play-rooms suite).
+`create` refuses a topic list with an entry that is not a topic id, and
+`answer` an option index past the question's options, both with 400; a
+room-code clash is left to the unique key on `matches.code`, and `create`
+draws another code. A Supabase call that times out answers 503
+`upstream_timeout`, and `state`, `answer`, `distribution` and `heartbeat`
+answer 503 `backend_unavailable` when they cannot read the room, not 404.
 `join` and `state` also send `question_count` and `server_now`. The screens
 count each question down against the server's clock, not the device's; the
 presenter's key appears once the server stops taking answers, the question's
@@ -428,8 +443,9 @@ learner sees a timeout whose message names the type check. Submit sends the
 code at once, and the browser's own run (its type check has 8 s once the
 compiler is loaded) is a preview the server's run replaces. The same thread
 transpiles the TypeScript, so code nested too deeply for the compiler is an
-`error` verdict, not an HTTP 500. System-design answers are graded against a
-key sealed in the coding session.
+`error` verdict, not an HTTP 500. React code that nests too deeply for its
+compiler fails the same way, before any sandbox starts. System-design answers
+are graded against a key sealed in the coding session.
 
 A coding session seals the exact task and grader version (hidden checks,
 puzzle material and efficiency guidance). Submit refuses a stale or
@@ -492,7 +508,10 @@ above the task's authored time-complexity target. Unknown complexity pays the
 base and shows no complexity row. The analysis withholds an estimate for
 returned closures, callable aliases, methods and accessors, callable
 containers, input-dependent templates and string additions whose output work
-it cannot resolve. Dynamic value flow still needs manual review; the check is
+it cannot resolve. One analysis spends at most 150,000 node visits outside
+the cost walk (`ANALYSIS_STEPS` in `lib/coding/complexity.ts`), shared by
+every call of a helper; past that it reports no estimate ("The analysis limit
+was reached"). Dynamic value flow still needs manual review; the check is
 bounded, not a general type analysis.
 
 **System design** returns, for a failed or partly right submission, only
@@ -574,7 +593,11 @@ URL fragment; that tab removes the fragment and submits the session in the
 request body. The server checks the owner, task binding, expiry and open
 attempt on access, Submit and reveal. A read-only attempt-status request
 checks completion when Learn regains focus. Missing coding passes leave the
-attempt open, recording no failure, XP or streak; a reveal still ends it.
+attempt open, recording no failure, XP or streak; a reveal still ends it. The
+coding routines check the attempt again under its row lock, so a verdict or a
+reveal for an attempt that ended mid-request (completed in another tab, or
+past its two hours) answers 409 `invalid_session` and records nothing, as
+does completing an expired attempt.
 `supabase/supabase-schema-062.sql` enforces the same rule under the parent
 row lock. A coding task issued inside a Learn level follows that level's
 access tier.
@@ -607,9 +630,14 @@ until the learner takes it or the account confirms a save. A save sends that
 time as `base`, and `save_coding_draft_v2` writes only while the account draft
 still has it: otherwise the server answers 409 `draft_conflict` with the
 stored time (never its code), and the page asks whether to save this code
-over it or open the other draft, keeping this device's code either way. An
-evolving stage's Submit writes the stage draft through the same routine,
-forced, and returns its time.
+over it or open the other draft, keeping this device's code either way. When
+other saves keep creating the same first draft beside it, the routine gives
+up after three tries, writes nothing, and the server answers 503 `draft_busy`
+with Retry-After. A draft save, or a signed-in evolving stage's Submit, whose
+code holds U+0000 (which Postgres text cannot store) answers 400. A task whose
+account draft cannot be read answers 500 instead of opening as if it had
+none. An evolving stage's Submit writes the stage draft through the same
+routine, forced, and returns its time.
 
 A sign-out the learner chooses (Log out, here or in another tab, or deleting
 the account) forgets the drafts with the rest of the account's data. A
@@ -617,7 +645,11 @@ session that ends on its own (an expired or revoked refresh, a password
 changed elsewhere) keeps the drafts under the account's id and out of sight,
 says "You were signed out — sign in to keep your code", and gives them back
 when the same account signs in and opens a coding task. Another account
-signing in deletes them unread (`client/src/lib/accountData.ts`).
+signing in deletes them unread (`client/src/lib/accountData.ts`). A task open
+at the sign-out reads itself again, so the account's code leaves the editor.
+Code typed a moment before and still waiting is written first
+(`beforeAccountChange`), and work begun for the account that left (a draft
+read, a brief refresh) checks `accountEpoch` and opens nothing.
 
 ### Evolving projects and short paths
 
@@ -697,7 +729,11 @@ table cells into anchors only for HTTPS and canonical internal Learn routes;
 anything else stays visible text, and inline code stays text. Learn opens the
 reading before creating an attempt; "Start the questions" opens the ordinary
 level. Reading is optional, records nothing and stays apart from grading and
-rewards. A failed lesson read still permits the questions.
+rewards. A failed lesson read still permits the questions. The content
+contracts refuse a trace with no frames, and `LessonBody` shows one that
+slips through as its words instead of failing the lesson. The level runner
+(`components/learn/LessonRunner.tsx`) is a chunk of its own: Learn fetches it
+when a level opens, not with the map.
 
 ## Learn sections
 
@@ -878,6 +914,10 @@ The board groups the recorded activity states by competency. It never turns
 reading, self-review and machine verification into a competency score, and it
 keeps diagnostic percentages in their own section. A failed progress read
 shows an error instead of a fresh board. Continue follows `nextActivityId`.
+A paused enrolment keeps its outline and evidence but links no activity,
+since the server refuses one with 409 `enrollment_paused`; the overview and
+the module page say the path is paused and lead to Resume. Start appears
+only once the account's enrolments have loaded.
 The completion card is available only when the server returns
 `guidedComplete`: it carries the exact "FDE guided path completed" label, the
 manifest's competency labels and recorded counts, and no identity or
@@ -924,8 +964,10 @@ write; loading the latest brief keeps the editor source. An automatic retry
 sends its previous seal when it starts a replacement attempt; a changed,
 legacy or expired code attempt needs a latest-brief review before another
 Submit. An accepted network retry returns the stored response read-only. A
-runtime-only grading change must bump the attempt tag in
-`lib/learning-paths/session.ts`.
+check whose attempt expired says so ("This attempt expired. Try again to
+start a new one.") and deals a new attempt only when the learner asks,
+because a silent deal would clear their answers. A runtime-only grading
+change must bump the attempt tag in `lib/learning-paths/session.ts`.
 
 An objective check grades against the key sealed in its attempt. A project
 check (`purpose: 'project'`; none is published) deals the same questions again
@@ -958,7 +1000,22 @@ A code exercise or a written piece autosaves one draft per activity, up to
 `PATH_LIMITS.draftsPerEnrollment` (60) per enrolment, which `npm run
 test:paths` keeps at or above every path's code exercises plus artifacts. A
 pass keeps its draft, the only copy of the learner's passed code the server
-holds. `purge_expired_learning_data` removes drafts idle for 90 days.
+holds. `purge_expired_learning_data` removes drafts idle for 90 days. A draft
+or artifact holding U+0000 answers 400, and a first save that races another
+answers 409 `draft_conflict`.
+
+The browser keeps an unsaved draft on the device too
+(`client/src/lib/learningPathWorkspace.ts`), with the server revision it was
+typed on; once the server has moved past that revision, the server's copy
+wins. Starting an activity returns its draft in the same request, and
+`draftUnavailable: true` when the server could not read it: the device copy
+then stays for the next save to settle. Switching activity, leaving the view
+or a change of account writes what is waiting first (`beforeAccountChange`).
+An involuntary sign-out keeps these copies for that account alone, as it does
+coding drafts ("Drafts" under "Coding section"); another account signing in
+deletes them unread. In a code activity, Reset asks before it replaces
+changed code with the starter, and the code editor loads only when a code
+activity renders.
 
 `accept_learning_path_result` (migration 054) keeps a verified pass and a
 submitted written piece against any weaker later attempt, which is still
@@ -1003,7 +1060,10 @@ second scheduler. Both are pure with the clock injected; persistence is
 service-role routine. Only independent retrieval lengthens an interval: a
 hinted, revealed or recognition-shaped answer holds the rung it already
 earned. Review grants no XP of its own and never widens the pool it draws
-from. See `docs/practice-scheduling.md`.
+from. When the learner's review states cannot be read, a session still runs
+as if none were stored, but the submit records no concept review, since each
+next state builds on the one read (`loadReviewStates` answers null). See
+`docs/practice-scheduling.md`.
 
 `shared/curation.ts` owns what the product may *say* about its content: the
 two gates (relevance out of ten, quality out of five, both required) and the
@@ -1515,30 +1575,63 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   Offline or on a 5xx, supabase-js keeps the session, so `lib/auth.tsx` removes
   the stored session and its code verifier itself, forgets the account's data
   and signs the page out. Signing out everywhere needs the server and reports a
-  failure. `clearAccountData` moves an account epoch, and a progress sync that
-  started before it writes nothing.
+  failure. `clearAccountData` writes any draft still waiting
+  (`beforeAccountChange`), then moves an account epoch (`accountEpoch`), and
+  work that started before it (a progress sync, an XP sync, a level
+  completion, a Challenge reward) writes and announces nothing.
+- **Progress is read, never sent.** The server writes Learn progress itself on
+  each completion. The browser pulls it at sign-in and when Today or a map
+  asks (`GET /api/quiz/roadmap?resource=progress`, `syncProgressWithServer`,
+  one request in flight per account) and sends nothing back; a PUT there
+  answers 405.
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
-  every answer before the handler runs; the public ones (the boards, settings,
-  the Learn map, health) set their own.
+  every answer before the handler runs, and the public reads set their own:
+  the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,
+  s-maxage=60, stale-while-revalidate=300`, so the CDN shares it; a lesson
+  `public, max-age=300, s-maxage=86400` with its ETag; the curation coverage
+  `public, s-maxage=60, stale-while-revalidate=300`; settings and the
+  Challenge board `public, s-maxage=15, stale-while-revalidate=60`. Health
+  answers `no-store`.
 - **Grants by address.** The admin allow-list, the owner's granted Learn paths
   and the owner's private categories count an email only once Supabase has
   confirmed it (`confirmedEmail` in `lib/auth.ts`), as billing does. The admin
   role in `app_metadata` needs no email.
-- **Read limits.** The wallet, badges and a friend lookup in `api/user/[op].ts`
-  and the Learn plan, progress and steps take `limitRead`
+- **Read limits.** The wallet, badges, a friend lookup, the sharkname
+  (`friends-handle`) and the board name (`leaderboard-name`) GETs in
+  `api/user/[op].ts` and the Learn plan, progress and steps take `limitRead`
   (`lib/rate-limit.ts`): an address bucket that holds a class behind one NAT,
   then the verified account's own (120 a minute). A guest has the address
   bucket alone, which the Learn map and the leaderboard take too. The
   fulfilment op takes the admin bucket before its gate, GET included.
+- **Class-sized writes.** `enforceClassRateLimit` takes an address bucket
+  sized for a class behind one NAT, then the caller's own bucket (the
+  verified account, or the address for a caller without one). Question
+  reports use it (`questionReportAddress`, then `questionReport`: three, then
+  one every three minutes), so a class can report more than three questions
+  at once.
 - **One-time claims.** `claimOnce` (one grade per placement round, one check
   per design walkthrough) is held in Upstash. Where Upstash is configured, a
   claim it cannot record is answered 503 `claim_unavailable` and nothing is
-  graded; only without Upstash does an instance's memory hold it.
+  graded; only without Upstash does an instance's memory hold it. A quiz
+  submit's own claim (`claim_quiz_submission`) answers the same 503 when the
+  database cannot take it.
+- **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
+  has not settled in time with `UpstreamTimeoutError`, a
+  `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which
+  it may retry, instead of 500. `withRequestContext` logs every 503 at level
+  error, and an escaped `AuthError` with the 401 or 503 it answers.
+- **Text with U+0000.** Postgres text and JSONB cannot store it, so a coding
+  draft, a learning-path draft or artifact, a Shark Card and a question
+  report holding it answer 400 before any write.
+- **Game settings.** A failed settings read serves the instance's last known
+  settings, or the defaults when it has none, and logs the failure, so a
+  database blip never turns back on a feature the owner switched off.
 
 ## Account erasure
 
 `DELETE /api/user/delete-account` ends any live Stripe subscription first and
-stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
+stops with 503 if Stripe cannot be reached. A database call that times out
+answers 503 `upstream_timeout`, and any other failure 500. It then calls `delete_user_data`,
 the one routine that erases every table holding an account id (restated last
 in `supabase/supabase-schema-060.sql`, which covers the voucher redemptions,
 merchandise, the month's XP ledger `user_xp_days`, the question hours

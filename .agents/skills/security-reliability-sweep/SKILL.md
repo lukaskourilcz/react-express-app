@@ -11,8 +11,8 @@ Goal: surface every way the app can be exploited or fail in production, ranked b
 
 1. **Spawn two auditors in parallel** (single message, two `Agent` tool calls):
 
-   - `security-auditor` — "Full security audit. Pay special attention to: RLS and grants in `supabase/supabase-schema*.sql`; JWT verification in `lib/auth.ts` and admin identity in `lib/admin-auth.ts`; server grading and one-time claims in `api/quiz/submit.ts` and `lib/quiz-tokens.ts`; secret leakage; npm audit."
-   - `reliability-auditor` — "Full reliability audit. Pay special attention to: counter races on `total_quizzes`/`current_streak`; mid-quiz refresh/network drop UX; the React error boundary (`client/src/components/ErrorBoundary.tsx`); idempotency of submit; observability gaps."
+   - `security-auditor` — "Full security audit. Pay special attention to: RLS and grants in `supabase/supabase-schema*.sql`; JWT verification in `lib/auth.ts` and admin identity in `lib/admin-auth.ts`; server grading in `api/quiz/submit.ts`, the sealed sessions in `lib/quiz-tokens.ts` and the one-time claims (`claimOnce` in `lib/rate-limit.ts`); secret leakage; npm audit."
+   - `reliability-auditor` — "Full reliability audit. Pay special attention to: counter races on `total_quizzes`/`current_streak`; mid-quiz refresh/network drop UX; the React error boundary (`client/src/components/ErrorBoundary.tsx`); idempotency of submit; Supabase timeouts, which must answer 503 `upstream_timeout` (`withTimeout` in `lib/http.ts`); observability gaps."
 
 2. **Merge into one report:**
 
