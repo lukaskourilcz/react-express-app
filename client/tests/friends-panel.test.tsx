@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { FriendsPanel } from '../src/components/FriendsPanel';
@@ -159,6 +159,36 @@ describe('answering two requests in a row', () => {
     await new Promise((done) => setTimeout(done, 50));
     expect(screen.queryByText('Gus Example')).toBeNull();
     expect(screen.queryByText('Dee Example')).toBeNull();
+  });
+});
+
+describe('double presses on a request', () => {
+  it('sends one answer for a double click, and keeps a second row busy while its answer runs', async () => {
+    const answered: string[] = [];
+    let releaseGus!: () => void;
+    const gusGate = new Promise<void>((done) => { releaseGus = done; });
+    serve({
+      requests: [
+        { handle: 'mucho-chomp-shark', displayName: 'Dee Example', direction: 'incoming' },
+        { handle: 'gracias-sharkie', displayName: 'Gus Example', direction: 'incoming' },
+      ],
+    });
+    server.use(http.post('*/api/user/friends-respond', async ({ request }) => {
+      const { handle } = await request.json() as { handle: string };
+      answered.push(handle);
+      if (handle === 'gracias-sharkie') await gusGate;
+      return HttpResponse.json({ state: 'accepted' });
+    }));
+    renderPanel();
+    const accept = await screen.findByRole('button', { name: 'Accept Dee Example' });
+    const acceptGus = screen.getByRole('button', { name: 'Accept Gus Example' });
+    act(() => { acceptGus.click(); accept.click(); accept.click(); });
+    await waitFor(() => expect(answered.sort()).toEqual(['gracias-sharkie', 'mucho-chomp-shark']));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Accept Dee Example' })).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'Accept Gus Example' })).toBeDisabled();
+    releaseGus();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Accept Gus Example' })).toBeEnabled());
+    await new Promise((done) => setTimeout(done, 50));
   });
 });
 

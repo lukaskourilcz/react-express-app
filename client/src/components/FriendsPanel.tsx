@@ -113,6 +113,27 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
   );
 }
 
+/** The rows with a change in flight. The ref holds a row at the press,
+ * because the disabled state reaches its buttons a render later, after a
+ * double click has sent its second answer; a set, so one row's answer that
+ * ends does not re-enable another row's buttons while that one runs. */
+function useInFlight() {
+  const running = useRef(new Set<string>());
+  const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
+  const run = async (key: string, work: () => Promise<void>) => {
+    if (running.current.has(key)) return;
+    running.current.add(key);
+    setBusy(new Set(running.current));
+    try {
+      await work();
+    } finally {
+      running.current.delete(key);
+      setBusy(new Set(running.current));
+    }
+  };
+  return { isBusy: (key: string) => busy.has(key), run };
+}
+
 /* ── your own sharkname ─────────────────────────────────────────────────── */
 
 function HandleCard({
@@ -226,18 +247,17 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
     }
   };
 
-  const ask = async (handle: string) => {
-    setBusy(true); setError(null);
+  const asking = useInFlight();
+  const ask = (handle: string) => asking.run(handle, async () => {
+    setError(null);
     try {
       const { state } = await requestFriend(handle);
       setResult({ found: true, handle, state });
       onChanged();
     } catch (err) {
       setError(friendlyError(err));
-    } finally {
-      setBusy(false);
     }
-  };
+  });
 
   return (
     <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
@@ -270,7 +290,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
             {result.displayName && result.displayName !== result.handle && <span className="fr-handle">{result.handle}</span>}
           </span>
           {result.state === 'none' && (
-            <Button variant="primary" isDisabled={busy} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
+            <Button variant="primary" isDisabled={busy || asking.isBusy(result.handle)} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
           )}
           {result.state === 'self' && <span className="fr-note">{t('friends.isYou')}</span>}
           {result.state === 'accepted' && <span className="fr-note">{t('friends.alreadyFriends')}</span>}
@@ -278,7 +298,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
           {result.state === 'pending_in' && <span className="fr-note">{t('friends.theyAsked')}</span>}
           {result.state === 'declined_out' && <span className="fr-note">{t('friends.wasDeclined')}</span>}
           {result.state === 'declined_in' && (
-            <Button variant="primary" isDisabled={busy} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
+            <Button variant="primary" isDisabled={busy || asking.isBusy(result.handle)} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
           )}
           {result.state === 'blocked' && <span className="fr-note">{t('friends.blocked')}</span>}
         </div>
@@ -293,15 +313,14 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
 function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChanged: () => void }) {
   const t = useT();
   const titleId = useId();
-  const [busy, setBusy] = useState<string | null>(null);
+  const answering = useInFlight();
   const [error, setError] = useState<string | null>(null);
 
-  const answer = async (handle: string, accept: boolean) => {
-    setBusy(handle); setError(null);
+  const answer = (handle: string, accept: boolean) => answering.run(handle, async () => {
+    setError(null);
     try { await respondFriend(handle, accept); onChanged(); }
     catch (err) { setError(friendlyError(err)); }
-    finally { setBusy(null); }
-  };
+  });
 
   const incoming = requests.filter((one) => one.direction === 'incoming');
   const outgoing = requests.filter((one) => one.direction === 'outgoing');
@@ -317,8 +336,8 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
               {one.displayName !== one.handle && <span className="fr-handle">{one.handle}</span>}
             </span>
             <span className="fr-item__actions">
-              <Button variant="primary" isDisabled={busy === one.handle} aria-label={t('friends.acceptOne', { name: one.displayName })} onClick={() => void answer(one.handle, true)} label={t('friends.accept')} />
-              <Button variant="secondary" isDisabled={busy === one.handle} aria-label={t('friends.declineOne', { name: one.displayName })} onClick={() => void answer(one.handle, false)} label={t('friends.decline')} />
+              <Button variant="primary" isDisabled={answering.isBusy(one.handle)} aria-label={t('friends.acceptOne', { name: one.displayName })} onClick={() => void answer(one.handle, true)} label={t('friends.accept')} />
+              <Button variant="secondary" isDisabled={answering.isBusy(one.handle)} aria-label={t('friends.declineOne', { name: one.displayName })} onClick={() => void answer(one.handle, false)} label={t('friends.decline')} />
             </span>
           </li>
         ))}
@@ -339,15 +358,14 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
 function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasHandle: boolean; onChanged: () => void }) {
   const t = useT();
   const titleId = useId();
-  const [busy, setBusy] = useState<string | null>(null);
+  const removing = useInFlight();
   const [error, setError] = useState<string | null>(null);
 
-  const drop = async (handle: string) => {
-    setBusy(handle); setError(null);
+  const drop = (handle: string) => removing.run(handle, async () => {
+    setError(null);
     try { await removeFriend(handle); onChanged(); }
     catch (err) { setError(friendlyError(err)); }
-    finally { setBusy(null); }
-  };
+  });
 
   return (
     <section className="fr-card ss-panel" aria-labelledby={titleId}>
@@ -383,7 +401,7 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                   {friend.activeToday && <> {' · '}<span className="fr-today">{t('friends.today')}</span></>}
                 </span>
               </span>
-              <Button variant="secondary" isDisabled={busy === friend.handle} aria-label={t('friends.removeOne', { name: friend.displayName })} onClick={() => void drop(friend.handle)} label={t('friends.remove')} />
+              <Button variant="secondary" isDisabled={removing.isBusy(friend.handle)} aria-label={t('friends.removeOne', { name: friend.displayName })} onClick={() => void drop(friend.handle)} label={t('friends.remove')} />
             </li>
           ))}
         </ul>
