@@ -182,7 +182,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
     if (!auth) return jsonError(res, 401, 'unauthorized', 'Sign in to build a personalized review');
     if (!supabase) return jsonError(res, 503, 'not_configured', 'Personalized review is not configured');
-    const [stats, history] = await Promise.all([
+    // The review states are read with the stats they are ranked beside; none
+    // of the three reads depends on another.
+    const [stats, history, states] = await Promise.all([
       withTimeout(
         supabase
           .from('user_category_stats')
@@ -199,6 +201,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           .order('last_missed_at', { ascending: false, nullsFirst: false })
           .limit(500),
       ),
+      loadReviewStates(supabase, auth.sub, scope.subject),
     ]);
     if (stats.error || history.error) {
       const migrationMissing = history.error?.message?.includes('user_question_history');
@@ -214,7 +217,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // says what order they arrive in. None of them widens the pool: `pool` is
     // already scoped by the same eligibility and plan filters as everything
     // else, so review can never unlock a level or resurrect retired material.
-    const states = await loadReviewStates(supabase, auth.sub, scope.subject);
     const due = dueFor(states, () => true, Date.now());
     const dueSet = new Set(due.map((one) => one.conceptId));
     // Prefer a *different* item for a due concept than the one last used, so a
