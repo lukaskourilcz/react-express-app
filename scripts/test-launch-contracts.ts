@@ -5739,6 +5739,21 @@ async function main() {
     assert.equal(skipped.statusCode, 200, JSON.stringify(skipped.body));
     const next = (skipped.body as { next?: string | null }).next;
     assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
+    // A skip note is cut to the 280 characters coding_skips holds by code
+    // point: cut by UTF-16 unit, an emoji at the edge left half of itself.
+    {
+      const notes: unknown[] = [];
+      const noteDb = practiceDb();
+      const recording = { from: noteDb.client.from, rpc: (name: string, args: Record<string, unknown>) => {
+        if (name === 'record_coding_skip') notes.push(args.p_note);
+        return noteDb.client.rpc(name, args);
+      } };
+      const noted = await asPremium(handleCodingSkip, { taskId: left.id, reason: 'unclear', note: `${'a'.repeat(279)}\u{1F600}\u{1F600}` }, { ...noteDb, client: recording as never });
+      assert.equal(noted.statusCode, 200, JSON.stringify(noted.body));
+      const kept = String(notes[0]);
+      assert.equal(Buffer.from(kept, 'utf8').toString('utf8'), kept, 'the note sent to record_coding_skip splits no character');
+      assert.equal(Array.from(kept).length, 280, 'the note keeps 280 characters');
+    }
 
     // A run's place is a Postgres integer: a number past it failed the
     // routine's call with a 500. The routine clamps the place to the queue,

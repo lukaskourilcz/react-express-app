@@ -261,7 +261,9 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   }
   const task = SECTION_TASKS.find((one) => one.id === body.taskId);
   if (!task) return jsonError(res, 400, 'bad_request', 'Unknown challenge');
-  const note = typeof body.note === 'string' ? body.note.trim().slice(0, 280) : '';
+  // coding_skips holds 280 characters (code points): cut by UTF-16 unit, an
+  // emoji at the edge kept half of itself.
+  const note = typeof body.note === 'string' ? Array.from(body.note.trim()).slice(0, 280).join('') : '';
 
   const recorded = await withTimeout(
     supabase.rpc('record_coding_skip', {
