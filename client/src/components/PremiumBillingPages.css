@@ -50,8 +50,15 @@
 @media (max-width: 599px) {
   .ss-checkout-actions { flex-direction: column-reverse; align-items: stretch; }
   .ss-checkout-actions > .astryx-button.ghost:first-child { margin-inline-start: 0; }
+  /* Signed out, the step's primary is the signed-out block's Sign in to
+     continue: full width too, over the full-width Back to plans. */
+  .ss-checkout-card .ss-signed-out { align-items: stretch; }
 }
 .ss-checkout-form[data-ready="true"] { min-height: 320px; }
+/* Until Stripe mounts into it the host is empty, and its flex slot would add
+   a second 0.9rem gap above the footer row (money-04); it stays in the flow,
+   so the mount and the focus move still find it. */
+.ss-checkout-form:empty { margin-top: -0.9rem; }
 /* Focus lands on the form's box when it opens, so Tab goes on into Stripe's
    fields; the box itself needs no ring. */
 .ss-checkout-form:focus { outline: none; }
