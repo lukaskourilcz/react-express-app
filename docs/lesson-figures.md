@@ -47,10 +47,11 @@ The three contrast pairs the interleaver cares about most (`map`, `filter` and `
 
 ## Accessibility
 
-Every figure carries its content in words under a "This figure in words" disclosure: the numbers, the order and the result, not a description of the picture. A disclosure is available to everybody, unlike an `alt` attribute, and it keeps the figure safe to lose to a narrow screen, a failed stylesheet or a reading order that differs from the visual one. The validator rejects alt text shorter than 120 characters and alt text that starts "a diagram of", because both are labels mistaken for content.
+Every figure carries its content in words under a "This figure in words" disclosure: the numbers, the order and the result, not a description of the picture. A disclosure is available to everybody, unlike an `alt` attribute, and it keeps the figure safe to lose to a narrow screen, a failed stylesheet or a reading order that differs from the visual one. The validator rejects alt text shorter than 120 characters and alt text that opens by naming a picture ("A diagram", "An image", "The figure" and the like), because both are labels mistaken for content.
 
 - **No meaning through colour.** Every marked cell, row and layer carries the word that says why it is marked: "middle", "found", "top", "only in the LEFT JOIN". The tint decorates a word that is already there.
 - **Stepping is manual.** Previous, Next and Reset; no autoplay, dragging or timer. The frames are states, so a reduced-motion preference has nothing to turn off.
+- **Focus stays on a control that still steps.** Reset, Next on the last step and Previous on the first turn themselves off, so focus moves to the button that still has something to do. The toggle and the step buttons are 44px tall.
 - **The whole sequence is written out** below the controls, so a stepped figure reads without touching them.
 - **Changes are announced.** The step description sits in a live region.
 - **Assumptions are stated** where the answer would change without them: the `box-sizing` in effect, the container width behind an `fr` calculation, the `highWaterMark` behind a stream chunk size, the tie-break rule in a binary search.
@@ -62,10 +63,11 @@ A figure marked `afterSubmission` stays hidden until the level is finished, for 
 
 ## What `npm run test:launch` checks
 
-- Every figure names a real topic and a level inside that topic's range.
+- Every figure names a real topic and a whole-number level inside that topic's range; `NaN` and fractions fail.
 - Every figure has a title and alt text of at least 120 characters.
 - No arrow is unlabelled: an unlabelled arrow means "somehow", the thing a diagram should replace.
-- No mark is wordless; no table row has the wrong width; no frame marks a cell it does not have.
+- No mark is wordless; no table row has the wrong width; no frame or table marks a position it does not have, and a mark position is a whole number.
+- A stepped figure has at least two frames.
 - A figure appears only on the level it was authored for.
 - A figure held until after submission is not returned before it.
 - The named topics stay covered, so the set cannot collapse into whichever topic was easiest to author.
