@@ -123,6 +123,21 @@ describe('GitHub garden card', () => {
     }
   });
 
+  it('forgets a repository choice the re-read list no longer offers, so Use is not sent for it', async () => {
+    answer(() => HttpResponse.json(PENDING));
+    const sent = posts(() => HttpResponse.json({ error: { code: 'bad_repo', message: 'Pick a repository you own that the app is installed on' } }, { status: 400 }));
+    const { client } = mount();
+    fireEvent.click(await screen.findByRole('radio', { name: 'garden-owner/garden' }));
+    expect(screen.getByRole('button', { name: en['github.useRepo'] })).toBeEnabled();
+    // The learner narrowed the installation on GitHub: the list read again
+    // offers another repository only.
+    act(() => { client.setQueryData(codingKeys.github(), { ...PENDING, repositories: [{ fullName: 'garden-owner/other', defaultBranch: 'main', private: false, fork: false }] }); });
+    const use = await screen.findByRole('button', { name: en['github.useRepo'] });
+    expect(use).toBeDisabled();
+    fireEvent.click(use);
+    expect(sent).toEqual([]);
+  });
+
   it('still says when the connection could not be read', async () => {
     answer(() => HttpResponse.json({ error: { code: 'internal_error', message: 'Could not handle the GitHub request' } }, { status: 500 }));
     mount();

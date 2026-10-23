@@ -65,6 +65,11 @@ export function GithubGardenCard() {
     setBusy(null);
   }, []));
   const [repoChoice, setRepoChoice] = useState<string | null>(null);
+  // The choice counts only while the list still offers it: a re-read after
+  // the installation changed can drop that repository, and Use would send a
+  // name the server refuses as bad_repo.
+  const offeredRepos = query.data?.status === 'pending_repo' ? query.data.repositories ?? [] : [];
+  const repoPick = repoChoice !== null && offeredRepos.some((repo) => repo.fullName === repoChoice) ? repoChoice : null;
   const [toast, setToast] = useState<Toast>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const anchorRef = useRef<HTMLHeadingElement>(null);
@@ -98,13 +103,14 @@ export function GithubGardenCard() {
   };
 
   const chooseRepo = async () => {
-    if (!repoChoice || !begin('repo')) return;
+    if (!repoPick || !begin('repo')) return;
+    const chosen = repoPick;
     const epoch = accountEpoch();
     try {
-      const next = await chooseGithubRepo(repoChoice);
+      const next = await chooseGithubRepo(chosen);
       if (accountEpoch() !== epoch) return;
       setConnection(next);
-      setToast({ message: t('github.repoSaved', { repo: repoChoice }), severity: 'success' });
+      setToast({ message: t('github.repoSaved', { repo: chosen }), severity: 'success' });
     } catch (error) {
       if (accountEpoch() === epoch) setToast({ message: friendlyError(error), severity: 'error' });
     } finally {
@@ -204,7 +210,7 @@ export function GithubGardenCard() {
         ) : (
           <>
             <Text type="supporting" size="sm" color="secondary">{t('github.pickRepo')}</Text>
-            <RadioCardGroup value={repoChoice} onChange={(value) => setRepoChoice(String(value))} label={t('github.pickRepoLabel')}>
+            <RadioCardGroup value={repoPick} onChange={(value) => setRepoChoice(String(value))} label={t('github.pickRepoLabel')}>
               {repos.map((repo, index) => (
                 <RadioCard key={repo.fullName} value={repo.fullName} index={index} label={repo.fullName} padding={2}>
                   <VStack gap={0}>
@@ -218,7 +224,7 @@ export function GithubGardenCard() {
             </RadioCardGroup>
             <HStack justify="between" wrap="wrap" gap={1}>
               <Button variant="ghost" size="sm" label={t('github.disconnect')} isDisabled={busy !== null} onClick={requestDisconnect} />
-              <Button variant="primary" size="sm" label={t('github.useRepo')} isDisabled={!repoChoice || busy !== null} onClick={() => void chooseRepo()} />
+              <Button variant="primary" size="sm" label={t('github.useRepo')} isDisabled={!repoPick || busy !== null} onClick={() => void chooseRepo()} />
             </HStack>
           </>
         )}
