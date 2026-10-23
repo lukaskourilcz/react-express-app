@@ -8,7 +8,7 @@ import {
   type Question,
 } from '../../lib/quiz-runtime';
 import { encodeSession, quizSessionExpiresAt } from '../../lib/quiz-tokens';
-import { confirmedEmail } from '../../lib/auth';
+import { AuthError, confirmedEmail } from '../../lib/auth';
 import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, tryAuthOnce } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
@@ -29,6 +29,15 @@ const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'a
 
 const logEvent = createLogger('quiz/questions');
 const supabase = createServiceClient();
+
+/** A caller whose credentials did not verify. A refused token is 401, as
+ * before; a sign-in service that is down or slow keeps its own 503 or 504,
+ * because a 401 tells the client the session is over when it is not. */
+function refuseCredentials(res: VercelResponse, error: unknown) {
+  if (!(error instanceof AuthError)) throw error;
+  if (error.status >= 500) return jsonError(res, error.status, error.code, error.message);
+  return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
+}
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
@@ -93,8 +102,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     let dueAuth;
     try {
       dueAuth = await tryAuthOnce(req);
-    } catch {
-      return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
+    } catch (error) {
+      return refuseCredentials(res, error);
     }
     // A signed-out visitor owes nothing, because nothing has been recorded for
     // them. That is an empty list, not an error.
@@ -125,8 +134,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     let auth;
     try {
       auth = await tryAuthOnce(req);
-    } catch {
-      return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
+    } catch (error) {
+      return refuseCredentials(res, error);
     }
     // Only a confirmed address is the owner's.
     const email = auth ? confirmedEmail(auth.payload)?.toLowerCase() ?? null : null;
@@ -168,8 +177,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     let auth;
     try {
       auth = await tryAuthOnce(req);
-    } catch {
-      return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
+    } catch (error) {
+      return refuseCredentials(res, error);
     }
     if (!auth) return jsonError(res, 401, 'unauthorized', 'Sign in to build a personalized review');
     if (!supabase) return jsonError(res, 503, 'not_configured', 'Personalized review is not configured');
