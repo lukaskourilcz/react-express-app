@@ -41,19 +41,22 @@ interface ReportRow {
 /** Recent reports, newest first, each with a short summary of its question. */
 export async function listReports(limit = 300): Promise<AdminReport[]> {
   if (!supabase) throw new Error('not_configured');
-  const { data, error } = await withTimeout(
-    supabase
-      .from(TABLE)
-      .select('id, question_id, reason, detail, reporter_sub, created_at')
-      .order('created_at', { ascending: false })
-      .limit(limit),
-    5000,
-  );
+  // The reports and the questions they name load together. The questions are
+  // the merged set before the eligibility gate: a reported question is often
+  // retired or withheld because of the report, and still has a summary.
+  const [{ data, error }, known] = await Promise.all([
+    withTimeout(
+      supabase
+        .from(TABLE)
+        .select('id, question_id, reason, detail, reporter_sub, created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      5000,
+    ),
+    getQuestionsForHistoryById(),
+  ]);
   if (error) throw new Error(error.message);
 
-  // The merged set before the eligibility gate: a reported question is often
-  // retired or withheld because of the report, and still has a summary.
-  const known = await getQuestionsForHistoryById();
   const summaryFor = (id: string): string | null => {
     const q = known.get(id);
     return q ? summarize(q.question) : null;
