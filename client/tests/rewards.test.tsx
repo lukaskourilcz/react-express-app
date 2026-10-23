@@ -356,6 +356,17 @@ describe('the Rewards screen', () => {
     expect(screen.queryByText('The shop could not load. Try again in a moment.')).toBeNull();
   });
 
+  it('asks nobody to sign in for coins or an invite link while the session is still being restored', async () => {
+    auth.value = { user: null, isAuthenticated: false, isLoading: true };
+    routes();
+    await mountShop();
+    // The invite section draws from the public settings while signed out.
+    expect(await screen.findByRole('heading', { name: 'Invite a friend' })).toBeInTheDocument();
+    expect(screen.queryByText('Sign in to see your coins.')).toBeNull();
+    expect(screen.queryByText('Sign in to get your invite link.')).toBeNull();
+    expect(screen.getAllByRole('status').some((one) => one.textContent === 'Loading…')).toBe(true);
+  });
+
   it('offers a retry when the coins cannot load', async () => {
     signIn();
     routes({ wallet: { error: { code: 'db_error' } }, walletStatus: 500 });

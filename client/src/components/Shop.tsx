@@ -135,13 +135,15 @@ export function ledgerLabel(entry: Pick<WalletEntry, 'reason' | 'reference'>, t:
 
 /* ── the wallet ────────────────────────────────────────────────────────── */
 
-function Wallet({ signedIn }: { signedIn: boolean }) {
+/** `restoring`: a stored session is still being restored, so the learner is
+ * not known to be signed out yet and is shown loading, not asked to sign in. */
+function Wallet({ signedIn, restoring = false }: { signedIn: boolean; restoring?: boolean }) {
   const t = useT();
   const wallet = useWallet(signedIn, { held: true });
   const [showAll, setShowAll] = useState(false);
   const entries = wallet.data?.entries ?? [];
   const visible = showAll ? entries : entries.slice(0, LEDGER_PREVIEW);
-  const loading = signedIn && wallet.isPending;
+  const loading = restoring || (signedIn && wallet.isPending);
 
   return (
     <section className="rw-wallet ss-raised" aria-labelledby="rw-wallet-title" aria-busy={loading || undefined}>
@@ -156,7 +158,7 @@ function Wallet({ signedIn }: { signedIn: boolean }) {
         </div>
       </div>
 
-      {!signedIn && <p className="rw-muted">{t('shop.signInForWallet')}</p>}
+      {!signedIn && !restoring && <p className="rw-muted">{t('shop.signInForWallet')}</p>}
       {loading && <p className="rw-muted" role="status">{t('common.loading')}</p>}
       {signedIn && wallet.isError && !wallet.data && (
         <div className="rw-inline-error" role="alert">
@@ -454,7 +456,11 @@ function useRewardsFirstData() {
 function Shop() {
   useRewardsFirstData();
   const t = useT();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  // On a direct load the session is restored after the page mounts: until
+  // then the wallet and the invite say loading, not "Sign in", which flashed
+  // at a signed-in learner (the saved challenges on /collection wait too).
+  const restoring = authLoading && !isAuthenticated;
   // Every read below is one the first-data hold made (useRewardsFirstData).
   const { tier } = useEntitlement({ held: true });
   const config = useGameConfig();
@@ -586,7 +592,7 @@ function Shop() {
 
       {/* The wallet. The recent movements sit beside the balance because a
           balance nobody can account for is what this replaced. */}
-      <Wallet signedIn={isAuthenticated} />
+      <Wallet signedIn={isAuthenticated} restoring={restoring} />
 
       <HowToEarn earn={earn} welcomeReceived={welcomeReceived} premium={premium} />
 
@@ -662,7 +668,7 @@ function Shop() {
         </section>
       )}
 
-      <ReferralInvite signedIn={isAuthenticated} />
+      <ReferralInvite signedIn={isAuthenticated} restoring={restoring} />
 
       {shop.isLoading && <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>}
       {/* A failed background re-read keeps the catalogue it had: the crown and
