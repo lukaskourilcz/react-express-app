@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Kicker } from '../landing/LandingKit';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@astryxdesign/core/Card';
@@ -11,6 +11,7 @@ import type { GithubConnectionResponse } from '../../../../shared/coding-api';
 import { useAuth } from '../../lib/auth';
 import { friendlyError } from '../../lib/api';
 import { accountEpoch } from '../../lib/accountData';
+import { useClearOnPageRestore } from '../../lib/pageRestore';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { codingKeys, chooseGithubRepo, disconnectGithub, startGithubConnect, syncGithub, useGithubConnection } from '../../coding/api';
 import { RadioCard, RadioCardGroup } from '../ui/RadioCards';
@@ -56,6 +57,13 @@ export function GithubGardenCard() {
     busyRef.current = null;
     setBusy(null);
   };
+  // Connect leaves for GitHub with the button busy; Back restores the page
+  // from the browser's cache exactly so, and the round trip it waited for is over.
+  useClearOnPageRestore(useCallback((stillBusy: boolean) => {
+    if (stillBusy || busyRef.current !== 'connect') return;
+    busyRef.current = null;
+    setBusy(null);
+  }, []));
   const [repoChoice, setRepoChoice] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);

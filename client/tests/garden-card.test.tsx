@@ -105,6 +105,24 @@ describe('GitHub garden card', () => {
     expect(screen.queryByText(en['github.repoSaved'].replace('{repo}', 'garden-owner/garden'))).not.toBeInTheDocument();
   });
 
+  it('offers Connect again when Back brings the page back from the browser cache', async () => {
+    answer(() => HttpResponse.json(NOT_CONNECTED));
+    posts(() => HttpResponse.json({ url: 'https://github.com/apps/devshark-garden/installations/new?state=s' }));
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, origin: original.origin, hash: '', assign } });
+    try {
+      mount();
+      fireEvent.click(await screen.findByRole('button', { name: en['github.connect'] }));
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('button', { name: en['github.connecting'] })).toBeDisabled();
+      act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+      expect(screen.getByRole('button', { name: en['github.connect'] })).toBeEnabled();
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
   it('still says when the connection could not be read', async () => {
     answer(() => HttpResponse.json({ error: { code: 'internal_error', message: 'Could not handle the GitHub request' } }, { status: 500 }));
     mount();
