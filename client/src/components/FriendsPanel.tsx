@@ -52,6 +52,9 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // The tab has drawn the learner's list once. A read after a change that
+  // fails then keeps that list on screen, with the error above it.
+  const loaded = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -59,17 +62,24 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
       setHandleState(own);
       setFriends(list.friends);
       setRequests(list.requests);
+      setError(null);
+      loaded.current = true;
       setState('ready');
     } catch (err) {
-      // The most likely cause is the migration not being applied yet. Either
-      // way the honest thing is to say the tab is not available, not to show an
-      // empty friends list that looks like nobody has been added.
       setError(friendlyError(err));
-      setState('unavailable');
+      // The most likely cause of a first read failing is the migration not
+      // being applied yet. Either way the honest thing is to say the tab is
+      // not available, not to show an empty friends list that looks like
+      // nobody has been added.
+      if (!loaded.current) setState('unavailable');
     }
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  const retry = () => {
+    setState('loading');
+    void refresh();
+  };
 
   if (state === 'loading') {
     return <LoadingScreen label={t('friends.loading')} sx={{ minHeight: 160 }} />;
@@ -79,12 +89,16 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
       <div className="fr-empty ss-panel" style={{ padding: 24 }}>
         <p className="fr-note">{t('friends.unavailable')}</p>
         {error && <p className="fr-note fr-note--error">{error}</p>}
+        <div>
+          <Button variant="secondary" label={t('quiz.retry')} onClick={retry} />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="fr">
+      {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}
       <HandleCard state={handle} onChanged={refresh} onEditSharkname={onEditSharkname} />
       {handle?.handle && <FindFriend onChanged={refresh} ownHandle={handle.handle} />}
       {requests.length > 0 && <Requests requests={requests} onChanged={refresh} />}

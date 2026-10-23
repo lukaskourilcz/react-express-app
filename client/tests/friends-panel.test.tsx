@@ -95,6 +95,37 @@ describe('the friends list', () => {
   });
 });
 
+describe('a friends read that fails', () => {
+  it('offers a retry when the tab does not load', async () => {
+    let fail = true;
+    server.use(
+      http.get('*/api/user/friends-handle', () => fail
+        ? HttpResponse.json({ error: { code: 'db_error', message: 'Unavailable' } }, { status: 503 })
+        : HttpResponse.json({ handle: 'thirsty-sharkie', discoverable: true, country: null, canChangeAt: null })),
+      http.get('*/api/user/friends-list', () => HttpResponse.json({ friends: [friend({ handle: 'fin-de-fiesta', displayName: 'fin-de-fiesta' })], requests: [] })),
+    );
+    renderPanel();
+    expect(await screen.findByText('Friends are not available yet on this deployment.')).toBeInTheDocument();
+    fail = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByRole('heading', { name: 'Friends (1)' })).toBeInTheDocument();
+  });
+
+  it('keeps the list on screen when the read after an answer fails', async () => {
+    serve({
+      friends: [friend({ handle: 'fin-de-fiesta', displayName: 'fin-de-fiesta' })],
+      requests: [{ handle: 'mucho-chomp-shark', displayName: 'Dee Example', direction: 'incoming' }],
+    });
+    renderPanel();
+    const accept = await screen.findByRole('button', { name: 'Accept Dee Example' });
+    server.use(http.get('*/api/user/friends-list', () => HttpResponse.json({ error: { code: 'db_error', message: 'Unavailable' } }, { status: 503 })));
+    fireEvent.click(accept);
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Friends (1)' })).toBeInTheDocument();
+    expect(screen.queryByText('Friends are not available yet on this deployment.')).toBeNull();
+  });
+});
+
 describe('your sharkname on the Friends tab', () => {
   it('says what friends add you by, and sends you to the Overview card to change it', async () => {
     serve();
