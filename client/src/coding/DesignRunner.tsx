@@ -3,7 +3,7 @@
 // Answers are graded on the server against the key sealed in the session. The
 // explanations and the correct options arrive with a passing verdict, never
 // before and never with a failed one: that says only which answers were wrong.
-import { useCallback, useId, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Kicker } from '../components/landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -55,6 +55,14 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
   // lost still used it up. Only a new attempt, opened again, can be checked.
   const [sessionUsed, setSessionUsed] = useState(false);
   const [moved, setMoved] = useState('');
+  // A verdict that arrives after this attempt was left (a new session, another
+  // task, another page) belongs to nothing on screen: it must not reach
+  // `onVerdict`, which would record it against what the learner opened since.
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => { live.current = false; };
+  }, []);
 
   const answered = useMemo(() => answers.filter((one) => one !== null).length, [answers]);
   const drillAnswer = useMemo((): DesignAnswer | null => {
@@ -76,9 +84,11 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
     setError(null);
     try {
       const result = await submitCoding({ session, answers: payload });
+      if (!live.current) return;
       setVerdict(result);
       onVerdict?.(result);
     } catch (caught) {
+      if (!live.current) return;
       if (caught instanceof ApiError && caught.code === 'design_session_used') {
         setSessionUsed(true);
         setError(t('coding.design.sessionUsed'));
@@ -86,7 +96,7 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
         setError(caught instanceof ApiError && caught.code === 'invalid_session' ? t('coding.verdict.sessionExpired') : friendlyError(caught));
       }
     } finally {
-      setSubmitting(false);
+      if (live.current) setSubmitting(false);
     }
   }, [session, submitting, sessionUsed, design, answers, answered, steps.length, drillAnswer, onVerdict, t]);
 

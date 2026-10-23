@@ -3,7 +3,7 @@
 // until a pass, and the runner does not invent them. A pass shows the whole
 // walkthrough.
 import { expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { DesignRunner } from '../src/coding/DesignRunner';
@@ -176,4 +176,30 @@ it('starts a new attempt clean when the session changes', async () => {
   expect(screen.getByRole('heading', { level: 3, name: 'What are we building' })).toBeVisible();
   expect(screen.getByRole('radio', { name: 'Reads dominate' })).not.toBeChecked();
   expect(screen.getByRole('button', { name: 'Next question' })).toBeDisabled();
+});
+
+// A verdict for an attempt the learner had already left still reached
+// onVerdict, which records it against whatever was opened since.
+it('reports no verdict for an attempt that was left before it arrived', async () => {
+  vi.mocked(submitCoding).mockReset();
+  let answer: (value: CodingVerdictResponse) => void = () => {};
+  vi.mocked(submitCoding).mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+  const onVerdict = vi.fn();
+  const view = (session: string) => (
+    <MemoryRouter><LanguageProvider>
+      <DesignRunner task={task} session={session} locked={null} signedIn mode="section" onVerdict={onVerdict} />
+    </LanguageProvider></MemoryRouter>
+  );
+  const { rerender } = render(view('left-session'));
+  fireEvent.click(screen.getByRole('radio', { name: 'Reads dominate' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Only the code' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'A cache' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }));
+  expect(submitCoding).toHaveBeenCalledWith({ session: 'left-session', answers: [0, 1, 0] });
+  rerender(view('new-session'));
+  await act(async () => { answer(verdict({ verdict: 'passed', design: [] })); });
+  expect(onVerdict).not.toHaveBeenCalled();
+  expect(screen.queryByRole('heading', { level: 3, name: /^Passed/ })).toBeNull();
 });
