@@ -8,6 +8,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from './mocks/server';
 import { completeRoadmapAttempt, syncProgressWithServer } from '../src/lib/roadmap';
 import { clearAccountData } from '../src/lib/accountData';
+import { syncXpWithServer } from '../src/lib/xp';
 
 const PROGRESS = 'devquiz:roadmap:v2';
 const UNLOCKS = 'devquiz:roadmap:unlocks:v1';
@@ -141,5 +142,39 @@ describe('a signed-in tab that is hidden or closed', () => {
       Reflect.deleteProperty(document, 'visibilityState');
       fetchSpy.mockRestore();
     }
+  });
+});
+
+// The account's XP read (lib/xp.ts syncXpWithServer), still out at sign-out:
+// written after the account's data was cleared, it left the account's XP in
+// the browser for the next person.
+describe('an XP sync in flight at sign-out', () => {
+  const QUEST = 'devquiz:xp:quest:v2';
+  function holdXp() {
+    const waiting: (() => void)[] = [];
+    server.use(http.get('*/api/user/xp', () => new Promise<Response>((resolve) => {
+      waiting.push(() => resolve(HttpResponse.json({ data: { quest_xp: 420, by_subject: { webdev: 420 } } })));
+    })));
+    return async () => {
+      await expect.poll(() => waiting.length).toBeGreaterThan(0);
+      waiting.shift()!();
+    };
+  }
+
+  it('writes nothing of the account that left', async () => {
+    const answer = holdXp();
+    const sync = syncXpWithServer();
+    clearAccountData();
+    await answer();
+    await sync;
+    expect(localStorage.getItem(QUEST)).toBeNull();
+  });
+
+  it('still stores a sync that finishes for the account that asked', async () => {
+    const answer = holdXp();
+    const sync = syncXpWithServer();
+    await answer();
+    await sync;
+    expect(JSON.parse(localStorage.getItem(QUEST) ?? '{}')).toEqual({ webdev: 420 });
   });
 });

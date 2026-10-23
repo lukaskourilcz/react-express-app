@@ -12,6 +12,7 @@
 // are always recomputed from (subject progress + subject quest).
 
 import { apiFetch } from './api';
+import { accountEpoch } from './accountData';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { useRoadmapProgress, getRoadmapProgress } from './roadmap';
@@ -265,6 +266,9 @@ export function flushQuestXpBeacon(): void {
 // exists only on the server: a verified quiz result it has just recorded. Its
 // rank-up would otherwise be marked seen here without ever being shown.
 export async function syncXpWithServer({ announceRankUp = false }: { announceRankUp?: boolean } = {}): Promise<void> {
+  // The account this read is for. Signed out while it was out, its XP was
+  // written back into the browser after the account's data was cleared.
+  const epoch = accountEpoch();
   let serverMap: QuestMap = {};
   try {
     const { data } = await apiFetch<{ data: { quest_xp: number; by_subject?: Record<string, number> } }>(XP_GET);
@@ -276,6 +280,7 @@ export async function syncXpWithServer({ announceRankUp = false }: { announceRan
   } catch {
     return; // not signed in or offline — keep local only
   }
+  if (epoch !== accountEpoch()) return;
   writeQuestMap(serverMap);
   reconcileRank(announceRankUp);
 }
