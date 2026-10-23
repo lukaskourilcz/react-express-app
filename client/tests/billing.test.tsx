@@ -463,6 +463,18 @@ describe('the plan line and the footer', () => {
     expect(portals).toBe(2);
   });
 
+  it('makes Manage billing pressable again when Back restores the Profile from the browser cache', async () => {
+    signIn();
+    serve({ plan: PREMIUM });
+    server.use(http.post('*/api/user/billing-portal', async () => { await delay('infinite'); return HttpResponse.json({ url: 'https://billing.stripe.com/p/session/test' }); }));
+    renderAt('/profile', <PlanLine />);
+    const manage = await screen.findByRole('button', { name: 'Manage billing' });
+    fireEvent.click(manage);
+    await waitFor(() => expect(manage).toBeDisabled());
+    act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+    await waitFor(() => expect(manage).toBeEnabled());
+  });
+
   it('keeps Manage billing away from a complimentary grant without billing', async () => {
     signIn();
     serve({ plan: { ...PREMIUM, source: 'manual', currentPeriodEnd: null } });

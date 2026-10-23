@@ -14,7 +14,7 @@
 // Customer Portal (card, invoices, plan switch, cancel at period end), whichever
 // grant wins the line: a complimentary grant longer than the subscription
 // under it, or a subscription that has ended and left its invoices.
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Text } from '@astryxdesign/core/Text';
@@ -23,6 +23,7 @@ import { useEntitlement } from '../lib/entitlement';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { openBillingPortal, useBilling } from '../lib/billing';
 import { friendlyError } from '../lib/api';
+import { useClearOnPageRestore } from '../lib/pageRestore';
 import { FREE_LEARN_LEVELS, type EntitlementResponse } from '../../../shared/tiers';
 
 function formatDay(iso: string): string {
@@ -62,6 +63,9 @@ function ManageBilling() {
   // A second press can land before `busy` disables the button; it must not
   // open a second portal session.
   const leaving = useRef(false);
+  // Back from the portal can bring the Profile back from the browser's cache
+  // still busy; the round trip it waited for is over.
+  useClearOnPageRestore(useCallback((value: boolean) => { leaving.current = value; setBusy(value); }, []));
   const open = async () => {
     if (leaving.current) return;
     leaving.current = true;
