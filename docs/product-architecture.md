@@ -331,6 +331,12 @@ from its verified identity, else its sharkname, else "Player" and four digits
 taken from the account id, the same in every room. The server ignores a name
 in the request body, and the client sends none, so no part of an email
 address reaches a room (`npm run test:launch`, play-rooms suite).
+`create` refuses a topic list with an entry that is not a topic id, and
+`answer` an option index past the question's options, both with 400; a
+room-code clash is left to the unique key on `matches.code`, and `create`
+draws another code. A Supabase call that times out answers 503
+`upstream_timeout`, and `state`, `answer`, `distribution` and `heartbeat`
+answer 503 `backend_unavailable` when they cannot read the room, not 404.
 `join` and `state` also send `question_count` and `server_now`. The screens
 count each question down against the server's clock, not the device's; the
 presenter's key appears once the server stops taking answers, the question's
