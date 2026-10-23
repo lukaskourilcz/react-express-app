@@ -3,6 +3,27 @@ import { createServiceClient, jsonError, withTimeout, logEvent, withRequestConte
 
 const service = createServiceClient();
 
+type DependencyStatus = 'ok' | 'down' | 'unconfigured';
+
+/** Read one row of `table` on the service connection within 1.5 s. */
+async function dependencyStatus(dependency: string, table: string, column: string): Promise<DependencyStatus> {
+  if (!service) return 'unconfigured';
+  try {
+    const { error } = await withTimeout(service.from(table).select(column).limit(1), 1500);
+    return error ? 'down' : 'ok';
+  } catch (error) {
+    if (dependency === 'database') {
+      logEvent('health', {
+        level: 'error',
+        category: 'dependency_check',
+        dependency,
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
+    }
+    return 'down';
+  }
+}
+
 /**
  * GET /api/health
  *
@@ -24,35 +45,15 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  let supabaseStatus: 'ok' | 'down' | 'unconfigured' = 'unconfigured';
-  let privilegedStatus: 'ok' | 'down' | 'unconfigured' = 'unconfigured';
-
   // Private learning tables intentionally grant nothing to anonymous callers.
   // Readiness checks run on the server's authorized connection too; requiring
   // an anonymous SELECT would report a healthy, private database as down.
-  if (service) {
-    try {
-      const { error } = await withTimeout(service.from('user_stats').select('id').limit(1), 1500);
-      supabaseStatus = error ? 'down' : 'ok';
-    } catch (error) {
-      supabaseStatus = 'down';
-      logEvent('health', {
-        level: 'error',
-        category: 'dependency_check',
-        dependency: 'database',
-        reason: error instanceof Error ? error.message : 'unknown',
-      });
-    }
-  }
-
-  if (service) {
-    try {
-      const { error } = await withTimeout(service.from('quiz_submissions').select('grade_key').limit(1), 1500);
-      privilegedStatus = error ? 'down' : 'ok';
-    } catch {
-      privilegedStatus = 'down';
-    }
-  }
+  // The two checks are independent, so a monitor waits for the slower one
+  // only, not their sum (up to 3 s while the database hangs).
+  const [supabaseStatus, privilegedStatus] = await Promise.all([
+    dependencyStatus('database', 'user_stats', 'id'),
+    dependencyStatus('service_role', 'quiz_submissions', 'grade_key'),
+  ]);
 
   const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
   const degraded = supabaseStatus === 'down' || privilegedStatus === 'down' ||
