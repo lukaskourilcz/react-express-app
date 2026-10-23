@@ -6,7 +6,7 @@ This file is an append-style evidence ledger. Each dated entry records what some
 
 Released:
 
-- `main` is the merge of PR #566, the last of four code audits run on 22 and 23 October with `.claude/skills/section-code-audit/SKILL.md`: FDE (#563), Web Developer (#564), Software Engineer (#565), and Quiz, Play, Profile and Leaderboard (#566). Their four entries at the end of this file say what each one fixed and left open. Vercel deploys `main` to https://devshark.app.
+- `main` is `1e2f8c68`, the merge of PR #566, the last of four code audits run on 22 and 23 October with `.claude/skills/section-code-audit/SKILL.md`: FDE (#563), Web Developer (#564), Software Engineer (#565), and Quiz, Play, Profile and Leaderboard (#566). Their four entries at the end of this file say what each one fixed and left open. Vercel deploys `main` to https://devshark.app.
 - The audits added no SQL migration and kept the twelve handlers. Supabase project `rvlybcjdpafwyeuojvhl` has every migration through 066 (`accept_learning_path_quota_result`); see "Migration 066 in production".
 - The initial load is 235,638 gzip bytes after #566, under the 241,651-byte budget in `docs/quality/bundle-budget.json`.
 - The progress PUT on `/api/quiz/roadmap` is retired and answers 405. The browser only reads progress.
