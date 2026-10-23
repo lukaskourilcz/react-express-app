@@ -6096,3 +6096,48 @@ This is the same audit as the FDE review, run with `.claude/skills/section-code-
 - **Hearts on the last question:** when the third miss is the last question of a 12-question level, the server still records a pass. Closing this changes a grading rule and needs a migration.
 - **One active practice run per learner:** this needs a partial unique index, which is a migration.
 - **The progress PUT:** it writes nothing but is still sent after shop changes.
+
+## Software Engineer code review — 23 October 2026
+
+This is the third audit run with `.claude/skills/section-code-audit/SKILL.md`, after FDE (#563) and Web Developer (#564). It covered the code specific to the Software Engineer section (`lib/coding/complexity.ts`, `lib/coding/puzzles.ts`, the shared catalogue, assessment and concept helpers, `client/src/coding/CodePuzzle.tsx`, the hidden `DesignRunner.tsx`, lesson figures and level intros) and the navigation helpers (`CareerRoadmap.tsx`, `tracks.ts`, `routePreload.ts`, `routeHead.ts`, `gameConfig.ts`). Branch `claude/swe-code-review`. It makes no SQL migration, no reviewed-content edit and no tier or XP change, and the system-design track stays hidden.
+
+**Fixed**
+- **Complexity estimator:**
+  - It matches bounds with one identifier scan instead of a new `RegExp` per name and loop, and one 150,000-step budget covers all passes. A 13 kB adversarial submission held a request for 14 s and now takes about 20 ms.
+  - A loop counter started at a literal no longer makes an input-sized loop look constant.
+  - A loop index now bounds only its own loop. This had labelled some O(n) solutions O(n²) and paid them 15 XP instead of 25.
+  - Snapshots of all 3,175 authored reports were compared before and after. The only changes are five labels that became "unknown", which pays the same XP.
+- **Puzzles:**
+  - A deal never starts solved; before, 1 in 120 deals of the five-line puzzle was already an answer.
+  - Lookups use own keys only.
+  - A submitted order padded with entries that are not line ids answers 400.
+- **Catalogue:** the tier pass ratio is indexed once per catalogue, so a pass over the 769 tasks went from about 40 ms to under 1 ms.
+- **Puzzle and system-design runners:**
+  - Moves are announced in the puzzle's own status line, and Shift+arrow is disabled while checking.
+  - Long lines scroll inside their box.
+  - System-design attempts are keyed per task and session, and a late verdict for a left attempt is dropped.
+  - Focus follows questions, verdicts and moved steps.
+- **Lesson figures:**
+  - An empty trace renders as text.
+  - Focus stays on a stepping control.
+  - The validator refuses NaN or fractional levels and marks.
+  - Buttons are 44px.
+- **Navigation:**
+  - `og:url` is written with the canonical.
+  - Trailing slashes are handled in titles.
+  - Preloads respect `saveData`.
+  - `/roadmap` totals include every track topic and round like section progress.
+  - Track saves are ref-guarded and check `accountEpoch()`.
+  - Lock counts are memoised.
+  - Unused strings and dev tips are removed from the initial chunk.
+
+**Checks** (local, Node 24, `npm run ci:parity -- --only …`)
+- **Passed:** typecheck:api, typecheck:scripts, typecheck:tooling, check:unused, check:security, build, check:public, check:bundle (initial load 237,482 gzip bytes, 780 below the Web Developer branch), test:launch, test:coding-auth, test:grading-integrity, test:paths, test:client, and `test:coding` separately (814 tasks).
+- **After the last two commits:** typecheck:api, typecheck:scripts and test:grading-integrity passed again.
+- **Not run:** browser, responsive and SQL; CI covers them.
+
+**Left open (NEEDED.md):**
+- whether a puzzle session may be submitted more than once;
+- whether a placement score of 18 or more should also open DSA Advanced;
+- seven DSA Advanced level intros that repeat the one before (content);
+- `/roadmap` has no DSA Advanced area (copy).
