@@ -22,7 +22,7 @@ export const en = {
   'coding.discovery.next': 'Your next challenge',
   'coding.discovery.loading': 'Loading progress…',
   'coding.discovery.failed': 'Could not load your progress.',
-  'coding.discovery.build': 'FullStack',
+  'coding.discovery.build': 'Build a full app',
   'coding.discovery.fullstack': 'A five-level link shortener, then three twelve-stage apps.',
   'coding.discovery.explore': 'Explore FullStack projects',
   'coding.evolving.title': 'Evolving challenges',
