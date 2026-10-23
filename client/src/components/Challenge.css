@@ -1,0 +1,37 @@
+/* The Biggest Shark Challenge run (UX audit U2). The run draws through the
+   shared question parts (components/question/); these rules are only its own
+   run status: the score, the clock and the fins on the header's first row. */
+
+.challenge-run__score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--color-text-secondary);
+}
+.challenge-run__score strong {
+  color: var(--brand-accent-on-soft, var(--brand-accent));
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+.challenge-run__clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: var(--radius-element);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-accent-on-soft, var(--brand-accent));
+  background: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+/* Under 15 seconds: the error colour. The digits say the time, and a polite
+   live region says the threshold once. */
+.challenge-run__clock[data-low] {
+  color: var(--ss-error);
+  background: color-mix(in srgb, var(--ss-error) 15%, transparent);
+}
+/* The h1, score, clock and fins share one row while they fit; on a narrow
+   phone the status takes a row of its own under the h1 instead of squeezing
+   the h1 into one word per line. */
+.challenge-run .ss-question-header__row:first-child { flex-wrap: wrap; row-gap: 8px; }

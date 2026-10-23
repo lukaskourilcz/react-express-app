@@ -7,9 +7,7 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { Badge } from '@astryxdesign/core/Badge';
 import { Banner } from '@astryxdesign/core/Banner';
-import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { AppToast } from './ui/AppToast';
 import { ApiError, apiFetch, friendlyError } from '../lib/api';
@@ -24,7 +22,6 @@ import type { Question, QuizResult } from '../types/quiz';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { useActiveSubject, useSubject, deliveryCategoriesForSubject } from '../lib/subjects';
-import { useIsMobile } from '../lib/useMediaQuery';
 import { visuallyHidden } from '../theme/MuiTheme';
 import { MotionPop } from '../lib/motion';
 import { SharkFin } from './SharkFin';
@@ -37,7 +34,15 @@ import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import { accountEpoch } from '../lib/accountData';
 import './DeepEndScreens.css';
-import { RadioCard, RadioCardGroup } from './ui/RadioCards';
+import './Challenge.css';
+import {
+  AnswerOptionList,
+  QuestionActions,
+  QuestionFeedback,
+  QuestionHeader,
+  QuestionHint,
+  QuestionShell,
+} from './question';
 import { categoryLabelKey } from '../lib/categories';
 import { CategoryTag, TopicPill } from './ui/CategoryTag';
 import ResultShareActions from './ResultShareActions';
@@ -199,7 +204,6 @@ export default function Challenge() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const accent = useActiveSubject().accent;
-  const isMobile = useIsMobile();
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [error, setError] = useState<string | null>(null);
@@ -900,209 +904,101 @@ export default function Challenge() {
   if (!current) return null;
 
   const low = timeLeft <= LOW_TIME_S;
-  const timePct = (Math.max(0, timeLeft) / timeLimitS) * 100;
   // Once the clock is out, no answer can be picked or sent: the question is a
   // timeout strike, whatever the connection is doing.
   const timeUp = timeLeft <= 0;
+  // The graded marks: the right answer, and a wrong pick. A question that
+  // does not count, or a strike the server refused for good, marks nothing.
+  const grade = lastResult && !lastResult.notCounted && lastResult.correctAnswer >= 0
+    ? { correct: lastResult.correctAnswer, picked: lastResult.selectedIndex >= 0 ? lastResult.selectedIndex : null }
+    : null;
 
   return (
-    // One-viewport layout matching the Quiz card geometry: ~560px column,
-    // primary card capped at ~80% height on sm+, centred; question text
-    // scrolls internally, answers + lock-in stay anchored near the bottom.
-    <div
-      style={{
-        position: 'relative',
-        flex: 1,
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        maxWidth: isMobile ? 680 : 560,
-        margin: '0 auto',
-        width: '100%',
-        padding: isMobile ? 4 : 8,
-      }}
-    >
+    <>
       {/* One-shot low-time announcement for screen readers (the visual cue is
-          colour + pulse, which AT users can't perceive). */}
+          colour, which AT users can't perceive). */}
       <span style={visuallyHidden} aria-live="polite">
         {timeLeft === LOW_TIME_S ? t('challenge.lowTime') : ''}
       </span>
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 8,
-          gap: 12,
-          flexShrink: 0,
-        }}
-      >
-        <HStack gap={1} align="center" style={{ flex: '1 1 auto', minWidth: 0 }}>
-          <Text type="label" color="secondary">
-            {t('challenge.score')}
-          </Text>
-          <Text type="large" weight="bold" color="accent">
-            {score}
-          </Text>
-        </HStack>
-        <HStack gap={1.5} align="center" style={{ flexShrink: 0 }}>
-          <span
-            role="timer"
-            aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              padding: '4px 11px',
-              borderRadius: 'var(--radius-element)',
-              fontFamily: 'monospace',
-              fontWeight: 800,
-              fontVariantNumeric: 'tabular-nums',
-              color: low ? 'var(--ss-error)' : 'var(--brand-accent)',
-              background: low
-                ? 'color-mix(in srgb, var(--ss-error) 15%, transparent)'
-                : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
-            }}
-          >
-            <ClockIcon />
-            <span>{fmtClock(timeLeft)}</span>
-          </span>
-          {livesIndicator}
-        </HStack>
-      </div>
-
-      {/* Per-question countdown as a bar — accent, flipping to error under the
-          low-time threshold to reinforce the pulsing clock. */}
-      <div style={{ marginBottom: 10, flexShrink: 0 }}>
-        <ProgressBar
-          label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
-          isLabelHidden
-          value={timePct}
-          variant={low ? 'error' : 'accent'}
-        />
-      </div>
-
-      {/* Surface styled with Astryx tokens so it themes with the rest of the
-          system, while plain flex/scroll keeps the one-viewport behaviour. */}
-      <div
-        style={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          maxHeight: isMobile ? undefined : '80%',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--color-background-surface)',
-          border: '1px solid var(--color-border)',
-          borderTop: `4px solid ${accent}`,
-          borderRadius: 'var(--radius-container)',
-          overflow: 'auto',
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'visible',
-            padding: 'clamp(1rem, 3.5vw, 1.5rem)',
-          }}
-        >
-          <HStack gap={1} align="center" wrap="wrap" style={{ marginBottom: 12, flexShrink: 0 }}>
-            <CategoryTag category={current.category} />
-            <Badge variant="neutral" label={t('challenge.difficultyLevel', { level: current.difficulty })} />
-          </HStack>
-
-          {/* Scrollable question region — answers below keep their position. */}
-          <div id="challenge-question" ref={questionRef} tabIndex={-1} style={{ marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {renderQuestion(current.question)}
+      {/* One question screen from the shared parts (UX audit U2,
+          questions-01): the 640px shell, the run's h1 with the score, clock
+          and fins, the answers, and the verdict in normal flow under them,
+          so it never covers the pick it grades. */}
+      <QuestionShell
+        ref={questionRef}
+        questionId="challenge-question"
+        className="challenge-run"
+        header={
+          <QuestionHeader
+            title={t('challenge.title')}
+            status={
+              <>
+                <span className="challenge-run__score">
+                  <span>{t('challenge.score')}</span>
+                  <strong>{score}</strong>
+                </span>
+                <span
+                  role="timer"
+                  aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+                  className="challenge-run__clock"
+                  data-low={low || undefined}
+                >
+                  <ClockIcon />
+                  <span>{fmtClock(timeLeft)}</span>
+                </span>
+                {livesIndicator}
+              </>
+            }
+            meta={<CategoryTag category={current.category} />}
+            difficulty={current.difficulty}
+          />
+        }
+        question={renderQuestion(current.question)}
+        actions={
+          <div ref={actionsRef}>
+            <QuestionActions
+              primary={
+                !lastResult
+                  ? {
+                    label: t('challenge.lockIn'),
+                    onClick: () => void submitAnswer(),
+                    disabled: selected == null || submitting || timeUp,
+                  }
+                  : {
+                    label: refillError !== null
+                      ? t('quiz.retry')
+                      : livesLost >= MAX_LIVES
+                        ? t('challenge.seeResult')
+                        : t('challenge.nextQuestion'),
+                    onClick: onContinue,
+                    disabled: refilling,
+                  }
+              }
+            />
           </div>
-
-          {/* Single-choice answers use the shared roving-tabindex radio pattern. Raise them ~50px
-              off the wave on phones. */}
-          <RadioCardGroup
-            value={selected}
-            onChange={(value) => { if (!lastResult && !timeUp) setSelected(Number(value)); }}
-            labelledBy="challenge-question"
-            style={{ flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {current.options.map((opt, idx) => {
-                const isSel = selected === idx;
-                const graded = !!lastResult;
-                const isCorrectOpt = graded && idx === lastResult!.correctAnswer;
-                const isWrongPick =
-                  graded && idx === lastResult!.selectedIndex && !lastResult!.isCorrect && !lastResult!.notCounted;
-                return (
-                  <RadioCard
-                    key={idx}
-                    value={idx}
-                    index={idx}
-                    label={opt}
-                    disabled={graded || timeUp}
-                    tone={isCorrectOpt ? 'success' : 'default'}
-                    padding={2}
-                    style={{
-                      ...(isWrongPick ? {
-                        borderColor: 'var(--ss-error)',
-                        background: 'var(--ss-error-soft)',
-                        color: 'var(--ss-error)',
-                      } : {}),
-                    }}
-                  >
-                    <HStack gap={2} align="center">
-                      <span
-                        aria-hidden
-                        style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: 'var(--radius-inner)',
-                          display: 'grid',
-                          placeItems: 'center',
-                          flexShrink: 0,
-                          fontSize: 'var(--ss-type-meta)',
-                          fontWeight: 700,
-                          background: isSel ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
-                          color: isSel ? 'var(--color-text-accent)' : 'inherit',
-                        }}
-                      >
-                        {idx + 1}
-                      </span>
-                      <Text type="body" weight={isSel ? 'semibold' : 'normal'}>
-                        {opt}
-                      </Text>
-                    </HStack>
-                  </RadioCard>
-                );
-              })}
-            </div>
-          </RadioCardGroup>
-        </div>
-      </div>
-
-      {/* Feedback overlay: a floating card that sits over the answer options
-          so the grade doesn't push the layout around. The live region stays
-          on the page and becomes the card while a verdict shows: a live
-          region drawn together with its words, as the card was, is not read. */}
-      <div
-        aria-live="assertive"
-        style={lastResult ? {
-          position: 'absolute',
-          left: isMobile ? 8 : 16,
-          right: isMobile ? 8 : 16,
-          bottom: isMobile ? 68 : 72,
-          zIndex: 5,
-          maxHeight: '48vh',
-          overflowY: 'auto',
-          borderRadius: 'var(--radius-container)',
-          backgroundColor: 'var(--color-background-surface)',
-          boxShadow: 'var(--shadow-high)',
-        } : undefined}
+        }
       >
+        <AnswerOptionList
+          options={current.options}
+          value={selected}
+          onChange={(index) => { if (!lastResult && !timeUp) setSelected(index); }}
+          labelledBy="challenge-question"
+          disabled={!!lastResult || timeUp}
+          grade={grade}
+        />
+        <QuestionHint
+          max={current.options.length}
+          verb="select"
+          next={lastResult ? 'continue' : selected != null ? 'submit' : undefined}
+          hidden={!lastResult && timeUp}
+        />
+        {!lastResult && strikeWaiting && <Banner status="warning" title={t('challenge.strikeRetrying')} />}
         {lastResult && (
-          <Banner
+          // Takes the focus when it appears, so a screen reader reads the
+          // verdict and Enter or the next Tab goes on from it.
+          <QuestionFeedback
+            key={lastResult.questionId}
             status={lastResult.notCounted ? 'info' : lastResult.isCorrect ? 'success' : 'error'}
             title={
               lastResult.notCounted === 'retired'
@@ -1116,47 +1012,13 @@ export default function Challenge() {
                       : t('challenge.wrong')
             }
             description={lastResult.explanation || undefined}
-          />
+          >
+            {refillError !== null && (
+              <Banner status="warning" title={t('challenge.nextQuestionFailed')} description={refillError} />
+            )}
+          </QuestionFeedback>
         )}
-      </div>
-
-      {!lastResult && strikeWaiting && (
-        <div style={{ marginTop: 12, flexShrink: 0 }}>
-          <Banner status="warning" title={t('challenge.strikeRetrying')} />
-        </div>
-      )}
-
-      {lastResult && refillError !== null && (
-        <div style={{ marginTop: 12, flexShrink: 0 }}>
-          <Banner status="warning" title={t('challenge.nextQuestionFailed')} description={refillError} />
-        </div>
-      )}
-
-      <div ref={actionsRef} style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
-        {!lastResult ? (
-          <Button
-            variant="primary"
-            label={t('challenge.lockIn')}
-            isDisabled={selected == null || submitting || timeUp}
-            isLoading={submitting}
-            onClick={() => void submitAnswer()}
-          />
-        ) : (
-          <Button
-            variant="primary"
-            label={
-              refillError !== null
-                ? t('quiz.retry')
-                : livesLost >= MAX_LIVES
-                  ? t('challenge.seeResult')
-                  : t('challenge.nextQuestion')
-            }
-            isDisabled={refilling}
-            isLoading={refilling}
-            onClick={onContinue}
-          />
-        )}
-      </div>
+      </QuestionShell>
 
       <AppToast
         open={!!snack}
@@ -1165,7 +1027,7 @@ export default function Challenge() {
         message={snack ?? ''}
         autoHideDuration={2500}
       />
-    </div>
+    </>
   );
 }
 

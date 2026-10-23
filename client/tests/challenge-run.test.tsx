@@ -304,7 +304,9 @@ describe('the timeout strike', () => {
 });
 
 describe('focus at time up', () => {
-  it('goes to the verdict\'s button when the clock disabled the focused Submit', async () => {
+  // The verdict takes the focus the clock took away (UX audit U2,
+  // questions-01): Enter or the next Tab goes on from it to Next.
+  it('goes to the verdict when the clock disabled the focused Submit', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let timeouts = 0;
     api.grade = (body) => {
@@ -338,7 +340,12 @@ describe('focus at time up', () => {
     await screen.findByText('Time ran out. One strike.');
     await settle();
     fixup.disconnect();
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Next question|See result/ }));
+    expect(document.activeElement).toHaveClass('ss-question-feedback');
+    expect(document.activeElement).toHaveTextContent('Time ran out. One strike.');
+    // Enter on the verdict goes on to the next question.
+    fireEvent.keyDown(document.activeElement!, { key: 'Enter' });
+    await settle();
+    expect(shownQuestion()).toBe('Batch 1 question 2?');
   });
 });
 
@@ -646,12 +653,38 @@ describe('focus', () => {
 });
 
 describe('the verdict', () => {
-  it('is read from a live region that was on the page before the answer', async () => {
+  // UX audit U2, questions-01: the verdict sits in normal flow under the
+  // answers and takes the focus, so a screen reader reads it; it used to
+  // float over the answers it graded.
+  it('takes the focus under the answers, with its explanation', async () => {
     await mount();
     await start();
-    const regions = [...document.querySelectorAll('[aria-live]')];
     await answer('right');
-    expect(regions.some((region) => region.isConnected && region.textContent?.includes('Correct') && region.textContent.includes('Because.'))).toBe(true);
+    const verdict = document.activeElement as HTMLElement;
+    expect(verdict).toHaveClass('ss-question-feedback');
+    expect(verdict).toHaveTextContent('Correct');
+    expect(verdict).toHaveTextContent('Because.');
+    const list = screen.getByRole('radiogroup');
+    expect(list.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(verdict.closest('.ss-question__panel')).not.toBeNull();
+    expect(verdict.getAttribute('style') ?? '').not.toMatch(/absolute/);
+  });
+
+  it('marks the right answer and a wrong pick in words, not colour alone', async () => {
+    await mount();
+    await start();
+    await answer('wrong');
+    expect(screen.getByRole('radio', { name: 'right, Correct answer' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'wrong, Your pick' })).toBeDisabled();
+    expect(screen.getByText('Your pick')).toBeInTheDocument();
+  });
+
+  it('shows the one keyboard hint, naming what Enter does now', async () => {
+    await mount();
+    await start();
+    expect(screen.getByText('Press 1–2 to select')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'right' }));
+    expect(screen.getByText('Press 1–2 to select · Enter to submit')).toBeInTheDocument();
   });
 });
 
