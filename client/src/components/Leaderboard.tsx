@@ -178,8 +178,16 @@ function Leaderboard() {
   // cached under the new board's key.
   const settledTab = useRef<Tab>(tab);
   if (data && !isPlaceholderData) settledTab.current = tab;
-  const drawTab: Tab = isPlaceholderData ? settledTab.current : tab;
-  const refreshing = isPlaceholderData || (isFetching && !!data);
+
+  // Offline shows up two ways: a request that failed on the network, or one
+  // React Query holds back because the browser already reports no connection.
+  const offline = fetchStatus === 'paused' || (!!error && isOffline(error));
+  // Offline, the previous tab's board is not on its way out: nothing will
+  // replace it. The tab picked shows its own last copy, or says it has none,
+  // rather than the previous tab's rows under the new tab's name.
+  const heldOver = offline && isPlaceholderData;
+  const drawTab: Tab = isPlaceholderData && !heldOver ? settledTab.current : tab;
+  const refreshing = (isPlaceholderData && !heldOver) || (isFetching && !!data);
 
   useEffect(() => {
     if (data && !error && !isPlaceholderData) writeCachedBoard(cacheKey, data);
@@ -194,11 +202,8 @@ function Leaderboard() {
     setTab('all');
   }, [missingWindow]);
 
-  // Offline shows up two ways: a request that failed on the network, or one
-  // React Query holds back because the browser already reports no connection.
-  const offline = fetchStatus === 'paused' || (!!error && isOffline(error));
   const stale: CachedBoard | null = offline
-    ? data
+    ? data && !heldOver
       ? { savedAt: dataUpdatedAt, data }
       : readCachedBoard(cacheKey)
     : null;

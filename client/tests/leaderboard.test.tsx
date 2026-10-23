@@ -184,6 +184,19 @@ it('shows the cached board when the browser already reports no connection', asyn
   }
 });
 
+it('does not show the previous tab’s board under a tab picked while offline', async () => {
+  server.use(leaderboardHandlers.populated); await mount();
+  await screen.findByText('Workshop learner');
+  onlineManager.setOnline(false);
+  try {
+    fireEvent.click(screen.getByRole('radio', { name: 'Today' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/You’re offline. Reconnect and try again./);
+    expect(screen.queryByText('Workshop learner')).toBeNull();
+  } finally {
+    onlineManager.setOnline(true);
+  }
+});
+
 it('says so when offline with nothing cached', async () => {
   server.use(leaderboardHandlers.offline); await mount();
   expect(await screen.findByRole('alert')).toHaveTextContent(/You’re offline. Reconnect and try again./);
