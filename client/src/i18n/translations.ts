@@ -2265,7 +2265,7 @@ export const en = {
   'authPage.expiredLead': 'Links work once and expire after a while. Ask for a new one below.',
   'authPage.signIn': 'Sign in',
   'authPage.alreadyConfirmed': 'Already confirmed?',
-  'authPage.resendTitle': 'Send a new confirmation link',
+  'authPage.resendIntro': 'Didn’t get it? We’ll send a new link.',
   'authPage.resendSubmit': 'Send a new link',
   'authPage.resendSent': 'If {email} still needs confirming, a new link is on its way.',
   'authPage.resetLoading': 'Opening your reset link…',
@@ -2281,7 +2281,6 @@ export const en = {
   'authPage.opening': 'Opening…',
   'authPage.resetExpiredTitle': 'This reset link has expired',
   'authPage.resetExpiredLead': 'Reset links work once and expire after a while. Ask for a new one below.',
-  'authPage.resetRequestTitle': 'Send a reset link',
 
   // The cookie banner and cookie settings (owner decision 2, 1 Oct 2026).
   // "Reject all" reads and weighs the same as "Accept all".

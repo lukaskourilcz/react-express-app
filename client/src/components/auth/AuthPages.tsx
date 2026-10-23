@@ -69,7 +69,15 @@ function linkState(
  * Supabase answers the same whether or not the address has an account, so
  * the sentence after sending says "if".
  */
-function EmailLinkRequest({ purpose, returnTo, signIn = false }: { purpose: 'confirm' | 'reset'; returnTo?: string; signIn?: boolean }) {
+function EmailLinkRequest({ purpose, label: pageTitle, intro = false, returnTo, signIn = false }: {
+  purpose: 'confirm' | 'reset';
+  /** The page's h1: the card is the page's one task, so it takes its name. */
+  label: string;
+  /** One short line above the field, where the lead has not said it already. */
+  intro?: boolean;
+  returnTo?: string;
+  signIn?: boolean;
+}) {
   const t = useT();
   const fieldMessage = useFieldMessage();
   const [email, setEmail] = useState('');
@@ -113,8 +121,11 @@ function EmailLinkRequest({ purpose, returnTo, signIn = false }: { purpose: 'con
     ? t('auth.sent.resendIn', { seconds: wait })
     : t(purpose === 'confirm' ? 'authPage.resendSubmit' : 'auth.dialog.sendReset');
   return (
-    <section className="ss-info-card ss-auth-page" aria-labelledby={`auth-request-${purpose}`}>
-      <h2 id={`auth-request-${purpose}`}>{t(purpose === 'confirm' ? 'authPage.resendTitle' : 'authPage.resetRequestTitle')}</h2>
+    // No heading of its own (UX audit shell-public-14): 'Send a reset link'
+    // over a 'Send reset link' button said the action twice. The button is
+    // the one statement of it, and the card takes the page's h1 as its name.
+    <section className="ss-info-card ss-auth-page" aria-label={pageTitle}>
+      {intro && <p className="ss-auth__lead">{t('authPage.resendIntro')}</p>}
       <form className="ss-auth ss-auth__form" method="post" noValidate onSubmit={(event) => void submit(event)}>
         <EmailField
           label={t('auth.email.label')}
@@ -228,7 +239,13 @@ export function EmailConfirmedPage() {
       lead={t(expired ? 'authPage.expiredLead' : 'authPage.confirmVisitLead')}
     >
       {/* The sign-in dialog opens for a signed-out visitor only. */}
-      <EmailLinkRequest purpose="confirm" returnTo={next !== '/' ? next : undefined} signIn={!user} />
+      <EmailLinkRequest
+        purpose="confirm"
+        label={t(expired ? 'authPage.expiredTitle' : 'authPage.confirmTitle')}
+        intro={!expired}
+        returnTo={next !== '/' ? next : undefined}
+        signIn={!user}
+      />
     </Page>
   );
 }
@@ -385,7 +402,7 @@ export function ResetPasswordPage() {
       title={t(expired ? 'authPage.resetExpiredTitle' : 'auth.dialog.forgotTitle')}
       lead={t(expired ? 'authPage.resetExpiredLead' : 'auth.dialog.forgotSubtitle')}
     >
-      <EmailLinkRequest purpose="reset" />
+      <EmailLinkRequest purpose="reset" label={t(expired ? 'authPage.resetExpiredTitle' : 'auth.dialog.forgotTitle')} />
     </Page>
   );
 }

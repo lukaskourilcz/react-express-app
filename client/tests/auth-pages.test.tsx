@@ -145,6 +145,8 @@ describe('/auth/confirmed', () => {
     await openPage(`/auth/confirmed?next=%2Fpremium${EXPIRED}`);
     expect(await h1()).toHaveTextContent('This confirmation link has expired');
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    // The lead already says to ask for a new link: no second line in the card.
+    expect(screen.queryByText('Didn’t get it? We’ll send a new link.')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Send a new link' }));
     expect(screen.getByText('Enter your email address.')).toBeInTheDocument();
     // Focus goes to the field, which reads its message out with it.
@@ -169,6 +171,10 @@ describe('/auth/confirmed', () => {
     const send = screen.getByRole('button', { name: 'Send a new link' });
     expect(send.compareDocumentPosition(signIn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(signIn.closest('.ss-auth-page')).toBe(send.closest('.ss-auth-page'));
+    // One short line above the field instead of a heading (shell-public-14).
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
+    const card = screen.getByRole('region', { name: 'Confirm your email' });
+    expect(card).toHaveTextContent(/^Didn’t get it\? We’ll send a new link\./);
     fireEvent.click(signIn);
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
@@ -266,6 +272,10 @@ describe('/reset-password', () => {
     server.use(http.post(`${AUTH}/recover`, () => gotrueOk({})));
     await openPage('/reset-password');
     expect(await h1()).toHaveTextContent('Reset your password');
+    // The card states its action once, on its button (UX audit
+    // shell-public-14): no heading of its own; it takes the h1 as its name.
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Reset your password' })).toContainElement(screen.getByRole('button', { name: 'Send reset link' }));
     // The live region is on the page, empty, before it has anything to say:
     // one that arrives with its words is not read out.
     const region = screen.getAllByRole('status').find((element) => element.classList.contains('ss-auth__status'));
