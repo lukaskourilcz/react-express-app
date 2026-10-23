@@ -234,7 +234,26 @@ describe('the plan', () => {
   it('counts every topic of the chosen track in the /roadmap headline', async () => {
     answer();
     await mountAt('/roadmap', <CareerRoadmap />);
-    expect(await screen.findByText('0 / 52 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+    expect(await screen.findByText('0 / 52 learning-path levels passed')).toBeInTheDocument();
+  });
+
+  // The track was named three times and the same topics were listed under
+  // every section that holds them (UX audit learn-16).
+  it('names the /roadmap track once and lists each topic once, under the first section that holds it', async () => {
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    await screen.findByText('0 / 52 learning-path levels passed');
+    // The segment is the one track label: no badge, no "on the Fullstack track".
+    expect(screen.getAllByText('Fullstack')).toHaveLength(1);
+    expect(screen.queryByText(/Choose Frontend, Backend or Fullstack/)).toBeNull();
+    const labels = [...document.querySelectorAll('.career-topic__label')].map((label) => label.textContent);
+    expect(labels).toContain('Git');
+    expect(new Set(labels).size).toBe(labels.length);
+    const git = [...document.querySelectorAll('.career-topic')].find((row) => row.querySelector('.career-topic__label')?.textContent === 'Git')!;
+    expect(git.closest('section')).toHaveAttribute('aria-labelledby', 'career-web-developer');
+    expect(git).toHaveTextContent('Also in: Software Engineer');
+    // The groups size to their content, one panel per section.
+    expect(document.querySelectorAll('section .ss-panel.career-pillars').length).toBeGreaterThan(0);
   });
 
   // Math.round drew 199 of 200 levels as a finished, green 100%.
@@ -246,7 +265,7 @@ describe('the plan', () => {
       progress: { javascript: { levels: passed, checkpoints: {} } },
     });
     await mountAt('/roadmap', <CareerRoadmap />);
-    expect(await screen.findByText('199 / 200 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+    expect(await screen.findByText('199 / 200 learning-path levels passed')).toBeInTheDocument();
     expect(screen.getAllByText('99%').length).toBeGreaterThan(0);
     expect(screen.queryByText('100%')).toBeNull();
   });
