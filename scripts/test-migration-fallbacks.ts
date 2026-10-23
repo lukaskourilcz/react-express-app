@@ -43,6 +43,10 @@ const INSTALLED: Record<string, unknown> = {
   credit_tokens: true,
 };
 
+/** Routines that raise, by name: answered with this status and body before
+ * INSTALLED is asked, as PostgREST answers a RAISE EXCEPTION. */
+const RPC_ERRORS: Record<string, { status: number; body: unknown }> = {};
+
 /** What a table read answers, by table; any other read finds nothing. */
 const TABLE_READS: Record<string, { status: number; body: unknown }> = {};
 
@@ -114,6 +118,11 @@ async function startStandIn(calls: Call[], writes: Call[]) {
       const raw = await readBody(req);
       const args = raw ? JSON.parse(raw) : {};
       calls.push({ name, args });
+      if (RPC_ERRORS[name]) {
+        res.statusCode = RPC_ERRORS[name].status;
+        res.end(JSON.stringify(RPC_ERRORS[name].body));
+        return;
+      }
       const unknownArg = (UNKNOWN_ARGS[name] ?? []).some((arg) => arg in args);
       if (name in INSTALLED && !unknownArg) {
         res.end(JSON.stringify(INSTALLED[name]));
@@ -678,10 +687,36 @@ async function main() {
     const empty = await freezes('POST');
     assert.equal(empty.statusCode, 409);
     assert.equal(empty.body?.error?.code, 'no_protection_left', 'an empty budget answers as before');
+
+    // Admin writes name the admin who made them, as api/admin's own ops do
+    // with `by`, so a voucher or an order change can be traced to an account.
+    const logged: Record<string, unknown>[] = [];
+    const captureLogs = async <T,>(run: () => Promise<T>): Promise<T> => {
+      const log = console.log;
+      console.log = (...args: unknown[]) => {
+        for (const arg of args) { try { logged.push(JSON.parse(String(arg))); } catch { /* not a structured line */ } }
+      };
+      try { return await run(); } finally { console.log = log; }
+    };
+    const voucherRow = {
+      id: '5d6a8a4e-1f59-4d6a-9f56-0f7b6c1e2a3b', hint: 'K7Q2', note: 'Trace', premiumDays: 30, maxRedemptions: 1, redeemedCount: 0,
+      redeemableUntil: null, active: true, createdAt: '2026-09-26T12:00:00+00:00', revokedAt: null,
+    };
+    INSTALLED.create_premium_voucher = voucherRow;
+    INSTALLED.revoke_premium_voucher = { ...voucherRow, active: false, revokedAt: '2026-09-26T12:30:00+00:00' };
+    for (const body of [{ action: 'create', note: 'Trace', premiumDays: 30, maxRedemptions: 1 }, { action: 'revoke', voucherId: voucherRow.id }]) {
+      const done = mockResponse();
+      await captureLogs(() => adminOps({ method: 'POST', headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'x-forwarded-for': '10.20.0.40' }, query: { op: 'vouchers' }, url: '/api/admin/vouchers', body } as never, done as never));
+      assert.equal(done.statusCode, 200, `${body.action}: ${JSON.stringify(done.body)}`);
+      const line = logged.find((one) => one.kind === `voucher_${body.action}`);
+      assert.equal(line?.by, ADMIN.id, `a voucher ${body.action} names the admin who made it`);
+    }
+    delete INSTALLED.create_premium_voucher;
+    delete INSTALLED.revoke_premium_voucher;
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the name and picture of the Google identity and ignores the body and user_metadata, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; a finished challenge run sends its answers from 052 and only its breakdown before; from 060 a quiz result and a challenge run pass on the answers the question hour held back, and before 060 fall back to the routines of 058; the streak shield returns every shielded date and answers 409 shield_would_end_streak when the routine refuses; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the name and picture of the Google identity and ignores the body and user_metadata, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; a finished challenge run sends its answers from 052 and only its breakdown before; from 060 a quiz result and a challenge run pass on the answers the question hour held back, and before 060 fall back to the routines of 058; the streak shield returns every shielded date and answers 409 shield_would_end_streak when the routine refuses; admin voucher and order writes name the admin; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {
