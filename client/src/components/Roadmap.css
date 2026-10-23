@@ -577,23 +577,22 @@
 }
 .rm-topic-pill--dimmed .rm-topic-glyph { filter: grayscale(1); }
 
+/* A section with nothing open (UX audit learn-09): in the column, on its
+   left edge like the rail above it, with no card of its own, then one row of
+   next steps at 44px. */
 .rm-section-empty {
-  max-width: 620px;
-  margin: 24px auto 8px;
-  padding: 18px 20px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-container);
-  background-color: var(--color-background-surface);
+  margin: 16px 0 8px;
   color: var(--color-text-secondary);
   font-size: var(--ss-type-compact);
 }
-.rm-section-empty p { margin: 0 0 12px; }
+.rm-section-empty p { margin: 0 0 16px; }
 .rm-section-empty__title {
   margin: 0 0 6px;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-text-primary);
 }
+.rm-section-empty__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 
 @media (prefers-reduced-motion: reduce) {
   /* Astryx's segment colour transition ignores reduced motion. */

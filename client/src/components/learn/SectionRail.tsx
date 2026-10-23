@@ -16,6 +16,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { RadioCard, RadioCardGroup } from '../ui/RadioCards';
 import { CategoryGlyph } from '../ui/techIcons';
+import { SwimCta } from '../landing/LandingKit';
 import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../../lib/categories';
 import type { TranslationKey } from '../../i18n/translations';
 import { learnText } from '../../i18n/translations.learn';
@@ -144,9 +145,14 @@ export function LockedNote({ entries, t }: { entries: readonly RailEntry[]; t: T
 
 /** The map area of a section with nothing open: which topic to pass to open
  * it, or, for a section the learner has not joined, that it is not in the
- * plan (the header holds the one action). */
+ * plan (the header holds the one action). It sits in the page's column on its
+ * left edge, with no card of its own (UX audit learn-09). A gate ends on the
+ * one row of next steps: the prerequisite as the primary and the skill check
+ * beside it, so the page drops its separate skill-check row here. When the
+ * header already offers the join, the prerequisite is a secondary, so the
+ * screen keeps one filled primary. */
 export function SectionEmpty(props:
-  | { kind: 'gate'; prereq: string; topic: string; onGo: () => void; t: TFn }
+  | { kind: 'gate'; prereq: string; topic: string; onGo: () => void; onSkillCheck: () => void; quiet?: boolean; t: TFn }
   | { kind: 'notMember'; name: string }) {
   if (props.kind === 'notMember') {
     return (
@@ -156,13 +162,19 @@ export function SectionEmpty(props:
       </div>
     );
   }
-  const { prereq, topic, onGo, t } = props;
+  const { prereq, topic, onGo, onSkillCheck, quiet = false, t } = props;
   const prereqLabel = t(categoryLabelKey(prereq));
+  const goLabel = learnText('learn.empty.action', { prereq: prereqLabel });
   return (
     <div className="rm-section-empty">
       <h2 className="rm-section-empty__title">{learnText('learn.empty.title')}</h2>
       <p>{learnText('learn.empty.body', { count: LEVELS_TO_UNLOCK_NEXT, prereq: prereqLabel, topic: t(categoryLabelKey(topic)) })}</p>
-      <Button variant="secondary" label={learnText('learn.empty.action', { prereq: prereqLabel })} onClick={onGo} />
+      <div className="rm-section-empty__actions">
+        {quiet
+          ? <Button variant="secondary" label={goLabel} onClick={onGo} />
+          : <SwimCta label={goLabel} onClick={onGo} />}
+        <Button variant="secondary" label={learnText('learn.empty.skillCheck')} onClick={onSkillCheck} />
+      </div>
     </div>
   );
 }

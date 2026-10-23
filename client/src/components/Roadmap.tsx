@@ -908,6 +908,9 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
       </button>
     </div>
   );
+  // The section header offers the join as a filled button (SectionHeader's
+  // `joinable`); a gate under it then keeps its own action secondary.
+  const headerJoins = section !== 'web-developer' && !authLoading && isAuthenticated && hasPlan && !isMember;
   const topicDone = passedLevelCount(progress, topic);
   const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
@@ -990,23 +993,27 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           <AxButton variant="secondary" label={t('roadmap.retry')} onClick={() => structureQuery.refetch()} />
         </div>
       ) : !sectionHasOpen && (gate || !isMember) ? (
-        <>
-          {gate ? (
-            <SectionEmpty
-              kind="gate"
-              prereq={gate.prereq}
-              topic={gate.topic}
-              onGo={() => {
-                focusOnArrival.current = gate.prereqSection;
-                switchSection(gate.prereqSection, gate.prereq as RoadmapTopic);
-              }}
-              t={t}
-            />
-          ) : (
+        gate ? (
+          // The gate's own action row holds the skill check (UX audit
+          // learn-09), so the separate skill-check row is not drawn here.
+          <SectionEmpty
+            kind="gate"
+            prereq={gate.prereq}
+            topic={gate.topic}
+            onGo={() => {
+              focusOnArrival.current = gate.prereqSection;
+              switchSection(gate.prereqSection, gate.prereq as RoadmapTopic);
+            }}
+            onSkillCheck={() => setSkillCheckOpen(true)}
+            quiet={headerJoins}
+            t={t}
+          />
+        ) : (
+          <>
             <SectionEmpty kind="notMember" name={sectionName} />
-          )}
-          {skillCheckRow}
-        </>
+            {skillCheckRow}
+          </>
+        )
       ) : levels.length === 0 ? (
         <div style={{ maxWidth: 620, margin: '32px auto 0' }}>
           <Banner status="info" title={t('roadmap.noLevels')} description={t('roadmap.noLevelsBody')} />

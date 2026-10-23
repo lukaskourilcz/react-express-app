@@ -46,6 +46,7 @@ export const learnEn = {
   'learn.empty.title': 'Nothing here is open yet',
   'learn.empty.body': 'Pass {count} levels of {prereq} to open {topic}.',
   'learn.empty.action': 'Go to {prereq}',
+  'learn.empty.skillCheck': 'Take the skill check',
   'learn.notJoined.title': '{name} is not in your plan',
   'learn.notJoined.body': 'Add it to open these topics as you pass what they build on.',
 

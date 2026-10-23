@@ -344,6 +344,24 @@ describe('the topic rail (UX audit learn-07)', () => {
   });
 });
 
+describe('a section with nothing open (UX audit learn-09)', () => {
+  it('ends on one row of next steps: the prerequisite as the one primary and the skill check beside it', async () => {
+    answer();
+    await mountAt('/learn/software-engineer');
+    const title = await screen.findByRole('heading', { level: 2, name: 'Nothing here is open yet' });
+    const empty = title.closest('.rm-section-empty') as HTMLElement;
+    const go = within(empty).getByRole('button', { name: /^Go to / });
+    expect(go).toHaveClass('ss-swim-cta');
+    const check = within(empty).getByRole('button', { name: 'Take the skill check' });
+    expect(go.parentElement).toBe(check.parentElement);
+    // The separate skill-check row is not drawn in this state.
+    expect(document.querySelector('.rm-skillcheck-row')).toBeNull();
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    fireEvent.click(check);
+    expect(await screen.findByRole('button', { name: 'Start placement' })).toBeInTheDocument();
+  });
+});
+
 describe('a section without a plan', () => {
   it('asks a visitor to sign in, and dims nothing', async () => {
     answer();

@@ -53,3 +53,14 @@ describe('the topic rail (learn-07)', () => {
     expect(declared(rules, '.rm-topic-progress .ss-premium-label', 'text-transform')).toBe('none');
   });
 });
+
+describe('a section with nothing open (learn-09)', () => {
+  it('sits in the column on its left edge, with no card of its own', () => {
+    const rules = topRules(addSheet('roadmap'));
+    expect(declared(rules, '.rm-section-empty', 'max-width')).toBe('');
+    expect(declared(rules, '.rm-section-empty', 'border')).toBe('');
+    expect(declared(rules, '.rm-section-empty', 'background-color')).toBe('');
+    expect(declared(rules, '.rm-section-empty', 'margin')).toBe('16px 0 8px');
+    expect(declared(rules, '.rm-section-empty__actions', 'display')).toBe('flex');
+  });
+});
