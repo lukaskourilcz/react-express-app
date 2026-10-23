@@ -98,7 +98,12 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
   const showEmailIssue = submitted || (blurred.email && email.trim() !== '') ? emailIssue : null;
   const showPasswordIssue = submitted || (blurred.password && password !== '') ? passwordIssue : null;
 
+  // Which form is on screen: a new one each time the learner moves to
+  // another. An answer that arrives for a form the learner left is not that
+  // form's to show; the email it may have sent still counts for the wait.
+  const shown = useRef(0);
   const switchView = (next: SignInView, focusEmail = false) => {
+    shown.current += 1;
     setView(next);
     setFailure(null);
     setSubmitted(false);
@@ -143,10 +148,15 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
       return;
     }
     begin('submit');
+    const on = shown.current;
     if (view === 'forgot') {
       const outcome = await sendPasswordReset(email);
       if (!mounted.current) return;
       finish();
+      if (on !== shown.current) {
+        if (outcome.ok) markEmailSent('reset', email);
+        return;
+      }
       if (outcome.ok) showSent('reset', email);
       else setFailure({ kind: outcome.failure, from: 'form' });
       return;
@@ -158,13 +168,17 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
       // button stays busy until then.
       if (outcome.ok) return;
       finish();
-      setFailure({ kind: outcome.failure, from: 'form' });
+      if (on === shown.current) setFailure({ kind: outcome.failure, from: 'form' });
       return;
     }
     const outcome = await signUpWithEmail(email, password, request.returnTo);
     if (!mounted.current) return;
     if (outcome.ok && outcome.signedIn) return;
     finish();
+    if (on !== shown.current) {
+      if (outcome.ok) markEmailSent('confirm', email);
+      return;
+    }
     if (outcome.ok) showSent('confirm', email);
     else setFailure({ kind: outcome.failure, from: 'form' });
   };
@@ -173,9 +187,14 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
     if (!begin('resend')) return;
     setFailure(null);
     setResent(false);
+    const on = shown.current;
     const outcome = purpose === 'confirm' ? await resendConfirmation(address, request.returnTo) : await sendPasswordReset(address);
     if (!mounted.current) return;
     finish();
+    if (on !== shown.current) {
+      if (outcome.ok || outcome.failure === 'emailRateLimited') markEmailSent(purpose, address);
+      return;
+    }
     if (!outcome.ok) {
       // Supabase refused for sending too often: wait the minute out here too.
       if (outcome.failure === 'emailRateLimited') {

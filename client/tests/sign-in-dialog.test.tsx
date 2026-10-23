@@ -369,6 +369,24 @@ describe('the sign-in dialog', () => {
     expect(calls('/recover')).toHaveLength(1);
   });
 
+  it('keeps a late answer for a form the learner left off the form they moved to', async () => {
+    let answer = () => {};
+    server.use(http.post(`${AUTH}/token`, () => new Promise<Response>((resolve) => {
+      answer = () => resolve(authError(400, 'invalid_credentials', 'Invalid login credentials'));
+    })));
+    const { dialog } = await openDialog();
+    type(field(dialog, 'Email'), 'ada@example.com');
+    type(field(dialog, 'Password'), 'wrong password');
+    press(dialog, 'Sign in');
+    await waitFor(() => expect(calls('/token')).toHaveLength(1));
+    // The learner moves to Create account while the sign-in is still out.
+    signUpTab(dialog);
+    await act(async () => { answer(); });
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Create account' })).toBeEnabled());
+    expect(within(dialog).getByRole('heading', { name: 'Create your devShark account' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+  });
+
   it('closes on its close button and gives focus back to what opened it', async () => {
     const { dialog } = await openDialog();
     press(dialog, 'Close');
