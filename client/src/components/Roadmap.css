@@ -26,15 +26,6 @@
   30%, 50%, 70% { transform: translateX(-5px); }
   40%, 60% { transform: translateX(5px); }
 }
-@keyframes rmCorrectPop {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-@keyframes rmSlideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
-}
 @keyframes rmCelebrate {
   0% { transform: scale(0) rotate(-18deg); }
   60% { transform: scale(1.25) rotate(8deg); }
@@ -107,12 +98,8 @@
   pointer-events: none;
 }
 
-/* Answer feedback on the lesson options. */
+/* A wrong answer shakes the heart once. */
 .rm-shake { animation: rmShake 0.4s ease both; }
-.rm-correct-pop { animation: rmCorrectPop 0.4s ease both; }
-
-/* Feedback panel + continue button slide up. */
-.rm-feedback { animation: rmSlideUp 0.25s ease both; }
 
 /* Finish screen flourishes. */
 .rm-celebrate { animation: rmCelebrate 0.55s cubic-bezier(0.2, 0.7, 0.3, 1.4) both; }
@@ -141,8 +128,6 @@
   .rm-flow,
   .rm-shimmer::after,
   .rm-shake,
-  .rm-correct-pop,
-  .rm-feedback,
   .rm-celebrate,
   .rm-count,
   .rm-confetti i {
@@ -171,30 +156,28 @@
    `--rm-on-accent`) custom properties set inline, so hover states can be
    expressed in CSS while the colour stays data-driven. */
 
-/* Skill-check CTA — a two-line outlined pill (static brand accent). */
+/* Skill check: a secondary action beside the map (UX audit learn-04), drawn
+   as an Astryx secondary button is: a 44px muted pill with no outline of its
+   own, so the screen's one filled primary stays the SwimCta. */
 .rm-skillcheck-cta {
-  text-transform: none;
-  font-weight: 700;
-  border: 2px solid var(--brand-accent);
-  color: var(--brand-accent);
-  background: transparent;
-  border-radius: var(--radius-element);
-  padding: 8px 13px;
-  /* A page action: 44px on every pointer (UX audit learn-18). */
-  min-height: var(--ss-control-height);
-  line-height: 1.2;
-  display: flex;
-  flex-direction: row;
-  gap: 6px;
+  display: inline-flex;
   align-items: center;
-  cursor: pointer;
+  gap: 6px;
+  min-height: var(--ss-control-height);
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-background-muted);
+  color: var(--color-text-primary);
   font-family: inherit;
-  transition: all 0.15s ease;
+  font-weight: 600;
+  line-height: 1.2;
+  text-transform: none;
+  cursor: pointer;
+  transition: background-color var(--ss-motion-feedback) ease;
 }
-.rm-skillcheck-cta:hover {
-  border-color: var(--brand-accent-hover);
-  background-color: rgba(45, 122, 45, 0.06);
-}
+.rm-skillcheck-cta:hover { background: color-mix(in srgb, var(--color-background-muted) 88%, var(--color-text-primary)); }
+.rm-skillcheck-cta:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
 /* Topic selector pills — logo + label. */
 .rm-topic-pill {
@@ -333,80 +316,6 @@
 .rm-level-btn:active { transform: translateY(3px) scale(0.98); }
 .rm-test-btn:hover { transform: scale(1.06) translateY(-1px); }
 .rm-test-btn:active { transform: translateY(3px) scale(0.98); }
-
-/* Lesson answer options. */
-.rm-option {
-  text-align: left;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 2px solid var(--color-border);
-  background-color: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font-size: 0.95rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  transition: border-color 0.12s ease, background-color 0.12s ease;
-}
-.rm-option:disabled { cursor: default; }
-.rm-option:not(:disabled):hover {
-  border-color: var(--rm-accent);
-  background-color: var(--color-background-muted);
-}
-
-/* Accent-filled action buttons (intro start, continue, finish next/retry).
-   The fill is set inline, with --rm-on-accent as its readable text colour;
-   a button on the brand accent falls back to --brand-on-accent. These, the
-   outlined retry and the text button are the level runner's page actions:
-   44px on every pointer (UX audit learn-18; they measured 41 and 34px). */
-.rm-accent-btn {
-  border: none;
-  color: var(--rm-on-accent, var(--brand-on-accent));
-  border-radius: var(--radius-element);
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 12px 20px;
-  min-height: var(--ss-control-height);
-  cursor: pointer;
-  font-family: inherit;
-  transition: filter 0.15s ease;
-}
-.rm-accent-btn:hover { filter: var(--rm-accent-hover, brightness(0.92)); }
-
-/* Outlined retry (passed) button. */
-.rm-outline-btn {
-  background: transparent;
-  border: 1px solid var(--brand-accent);
-  color: var(--brand-accent);
-  border-radius: var(--radius-element);
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 11px 19px;
-  min-height: var(--ss-control-height);
-  cursor: pointer;
-  font-family: inherit;
-}
-.rm-outline-btn:hover { background-color: rgba(45, 122, 45, 0.06); }
-
-/* Plain text button (back to path / exit). */
-.rm-text-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: 10px 12px;
-  min-height: var(--ss-control-height);
-  cursor: pointer;
-  font-family: inherit;
-  border-radius: var(--radius-element);
-  line-height: 1;
-}
-.rm-text-btn:hover { background-color: var(--color-background-muted); }
 
 /* RoadmapTree: gentle re-animate of the path when the track changes. */
 @keyframes rmTrackIn {

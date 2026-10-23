@@ -30,11 +30,21 @@ describe('touch targets on a coarse pointer', () => {
     expect(declared(roadmap, '.rm-skillcheck-cta', 'min-height')).toBe('var(--ss-control-height)');
   });
 
-  it.each(['.rm-accent-btn', '.rm-outline-btn', '.rm-text-btn'])(
-    'keeps the level runner action %s at the control height on every pointer',
+  // UX audit learn-04: Skill check is a secondary pill with no outline of its
+  // own, not a second accent-bordered call to action beside the map's primary.
+  it('draws the Skill check as a secondary pill, without the accent border', () => {
+    const roadmap = [...addSheet('roadmap').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+    expect(declared(roadmap, '.rm-skillcheck-cta', 'border-radius')).toBe('999px');
+    expect(declared(roadmap, '.rm-skillcheck-cta', 'border')).toMatch(/^0/);
+  });
+
+  // UX audit learn-04: the level runner's actions are the shared QuestionActions
+  // row (44px, one SwimCta md), so its own button and option classes are gone.
+  it.each(['.rm-accent-btn', '.rm-outline-btn', '.rm-text-btn', '.rm-option'])(
+    'no longer styles the level runner with %s',
     (selector) => {
       const roadmap = [...addSheet('roadmap').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
-      expect(declared(roadmap, selector, 'min-height')).toBe('var(--ss-control-height)');
+      expect(roadmap.some((rule) => rule.selectorText.split(',').some((part) => part.trim().startsWith(selector)))).toBe(false);
     },
   );
 });

@@ -1849,11 +1849,13 @@ export function BigOIntroduction() {
         if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
       }} /></LessonStage>;
   }
-  return <div className="de-page" style={{ maxWidth: 640 }}>
+  // The route shell sets the width. Lesson 1 is the one SwimCta md and lesson
+  // 2 a secondary, both 44px (UX audit learn-04).
+  return <div className="de-page">
     <h1>{t('bigO.pathTitle')}</h1>
     <p>{t('bigO.pathLead')}</p>
     <div className="ss-info-actions">
-      <AxButton variant="primary" label={t('bigO.firstLesson')} onClick={() => open(1)} />
+      <SwimCta label={t('bigO.firstLesson')} onClick={() => open(1)} />
       <AxButton variant="secondary" label={t('bigO.secondLesson')} onClick={() => open(2)} />
     </div>
     <p><Link to="/big-o">{t('bigO.backToGuide')}</Link></p>
