@@ -595,44 +595,81 @@
 .ss-figure__frames { margin-top: 10px; display: grid; gap: 4px; font-size: var(--ss-type-meta); color: var(--color-text-secondary); counter-reset: figframe; }
 .ss-figure__frames li::before { counter-increment: figframe; content: counter(figframe) ". "; font-weight: 700; }
 
+/* ── Control heights ────────────────────────────────────────────────────────
+ *
+ * One button scale on every pointer (UX audit U1, #573). Every page action and
+ * form control is var(--ss-control-height) (44px) tall, with a mouse as with a
+ * finger: on a desktop the primary used to be the smallest control in its row
+ * (Astryx md 32px, lg 36px, sm 28px, segmented items 28px). Only controls
+ * inside an element with class "ss-compact", a component's own toolbar, drop
+ * to var(--ss-control-height-compact) (36px) on a fine pointer, and keep a
+ * 44px hit area through ::before; on a coarse pointer they stay at 44px.
+ *
+ * Applied as a floor rather than a fixed size so a control that is already
+ * larger is untouched, and to min-height/min-width rather than padding so a
+ * label never reflows. The floor sits here, once, and not page by page.
+ *
+ * !important, deliberately and only on these floors. Astryx ships StyleX
+ * atomic rules guarded by repeated id-level negations, which is a specificity
+ * no class selector can reach. The alternative is forking the design system,
+ * which the implementation rules rule out; this stays a floor on two
+ * properties.
+ */
+.astryx-button,
+.astryx-segmented-control-item {
+  min-height: var(--ss-control-height) !important;
+  min-width: var(--ss-control-height) !important;
+}
+/* The Astryx text field is 32px at its default size and 36px at its largest.
+   The box grows to the control height and the input stretches to fill it, so
+   a click or tap anywhere in the box lands in the field (the email on
+   /premium/cancel measured 23px on a phone, #222). The input itself gets the
+   floor as well: Astryx sizes it to the box's own height, which stays 36px
+   under the floor above (it measured 34px on /premium/cancel). */
+.astryx-text-input {
+  min-height: var(--ss-control-height) !important;
+}
+.astryx-text-input > input {
+  align-self: stretch;
+  min-height: var(--ss-control-height) !important;
+}
+
+/* A component's own toolbar (the coding action bar, a runner's icon row):
+   36px controls on a mouse, each with a 44px hit area drawn by ::before.
+   Astryx buttons and segmented items are already position: relative; the
+   text field's wrapper is not, so it gets it here (a click on the wrapper
+   focuses the input, Astryx TextInput). */
+@media (pointer: fine) {
+  .ss-compact .astryx-button,
+  .ss-compact .astryx-segmented-control-item {
+    min-height: var(--ss-control-height-compact) !important;
+    min-width: var(--ss-control-height-compact) !important;
+  }
+  .ss-compact .astryx-text-input {
+    position: relative;
+    min-height: var(--ss-control-height-compact) !important;
+  }
+  .ss-compact .astryx-text-input > input {
+    min-height: calc(var(--ss-control-height-compact) - 2px) !important;
+  }
+  .ss-compact .astryx-button::before,
+  .ss-compact .astryx-segmented-control-item::before,
+  .ss-compact .astryx-text-input::before {
+    content: '';
+    position: absolute;
+    inset: calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2);
+  }
+}
+
 /* ── Touch targets ──────────────────────────────────────────────────────────
  *
- * The design contract asks for 44px targets. The app's own controls meet it;
- * the ones that did not were the shared Astryx controls and the footer links,
- * measured in a headless browser at 390px across nineteen routes: the mobile
- * navigation toggle at 36×36, primary and secondary buttons at 32px tall,
- * segmented-control items at 28px, and the footer links at 14px — text
- * height, no padding at all. The navigation toggle is the most-tapped control
- * on a phone and was the smallest thing on the page.
- *
- * Scoped to coarse pointers on purpose. A mouse is precise and the desktop
- * density is deliberate; a finger is not, and this is the case the 44px rule
- * is actually about. Applied as a floor rather than a fixed size so a control
- * that is already larger is untouched, and to min-height/min-width rather than
- * padding so nothing reflows into a neighbour.
+ * The app's own controls beyond the shared Astryx ones, measured in a
+ * headless browser at 390px across nineteen routes: the mobile navigation
+ * toggle at 36×36 and the footer links at 14px (text height, no padding at
+ * all). Scoped to coarse pointers: these are text links and small inline
+ * controls whose desktop density is deliberate.
  */
 @media (pointer: coarse) {
-  /* !important, deliberately and only here. Astryx ships StyleX atomic rules
-     guarded by repeated id-level negations, which is a specificity no class
-     selector can reach. The alternative is forking the design system, which
-     the implementation rules rule out; this stays a floor on two properties,
-     inside one media query. */
-  .astryx-button,
-  .astryx-segmented-control-item {
-    min-height: 44px !important;
-    min-width: 44px !important;
-  }
-  /* The Astryx text field is 32px at its default size and 36px at its
-     largest. On a phone the box grows to 44px and the input stretches to
-     fill it, so a tap anywhere in the box lands in the field (the email on
-     /premium/cancel measured 23px, #222). */
-  .astryx-text-input {
-    min-height: 44px !important;
-  }
-  .astryx-text-input > input {
-    align-self: stretch;
-  }
-
   .ss-footer-settings button,
   .ss-brand-footer__social a,
   .ss-drawer-brand,
@@ -652,12 +689,6 @@
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-  }
-  /* The input itself, not only its box: Astryx sizes it to the box's own
-     height, which stays 36px under the 44px floor above, so the input
-     measured 34px (/premium/cancel, the voucher field). */
-  .astryx-text-input > input {
-    min-height: 44px !important;
   }
 
   /* The footer links are bare text in a wrapped row. Height is what gives
