@@ -1,6 +1,6 @@
 ---
 name: section-code-audit
-description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564), Software Engineer (#565) and Quiz/Play/Profile/Leaderboard (#566) audits of 22–23 October 2026.
+description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564), Software Engineer (#565), Quiz/Play/Profile/Leaderboard (#566), sign-in and sandboxes (#570), rewards and billing (#568) and site and plumbing (#569) audits of 22–23 October 2026.
 ---
 
 # Section code audit
@@ -29,6 +29,15 @@ Area maps known today (check them, files move):
 - **Play**: `api/play/[action].ts`, `client/src/components/Play.tsx`, `client/src/lib/realtime.ts` (Classroom rooms included).
 - **Profile**: `api/user/[op].ts`, `lib/friends-handlers.ts`, `lib/leaderboard-identity.ts`, `lib/settings-store.ts`, `Profile.tsx`, `FriendsPanel.tsx`, `SharknameCard.tsx`, `client/src/lib/leaderboardVisibility.ts`.
 - **Leaderboard**: `api/leaderboard.ts`, `client/src/components/Leaderboard.tsx`, `client/src/lib/utcDay.ts`.
+- **Sign-in and accounts** (#570): `lib/auth.ts`, `access.ts`, `entitlements.ts`, `admin-auth.ts`, `auth-events-store.ts`, `topic-grants.ts`, the `authevent` and `delete-account` ops of `api/user/[op].ts`; in the client `auth.tsx`, `emailAuth.ts`, `authLanding.ts`, `authReturn.ts`, `signInDialog.ts`, `supabase*.ts`, `accountData.ts`, `entitlement.ts`, `client/src/components/auth/*`, `AuthButton.tsx`, `SignInButton.tsx`, `RegisterPromptSnackbar.tsx`.
+- **Grading sandboxes** (#570): `lib/coding/sandbox.ts`, `react-runner.ts`, `react-isolated.ts`, `react-learner.ts`, `realm-lockdown.ts`, `quickjs-variant.ts`; `client/src/coding/runner/*`, `useReactHarness.ts`. Run `node scripts/build-react-runner.mjs` after changing anything the React guest bundles, or `test:grading-integrity` reads a stale `lib/coding/generated/` bundle.
+- **Rewards and billing** (#568): `lib/rewards/*`, `lib/vouchers.ts`, `shared/rewards.ts`, `lib/billing/*`; `Shop.tsx`, `client/src/lib/shop.ts`, `rewards.ts`, `rewardsShop.ts`, `referral.ts`, `streakFreezes.ts`, `voucher.ts`, `Referral*.tsx`, `PremiumVoucher.tsx`, `Collection.tsx`, `PremiumPage.tsx`, `PremiumBillingPages.tsx`, `UpgradeSheet*.tsx`, `LaunchOffer.tsx`, `PremiumCheckoutButton.tsx`, `PlanLine.tsx`, `client/src/lib/billing.ts`, `launchOffer.ts`, `stripeCheckoutForm.ts`. Never change prices, plans, the launch offer or whether checkout is open (#221).
+- **Admin and `/dev`** (#569): `api/admin/[op].ts`, `client/src/components/dev/*`, `devApi.ts`, `triageApi.ts`.
+- **Public site** (#569): `Home.tsx`, `client/src/components/landing/*`, `TopicLandingPage.tsx`, `topics/TopicArticle.tsx`, `PublicInfoPages.tsx`, `LegalPages.tsx`, `BrandFooter.tsx`, `DailyStaticArticle.tsx`, `landingTopics.ts`, `publicMetadata.ts`, `routeHead.ts`.
+- **Consent, analytics, monitoring and the GitHub garden** (#569): `consent.ts`, `analytics.ts`, `marketing*.ts`, `posthogClient.ts`, `sentry.ts`, `sentry-sdk.ts`, `CookieConsent*.tsx`, `lib/marketing/source.ts`, `lib/github-*.ts`, `GithubGardenCard.tsx`, `GithubSettingsPage.tsx`.
+- **Shared plumbing** (#569): `lib/rate-limit.ts`, `lib/http.ts`, `request-timing.ts`, `api/health.ts`, `api/settings.ts`, `client/src/lib/store.ts`, `storage.ts`, `queryClient.ts`, `api.ts`, `routePreload.ts`, `routeRecovery.ts`, `client/vite.config.ts`, `vercel.json`, and a read-only pass over the SQL in `supabase/`.
+
+Several areas can run at once on separate branches and worktrees (three did on 23 October). Give each branch a list of files it must not touch, collect every item an agent left because "the file belongs to another branch", and run one small leftovers round after the branches merge (#571 did that for twelve items).
 
 Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, `scripts/test-*.ts`) and the SQL the handlers call before changing anything.
 
@@ -42,11 +51,18 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - An attempt that expired mid-request answers 409 `invalid_session`, and a one-time claim the database cannot take answers 503 `claim_unavailable`, never 500. Check auth before `claimOnce`: a refused token used up a placement round.
 - Rate limits for writes a class makes together: a class-sized address bucket plus a per-account bucket through `enforceClassRateLimit` (`questionReportAddress`, `questionReport`), or a class behind one NAT shares one person's budget.
 
+- Auth outages: supabase-js reports a dropped connection as `AuthRetryableFetchError` with status 0, and Auth's own 429 or an unreadable answer as other errors. Answer them 503 `auth_unavailable`, never 401 (it tells a signed-in learner their session ended) and never 403 at the admin gate. Verify a token at most once per request (`tryAuthOnce`, memoised in `lib/auth.ts`).
+- Entitlement and cleared-content reads fail closed and say so: a failed read answers 503 `entitlement_unavailable`, never 402 (a lapsed learner is shown the upgrade sheet for work they passed) and never "not Premium" on an admin screen. A "cleared" callback that cannot read throws; `assertOpen` turns the throw into 503.
+- Routine errors: never answer with Postgres's raw message. Map each named raise (`unknown_order` 404, `order_not_cancellable` 409) and answer anything else 500 with the generic body, logging the message.
+- Admin writes log the admin account that made them (`by`: the admin id, or `legacy-password`).
+
 **Server: untrusted input**
 - Postgres text and JSONB refuse U+0000, so a draft, Shark Card or report holding it answered 500. Walk the values (not the JSON text, which would also catch code that spells `\u0000` out) and answer 400. Cut user text by code points (`Array.from`), not UTF-16 units, so an emoji is not split.
 - `NaN` passes every range test, and a fractional index never matches. Check `Number.isFinite` and `Number.isInteger` on thresholds, weights, answer indexes, figure levels and field caps, and refuse an option index past the options.
 - Query parameters can arrive as arrays (`?categories=a&categories=b`): read only a single string or refuse it; `.split()` on an array throws.
 - Arrays from the client: refuse entries of the wrong type with 400 (topic ids, puzzle line ids) instead of acting on the rest. Where free text is expected, keep string entries only, never `String(entry)` (`[{}]` became `"[object Object]"`).
+- Webhook signatures: compare bytes, and check the length before `timingSafeEqual`; a 64-character non-ASCII header made it throw a `RangeError` and answer 500, which the provider retries forever. A signed body that is not a JSON object answers 400. An unknown `op` value answers 400 instead of falling through to the default action (a misspelt `equip` bought the crown).
+- Paged provider lists (Stripe subscriptions, GitHub installation repositories): read every page up to a sane cap; a live subscription behind 20 expired ones was missed.
 - Lookups by id on plain objects: use `Object.hasOwn` or a `Map`, or `constructor` and `__proto__` resolve to Object members (`puzzleFor('constructor')`).
 - Calendar dates: `2026-02-30` and year 0 parse in JavaScript and fail in Postgres. Booleans: refuse anything but `true` or `false`. Ids: refuse one longer than any real id before it reaches the database.
 
@@ -78,6 +94,12 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Dates that roll over: a page left open overnight moves to the new UTC day at midnight and when the tab is visible again (`useUtcDay` in `client/src/lib/utcDay.ts`).
 - Controlled inputs bound to the URL: React Router updates the URL in a transition, so a search box controlled by it dropped keystrokes. Keep local state and write the URL after.
 
+**Client: accounts and caches**
+- Empty the query cache when the account changes, *before* the new account's first render (in `clearAccountData`), not in an effect after it: several keys (`['rewards','wallet']`, `['concept-due']`) carry no account id.
+- While the stored session is restored, `isAuthenticated` is false: show Loading, not "Sign in to …" (the wallet, the invite link, Shark Cards).
+- A session that replaces another without a sign-out is an account change too. An email link opened while another account is signed in must not act on the signed-in account.
+- Consent: send analytics events when they are captured (a batch queued before a withdrawal was sent after it), identify once per consent yes, and scrub Sentry errors, breadcrumbs and traces of query strings, e-mail addresses, tokens and request data.
+
 **Client: states**
 - Do not offer "Start" while the enrollment list or the open run is loading or failed. Show a paused enrollment as paused, offer Try again when an activity fails to open, and say a sealed attempt expired instead of re-dealing it.
 - Empty data: a trace with no frames threw and replaced the lesson with the error boundary.
@@ -99,10 +121,14 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Canvas and downloads: `roundRect` is missing before Safari 16 and Firefox 112, so fall back to `arcTo`; zero the canvas after export (iOS caps canvas memory); attach the anchor before `click()` and revoke the object URL later.
 - Head tags: write `og:url` beside the canonical on client navigation, and read a trailing slash as the same route.
 
+- Shell growth: fixes in modules every page loads (`store.ts`, `queryClient.ts`, `auth.tsx`, `consent.ts`) add bytes. Win them back by moving code only one screen uses into its own module (`rewardsShop.ts`, the lazily loaded `RegisterPromptCard.tsx`, Sentry's init options in `sentry-sdk.ts`), and measure each move: some "trims" grow the gzip size.
+
 ## 3. How to work
 
 - Run it as a workflow: four reviewers in parallel on the disjoint groups, each followed by a skeptic that tries to refute every commit and repairs or reverts with *new* commits, then one checks agent. Then a second, smaller round for the issues the first round listed as "not fixed" but that are real. Check the scariest-sounding "not fixed" items yourself first: in the FDE audit, a reported token/attempt TTL mismatch turned out to be 3 h on both sides.
 - One fix per commit, right after its cheapest relevant check passes. Message: `fix|perf|refactor|test(<area>): <what and why>`. Agents share the worktree, so commit with `git commit -m … -- <paths>` and never `git add -A`, stash, reset, rebase or push. The owner wants many real commits; never pad.
+- Agents that share a worktree can cross commit messages (one commit carried another's message in #568). Before pushing, compare each commit's files with its message; fix a wrong message with `git filter-branch --msg-filter` on the unpushed range, never by rewriting pushed history.
+- A CI job that hits its time limit is not always the code: in #568 and #569 GitHub's cache restore stalled for ten minutes before `test:coding` began. Compare the step timestamps with a recent `main` run, then rerun the failed jobs.
 - Behaviour fixes get a regression test in the area's existing test file, and the test must fail on the old code.
 - Do not edit SQL migrations, reviewed content (`lib/learning-paths/content`, `solutions`, `lib/roadmap-questions-*`, `lib/coding/tasks`, `lib/coding/solutions`), tier gating, XP or copy meaning. Report DB issues that need a migration.
 - Comments count: `scripts/test-learning-paths.ts` and `test-launch-contracts.ts` fail if any file under `client/src` *mentions* `lib/learning-paths`, even in a comment.
