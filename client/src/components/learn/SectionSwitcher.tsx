@@ -99,13 +99,16 @@ export function SectionSwitcher({ value, items, onActivate }: {
 export type JoinState = { status: 'saving' | 'saved' | 'error'; step?: 'save' | 'enroll' };
 
 /**
- * The section's one-line purpose and, for a section the learner has not
- * joined, its single action. In order: nothing for Web Developer or while the
- * session loads (the space is kept); sign in for a visitor; "Choose your plan"
- * for an account with no saved plan, since a join would save a plan from the
- * local track and hide topics open today; nothing for a member; otherwise the
- * join. A failed join replaces the button with its error and one Try again.
- * Focus follows each of those swaps (see the effect below).
+ * The section's one supporting line and, for a section the learner has not
+ * joined, its single action. The switcher above is the one place the section
+ * is named (UX audit learn-01), so neither the line nor the action repeats
+ * it. In order: nothing for Web Developer or while the session loads (the
+ * space is kept); sign in for a visitor; "Choose your plan" for an account
+ * with no saved plan, since a join would save a plan from the local track and
+ * hide topics open today; nothing for a member; otherwise the join. A failed
+ * join replaces the button with its error and one Try again. Focus follows
+ * each of those swaps (see the effect below). A visitor's device-only note is
+ * the small status under the line and the action, in every section.
  */
 export function SectionHeader({
   section,
@@ -122,6 +125,7 @@ export function SectionHeader({
   fde,
   premiumLabel,
   retryLabel,
+  deviceNote,
 }: {
   section: LearnSectionId;
   name: string;
@@ -137,6 +141,8 @@ export function SectionHeader({
   fde?: { entryLoading: boolean; pathOpen: boolean; barred: boolean };
   premiumLabel: string;
   retryLabel: string;
+  /** What a visitor's progress does without an account; shown signed out. */
+  deviceNote?: string;
 }) {
   const saving = join?.status === 'saving';
   const failed = join?.status === 'error';
@@ -161,12 +167,13 @@ export function SectionHeader({
 
   let action: ReactNode = null;
   let note: ReactNode = null;
+  if (!authLoading && !signedIn) note = deviceNote ?? null;
   if (section === 'web-developer') {
     action = null;
   } else if (authLoading) {
     action = <span className="rm-section-action__slot" aria-hidden="true" />;
   } else if (!signedIn) {
-    action = <Button variant="secondary" label={learnText('learn.join.signIn', { name })} onClick={onSignIn} />;
+    action = <Button variant="secondary" label={learnText('learn.join.signIn')} onClick={onSignIn} />;
   } else if (!hasPlan) {
     action = <Button variant="secondary" as={Link} href={CHOOSE_PLAN_HREF} label={learnText('learn.join.choosePlan')} />;
     note = learnText('learn.join.noPlan');
@@ -174,9 +181,7 @@ export function SectionHeader({
     if (section === 'forward-deployed-engineer' && fde?.entryLoading) {
       action = <Skeleton width={220} height={44} radius="rounded" />;
     } else {
-      const labelKey: LearnKey = section === 'software-engineer'
-        ? 'learn.join.softwareEngineer'
-        : fde?.pathOpen ? 'learn.join.fdeStart' : 'learn.join.fdeAdd';
+      const labelKey: LearnKey = section === 'forward-deployed-engineer' && fde?.pathOpen ? 'learn.join.fdeStart' : 'learn.join.add';
       const barred = section === 'forward-deployed-engineer' && !!fde?.pathOpen && fde.barred;
       action = (
         <>

@@ -193,7 +193,7 @@ test.describe('A Frontend learner and Software Engineer', () => {
     for (const name of ['Git', 'General', 'DSA Foundations']) {
       await expect(topicCard(page, name)).not.toHaveAccessibleName(/not in your plan/);
     }
-    const join = page.getByRole('button', { name: 'Add Software Engineer to your plan' });
+    const join = page.getByRole('button', { name: 'Add it to your plan' });
     await expect(join).toHaveCount(1);
     // A card shows the logo, the topic name and its levels; no "Also in" line.
     for (const name of ['Git', 'Databases', 'General']) {
@@ -212,7 +212,7 @@ test.describe('A Frontend learner and Software Engineer', () => {
     await expect(page.getByText(/Software Engineer is in your plan\./)).toBeVisible();
     await expect(page.getByText(/Software Engineer is in your plan\./)).toBeFocused();
     expect(state.puts.at(-1)).toMatchObject({ baseTrack: 'frontend', specialization: null, sections: ['software-engineer'] });
-    await expect(page.getByRole('button', { name: 'Add Software Engineer to your plan' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Add it to your plan' })).toHaveCount(0);
     for (const name of ['Algorithms', 'Security', 'DSA Foundations']) await expect(topicCard(page, name)).toBeEnabled();
     for (const name of ['System Design', 'DevOps & Cloud', 'Databases']) await expect(topicCard(page, name)).toHaveAccessibleName(/Locked/);
 
@@ -240,7 +240,7 @@ test.describe('Learn section states', () => {
     await expect(topicCard(page, 'Algorithms')).toBeVisible();
     await expect(page.getByRole('radio', { name: /not in your plan/ })).toHaveCount(0);
     await expect(page.getByText(/this progress stays on this device only/)).toBeVisible();
-    await page.getByRole('button', { name: 'Sign in to add Software Engineer to your plan' }).click();
+    await page.getByRole('button', { name: 'Sign in to add it to your plan' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
@@ -262,9 +262,9 @@ test.describe('Learn section states', () => {
     await prepare(page);
     await stand(page, 'frontend');
     await page.goto('/learn/software-engineer');
-    await expect(page.getByRole('button', { name: 'Add Software Engineer to your plan' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Add it to your plan' })).toBeEnabled();
     await context.setOffline(true);
-    await expect(page.getByRole('button', { name: 'Add Software Engineer to your plan' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Add it to your plan' })).toBeDisabled();
     await expect(page.getByText('You’re offline. Add it when the connection returns.')).toBeVisible();
     await switcherItem(page, 'Software Engineer').focus();
     await page.keyboard.press('ArrowLeft');
@@ -412,7 +412,7 @@ test.describe('Learn section targets on a touch screen', () => {
     await prepare(page);
     await stand(page, 'frontend');
     await page.goto('/learn/software-engineer');
-    await expect(page.getByRole('button', { name: 'Add Software Engineer to your plan' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add it to your plan' })).toBeVisible();
     await measure('.rm-section-switcher .astryx-segmented-control-item');
     await measure('.rm-section-action .astryx-button');
     await measure('.rm-topic-pill');

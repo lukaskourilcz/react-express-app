@@ -156,12 +156,12 @@ describe('joining Software Engineer', () => {
     expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /^Git, Premium$/ })).not.toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add it to your plan' }));
     expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
     expect(saves.calls).toEqual([['user-1', { schemaVersion: 1, baseTrack: 'frontend', specialization: null }, { sections: ['software-engineer'] }]]);
     expect(notInPlan()).toHaveLength(0);
     expect(screen.getByRole('radio', { name: /^Algorithms/ })).not.toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Add Software Engineer to your plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add it to your plan' })).toBeNull();
     // The button is gone; focus is on the line that replaced it.
     expect(screen.getByText(/Software Engineer is in your plan\./)).toHaveFocus();
 
@@ -180,7 +180,7 @@ describe('joining Software Engineer', () => {
     signIn({ devquiz_learning_preference_v1: FRONTEND });
     answer();
     await mountAt('/learn/software-engineer');
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add it to your plan' }));
     expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
     expect(notInPlan()).toHaveLength(0);
 
@@ -188,7 +188,7 @@ describe('joining Software Engineer', () => {
     act(() => clearAccountData());
     expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
     expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Add Software Engineer to your plan' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add it to your plan' })).toBeInTheDocument();
   });
 
   it('drops a join whose save lands after the account changed', async () => {
@@ -197,7 +197,7 @@ describe('joining Software Engineer', () => {
     let land!: (outcome: unknown) => void;
     saves.results.push(new Promise((resolve) => { land = resolve; }));
     await mountAt('/learn/software-engineer');
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add it to your plan' }));
     await waitFor(() => expect(saves.calls).toHaveLength(1));
 
     auth.value = { ...auth.value, user: { id: 'user-2', user_metadata: { devquiz_learning_preference_v1: FRONTEND } }, isAuthenticated: true };
@@ -211,7 +211,7 @@ describe('joining Software Engineer', () => {
     signIn({ devquiz_learning_preference_v1: FRONTEND });
     answer();
     await mountAt('/learn/software-engineer');
-    const add = await screen.findByRole('button', { name: 'Add Software Engineer to your plan' });
+    const add = await screen.findByRole('button', { name: 'Add it to your plan' });
     act(() => {
       add.click();
       add.click();
@@ -225,11 +225,11 @@ describe('joining Software Engineer', () => {
     answer();
     saves.results.push({ ok: false, reason: 'network', message: 'network' });
     await mountAt('/learn/software-engineer');
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add it to your plan' }));
     expect(await screen.findByText('Software Engineer was not added to your plan. Try again.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Try again' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Try again' })).toHaveFocus();
-    expect(screen.queryByRole('button', { name: 'Add Software Engineer to your plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add it to your plan' })).toBeNull();
     expect(notInPlan().length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -270,11 +270,39 @@ describe('joining Forward Deployed Engineer', () => {
   });
 });
 
+describe('the Learn header (UX audit learn-01)', () => {
+  // One h1 in every auth state; the switcher is the one place the section
+  // is named, so the section body never repeats it.
+  const bodyText = () => document.querySelector('.rm-section-body')?.textContent ?? '';
+
+  it('is "Learn" for a visitor, with the section named only in the switcher', async () => {
+    answer();
+    await mountAt('/learn/software-engineer');
+    await screen.findByRole('button', { name: 'Sign in to add it to your plan' });
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => h.textContent)).toEqual(['Learn']);
+    expect(screen.getByRole('radio', { name: /^Software Engineer/ })).toHaveAttribute('aria-checked', 'true');
+    expect(bodyText()).not.toContain('Software Engineer');
+    expect(screen.queryByText('Clear the levels in each part, then pass its test.')).toBeNull();
+    // The device-only note is the small status in the section header.
+    expect(screen.getByText(/this progress stays on this device only/).closest('.rm-section-header')).not.toBeNull();
+  });
+
+  it('stays "Learn" once signed in', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    await mountAt('/learn/software-engineer');
+    await screen.findByRole('button', { name: 'Add it to your plan' });
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => h.textContent)).toEqual(['Learn']);
+    expect(bodyText()).not.toContain('Software Engineer');
+    expect(screen.queryByText(/this progress stays on this device only/)).toBeNull();
+  });
+});
+
 describe('a section without a plan', () => {
   it('asks a visitor to sign in, and dims nothing', async () => {
     answer();
     await mountAt('/learn/software-engineer');
-    const action = await screen.findByRole('button', { name: 'Sign in to add Software Engineer to your plan' });
+    const action = await screen.findByRole('button', { name: 'Sign in to add it to your plan' });
     expect(notInPlan()).toHaveLength(0);
     fireEvent.click(action);
     expect(signIns.calls).toEqual([{ returnTo: '/learn/software-engineer' }]);
@@ -289,7 +317,7 @@ describe('a section without a plan', () => {
     expect(choose).toHaveAttribute('href', '/profile#learning-plan');
     fireEvent.click(choose);
     expect(notInPlan()).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: /Add Forward Deployed Engineer/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add it to your plan' })).toBeNull();
     await waitFor(() => expect(screen.getByTestId('probe-path')).toHaveTextContent('/profile'));
   });
 });

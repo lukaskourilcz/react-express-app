@@ -449,6 +449,20 @@ describe('the Learn path shelf', () => {
     });
     expect(screen.queryByText('Premium')).toBeNull();
   });
+
+  // UX audit learn-01: the section switcher names the section, so the card
+  // says what it is and keeps the path's name in its link's name only.
+  it('titles the card by what it is and names the path only in its link', async () => {
+    state.tier = 'free';
+    await mount('/r', '/r', async () => {
+      const { default: PathShelf } = await import('../src/components/paths/PathShelf');
+      return <PathShelf pathIds={['fde']} />;
+    });
+    const heading = await screen.findByRole('heading', { level: 3 });
+    expect(heading.textContent).toMatch(/^Guided path( outline)?$/);
+    expect(within(heading).getByRole('link')).toHaveAccessibleName(`${heading.textContent}: Forward Deployed Engineer`);
+    expect(screen.queryByText('Role')).toBeNull();
+  });
 });
 
 describe('Today', () => {

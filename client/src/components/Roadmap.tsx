@@ -908,17 +908,12 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
 
   return (
     <div className="de-page" style={{ maxWidth: 1060 }}>
-      <div className="rm-journey-heading">
-        <Kicker as="h1" className="ss-section-title">{!isAuthenticated && !authLoading ? sectionName : t('roadmap.journeyTitle')}</Kicker>
-        <div style={{ marginTop: 4 }}>
-          <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
-        </div>
-        {!isAuthenticated && !authLoading && (
-          <div style={{ marginTop: 4 }}>
-            <Text type="supporting" color="secondary">{t('register.deviceOnly')}</Text>
-          </div>
-        )}
-      </div>
+      {/* One header in every auth state (UX audit learn-01): the h1 is
+          always "Learn", the switcher below is the one place the section is
+          named, and the section line under it is the one supporting line. */}
+      <header className="rm-journey-heading">
+        <Kicker as="h1" className="ss-section-title">{t('nav.learn')}</Kicker>
+      </header>
 
       {retired && (
         <div className="cd-note" role="status" style={{ marginBottom: 16 }}>
@@ -955,6 +950,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending || enrollments.isLoading, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
           premiumLabel={t('premium.badge')}
           retryLabel={t('roadmap.retry')}
+          deviceNote={t('register.deviceOnly')}
         />
 
         {LEARN_SECTIONS.find((one) => one.id === section)!.paths.length > 0 && (
