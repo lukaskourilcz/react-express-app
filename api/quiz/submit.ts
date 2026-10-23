@@ -254,7 +254,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // explanations, and for the one grading decision the sealed key
   // cannot make on its own. A question that was retired between the session
   // being issued and the answers arriving is void: it is neither counted for
-  // nor against the learner, it earns no proof, and it is reported back so
+  // nor against the learner, earns no XP, and it is reported back so
   // the result screen can say why the total is short. The key stays sealed
   // either way; nothing here reveals it.
   const [questionsById, reviewStates] = await loading;
