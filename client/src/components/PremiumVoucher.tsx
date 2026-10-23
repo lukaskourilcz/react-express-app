@@ -76,6 +76,10 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
   const [code, setCode] = useState(() => voucherFromSearch(location.search) ?? readVoucherPrefill() ?? '');
   const [step, setStep] = useState<Step>({ kind: 'form' });
   const [busy, setBusy] = useState(false);
+  // Set at the press: `busy` lands a render later, so Enter and a click
+  // together sent the code twice, and the second answer ("already redeemed")
+  // replaced the first one's "Premium is open".
+  const redeeming = useRef(false);
   const input = useRef<HTMLInputElement | null>(null);
   const doneHeading = useRef<HTMLHeadingElement>(null);
   const section = useRef<HTMLElement>(null);
@@ -125,12 +129,13 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (redeeming.current) return;
     if (code.trim() === '' || !voucherLooksValid(code)) {
       setStep({ kind: 'form', refusal: code.trim() === '' ? 'empty' : 'invalid' });
       input.current?.focus();
       return;
     }
+    redeeming.current = true;
     setBusy(true);
     setStep({ kind: 'form' });
     try {
@@ -146,6 +151,7 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
       // The code itself was the problem: back to the field to correct it.
       if (FIELD_REFUSALS[refused]) input.current?.focus();
     } finally {
+      redeeming.current = false;
       setBusy(false);
     }
   };

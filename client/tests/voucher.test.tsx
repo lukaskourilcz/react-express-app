@@ -192,6 +192,27 @@ describe('/premium while checkout is off', () => {
     expect(within(voucherSection()).getByRole('button', { name: 'Redeem voucher' })).toBeEnabled();
   });
 
+  it('sends the code once when it is submitted twice at once', async () => {
+    signIn();
+    serve({ plans: [FREE, VOUCHER_PLAN] });
+    let answered = 0;
+    const sent = redeemAnswers(() => (answered++ === 0
+      ? HttpResponse.json({ status: 'redeemed', validUntil: THIS_YEAR_END })
+      : HttpResponse.json({ error: { code: 'voucher_already_redeemed', message: 'You already redeemed this voucher.' } }, { status: 409 })));
+    await mountAt('/premium', <PremiumPage />);
+    const field = await screen.findByRole('textbox', { name: /Voucher code/ });
+    fireEvent.change(field, { target: { value: 'K7Q2-ABCD-1234' } });
+    const form = field.closest('form')!;
+    act(() => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    expect(await within(voucherSection()).findByRole('heading', { level: 3, name: 'Premium is open' })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(sent).toEqual([{ code: 'K7Q2-ABCD-1234' }]);
+    expect(within(voucherSection()).getByRole('heading', { level: 3, name: 'Premium is open' })).toBeInTheDocument();
+  });
+
   it('refuses an empty or impossible code without spending an attempt', async () => {
     signIn();
     serve();
