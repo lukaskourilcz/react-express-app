@@ -316,3 +316,17 @@ coming back. The tokens and the map are in
 - **Every `Page` h1 sits at one x and one y.** The `Page` layout fills the
   column and always draws its kicker line.
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
+
+## 11. One question system
+
+The same audit (U2, #574) found five question widths, two answer designs and
+the main action in a different place on every runner. A question screen is
+built from the shared parts in `client/src/components/question/`
+([the design system](docs/design/design-system.md#question-screens) lists
+their props), never drawn again by hand.
+
+- **One shell.** `QuestionShell` is the `--ss-width-task` (640px) column with
+  one `.ss-panel` surface and no accent edge. A runner sets no width, card or
+  `flex: 1` of its own. The question block keeps one reserved height
+  (`--ss-question-block-min`) and scrolls past `--ss-question-block-max`, so
+  the answers start at the same y on every question.

@@ -1,0 +1,181 @@
+/* The shared question parts (UX audit U2, #574). One shell, one header, one
+   answer list, inline feedback, one hint line and one action row, so Quiz,
+   Challenge, Daily, the Learn runner and Shark Cards draw a question the same
+   way. Sizes come from the question tokens in astryx-theme.css. */
+
+/* ——— QuestionShell ——— */
+.ss-question {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: var(--ss-width-task);
+  margin: 0 auto;
+  min-width: 0;
+}
+.ss-question__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px;
+  border-radius: var(--radius-container);
+}
+/* The question block keeps one height, so the answers under it start at the
+   same y on every question; a long question scrolls inside it. */
+.ss-question__block {
+  min-height: var(--ss-question-block-min);
+  max-height: var(--ss-question-block-max);
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.ss-question__block[data-stable='false'] { min-height: 0; max-height: none; overflow: visible; }
+.ss-question__block pre { max-width: 100%; overflow-x: auto; }
+/* Focused when a run starts or moves on; the ring is for the keyboard only. */
+.ss-question__block:focus { outline: none; }
+.ss-question__block:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+.ss-question__body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+@media (max-width: 559px) {
+  .ss-question__panel { padding: 16px; }
+}
+
+/* ——— QuestionHeader ——— */
+.ss-question-header { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ss-question-header__row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ss-question-header__title {
+  flex: none;
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-size: var(--ss-question-title-size);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.ss-question-header__progress { flex: 1 1 auto; min-width: 48px; }
+.ss-question-header__status { flex: none; margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: var(--ss-type-compact); font-weight: 600; }
+.ss-question-header__meta { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.ss-question-header__tools { flex: none; display: flex; align-items: center; gap: 4px; margin-inline-start: auto; }
+
+.ss-question-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--ss-control-height);
+  height: var(--ss-control-height);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color var(--ss-motion-feedback) ease, color var(--ss-motion-feedback) ease;
+}
+.ss-question-icon-button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
+.ss-question-icon-button[aria-pressed='true'] { background: var(--brand-accent-soft); color: var(--brand-accent-on-soft); }
+.ss-question-icon-button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.ss-question-icon-button svg { width: 20px; height: 20px; }
+
+/* ——— AnswerOptionList ——— */
+.ss-answer-list { display: flex; flex-direction: column; gap: var(--ss-answer-gap); min-width: 0; }
+.ss-question .ss-answer-option.ss-radio-card,
+.ss-answer-list .ss-answer-option.ss-radio-card {
+  display: flex;
+  align-items: center;
+  min-height: var(--ss-answer-row-min);
+  border-radius: var(--radius-element);
+}
+.ss-answer-list .ss-answer-option.ss-radio-card[data-selected='true'] {
+  border-color: var(--brand-accent);
+  box-shadow: inset 0 0 0 1px var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+.ss-answer-list .ss-answer-option.ss-radio-card[data-mark='correct'] {
+  border-color: var(--ss-success);
+  box-shadow: inset 0 0 0 1px var(--ss-success);
+  background: var(--ss-success-soft);
+}
+.ss-answer-list .ss-answer-option.ss-radio-card[data-mark='pick'] {
+  border-color: var(--ss-error);
+  box-shadow: inset 0 0 0 1px var(--ss-error);
+  background: var(--ss-error-soft);
+}
+/* A graded list is disabled, but its marks are the answer: full strength. */
+.ss-answer-list .ss-answer-option.ss-radio-card[data-mark]:disabled { opacity: 1; }
+.ss-answer-option__row { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
+.ss-answer-option__key {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--ss-answer-chip);
+  height: var(--ss-answer-chip);
+  border-radius: var(--radius-inner);
+  background: var(--color-background-muted);
+  color: var(--color-text-primary);
+  font-size: var(--ss-type-meta);
+  font-weight: 700;
+}
+.ss-answer-option[data-selected='true'] .ss-answer-option__key { background: var(--brand-accent); color: var(--brand-on-accent); }
+.ss-answer-option__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: 400; }
+.ss-answer-option[data-selected='true'] .ss-answer-option__text { font-weight: 600; }
+.ss-answer-option__mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--ss-type-meta);
+  font-weight: 700;
+}
+.ss-answer-option[data-mark='correct'] .ss-answer-option__mark { color: var(--ss-success-strong); }
+.ss-answer-option[data-mark='pick'] .ss-answer-option__mark { color: var(--ss-error); }
+
+/* ——— QuestionHint ——— */
+/* One reserved line under the answers in every state: hiding the words never
+   moves the answers above or the actions below. Keys belong to a desktop with
+   a fine pointer; a phone or a touch screen does not have them, so the line
+   is not drawn there at all (the same on every question). */
+.ss-question-hint {
+  min-height: 1.5em;
+  margin: 0;
+  font-size: var(--ss-type-meta);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.ss-question-hint[data-hidden='true'] { visibility: hidden; }
+@media (pointer: coarse), (max-width: 599px) {
+  .ss-question-hint { display: none; }
+}
+
+/* ——— QuestionFeedback ——— */
+/* In normal flow, under the answers, never over them. */
+.ss-question-feedback { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ss-question-feedback:focus { outline: none; }
+.ss-question-feedback:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-element); }
+
+/* ——— QuestionActions ——— */
+/* One 44px row under the panel: secondaries on the left, the one primary
+   (SwimCta md) on the right. Under 560px the primary takes the last row at
+   full width, in the thumb zone, and the secondaries share the row above. */
+.ss-question-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ss-question-actions__secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.ss-question-actions__primary { display: flex; margin-inline-start: auto; }
+@media (max-width: 559px) {
+  .ss-question-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .ss-question-actions__secondary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ss-question-actions__secondary > * { width: 100%; }
+  .ss-question-actions__secondary:empty { display: none; }
+  .ss-question-actions__primary { margin-inline-start: 0; }
+  .ss-question-actions__primary > .ss-swim-cta { width: 100%; }
+}

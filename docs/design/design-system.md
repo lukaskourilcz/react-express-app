@@ -78,6 +78,21 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 
 **Form controls with a label.** A control group (`ToggleButtonGroup`, `SegmentedControl`, a `select`) takes its label above it, never as a suffix after it, and the default size, so one form has one control height. Two short groups may sit side by side from 900px (the question count and time limit on `/play`). Icon-only buttons are 44×44 with a 20px glyph (the header's Leaderboard, Premium and Coins; a dialog's close keeps its 16px glyph in a 44px button). Icons that sit side by side share one drawing language: the header's three are stroke icons in the text colour (`TrophyIcon`, the Premium diamond, `CoinsIcon` from `components/ui/icons.tsx`); the filled accent `CoinIcon` stays for the Coins page's balance, where it is large enough to read as a coin.
 
+## Question screens
+
+Every question screen draws through the shared parts in `client/src/components/question/` (UX audit U2, #574), imported from its `index.ts`. Their sizes are tokens in `client/src/styles/astryx-theme.css`:
+
+| Token | Value | Used by |
+|---|---|---|
+| `--ss-question-block-min` | 200px | The question block's reserved height, so the answers start at one y on every question. |
+| `--ss-question-block-max` | 40vh | Past this the question block scrolls inside itself. |
+| `--ss-answer-row-min` | 48px | One answer row. |
+| `--ss-answer-gap` | 8px | The gap between answer rows. |
+| `--ss-answer-chip` | 26px | The number chip at the start of a row. |
+| `--ss-question-title-size` | 1.25rem | The run's `h1` in the QuestionHeader. |
+
+**QuestionShell** (`QuestionShell.tsx`). The `--ss-width-task` (640px) column, centred, with one `.ss-panel` surface (24px padding, 16px under 560px, `--radius-container`, no accent edge) and the actions 16px under it. Props: `header` (a QuestionHeader), `question` (the text, code and notes), `questionId` (the block's id, which names the answer list), `children` (the answer list, hint and feedback, under the block), `actions` (a QuestionActions row), `notice` (an error banner above the panel), `stable` (default `true`: the block keeps `--ss-question-block-min` and scrolls past `--ss-question-block-max`; `false` for one question on its own page), `focusable` (default `true`: the block takes `tabIndex -1`), `className`, `labelledBy`. The forwarded ref is the question block, for moving focus to it when a run starts or moves on. A runner sets no width, card or `flex: 1` of its own: the shell is top-anchored and as tall as its content.
+
 ## Layout and density
 
 - Mobile gutter: 16px; tablet: 24px; desktop: 24–32px.
