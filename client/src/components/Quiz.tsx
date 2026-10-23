@@ -792,7 +792,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const currentQuestion = questions[currentIndex];
 
-  // Move focus to result heading + announce
+  // Move focus to the result heading, which reads the score out. It is no
+  // live region: one drawn together with its words is not read, and where a
+  // reader did read it, the score was heard twice.
   useEffect(() => {
     if (state === 'submitted' && resultHeadingRef.current) {
       resultHeadingRef.current.focus();
@@ -1039,7 +1041,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 id="quiz-result-heading"
                 ref={resultHeadingRef}
                 tabIndex={-1}
-                aria-live="polite"
                 aria-label={t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })}
                 style={{ position: 'relative', margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '3rem', lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--brand-accent)' }}
               >

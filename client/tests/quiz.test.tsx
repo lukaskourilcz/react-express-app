@@ -214,6 +214,10 @@ describe('a question retired while the quiz was open', () => {
     answerAll(2);
     fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
     await screen.findByText('1 / 1');
+    // The score is read once, from the focused heading, not again as a live region.
+    const heading = screen.getByRole('heading', { level: 1, name: /1/ });
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(heading).not.toHaveAttribute('aria-live');
 
     expect(screen.getByText('Retired, not counted')).toBeInTheDocument();
     expect(screen.queryByText('alpha b')).not.toBeInTheDocument();
