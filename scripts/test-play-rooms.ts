@@ -35,6 +35,8 @@ const USERS = {
   host: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e01', token: 'play-contract-host', email: 'grace@example.com', identities: [googleIdentity('Grace Hopper')] },
   one: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', token: 'play-contract-one', email: 'ada.lovelace@example.com', identities: [emailIdentity('ada.lovelace@example.com')] },
   two: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e03', token: 'play-contract-two', email: 'alan.turing@example.com', identities: [emailIdentity('alan.turing@example.com')] },
+  // Hosts the rooms of the later checks: one account may open five rooms a minute.
+  three: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e04', token: 'play-contract-three', email: 'edsger.dijkstra@example.com', identities: [emailIdentity('edsger.dijkstra@example.com')] },
 } as const;
 type Who = keyof typeof USERS;
 
@@ -295,15 +297,15 @@ async function main() {
     };
     const room = (code: string) => tables.matches.find((match) => match.code === code)!;
     const correctIndex = (code: string, idx: number) => (room(code).questions as Array<{ correct_index: number }>)[idx].correct_index;
-    const open = async (mode: 'multiplayer' | 'classroom', players: Who[]) => {
-      const created = await call('host', 'POST', 'create', { host_name: 'Host', mode, count: 5, categories: ['javascript'], duration_s: 30 });
+    const open = async (mode: 'multiplayer' | 'classroom', players: Who[], host: Who = 'host') => {
+      const created = await call(host, 'POST', 'create', { host_name: 'Host', mode, count: 5, categories: ['javascript'], duration_s: 30 });
       assert.equal(created.statusCode, 200, `a ${mode} room opens (${JSON.stringify(created.body)})`);
       const code = created.body.code as string;
       for (const who of players) {
         const joined = await call(who, 'POST', 'join', { code, display_name: who });
         assert.equal(joined.statusCode, 200, `${who} joins the ${mode} room`);
       }
-      assert.equal((await call('host', 'POST', 'control', { code, action: 'start' })).statusCode, 200, `the ${mode} room starts`);
+      assert.equal((await call(host, 'POST', 'control', { code, action: 'start' })).statusCode, 200, `the ${mode} room starts`);
       return code;
     };
     const rewind = (code: string, ms: number) => {
@@ -532,6 +534,18 @@ async function main() {
       const board = (await call('two', 'GET', 'state', { code })).body.scoreboard as Array<{ user_id: string; score: number }>;
       assert.ok(board.find((row) => row.user_id === USERS.one.id)!.score >= 100, 'the open question counts in multiplayer, as before');
       assert.equal('p_before_idx' in (scoreboardCalls.at(-1) ?? {}), false, 'with the call it always made');
+    }
+
+    // 8. A code repeated in the query string arrives as an array: the reads
+    //    refuse it as a bad request instead of failing with a 500.
+    {
+      const code = await open('multiplayer', ['one'], 'three');
+      const doubled = await call('one', 'GET', 'state', { code: [code, code] });
+      assert.equal(doubled.statusCode, 400, `a repeated code is a bad request (${JSON.stringify(doubled.body)})`);
+      assert.equal(doubled.body.error.code, 'bad_request');
+      const peek = await call('three', 'GET', 'distribution', { code: [code, code], q: '0' });
+      assert.equal(peek.statusCode, 400, 'the distribution refuses it too');
+      assert.equal((await call('one', 'GET', 'state', { code: 'X'.repeat(17) })).statusCode, 400, 'a code longer than any room code is refused');
     }
 
     // 5. The Play switch turns every action off, rooms already open included.

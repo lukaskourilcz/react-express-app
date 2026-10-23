@@ -403,10 +403,11 @@ async function state(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const code = (req.query.code as string)?.toUpperCase();
-  if (!code) return jsonError(res, 400, 'bad_request', 'code required');
   // State is public to room-code holders. Validate the code before performing
-  // optional remote authentication so malformed probes remain cheap.
+  // optional remote authentication so malformed probes remain cheap. A code
+  // repeated in the query string arrives as an array, which is no code.
+  if (!isShortString(req.query.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
+  const code = req.query.code.toUpperCase();
   const auth = await tryAuth(req);
   const sub = auth?.sub ?? null;
 
@@ -870,9 +871,9 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
   if (!sub) return;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.playDistributionPerUser, `user:${sub}`))) return;
 
-  const code = (req.query.code as string)?.toUpperCase();
+  if (!isShortString(req.query.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
+  const code = req.query.code.toUpperCase();
   const qParam = parseInt(req.query.q as string, 10);
-  if (!code) return jsonError(res, 400, 'bad_request', 'code required');
   if (!Number.isFinite(qParam) || qParam < 0)
     return jsonError(res, 400, 'bad_request', 'q (question index) required');
 
