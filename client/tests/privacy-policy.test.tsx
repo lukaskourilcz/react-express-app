@@ -112,6 +112,31 @@ describe('the privacy policy', () => {
     }
   });
 
+  // UX audit shell-public-18: 26 sections over 9,000px had no index.
+  it('lists every section under the lead as a jump link that moves focus there', () => {
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) { scrolled.push(this.id); };
+    try {
+      renderPolicy();
+      const index = screen.getByRole('navigation', { name: 'On this page' });
+      const links = within(index).getAllByRole('link');
+      const headings = screen.getAllByRole('heading', { level: 2 }).filter((heading) => heading.closest('.ss-legal-section'));
+      expect(links.map((link) => link.textContent)).toEqual(headings.map((heading) => heading.textContent));
+      expect(links.length).toBe(26);
+      expect(links[0]).toHaveAttribute('href', '/privacy#controller');
+      // Closed on a narrow screen (jsdom matches no media query), in a
+      // details the reader can open.
+      expect(index.closest('details')).not.toHaveAttribute('open');
+      const cookies = within(index).getByRole('link', { name: 'Cookies and browser storage' });
+      fireEvent.click(cookies);
+      expect(scrolled).toContain('cookies');
+      expect(screen.getByRole('heading', { level: 2, name: 'Cookies and browser storage' })).toHaveFocus();
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it('shows the banner compact on the policy, so it never hides the text', () => {
     renderPolicy();
     const banner = screen.getByRole('region', { name: 'Cookies on devShark' });

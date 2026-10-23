@@ -215,7 +215,12 @@ describe('Invite a friend', () => {
     signOut();
     routes();
     render(<ReferralInvite signedIn={false} />, { wrapper });
-    expect(screen.getByText('Sign in to get your invite link.')).toBeInTheDocument();
+    // The money screens' one signed-out block, with a button (UX audit
+    // money-05); secondary, as the wallet's Sign in is the page's primary.
+    expect(screen.getByText('Your invite link shows here once you sign in.')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Sign in' });
+    expect(button).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(button).toHaveClass('secondary');
     expect(screen.queryByLabelText('Your invite link')).toBeNull();
   });
 

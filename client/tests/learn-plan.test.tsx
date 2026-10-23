@@ -900,7 +900,9 @@ describe('a level on the shared question parts', () => {
     try {
       const second = { ...QUESTION, id: 'q-2', question: 'Which option is second?' };
       const start = await openLevel({ ...PLAYABLE, questions: [QUESTION, second] });
-      expect(screen.getByRole('heading', { level: 1, name: 'Level 1 · Level 1 title' })).toHaveFocus();
+      // Focus moves in an effect after the intro paints; wait for it rather than
+      // read it in the same tick (it lagged on a loaded CI runner).
+      await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Level 1 · Level 1 title' })).toHaveFocus());
       fireEvent.click(start);
       fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
       fireEvent.click(await screen.findByRole('button', { name: 'Continue' }));

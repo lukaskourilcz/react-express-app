@@ -3,8 +3,40 @@
  * waiver sentence and the model form set apart so a reader finds them. */
 .ss-legal-updated { margin: -0.5rem 0 0; font-size: 0.85rem; color: var(--color-text-secondary); }
 .ss-legal { display: flex; flex-direction: column; }
-.ss-legal-section { padding: 1.35rem 0; border-top: 1px solid var(--ss-card-line); scroll-margin-top: 1rem; }
+/* The floating header sits over <main>, the scroll container: a jump leaves
+   the section's title clear of it. */
+.ss-legal-section { padding: 1.35rem 0; border-top: 1px solid var(--ss-card-line); scroll-margin-top: 6rem; }
 .ss-legal-section h2 { margin: 0 0 0.6rem; font: 750 1.15rem/1.3 var(--font-family-heading); letter-spacing: -0.01em; }
+.ss-legal-section h2:focus { outline: none; }
+.ss-legal-section h2:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 4px; border-radius: var(--radius-inner); }
+
+/* 'On this page' (UX audit shell-public-18): the section titles as jump links
+   in body type, in two columns where there is room. No panel. */
+.ss-legal-index { max-width: 68ch; margin: 0 0 0.5rem; }
+.ss-legal-index summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--ss-control-height);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  list-style: none;
+}
+.ss-legal-index summary::-webkit-details-marker { display: none; }
+.ss-legal-index summary::after { content: '+'; font: 700 1.1rem/1 var(--font-family-heading); color: var(--color-text-secondary); }
+.ss-legal-index[open] summary::after { content: '−'; }
+.ss-legal-index summary:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+.ss-legal-index ol { margin: 0.25rem 0 0; padding-left: 1.5rem; line-height: 1.5; color: var(--color-text-secondary); }
+.ss-legal-index li { break-inside: avoid; }
+.ss-legal-index a { display: inline-flex; align-items: center; min-height: 32px; color: var(--brand-accent); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.ss-legal-index a:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+@media (min-width: 600px) {
+  .ss-legal-index ol { columns: 2; column-gap: 2rem; }
+}
+@media (pointer: coarse) {
+  .ss-legal-index a { min-height: 44px; }
+}
 .ss-legal-section p { max-width: 68ch; margin: 0.55rem 0; color: var(--color-text-secondary); line-height: 1.65; overflow-wrap: anywhere; }
 .ss-legal-section > .ss-info-note { max-width: 68ch; color: var(--color-text-primary); }
 
@@ -63,5 +95,9 @@
 .ss-legal-table tbody tr:last-child th,
 .ss-legal-table tbody tr:last-child td { border-bottom: 0; }
 .ss-legal-table td { color: var(--color-text-secondary); }
+/* The last column holds a short label ('Analytics, with your consent'): at
+   least 14ch, so it wraps to two lines at most rather than three
+   (UX audit shell-public-18). */
+.ss-legal-table td:last-child { min-width: 14ch; }
 .ss-legal-table code { font-size: 0.85em; white-space: nowrap; }
 .ss-legal-table__where { display: block; margin-top: 0.15rem; color: var(--color-text-secondary); font-size: 0.8rem; font-weight: 400; }

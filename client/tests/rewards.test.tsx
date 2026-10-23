@@ -168,6 +168,66 @@ describe('the Rewards screen', () => {
     expect(screen.queryByLabelText('Postcode')).toBeNull();
   });
 
+  // UX audit money-08 and money-12: the editorial header of the money pages,
+  // and 'Coins' said by the h1 and the number's unit only.
+  it('heads the page like /premium and names the wallet for screen readers only', async () => {
+    signIn();
+    routes();
+    await mountShop();
+    await screen.findByText('1,240');
+    const header = document.querySelector('.ss-info-page__header')!;
+    expect(header.querySelector('.ss-info-page__kicker')).toHaveTextContent('Rewards');
+    expect(within(header as HTMLElement).getByRole('heading', { level: 1, name: 'Coins' })).toBeInTheDocument();
+    expect(within(header as HTMLElement).getByText('Coins never buy XP or a place on a board.')).toBeInTheDocument();
+    expect(screen.queryByText(/Learning earns coins/)).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Your coins' })).toHaveClass('ss-sr-only');
+  });
+
+  // UX audit money-02 and money-07: the two coin items are rows of one ruled
+  // list with one structure, and a short balance says by how much.
+  it('lists the crown and streak protection as two rows and says how many coins are missing', async () => {
+    signIn();
+    routes({ wallet: wallet({ balance: 640 }) });
+    await mountShop();
+    await screen.findByText('640');
+    const section = screen.getByRole('region', { name: 'Crown and streak protection' });
+    const rows = within(section).getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row).toHaveClass('rw-spend__row');
+      expect(row.querySelector('.rw-spend__icon svg')).toHaveAttribute('width', '44');
+      expect(row.querySelector('.rw-spend__name')).not.toBeNull();
+      expect(row.querySelector('.rw-spend__blurb')).not.toBeNull();
+      expect(row.querySelector('.rw-spend__action')).not.toBeNull();
+    }
+    expect(section.querySelector('.astryx-card')).toBeNull();
+    // 1,200 against 640: the crown says 560 more, and its Buy names that line.
+    const crown = rows[0];
+    const short = within(crown).getByText('560 more coins');
+    const buy = within(crown).getByRole('button', { name: 'Buy' });
+    expect(buy).toBeDisabled();
+    expect(buy).toHaveAttribute('aria-describedby', short.id);
+    // 250 is covered: no line, no description.
+    expect(within(rows[1]).queryByText(/more coins/)).toBeNull();
+    expect(within(rows[1]).getByRole('button', { name: 'Buy' })).not.toHaveAttribute('aria-describedby');
+  });
+
+  // UX audit money-14: no dashed box between the two ruled lists.
+  it('says which rows pay Premium members in a plain line with a ghost link to the sheet', async () => {
+    signIn();
+    routes();
+    await mountShop();
+    const earn = await screen.findByRole('region', { name: 'How to earn' });
+    expect(earn.querySelector('.rw-premium-note')).toBeNull();
+    const note = within(earn).getByText(/Premium milestones pay Premium members/);
+    expect(note).toHaveClass('rw-muted');
+    const see = within(earn).getByRole('button', { name: 'See what Premium includes' });
+    expect(see).toHaveClass('ghost', 'ss-action');
+    const sheet = renderHook(() => useUpgradeRequest());
+    fireEvent.click(see);
+    expect(sheet.result.current).not.toBeNull();
+  });
+
   it('keeps the sections in the order of the handoff', async () => {
     signIn();
     merch.on = true;
@@ -229,8 +289,23 @@ describe('the Rewards screen', () => {
     signOut();
     routes();
     await mountShop();
-    expect(screen.getByText(/Sign in to see your coins/)).toBeInTheDocument();
     expect(screen.getByText('Streak milestones')).toBeInTheDocument();
+    // UX audit money-05: one signed-out block where the balance goes, with no
+    // '—' standing in for a number; one primary Sign in on the screen; Buy
+    // asks to sign in instead of sitting disabled.
+    const walletSection = screen.getByRole('region', { name: 'Your coins' });
+    expect(within(walletSection).getByText('Your coins and what earned them show here once you sign in.')).toBeInTheDocument();
+    expect(within(walletSection).queryByText('—')).toBeNull();
+    expect(within(walletSection).getByRole('button', { name: 'Sign in' })).toHaveClass('primary');
+    const signIns = screen.getAllByRole('button', { name: 'Sign in' });
+    expect(signIns.filter((one) => one.classList.contains('primary'))).toHaveLength(1);
+    const buys = await screen.findAllByRole('button', { name: 'Sign in to buy' });
+    expect(buys).toHaveLength(2);
+    for (const buy of buys) {
+      expect(buy).toBeEnabled();
+      expect(buy).toHaveAttribute('aria-haspopup', 'dialog');
+    }
+    expect(screen.queryByRole('button', { name: 'Buy' })).toBeNull();
   });
 
   it('buys one streak protection for a double click on Buy', async () => {
@@ -362,8 +437,9 @@ describe('the Rewards screen', () => {
     await mountShop();
     // The invite section draws from the public settings while signed out.
     expect(await screen.findByRole('heading', { name: 'Invite a friend' })).toBeInTheDocument();
-    expect(screen.queryByText('Sign in to see your coins.')).toBeNull();
-    expect(screen.queryByText('Sign in to get your invite link.')).toBeNull();
+    expect(screen.queryByText('Your coins and what earned them show here once you sign in.')).toBeNull();
+    expect(screen.queryByText('Your invite link shows here once you sign in.')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Sign in/ })).toBeNull();
     expect(screen.getAllByRole('status').some((one) => one.textContent === 'Loading…')).toBe(true);
   });
 

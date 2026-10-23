@@ -3,14 +3,15 @@
 // no caller can show a checkout entry point that the server would refuse:
 //
 //   billing off (BILLING_ENABLED unset)   "Premium opens soon", no button
-//   signed out                            sign in first, then come back here
+//   signed out                            the same plan label; sign in first,
+//                                         then on to this plan's checkout
 //   a paid subscription already           "Manage billing" (the portal)
 //   otherwise                             continue to Stripe for this plan
 //
 // The button only leads to Stripe's hosted page. The order button that
 // commits to paying is Stripe's, with the wording set on the server.
 import { useCallback, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { useLanguage } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
@@ -25,7 +26,6 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   const billing = useBilling();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const entitlement = useEntitlement();
-  const location = useLocation();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,22 +56,25 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   // would refuse a second checkout, so this is the portal instead.
   const paying = entitlement.data?.subscriptionLive === true
     || (entitlement.tier === 'premium' && entitlement.data?.source === 'provider');
-  const label = !isAuthenticated
-    ? t('billing.checkout.signIn')
-    : paying
-      ? t('profile.plan.manage')
-      : t(plan === 'annual' ? 'billing.checkout.annual' : 'billing.checkout.monthly');
-  // Signed out, the press opens the sign-in dialog, which comes back to this
-  // page; signed in, it leaves for Stripe and stays busy until it does.
+  // The plan name stays on the button for everyone (UX audit money-15,
+  // shell-public-06): two identical 'Sign in to continue' buttons hid which
+  // plan each one was for. Signed out, the press opens the sign-in dialog and
+  // comes back to this plan's checkout; signed in, it goes there directly, or
+  // leaves for the portal and stays busy until it does.
+  const label = paying && isAuthenticated
+    ? t('profile.plan.manage')
+    : t(plan === 'annual' ? 'billing.checkout.annual' : 'billing.checkout.monthly');
+  const checkoutPath = `/premium/checkout?plan=${plan}`;
   const press = !isAuthenticated
-    ? () => openSignIn({ returnTo: location.pathname + location.search })
-    : paying ? () => void run(openBillingPortal) : () => navigate(`/premium/checkout?plan=${plan}`);
+    ? () => openSignIn({ returnTo: checkoutPath })
+    : paying ? () => void run(openBillingPortal) : () => navigate(checkoutPath);
 
   return (
     <>
       <Button
         variant={paying ? 'secondary' : 'primary'}
         label={label}
+        aria-haspopup={isAuthenticated ? undefined : 'dialog'}
         onClick={press}
         isLoading={busy || waiting}
         isDisabled={busy || waiting}

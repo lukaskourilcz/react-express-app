@@ -76,7 +76,7 @@ describe('page actions', () => {
   it('draws the header sign-in button as a page action', async () => {
     const { default: SignInButton } = await import('../src/components/SignInButton');
     renderIn(<SignInButton />);
-    expect(screen.getByRole('button', { name: 'Log in' })).toHaveClass('astryx-button', 'ss-action');
+    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveClass('astryx-button', 'ss-action');
   });
 
   it('puts the Page actions in the shared action row, which carries the page-action type', () => {

@@ -111,9 +111,12 @@ function ConsentBanner({ onDecided }: { onDecided: (record: ConsentRecord) => vo
             </p>
           )}
         </div>
+        {/* Reject all, then Accept all, in the banner and in the settings
+            dialog it opens alike (UX audit shell-public-11): the same two
+            equal buttons swapped places between the two surfaces. */}
         <div className="ss-consent__actions">
-          <Button variant="secondary" label={t('consent.acceptAll')} onClick={() => onDecided(acceptAllConsent())} />
           <Button variant="secondary" label={t('consent.rejectAll')} onClick={() => onDecided(rejectAllConsent())} />
+          <Button variant="secondary" label={t('consent.acceptAll')} onClick={() => onDecided(acceptAllConsent())} />
           <Button variant="secondary" label={t('consent.choose')} onClick={openConsentSettings} aria-haspopup="dialog" />
         </div>
       </div>

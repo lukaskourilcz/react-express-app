@@ -25,10 +25,13 @@ for (const theme of ['light', 'dark'] as const) {
     });
     await page.goto('/');
     const feature = page.getByRole('region', { name: 'Forward Deployed Engineer', exact: true });
-    await expect(feature).toContainText(`${inventory.modules} required modules`);
-    await expect(feature).toContainText(`${inventory.lessons} lessons`);
-    await expect(feature).toContainText(`${inventory.moduleChecks + inventory.finalChecks} module and capstone questions`);
-    await expect(feature).toContainText('Recording work is unavailable right now.');
+    // The inventory reads as four stats beside the pitch (UX audit shell-public-08).
+    const stats = feature.locator('.ss-fde-feature__stats');
+    await expect(stats).toContainText(new RegExp(`${inventory.modules}\\s*Modules`));
+    await expect(stats).toContainText(new RegExp(`${inventory.lessons}\\s*Lessons`));
+    await expect(stats).toContainText(new RegExp(`${inventory.moduleChecks + inventory.finalChecks}\\s*Questions`));
+    await expect(stats).toContainText(new RegExp(`${inventory.moduleCodeExercises + inventory.finalCodeExercises}\\s*Code exercises`));
+    await expect(feature).toContainText('Work is not recorded yet.');
     for (const width of [360, 390, 430, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `reflow ${width}`).toBe(true);
@@ -41,7 +44,11 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page).toHaveURL(/\/learn\/forward-deployed-engineer\/path$/);
     await expect(page.locator('.lp-page h1')).toHaveText('Forward Deployed Engineer');
     await page.goto('/premium');
-    await expect(page.locator('.ss-premium-list')).toContainText(['Our flagship Forward Deployed Engineer path: diagnostic and first module free']);
+    // /premium states what Premium opens once, in the plan table (UX audit
+    // money-03). The table lists only what is open (review finding product-6), so
+    // while this catalog keeps the path switched off it has no FDE row yet.
+    await expect(page.locator('.ss-compare')).toContainText('Projects and short paths');
+    await expect(page.locator('.ss-compare tr', { hasText: 'Forward Deployed Engineer path' })).toHaveCount(0);
     expect(errors).toEqual([]); expect(writes).toEqual([]);
   });
 }

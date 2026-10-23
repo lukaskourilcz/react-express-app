@@ -104,7 +104,7 @@ function TopicCard({
       </span>
       {/* The tick sits on the selected card's accent tint, so it takes the
           derived on-tint accent rather than the plain one. */}
-      <span style={{ marginLeft: 'auto', fontSize: 'var(--ss-type-compact)', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
+      <span aria-hidden className="ss-topic-card__tick" style={{ marginLeft: 'auto', fontSize: 'var(--ss-type-compact)', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
     </button>
   );
 }
@@ -120,7 +120,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
       style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-page)' }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', position: 'relative' }}>
-        <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
+        <h2 className="ss-section-title">
           {t('home.insideTopic', { name: topic.name })}
         </h2>
       </div>
@@ -252,11 +252,11 @@ export default function Home() {
       <section id="topics" ref={topicsRef} aria-label={t('home.topicsTitle')} style={{ display: 'flex', flexDirection: 'column', gap: 20, scrollMarginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Kicker>{t('home.topicsKicker')}</Kicker>
-          <h2 ref={topicsHeadingRef} tabIndex={-1} style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
+          <h2 ref={topicsHeadingRef} tabIndex={-1} className="ss-section-title" style={{ marginTop: 6 }}>
             {t('home.topicsTitle')}
           </h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
+        <div className="ss-topic-grid">
           {featured.map((topic) => (
             <TopicCard
               key={topic.id}

@@ -1,5 +1,6 @@
 // /premium, the plan table, the Terms and the privacy policy (#222).
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
@@ -79,16 +80,20 @@ describe('/premium', () => {
     expect(within(plans).getByRole('link', { name: 'Cancel or withdraw' })).toHaveAttribute('href', '/premium/cancel');
   });
 
-  it('signs a visitor in and comes back to /premium', async () => {
+  // UX audit money-15 and shell-public-06: the plan buttons keep their plan
+  // name signed out, and the page asks to sign in once, on those buttons.
+  it('signs a visitor in from the plan button and goes on to that plan\'s checkout', async () => {
     serve();
     renderAt('/premium', <PremiumPage />);
-    const buttons = await screen.findAllByRole('button', { name: 'Sign in to continue' });
-    expect(buttons).toHaveLength(2);
-    expect(screen.getByText('Sign in first. You come back here to choose a plan.')).toBeInTheDocument();
+    const monthly = await screen.findByRole('button', { name: 'Continue with monthly' });
+    expect(screen.getByRole('button', { name: 'Continue with yearly' })).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(monthly).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(screen.queryByRole('button', { name: 'Sign in to continue' })).toBeNull();
+    expect(screen.queryByText(/Sign in first/)).toBeNull();
     // The button waits for the billing settings before it acts.
-    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]).toBeEnabled());
-    fireEvent.click(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]);
-    await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Continue with monthly' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with monthly' }));
+    await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium/checkout?plan=monthly' }));
   });
 
   it('offers both checkouts to a free account', async () => {
@@ -144,7 +149,7 @@ describe('/premium', () => {
     renderAt('/premium', <PremiumPage />);
     expect(await screen.findByText('Premium opens soon')).toBeInTheDocument();
     expect(screen.getAllByText('Premium opens soon')).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: /Continue with|Sign in to continue/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
   });
 
   it('says so when the settings cannot be read, and tries again', async () => {
@@ -158,9 +163,36 @@ describe('/premium', () => {
     renderAt('/premium', <PremiumPage />);
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('We could not reach devShark to check whether checkout is open.');
-    expect(screen.queryByRole('button', { name: 'Sign in to continue' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
     fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
-    expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
+    expect(await screen.findAllByRole('button', { name: /Continue with/ })).toHaveLength(2);
+  });
+
+  // UX audit money-03 and shell-public-06: what Premium opens is said once,
+  // by the table, and VAT is said by the prices and 'Before you pay' only.
+  it('states what Premium opens once, in the table, without a second kicker or VAT line', () => {
+    serve();
+    renderAt('/premium', <PremiumPage />);
+    expect(screen.queryByRole('heading', { name: 'Premium includes' })).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByRole('rowheader', { name: 'Projects and short paths' })).toBeInTheDocument();
+    expect(screen.queryByText('Plans')).toBeNull();
+    expect(screen.queryByText('Prices exclude VAT. Applicable VAT is added at checkout.')).toBeNull();
+    // The refund answer's link names the withdrawal, not the cancellation.
+    const refund = screen.getByText('Can I withdraw and get my money back?').closest('details')!;
+    expect(within(refund).getByRole('link', { name: 'Withdraw and get a refund' })).toHaveAttribute('href', '/premium/cancel?action=withdraw');
+    const cancel = screen.getByText('How do I cancel?').closest('details')!;
+    expect(within(cancel).getByRole('link', { name: 'Open the cancellation page' })).toHaveAttribute('href', '/premium/cancel');
+  });
+
+  // UX audit money-08: one h2 size on the page, the shared section title.
+  it('draws every section h2 at the one section-title size', async () => {
+    serve();
+    renderAt('/premium', <PremiumPage />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Continue with monthly' })).toBeEnabled());
+    const titles = screen.getAllByRole('heading', { level: 2 });
+    expect(titles.map((h) => h.textContent)).toEqual(['Choose a plan', 'Have a voucher?', 'Free and Premium', 'Questions']);
+    for (const title of titles) expect(title).toHaveClass('ss-section-title');
   });
 
   it('answers six questions in native disclosures', () => {
@@ -176,18 +208,25 @@ describe('/premium', () => {
   });
 });
 
+describe('the /premium title', () => {
+  it('balances its two lines, so \'month\' never stands alone in the 800px column', () => {
+    const css = readFileSync(new URL('../src/components/PremiumPage.css', import.meta.url), 'utf8');
+    expect(css).toContain('.ss-info-page:has(> .ss-premium-page) .ss-info-page__header h1 { text-wrap: balance; }');
+  });
+});
+
 describe('the plan table', () => {
   it('compares Free and Premium and drops the AI and language rows', () => {
     server.use(settingsHandler);
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
     const headers = within(table).getAllByRole('columnheader').map((cell) => cell.textContent);
-    expect(headers).toEqual(['What you get', 'FreeEvery account', 'Premium€4.99 a month, before VAT']);
+    expect(headers).toEqual(['Feature', 'FreeEvery account', 'Premium€4.99 a month, before VAT']);
     const rows = within(table).getAllByRole('rowheader').map((cell) => cell.textContent);
     expect(rows).toContain('React');
     // Nothing that has not opened yet (design audit P0.1), and no ads row:
     // the footnote says it once.
-    expect(rows).not.toContain('The FDE learning path');
+    expect(rows).not.toContain('Forward Deployed Engineer path');
     expect(rows).not.toContain('Coins for merchandise');
     expect(rows).not.toContain('Ads');
     expect(rows.join(' ')).not.toMatch(/AI|[Ll]anguage|[Tt]ranslat/);
@@ -195,6 +234,40 @@ describe('the plan table', () => {
     expect(within(table).getByText('Levels 1 to 12')).toBeInTheDocument();
     expect(within(table).getByText('All 17')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/learn');
+    // Projects have a row of their own (UX audit money-03): the coding row no
+    // longer folds the project stages into its free cell, so each is said once.
+    const projects = within(table).getByRole('rowheader', { name: 'Projects and short paths' }).closest('tr')!;
+    expect(within(projects).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Opening stages', 'Every stage']);
+    const coding = within(table).getByRole('rowheader', { name: 'Coding challenges' }).closest('tr')!;
+    expect(within(coding).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['A starter set', 'Every challenge, plus each new one']);
+    // The landing keeps its kicker and its VAT subtitle.
+    expect(screen.getByText('Plans')).toBeInTheDocument();
+    expect(screen.getByText('Prices exclude VAT. Applicable VAT is added at checkout.')).toBeInTheDocument();
+  });
+
+  // The phone layout draws rows as blocks (display: grid), which drops a
+  // table's implicit roles in some browsers: the roles are explicit.
+  it('keeps explicit table roles for the phone layout', () => {
+    server.use(settingsHandler);
+    renderAt('/', <ComparisonTable />);
+    const table = screen.getByRole('table');
+    expect(table).toHaveAttribute('role', 'table');
+    for (const row of within(table).getAllByRole('row')) expect(row).toHaveAttribute('role', 'row');
+    for (const header of within(table).getAllByRole('rowheader')) expect(header).toHaveAttribute('role', 'rowheader');
+    for (const cell of within(table).getAllByRole('cell')) expect(cell).toHaveAttribute('role', 'cell');
+    expect(within(table).getAllByRole('columnheader')[0]).toHaveClass('ss-compare__featurecol');
+  });
+
+  // /premium has its own section kicker and states VAT by its prices.
+  it('leaves out its kicker, its subtitle and the caption\'s VAT clause when embedded (money-03)', () => {
+    server.use(settingsHandler);
+    renderAt('/', <ComparisonTable embedded showCta={false} />);
+    const table = screen.getByRole('table');
+    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
+    expect(screen.queryByText('Plans')).toBeNull();
+    expect(screen.queryByText('Prices exclude VAT. Applicable VAT is added at checkout.')).toBeNull();
+    // The plan cards and Before you pay say 'before VAT' beside the price.
+    expect(within(table).getAllByRole('columnheader')[2]).toHaveTextContent(/^Premium€4\.99 a month$/);
   });
 
   // Merchandise is paused until next quarter (owner decision 10): the coin row
@@ -207,22 +280,28 @@ describe('the plan table', () => {
     })));
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
-    expect(await within(table).findByRole('rowheader', { name: 'The FDE learning path' })).toBeInTheDocument();
+    const path = await within(table).findByRole('rowheader', { name: 'Forward Deployed Engineer path' });
+    expect(within(path.closest('tr')!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Diagnostic and first module', 'Every module as it ships']);
     expect(within(table).queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
   });
 
-  it('keeps Start free disabled for Premium and explains it through a keyboard tooltip', async () => {
-    signIn(); serve({ plan: PAYING });
+  // UX audit shell-public-17: 'Start free' is for a visitor without an
+  // account. A signed-in free learner gets a secondary 'See Premium', and a
+  // Premium member no action at all.
+  it('offers Start free only when signed out', async () => {
+    signIn(); serve({ plan: FREE });
     const onStart = vi.fn();
+    const free = renderAt('/', <ComparisonTable onStart={onStart} />);
+    const premium = await screen.findByRole('link', { name: 'See Premium' });
+    expect(premium).toHaveAttribute('href', '/premium');
+    expect(premium).toHaveClass('ss-action');
+    expect(screen.queryByRole('button', { name: 'Start free' })).toBeNull();
+    free.unmount();
+    serve({ plan: PAYING });
     renderAt('/', <ComparisonTable onStart={onStart} />);
-    const button = await screen.findByRole('button', { name: 'Start free' });
-    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'));
-    fireEvent.click(button);
-    expect(onStart).not.toHaveBeenCalled();
-    act(() => button.focus());
-    // jsdom treats the native popover as hidden; the browser regression checks
-    // that keyboard focus actually opens it.
-    expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent('You are already a Premium member! Thank you! 💙');
+    await screen.findByRole('table');
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'See Premium' })).toBeNull());
+    expect(screen.queryByRole('button', { name: 'Start free' })).toBeNull();
   });
 });
 
@@ -232,7 +311,7 @@ describe('the launch price (4 Oct to 30 Nov 2026, Prague)', () => {
   afterEach(() => { vi.useRealTimers(); });
 
   const expectRegularPage = async () => {
-    expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
+    expect(await screen.findAllByRole('button', { name: /Continue with/ })).toHaveLength(2);
     expect(screen.getByRole('heading', { level: 1, name: 'Everything in devShark for €4.99 a month' })).toBeInTheDocument();
     const plans = screen.getByRole('region', { name: 'Choose a plan' });
     expect(within(plans).getByText('€4.99')).toBeInTheDocument();
@@ -343,6 +422,8 @@ describe('the Terms and the privacy policy', () => {
     serve();
     renderAt('/terms', <TermsPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Terms of use' })).toBeInTheDocument();
+    // UX audit money-08: the legal pages name their group above the h1.
+    expect(document.querySelector('.ss-info-page__kicker')).toHaveTextContent('Legal');
     expect(screen.getAllByText('Lukáš Kouřil').length).toBeGreaterThan(0);
     expect(screen.getByText('04713397')).toBeInTheDocument();
     expect(screen.getAllByText('Družstevní čtvrť 3145/19, 695 01 Hodonín, Czech Republic').length).toBeGreaterThan(0);
@@ -378,6 +459,7 @@ describe('the Terms and the privacy policy', () => {
     serve();
     renderAt('/privacy', <PrivacyPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy policy' })).toBeInTheDocument();
+    expect(document.querySelector('.ss-info-page__kicker')).toHaveTextContent('Legal');
     expect(screen.queryByText(/sprd\.net AG/)).toBeNull();
     expect(screen.getByText(/does not offer merchandise yet\. It collects no order and no postal address/)).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Link privacy policy' })).toHaveAttribute('href', 'https://link.com/privacy');

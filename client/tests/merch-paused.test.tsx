@@ -102,8 +102,11 @@ describe('while merchandise is paused (owner decision 10)', () => {
     expect(premiumIncludes(true)).not.toContain('premium.sheet.include6');
     serveOpenMerch();
     render(<PremiumPage />, { wrapper });
-    expect(await screen.findByRole('heading', { name: 'Premium includes' })).toBeInTheDocument();
+    // /premium states what Premium opens in the plan table only; the list
+    // lives in the upgrade sheet (UX audit money-03), which premiumIncludes
+    // above feeds.
     await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
+    expect(screen.queryByRole('heading', { name: 'Premium includes' })).toBeNull();
     expect(screen.queryByText(/devShark merchandise/)).toBeNull();
     expect(screen.queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
     expect(document.body.textContent).not.toMatch(/merchandise/i);

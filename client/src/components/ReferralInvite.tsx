@@ -9,6 +9,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { Kicker } from './landing/LandingKit';
+import { SignedOutBlock } from './SignedOutBlock';
 import { useT } from '../i18n/LanguageContext';
 import { useGameConfig } from '../lib/gameConfig';
 import { inviteLink, useReferral } from '../lib/referral';
@@ -85,7 +86,10 @@ export function ReferralInvite({ signedIn, restoring = false }: { signedIn: bool
         </div>
       )}
 
-      {!signedIn && !restoring && <p className="rw-muted">{t('rewards.invite.signedOut')}</p>}
+      {/* The money screens' one signed-out block (UX audit money-05); the
+          wallet's Sign in above is the screen's primary, so this one is
+          secondary. */}
+      {!signedIn && !restoring && <SignedOutBlock message={t('rewards.invite.signedOut')} emphasis="secondary" />}
       {loading && <p className="rw-muted" role="status">{t('common.loading')}</p>}
       {signedIn && referral.isError && !data && (
         <div className="rw-inline-error" role="alert">

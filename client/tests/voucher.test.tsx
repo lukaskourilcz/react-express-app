@@ -129,7 +129,8 @@ describe('/premium while checkout is off', () => {
     expect(voucherSection()).toHaveClass('ss-info-card');
     expect(voucherSection()).not.toHaveClass('ss-premium-voucher--inline');
     expect(await within(voucherSection()).findByText(/Premium is not on sale yet\. If someone gave you a voucher/)).toBeInTheDocument();
-    expect(within(voucherSection()).getByText('Sign in first. The voucher opens Premium on the account you sign in with.')).toBeInTheDocument();
+    // One prompt, the button (UX audit money-15): no 'Sign in first' line.
+    expect(within(voucherSection()).queryByText(/Sign in first/)).toBeNull();
     expect(within(voucherSection()).queryByRole('textbox')).toBeNull();
     fireEvent.click(within(voucherSection()).getByRole('button', { name: 'Sign in to redeem' }));
     await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium#voucher' }));
