@@ -89,7 +89,10 @@ export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnl
     // keys and does nothing with them; the event still reaches the workbench.
     Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => true }, { key: 'Shift-Mod-Enter', run: () => true }])),
     EditorView.lineWrapping,
-    EditorView.contentAttributes.of({ 'aria-label': ariaLabel, 'aria-multiline': 'true', role: 'textbox', ...(describedBy ? { 'aria-describedby': describedBy } : {}) }),
+    // tabindex="0" names what contenteditable already does: the code is a tab
+    // stop. In the coding frame the editor scrolls inside (coding-01), and a
+    // scrolling region has to hold something focusable that says so.
+    EditorView.contentAttributes.of({ 'aria-label': ariaLabel, 'aria-multiline': 'true', role: 'textbox', tabindex: '0', ...(describedBy ? { 'aria-describedby': describedBy } : {}) }),
   ], [track, ariaLabel, describedBy]);
 
   return (
