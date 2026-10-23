@@ -262,6 +262,52 @@ describe('/reset-password', () => {
   });
 });
 
+describe('a press that lands twice on an email-link page', () => {
+  // A double click, or Enter twice: both presses run before React draws the
+  // first one's busy state.
+  const twice = (control: () => HTMLElement, submit = true) => act(() => {
+    const element = control();
+    const target = submit ? element.closest('form')! : element;
+    const fire = submit ? fireEvent.submit : fireEvent.click;
+    fire(target);
+    fire(target);
+  });
+
+  it('sends one email', async () => {
+    server.use(http.post(`${AUTH}/recover`, () => gotrueOk({})));
+    await openPage('/reset-password');
+    await h1();
+    type('Email', 'ada@example.com');
+    twice(() => screen.getByRole('button', { name: 'Send reset link' }));
+    await status(/has a devShark account/);
+    expect(calls('/recover')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('opens a scanner-safe link once', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => gotrueOk(SESSION)));
+    await openPage('/auth/confirmed?token_hash=pkce_0123456789abcdef&type=email');
+    await h1();
+    twice(() => screen.getByRole('button', { name: 'Confirm my email' }), false);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your email is confirmed' })).toBeInTheDocument();
+    expect(calls('/verify')).toHaveLength(1);
+  });
+
+  it('sets the new password once', async () => {
+    server.use(
+      http.put(`${AUTH}/user`, () => gotrueOk({ ...USER, updated_at: '2026-10-01T09:05:00Z' })),
+      http.post(`${AUTH}/logout`, () => new HttpResponse(null, { status: 204 })),
+    );
+    await openPage(`/reset-password${linkFragment('recovery')}`);
+    await screen.findByRole('heading', { level: 1, name: 'Set a new password' });
+    type('New password', 'a much longer passphrase');
+    type('Confirm new password', 'a much longer passphrase');
+    twice(() => screen.getByRole('button', { name: 'Save new password' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your password is changed' })).toBeInTheDocument();
+    expect(calls('/user').filter((one) => one.method === 'PUT')).toHaveLength(1);
+  });
+});
+
 describe('where the app shell sends a learner from an email link', () => {
   it('opens the new-password form when a reset link lands on the home page', async () => {
     // Supabase sends the link to the Site URL when /reset-password is not on

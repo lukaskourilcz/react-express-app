@@ -13,7 +13,7 @@
 // Both also take the scanner-safe link (`?token_hash=…&type=…`): the session
 // opens when the learner presses the button, not when a mail filter fetches
 // the link. Neither page is a new API handler: both talk to Supabase Auth.
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { useT } from '../../i18n/LanguageContext';
@@ -56,6 +56,9 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Read at once, as the sign-in dialog's is: a second press in the same task
+  // sent a second email, which Supabase refused beside the first one's "sent".
+  const sending = useRef(false);
   const [failure, setFailure] = useState<AuthFailure | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -64,12 +67,14 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy || wait > 0) return;
+    if (sending.current || wait > 0) return;
     setSubmitted(true);
     setFailure(null);
     if (problem) return;
+    sending.current = true;
     setBusy(true);
     const outcome = purpose === 'confirm' ? await resendConfirmation(email, returnTo) : await sendPasswordReset(email);
+    sending.current = false;
     setBusy(false);
     if (outcome.ok || outcome.failure === 'emailRateLimited') {
       markEmailSent(purpose, email);
@@ -117,6 +122,9 @@ export function EmailConfirmedPage() {
   const [linkError] = useState(() => linkErrorIn(location));
   const [tokenLink] = useState(() => tokenLinkIn(location.search, 'confirm'));
   const [verifying, setVerifying] = useState(false);
+  // A link opens once: a second press in the same task spent it again, and
+  // its refusal could show "expired" over the session the first one opened.
+  const opening = useRef(false);
   const [verifyFailure, setVerifyFailure] = useState<AuthFailure | null>(null);
   const next = continuePath(params.get('next'));
 
@@ -138,12 +146,14 @@ export function EmailConfirmedPage() {
   }
 
   const confirm = async () => {
-    if (!tokenLink || verifying) return;
+    if (!tokenLink || opening.current) return;
+    opening.current = true;
     setVerifying(true);
     setVerifyFailure(null);
     const outcome = await verifyEmailLink(tokenLink);
     // Confirmed: supabase-js announces SIGNED_IN and the page above takes over.
     if (!outcome.ok) {
+      opening.current = false;
       setVerifying(false);
       setVerifyFailure(outcome.failure);
     }
@@ -192,18 +202,21 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
   const [again, setAgain] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
   const [failure, setFailure] = useState<AuthFailure | null>(null);
   const problem = newPasswordProblem(password);
   const mismatch = again !== password ? 'passwordMismatch' as const : null;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (saving.current) return;
     setSubmitted(true);
     setFailure(null);
     if (problem || mismatch || !again) return;
+    saving.current = true;
     setBusy(true);
     const outcome = await updatePassword(password);
+    saving.current = false;
     setBusy(false);
     if (outcome.ok) onDone(outcome.otherDevicesSignedOut);
     else setFailure(outcome.failure);
@@ -244,6 +257,9 @@ export function ResetPasswordPage() {
   const [linkError] = useState(() => linkErrorIn(location));
   const [tokenLink] = useState(() => tokenLinkIn(location.search, 'recovery'));
   const [verifying, setVerifying] = useState(false);
+  // A link opens once: a second press in the same task spent it again, and
+  // its refusal could show "expired" over the session the first one opened.
+  const opening = useRef(false);
   const [verifyFailure, setVerifyFailure] = useState<AuthFailure | null>(null);
   const [done, setDone] = useState<{ otherDevicesSignedOut: boolean } | null>(null);
 
@@ -273,12 +289,14 @@ export function ResetPasswordPage() {
   }
 
   const open = async () => {
-    if (!tokenLink || verifying) return;
+    if (!tokenLink || opening.current) return;
+    opening.current = true;
     setVerifying(true);
     setVerifyFailure(null);
     const outcome = await verifyEmailLink(tokenLink);
     // Opened: supabase-js announces PASSWORD_RECOVERY and the form above shows.
     if (!outcome.ok) {
+      opening.current = false;
       setVerifying(false);
       setVerifyFailure(outcome.failure);
     }
