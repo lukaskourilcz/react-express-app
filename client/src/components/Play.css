@@ -87,7 +87,9 @@
    600px, the full width of the panel below it. */
 .play-lobby__start { display: flex; justify-content: flex-end; }
 @media (max-width: 599.95px) {
-  .play-lobby__start { display: grid; }
+  /* justify-content: normal, or the grid's one track shrinks to the
+     button and flex-end keeps it on the right. */
+  .play-lobby__start { display: grid; justify-content: normal; }
 }
 
 /* A room's header: the shared PageHeader on the left, the code badge (44px)

@@ -946,7 +946,10 @@ describe('the lobby (social-account-14, -15)', () => {
     expect(start.parentElement).toHaveClass('play-lobby__start');
     const css = readFileSync(new URL('../src/components/Play.css', import.meta.url), 'utf8');
     expect(css).toMatch(/\.play-lobby__start \{ display: flex; justify-content: flex-end; \}/);
-    expect(css).toMatch(/@media \(max-width: 599\.95px\) \{\s*\.play-lobby__start \{ display: grid; \}/);
+    // Full width on a phone: a grid whose one track is not shrunk by the
+    // wide screen's flex-end (at 390 it stayed a 180px button on the right).
+    const phone = css.slice(css.indexOf('@media (max-width: 599.95px)'));
+    expect(phone).toMatch(/\.play-lobby__start \{ display: grid; justify-content: normal; \}/);
     // The badge takes the default size, so the shared floor makes it 44px.
     expect(screen.getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
     const source = readFileSync(new URL('../src/components/Play.tsx', import.meta.url), 'utf8');
