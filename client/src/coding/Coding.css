@@ -165,12 +165,6 @@
 }
 
 .cd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-/* Technique filter: chips from 760px up, one select in the filter row below. */
-.cd-search .cd-technique-select { display: none; }
-@media (max-width: 759px) {
-  .cd-technique-chips { display: none; }
-  .cd-search .cd-technique-select { display: block; }
-}
 .cd-chip {
   min-height: 44px;
   padding: 8px 14px;
@@ -710,8 +704,25 @@
 .cd-run__when { margin: 0; color: var(--color-text-secondary); }
 @media (max-width: 560px) { .cd-run__options { grid-template-columns: minmax(0, 1fr); } }
 
-.cd-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
-.cd-search input[type="search"] { flex: 1 1 220px; min-width: 0; }
+/* One filter row (UX audit coding-16): the search grows, the selects share
+   what is left at up to 160px each, all 44px tall. From 1024px it never
+   wraps; under 760px it is a 2-column grid, the search across both. */
+.cd-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cd-search input[type="search"] { flex: 1 1 240px; min-width: 0; }
+.cd-search select { flex: 0 1 160px; min-width: 0; text-overflow: ellipsis; }
+.cd-search > .astryx-button { flex: none; }
+@media (min-width: 1024px) {
+  .cd-search { flex-wrap: nowrap; }
+  .cd-search input[type="search"] { flex-basis: 320px; min-width: 200px; }
+  .cd-search select { min-width: 110px; }
+}
+@media (max-width: 759px) {
+  .cd-search { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cd-search input[type="search"], .cd-search > .astryx-button { grid-column: 1 / -1; }
+}
+.cd-filter-count { margin: 0; font-size: 0.85rem; color: var(--color-text-secondary); }
+/* Empty, it stays a live region but takes no room in the page's column. */
+.cd-filter-count:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .cd-search input, .cd-search select {
   min-height: 44px;
   padding: 0 10px;

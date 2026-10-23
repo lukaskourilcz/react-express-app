@@ -1601,7 +1601,7 @@ export const en = {
   'coding.minutes': '{n} min',
   'coding.level': 'Level {n}',
   'coding.filter.status': 'Status',
-  'coding.filter.all': 'All',
+  'coding.filter.anyStatus': 'Any status',
   'coding.empty': 'No task matches this filter.',
   'coding.signInHint': 'Sign in to keep your progress. Signed out, you can run and check the free tasks, but no pass is recorded.',
   'coding.loading': 'Loading task…',

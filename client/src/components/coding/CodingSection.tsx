@@ -593,25 +593,9 @@ export function CodingTrackScreen() {
         </p>
       )}
       <EvolvingGallery passed={passed} premiumOf={premiumOf} track={track} />
-      {/* Under 760px the technique chips fold into the filter row as one
-          select (design audit P2.3); both drive the same `group` filter. */}
-      <div className="cd-chips cd-technique-chips" role="group" aria-label={t('coding.techniques')}>
-        <button type="button" className="cd-chip" aria-pressed={!group} onClick={() => setFilter('group', null)}>{t('coding.techniques.all')}</button>
-        {groupsHere.map((g) => <button key={g} type="button" className="cd-chip" aria-pressed={group === g} onClick={() => setFilter('group', g)}>{t(`coding.group.${g}` as never)}</button>)}
-      </div>
-      {isAuthenticated && (
-        <div className="cd-chips" role="group" aria-label={t('coding.filter.status')}>
-          {(['all', 'open', 'passed'] as const).map((value) => (
-            <button key={value} type="button" className="cd-chip" aria-pressed={statusFilter === value} onClick={() => setFilter('status', value === 'all' ? null : value)}>
-              {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : t('coding.status.passed')}
-            </button>
-          ))}
-          <button type="button" className="cd-chip" aria-pressed={savedOnly} onClick={() => setFilter('saved', savedOnly ? null : '1')}>
-            {t('coding.filter.saved')}
-          </button>
-        </div>
-      )}
-
+      {/* One filter row (UX audit coding-16): the search and one select per
+          filter, the technique one at every width, and status with Saved for
+          a signed-in learner. Under 760px it folds to a 2-column grid. */}
       <div className="cd-search">
         <label className="cd-visually-hidden" htmlFor={`${track}-search`}>{t('coding.filter.searchLabel')}</label>
         <input
@@ -624,7 +608,7 @@ export function CodingTrackScreen() {
           onChange={(event) => setFilter('q', event.target.value || null)}
         />
         <label className="cd-visually-hidden" htmlFor={`${track}-technique`}>{t('coding.techniques')}</label>
-        <select id={`${track}-technique`} className="cd-technique-select" value={group ?? 'all'} onChange={(event) => setFilter('group', event.target.value === 'all' ? null : event.target.value)}>
+        <select id={`${track}-technique`} value={group ?? 'all'} onChange={(event) => setFilter('group', event.target.value === 'all' ? null : event.target.value)}>
           <option value="all">{t('coding.techniques.all')}</option>
           {groupsHere.map((g) => <option key={g} value={g}>{t(`coding.group.${g}` as never)}</option>)}
         </select>
@@ -648,11 +632,37 @@ export function CodingTrackScreen() {
           <option value="tests">{t('coding.filter.formatTests')}</option>
           <option value="debug">{t('coding.filter.formatDebug')}</option>
         </select>
+        {isAuthenticated && (
+          <>
+            <label className="cd-visually-hidden" htmlFor={`${track}-status`}>{t('coding.filter.status')}</label>
+            <select
+              id={`${track}-status`}
+              value={savedOnly ? 'saved' : statusFilter}
+              onChange={(event) => {
+                const value = event.target.value;
+                const next = new URLSearchParams(params);
+                next.delete('status');
+                next.delete('saved');
+                if (value === 'saved') next.set('saved', '1');
+                else if (value !== 'all') next.set('status', value);
+                setParams(next, { replace: true });
+              }}
+            >
+              <option value="all">{t('coding.filter.anyStatus')}</option>
+              <option value="open">{t('coding.status.open')}</option>
+              <option value="passed">{t('coding.status.passed')}</option>
+              <option value="saved">{t('coding.filter.saved')}</option>
+            </select>
+          </>
+        )}
         {filtersOn && (
           <Button variant="ghost" onClick={() => { if (searchBox.current) searchBox.current.value = ''; setParams(new URLSearchParams(), { replace: true }); }} label={t('coding.filter.reset')} />
         )}
       </div>
-      <p className="cd-shortcuts" role="status">{t('coding.filter.count', { shown: filtered.length, total: tasks.length })}</p>
+      {/* The total is the header's; the count speaks only once a filter
+          narrows the list. The live region stays in place, empty, so the
+          first filter is announced too. */}
+      <p className="cd-filter-count" role="status">{filtersOn ? t('coding.filter.count', { shown: filtered.length, total: tasks.length }) : ''}</p>
 
       {filtered.length === 0 && <p className="cd-note">{filtersOn ? t('coding.filter.empty') : t('coding.empty')}</p>}
       {bands.map(({ level, tiers }) => (
