@@ -341,6 +341,15 @@ coming back. The tokens and the map are in
   with one row of next steps, not a centred card. While the header offers
   the join, the join is the one `SwimCta` and every action under it is a
   secondary.
+- **One Learn page header** (UX audit learn-15). A Learn-area page that is
+  not a section (`/roadmap`, `/big-o`, `/learn/big-o`) opens with
+  `LearnPageHeader` (`components/learn/LearnPageHeader.tsx`): the Learn
+  title (`<Kicker as="h1">`, 800 weight, wave) on the `PageHeader` frame, one
+  supporting line, and at most one context link above the title. It sets no
+  width; the route shell's 800px column holds it. A link in the Learn area
+  is the accent with a 1px underline (`.learn-link`), never the browser's
+  blue; a heading that links somewhere stays in the text colour with an
+  accent arrow.
 - **A summary on request goes below what it sums up.** Evidence, counts and
   other recaps of a page's content follow that content as one closed
   disclosure (`.lp-disclosure`), not a long section before it. A row that is

@@ -49,9 +49,11 @@ import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
+import { LearnPageHeader } from './learn/LearnPageHeader';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import './DeepEndScreens.css';
+import './CareerRoadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -249,19 +251,11 @@ export default function CareerRoadmap() {
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 780, margin: '0 auto' }}>
+    // The route shell sets the 800px column (UX audit learn-15): no width of
+    // its own, and the Learn page header, as on /learn and Big O.
+    <div className="career-roadmap">
       <VStack gap={4}>
-        {/* Header */}
-        <div className="ss-pop" style={{ width: '100%' }}>
-          <VStack gap={1}>
-            <Heading level={1} type="display-3">
-              {pageTitle}
-            </Heading>
-            <Text type="large" color="secondary">
-              {headerBody}
-            </Text>
-          </VStack>
-        </div>
+        <LearnPageHeader title={pageTitle} lead={headerBody} />
 
         {/* Track chooser — drives the headline %, the map and the pillars below. */}
         <VStack gap={1.5} align="center">
@@ -365,8 +359,12 @@ export default function CareerRoadmap() {
         <section key={section.id} aria-labelledby={`career-${section.id}`} style={{ width: '100%' }}>
           <VStack gap={2}>
             <HStack justify="between" align="center" gap={1} wrap="wrap">
+              {/* A text-colour heading with the accent arrow, not the
+                  browser's blue link (learn-15). */}
               <Heading level={2} id={`career-${section.id}`}>
-                <Link to={`/learn/${section.id}`}>{learnText(`learn.section.${section.id}`)}</Link>
+                <Link className="career-section__link" to={`/learn/${section.id}`}>
+                  {learnText(`learn.section.${section.id}`)}
+                </Link>
               </Heading>
               <Text type="supporting" color="secondary">
                 {section.id === 'forward-deployed-engineer' && fde.pending

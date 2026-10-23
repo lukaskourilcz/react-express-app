@@ -1,0 +1,22 @@
+/* The career roadmap (/roadmap). The route shell sets the column (800px). */
+.career-roadmap { width: 100%; }
+
+/* A section heading is a text-colour heading with an accent arrow (UX audit
+   learn-15): the whole heading is the link to the section on /learn, its
+   underline only on hover, and its press 44px tall. */
+.career-section__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ss-control-height);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+.career-section__link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+.career-section__link:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+/* Drawn, not written: the heading's name stays the section's name. */
+.career-section__link::after {
+  content: '\2192';
+  content: '\2192' / '';
+  margin-inline-start: 0.35em;
+  color: var(--color-text-accent);
+}

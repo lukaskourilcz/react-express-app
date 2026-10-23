@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
+import { LearnPageHeader } from './learn/LearnPageHeader';
 import './BigOPage.css';
 
 const curves = [
@@ -12,9 +13,10 @@ const curves = [
 
 export default function BigOPage() {
   const { t } = useLanguage();
+  // The Learn page header (UX audit learn-15); the route shell sets the 800px
+  // column.
   return <article className="de-page bo-page">
-    <h1>{t('bigO.title')}</h1>
-    <p>{t('bigO.lead')}</p>
+    <LearnPageHeader title={t('bigO.title')} lead={t('bigO.lead')} />
     <section className="ss-info-card">
       <h2>{t('bigO.inputTitle')}</h2>
       <p>{t('bigO.inputBody')}</p>

@@ -1,5 +1,5 @@
-.bo-page { max-width: 800px; --ss-chart-blue: light-dark(#0e7490, #6ccce2); --ss-chart-gold: light-dark(#946000, #f5c364); }
-.bo-page > p, .bo-page .ss-info-card p { line-height: 1.65; }
+.bo-page { --ss-chart-blue: light-dark(#0e7490, #6ccce2); --ss-chart-gold: light-dark(#946000, #f5c364); }
+.bo-page .ss-info-card p { line-height: 1.65; }
 .bo-page .ss-info-card { margin-top: 24px; }
 .bo-chart { margin: 24px 0; }
 .bo-chart svg { display: block; width: 100%; height: auto; overflow: visible; }

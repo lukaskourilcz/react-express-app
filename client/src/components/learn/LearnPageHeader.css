@@ -1,0 +1,38 @@
+/* The Learn page header (UX audit learn-15): the shared .ss-page-header frame
+   with the Learn title (.ss-kicker.ss-section-title). The frame's 8px gap sets
+   the spacing, so the title drops its own bottom margin. */
+.learn-page-header { margin-bottom: 8px; }
+.learn-page-header > .ss-section-title { margin: 0; }
+
+/* The context link above the title, set as the FDE module page's kicker
+   (.lp-kicker): small, uppercase, spaced. The link is the accent with a 1px
+   underline, and its press reaches 44px without moving the title. */
+.learn-page-header__context {
+  margin: 0;
+  font-size: var(--ss-type-meta);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* The Learn-area link rule: accent text, a 1px underline. */
+.learn-page-header__context a,
+.learn-link {
+  color: var(--color-text-accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.learn-page-header__context a {
+  display: inline-block;
+  line-height: 16px;
+  padding-block: 14px;
+  margin-block: -14px;
+}
+.learn-page-header__context a:focus-visible,
+.learn-link:focus-visible {
+  outline: 3px solid var(--ss-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-inner);
+}
