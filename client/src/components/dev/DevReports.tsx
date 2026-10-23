@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Badge } from '@astryxdesign/core/Badge';
 import type { BadgeVariant } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
@@ -56,7 +56,11 @@ export default function DevReports() {
   const reload = () => void refetch();
   const [filter, setFilter] = useState<'all' | 'flags'>('all');
   const [snack, setSnack] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+  // Every report being dismissed, not only the last one pressed: dismissing A
+  // and then B must keep B's button disabled until B's own answer lands. The
+  // ref guards a second press before React has drawn the disabled button.
+  const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
+  const busyRef = useRef(new Set<string>());
 
   const flagCount = useMemo(() => reports.filter((r) => r.reason === 'needs-review').length, [reports]);
   const shown = useMemo(
@@ -65,7 +69,9 @@ export default function DevReports() {
   );
 
   const handleDismiss = async (r: AdminReport) => {
-    setBusy(r.id);
+    if (busyRef.current.has(r.id)) return;
+    busyRef.current.add(r.id);
+    setBusy(new Set(busyRef.current));
     try {
       await dismissReport(r.id);
       queryClient.setQueryData<{ reports: AdminReport[] }>(REPORTS_KEY, (old) =>
@@ -75,7 +81,8 @@ export default function DevReports() {
     } catch (err) {
       setSnack(friendlyError(err));
     } finally {
-      setBusy(null);
+      busyRef.current.delete(r.id);
+      setBusy(new Set(busyRef.current));
     }
   };
 
@@ -144,7 +151,7 @@ export default function DevReports() {
                     </span>
                   </TableCell>
                   <TableCell style={{ textAlign: 'right' }}>
-                    <Button size="sm" variant="ghost" label="Dismiss" onClick={() => handleDismiss(r)} isDisabled={busy === r.id} />
+                    <Button size="sm" variant="ghost" label="Dismiss" onClick={() => handleDismiss(r)} isDisabled={busy.has(r.id)} />
                   </TableCell>
                 </TableRow>
               );
