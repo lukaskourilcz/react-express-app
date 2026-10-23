@@ -189,4 +189,14 @@ describe('/dev → Question bank', () => {
     expect(reads).toBe(2);
     expect(screen.getByRole('button', { name: 'Delete selected (1)' })).toBeInTheDocument();
   });
+
+  it('counts in "Delete N fillers" only the served questions the server deletes, not unreviewed ones', async () => {
+    const low = (id: string, active: boolean): AdminQuestion => ({ ...question(id), importance: 2, review: { active, reason: active ? 'reviewed' : 'unreviewed' } });
+    server.use(
+      http.get('*/api/admin/questions', () => HttpResponse.json({ questions: [low('f1', true), low('f2', false), question('k1')], categories: ['react'], reportCounts: {} })),
+    );
+    renderTab('questions');
+    expect(await screen.findByRole('button', { name: 'Delete 1 filler' })).toBeInTheDocument();
+  });
+
 });

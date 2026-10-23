@@ -352,9 +352,11 @@ export default function DevQuestions() {
     setConfirm({ title: 'Revert question?', description: 'Your edits will be discarded and the original question restored.', actionLabel: 'Revert', destructive: false, onConfirm: () => runAction('Reverted to original', () => resetQuestion(q.id)) });
   };
 
-  // How many currently-visible, non-custom questions the bulk action would hide.
+  // How many questions the bulk action would delete: the server takes only the
+  // served, non-custom ones (lib/questions-store.ts bulkHideByImportance reads
+  // the eligible set), so an unreviewed or retired question is not counted.
   const bulkHideCount = useMemo(
-    () => questions.filter((q) => !q.deleted && q.source !== 'custom' && q.importance <= bulkThreshold).length,
+    () => questions.filter((q) => !q.deleted && q.review.active && q.source !== 'custom' && q.importance <= bulkThreshold).length,
     [questions, bulkThreshold],
   );
   const handleBulkHide = async () => {
