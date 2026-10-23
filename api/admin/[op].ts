@@ -11,7 +11,8 @@ import {
   bulkHideByImportance,
   KNOWN_CATEGORIES,
 } from '../../lib/questions-store';
-import { loadDeploymentQuestionBank } from '../../lib/question-bank-loader';
+import { loadSubjectQuestionBank } from '../../lib/question-bank-loader';
+import { deploymentSubjectIds } from '../../lib/product-scope';
 import type { Question } from '../../lib/quiz-data';
 import { listReports, dismissReport, reportCounts } from '../../lib/reports-store';
 import { listAuthEvents } from '../../lib/auth-events-store';
@@ -221,13 +222,17 @@ const bankIds = new WeakMap<readonly Question[], ReadonlySet<string>>();
  * question that does not exist, which no listing shows and nothing removes. */
 async function knownQuestionId(id: string): Promise<boolean> {
   if (id.startsWith('dev-')) return true;
-  const bank = await loadDeploymentQuestionBank();
-  let ids = bankIds.get(bank);
-  if (!ids) {
-    ids = new Set(bank.map((question) => question.id));
-    bankIds.set(bank, ids);
-  }
-  return ids.has(id);
+  // Keyed by each subject's bank, the array the loader keeps for the life of
+  // the process (the deployment bank is a new flat() copy on every call).
+  const banks = await Promise.all(deploymentSubjectIds().map((subject) => loadSubjectQuestionBank(subject)));
+  return banks.some((bank) => {
+    let ids = bankIds.get(bank);
+    if (!ids) {
+      ids = new Set(bank.map((question) => question.id));
+      bankIds.set(bank, ids);
+    }
+    return ids.has(id);
+  });
 }
 
 function unknownQuestion(res: VercelResponse) {
