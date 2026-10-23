@@ -330,8 +330,10 @@ async function markBroken(supabase: SupabaseClient, userId: string, message: str
   await withTimeout(supabase.from('github_connections').update({ status: 'broken', last_error: message.slice(0, 500), updated_at: new Date().toISOString() }).eq('user_id', userId));
 }
 
+interface QueuedRow { id: string; path: string; content: string; message: string; attempts: number }
+
 /** Writes one queued row to the repository. Returns the garden status for the UI. */
-async function deliver(supabase: SupabaseClient, connection: ConnectionRow, row: { id: string; path: string; content: string; message: string; attempts: number }): Promise<CodingGardenStatus> {
+async function deliver(supabase: SupabaseClient, connection: ConnectionRow, row: QueuedRow): Promise<CodingGardenStatus> {
   if (connection.status !== 'active' || !connection.repo_full_name || !connection.default_branch) return { status: 'queued' };
   const now = new Date().toISOString();
   try {
@@ -376,19 +378,33 @@ export async function commitPassedTask(supabase: SupabaseClient, input: GardenPa
   const message = commitMessageFor(input.task);
   const inserted = await withTimeout(supabase.from('github_commits').insert({ user_id: input.userId, task_id: input.task.id, path, content, message }).select('id,path,content,message,attempts').single());
   if (inserted.error || !inserted.data) return { status: 'failed' };
-  const status = await deliver(supabase, connection, inserted.data as { id: string; path: string; content: string; message: string; attempts: number });
+  const row = inserted.data as QueuedRow;
+  // This pass supersedes any copy of the same file still waiting: delivered
+  // after this one, an older copy would put the older code back.
+  await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: new Date().toISOString() }).eq('user_id', input.userId).eq('path', path).eq('status', 'queued').neq('id', row.id));
+  const status = await deliver(supabase, connection, row);
   if (status.status === 'committed') await retryQueued(supabase, input.userId, 5).catch(() => undefined);
   return status;
 }
 
-/** Retries queued rows for one learner, oldest first. */
+/** Retries queued rows for one learner, oldest first. Of several queued
+ * copies of one file only the newest is written; the older ones are skipped,
+ * so a retry neither writes old code over new nor makes one commit per copy. */
 export async function retryQueued(supabase: SupabaseClient, userId: string, limit = 20): Promise<{ committed: number; failed: number; remaining: number }> {
   const connection = await loadConnection(supabase, userId);
   const rows = await withTimeout(supabase.from('github_commits').select('id,path,content,message,attempts').eq('user_id', userId).eq('status', 'queued').order('created_at', { ascending: true }).limit(limit));
   if (!connection || rows.error) return { committed: 0, failed: 0, remaining: rows.data?.length ?? 0 };
+  const queued = (rows.data ?? []) as QueuedRow[];
+  const newest = new Map<string, QueuedRow>();
+  for (const row of queued) newest.set(row.path, row);
+  const superseded = queued.filter((row) => newest.get(row.path) !== row).map((row) => row.id);
+  if (superseded.length > 0) {
+    await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: new Date().toISOString() }).in('id', superseded));
+  }
   let committed = 0;
   let failed = 0;
-  for (const row of (rows.data ?? []) as { id: string; path: string; content: string; message: string; attempts: number }[]) {
+  for (const row of queued) {
+    if (newest.get(row.path) !== row) continue;
     const status = await deliver(supabase, connection, row);
     if (status.status === 'committed' || status.status === 'skipped') committed++;
     else if (status.status === 'failed') failed++;
