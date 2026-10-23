@@ -51,6 +51,9 @@ describe('the Page layout', () => {
     const billing = css('../src/components/PremiumBillingPages.css');
     expect(billing).toMatch(/\.ss-billing-card \{[^}]*max-width: var\(--ss-width-task\);/);
     expect(billing).not.toMatch(/\.ss-checkout-card \{[^}]*max-width/);
+    // Only a banner and its button (no plan chosen, billing unreachable): no
+    // card around them. Astryx draws the banner class one level down.
+    expect(billing).toContain('.ss-checkout-card:has(.astryx-banner) { padding: 0; border: 0; background: none; box-shadow: none; }');
   });
 });
 
