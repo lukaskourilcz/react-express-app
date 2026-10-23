@@ -399,6 +399,22 @@ describe('submitting', () => {
     expect(bodies.map((body) => body.answers)).toEqual([{ a: 1 }, { a: 1 }]);
   });
 
+  it('sends one submit for a double press before the button turns busy', async () => {
+    let submits = 0;
+    server.use(http.post('*/api/quiz/submit', () => { submits++; return HttpResponse.json(graded([Q('a')])); }));
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    const submit = screen.getByRole('button', { name: /submit quiz/i });
+    // Both presses land before React renders the busy button.
+    act(() => {
+      fireEvent.click(submit);
+      fireEvent.keyDown(document.body, { key: 'Enter' });
+    });
+    await screen.findByText('1 / 1');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(submits).toBe(1);
+  });
+
   it('says when advanced was asked of topics that have none', async () => {
     await startQuiz([Q('a')], { hardestAvailable: true });
     expect(screen.getByText(/no advanced questions yet/)).toBeInTheDocument();

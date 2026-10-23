@@ -213,6 +213,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const questionTextRef = useRef<HTMLDivElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
+  // One submit at a time. `submitting` reaches the next handler only after a
+  // render, and a second Enter or click in that gap sent the answer set
+  // twice: the result was recorded, announced and counted twice.
+  const submittingRef = useRef(false);
 
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   // The saved plan, used only to say whether this topic is part of it.
@@ -564,7 +568,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (submitting) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setAnswersLocked(true);
     setError(null);
@@ -652,9 +657,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setError(friendlyError(err));
       }
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, t, questions, mode, hintedIds]);
+  }, [answers, clearProgress, isAuthenticated, sessionId, user, t, questions, mode, hintedIds]);
 
   const handleRestart = () => {
     clearProgress();
