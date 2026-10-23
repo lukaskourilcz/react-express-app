@@ -313,6 +313,18 @@ describe('what friends see', () => {
     expect(screen.getByText('Your account has no photo, so friends see your initials.')).toBeInTheDocument();
   });
 
+  it('puts the two name columns side by side only when the panel itself is 400px wide, and stacks them below 600px', () => {
+    const css = readSheet();
+    // The panel is the container; inside one of the Profile's two columns it
+    // is too narrow for two readable columns, whatever the viewport.
+    expect(css).toMatch(/\.sn-card \{[^}]*container: sn-card \/ inline-size;/);
+    expect(css).toMatch(/\.sn-columns \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\);/);
+    expect(css).toMatch(/@container sn-card \(min-width: 400px\) \{\s*\.sn-columns \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
+    const container = css.indexOf('@container sn-card');
+    const phone = css.indexOf('@media (max-width: 600px) {\n  .sn-columns');
+    expect(phone).toBeGreaterThan(container);
+  });
+
   it('gives the photo switch the same 44px hit area as the leaderboard column beside it', () => {
     const square = /top: -10px !important; left: -2px !important; width: 44px !important; height: 44px !important;/;
     const rule = (css: string, selector: string) => css.split('\n').find((line) => line.startsWith(selector)) ?? '';
