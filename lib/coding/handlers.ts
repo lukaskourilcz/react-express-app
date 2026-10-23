@@ -812,6 +812,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
       // verdict, so the browser's next save builds on it.
       if (code !== null) {
         const draft = await storeDraft(supabase, userId, task.id, code, 'force');
+        if (draft === 'busy') return draftBusy(res);
         if (!draft || draft === 'missing') return jsonError(res, 500, 'db_error', 'Could not save stage code');
         if (draft.saved && draft.updatedAt) draftUpdatedAt = draft.updatedAt;
       }
@@ -963,13 +964,22 @@ const isDraftTime = (value: unknown): value is string =>
 
 type StoredDraft = { saved: true; updatedAt: string | null } | { saved: false; updatedAt: string };
 
+/** save_coding_draft_v2 met two other saves of the same new draft and gave
+ * up (`coding_draft_busy`). Nothing was written; another try a moment later
+ * goes through. */
+function draftBusy(res: VercelResponse) {
+  res.setHeader('Retry-After', '1');
+  return jsonError(res, 503, 'draft_busy', 'Another save of this draft was in progress. Try again in a moment.');
+}
+
 /** Write a task's draft: only while the account's draft still has `base`
  * (null: none yet), or whatever it holds with 'force'. Migration 059's
  * save_coding_draft_v2 decides under a row lock. Before that migration the
  * save goes through save_coding_draft (025), which always writes, and the
  * time is read back: none when another save overtook it. Null for a database
- * error, 'missing' when neither routine exists. */
-async function storeDraft(supabase: SupabaseClient, userId: string, taskId: string, code: string, base: string | null | 'force'): Promise<StoredDraft | 'missing' | null> {
+ * error, 'missing' when neither routine exists, 'busy' when 059's routine
+ * gave up on concurrent first saves. */
+async function storeDraft(supabase: SupabaseClient, userId: string, taskId: string, code: string, base: string | null | 'force'): Promise<StoredDraft | 'missing' | 'busy' | null> {
   const force = base === 'force';
   const result = await withTimeout(supabase.rpc('save_coding_draft_v2', { p_user_id: userId, p_task_id: taskId, p_code: code, p_base: force ? null : base, p_force: force }));
   if (!result.error) {
@@ -978,6 +988,7 @@ async function storeDraft(supabase: SupabaseClient, userId: string, taskId: stri
     if (answer?.saved === false && answer.conflict === true && updatedAt) return { saved: false, updatedAt };
     return { saved: true, updatedAt };
   }
+  if (/\bcoding_draft_busy\b/.test(result.error.message ?? '')) return 'busy';
   if (!isRpcMissing(result.error)) return null;
   const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: taskId, p_code: code }));
   if (saved.error) return isRpcMissing(saved.error) ? 'missing' : null;
@@ -1015,6 +1026,7 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     if (base === undefined) return jsonError(res, 400, 'bad_request', 'base must be a draft time or null');
     const saved = await storeDraft(supabase, userId, id, code, base);
     if (!saved) return jsonError(res, 500, 'db_error', 'Could not save the draft');
+    if (saved === 'busy') return draftBusy(res);
     if (saved === 'missing') return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
     // Saved from another device or tab since: nothing was written, and the
     // browser asks the learner which code to keep. The other code stays on

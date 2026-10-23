@@ -233,6 +233,14 @@ async function main() {
     const bad = await post({ code: '// x', base });
     assert.deepEqual([bad.status, bad.body.error?.code, bad.args], [400, 'bad_request', undefined], `base ${JSON.stringify(base)} is refused before the database`);
   }
+  // save_coding_draft_v2 gives up after three concurrent first saves with
+  // coding_draft_busy. That is a retry, not a 500.
+  {
+    const busy = { from: database.from, rpc: async () => ({ data: null, error: { code: 'P0001', message: 'coding_draft_busy' } }) };
+    const out = response();
+    await handleCodingDraft({ method: 'POST', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-c' }, body: { id: 'js-double-numbers', user_id: 'account-c', code: '// x', base: null } } as never, out as never, busy as never);
+    assert.deepEqual([out.statusCode, errorCode(out.body)], [503, 'draft_busy'], `a busy draft save asks for a retry (${JSON.stringify(out.body)})`);
+  }
   console.log('Coding draft conflict passed: a save built on an older draft time is refused with 409 and the stored time, never its code; no base writes as before.');
 
   // An evolving stage's Submit stores the submitted code as the stage draft,
