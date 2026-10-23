@@ -9,7 +9,7 @@ import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
-import { Kicker, SwimCta } from '../landing/LandingKit';
+import { SwimCta } from '../landing/LandingKit';
 import { useAdvanceSession, usePracticeSession, useStartSession } from '../../coding/practice';
 import { ApiError } from '../../lib/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
@@ -125,8 +125,10 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
 }
 
 /** `collapsible` renders the planner as one row that opens on click (design
- * audit P1.6). A run already open or scheduled keeps the planner open, so its
- * card is never hidden behind the toggle. */
+ * audit P1.6): a hairline disclosure, not a card (UX audit coding-08), with
+ * the title, one line on what a run is, and "Plan a run" at its end. A run
+ * already open or scheduled keeps the planner open, so its card is never
+ * hidden behind the toggle. */
 export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedIn: boolean; collapsible?: boolean }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(!collapsible);
@@ -170,25 +172,21 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
 
   const showBody = expanded || !!open;
   return (
-    <section className={`cd-run cd-pane${showBody ? '' : ' cd-run--collapsed'}`} aria-labelledby="cd-run-title">
+    <section className={`cd-run${showBody ? '' : ' cd-run--collapsed'}`} aria-labelledby="cd-run-title">
       <div className="cd-run__head">
-        {collapsible && !open ? (
-          <h2 id="cd-run-title" className="cd-run__toggle-heading">
-            <button
-              type="button"
-              className="cd-run__toggle"
-              aria-expanded={showBody}
-              aria-controls={bodyId}
-              onClick={() => setExpanded((value) => !value)}
-            >
-              <span>{t('coding.run.title')}</span>
-              <span className="cd-run__chevron" aria-hidden>{showBody ? '−' : '+'}</span>
-            </button>
-          </h2>
-        ) : (
-          <>
-            <Kicker as="h2" id="cd-run-title">{t('coding.run.title')}</Kicker>
-          </>
+        <div className="cd-run__intro">
+          <h2 id="cd-run-title" className="cd-run__title">{t('coding.run.title')}</h2>
+          {!open && <p className="cd-run__lead">{t('coding.run.lead')}</p>}
+        </div>
+        {collapsible && !open && (
+          <Button
+            variant="secondary"
+            className="cd-run__toggle"
+            aria-expanded={showBody}
+            aria-controls={bodyId}
+            onClick={() => setExpanded((value) => !value)}
+            label={t(showBody ? 'coding.run.hide' : 'coding.run.open')}
+          />
         )}
       </div>
       {showBody && (<div id={bodyId} className="cd-run__body">

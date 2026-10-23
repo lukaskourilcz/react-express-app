@@ -675,16 +675,21 @@
 
 /* The challenge-run planner on the Coding home: a form the learner shapes a
    run with, or the one open run and its actions. Same paper as the panes. */
-.cd-run { gap: 16px; }
-.cd-run__body { display: contents; }
+/* A hairline disclosure, not a card (UX audit coding-08): one 64px row with
+   the title and what a run is on the left and "Plan a run" on the right; the
+   form opens under it, between the same two lines. */
+.cd-run { display: flex; flex-direction: column; gap: 16px; padding-block: 10px; border-block: 1px solid var(--ss-card-line); }
 .cd-run--collapsed { gap: 0; }
-.cd-run__toggle-heading { margin: 0; font: inherit; }
-.cd-run__toggle { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; width: 100%; min-height: 44px; padding: 8px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.cd-run__toggle > span:first-child { font-family: var(--font-family-heading); font-weight: 700; font-size: 1.05rem; color: var(--color-text-primary); }
-.cd-run__chevron { display: grid; place-items: center; width: 44px; height: 44px; font-size: 1.75rem; line-height: 1; font-weight: 600; color: var(--color-text-accent); }
-.cd-run__toggle:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
-.cd-run__head { display: grid; gap: 4px; text-align: center; }
-.cd-run__head .cd-lead { margin-top: 0; }
+.cd-run:not(.cd-run--collapsed) { padding-bottom: 20px; }
+.cd-run__body { display: contents; }
+.cd-run__head { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 44px; }
+.cd-run__intro { display: grid; gap: 2px; min-width: 0; }
+.cd-page .cd-run__title { margin: 0; font-family: var(--font-family-heading); font-size: 1.05rem; font-weight: 700; }
+.cd-run__lead { margin: 0; font-size: 0.9rem; color: var(--color-text-secondary); }
+.cd-run__toggle { flex: none; }
+@media (max-width: 560px) {
+  .cd-run__head { flex-wrap: wrap; }
+}
 .cd-run__form { display: grid; gap: 16px; }
 .cd-run__field { display: grid; gap: 8px; }
 .cd-run__label { font-size: 0.88rem; font-weight: 650; color: var(--color-text-secondary); }
