@@ -67,6 +67,36 @@ export function authUndecided(error: { name?: string; status?: number }): boolea
   return typeof status === 'number' && (status === 0 || status === 429 || status >= 500);
 }
 
+/** Token checks already asked for one request, by token. A route whose rate
+ * limit keys by account verifies the caller before its handler does, and a
+ * handler that reads `tryAuth` directly (not lib/http's `tryAuthOnce`) would
+ * otherwise ask Supabase Auth a second time for the same token. Keyed by the
+ * request object, so nothing outlives the request. A decided answer (the
+ * account, or a refusal) is kept; anything else is asked again. */
+const tokenChecks = new WeakMap<VercelRequest, Map<string, Promise<AuthResult>>>();
+
+function verifyTokenOnce(client: SupabaseClient, req: VercelRequest, token: string): Promise<AuthResult> {
+  let checks = tokenChecks.get(req);
+  if (!checks) tokenChecks.set(req, (checks = new Map()));
+  const existing = checks.get(token);
+  if (existing) return existing;
+  const pending = (async () => {
+    const { data, error } = await withAuthDeadline(client.auth.getUser(token));
+    if (error || !data?.user?.id) {
+      if (error && authUndecided(error)) {
+        throw new AuthError(503, 'auth_unavailable', 'Authentication service is unavailable');
+      }
+      throw new AuthError(401, 'invalid_token', 'Token verification failed');
+    }
+    return { sub: data.user.id, payload: data.user as unknown as Record<string, unknown> };
+  })();
+  checks.set(token, pending);
+  pending.catch((error: unknown) => {
+    if (!(error instanceof AuthError && error.status === 401)) checks.delete(token);
+  });
+  return pending;
+}
+
 /**
  * Verify the caller's Supabase access token and return the verified subject
  * (the Supabase user id / UUID).
@@ -81,14 +111,7 @@ export async function requireAuth(req: VercelRequest): Promise<AuthResult> {
 
   if (authClient) {
     if (!token) throw new AuthError(401, 'missing_token', 'Missing Bearer token');
-    const { data, error } = await withAuthDeadline(authClient.auth.getUser(token));
-    if (error || !data?.user?.id) {
-      if (error && authUndecided(error)) {
-        throw new AuthError(503, 'auth_unavailable', 'Authentication service is unavailable');
-      }
-      throw new AuthError(401, 'invalid_token', 'Token verification failed');
-    }
-    return { sub: data.user.id, payload: data.user as unknown as Record<string, unknown> };
+    return verifyTokenOnce(authClient, req, token);
   }
 
   if (IS_PROD) {

@@ -522,6 +522,17 @@ async function main() {
     assert.equal(leapDay.statusCode, 200, `a leap day is a day (${JSON.stringify(leapDay.body)})`);
     console.log('PASS verified caller: a daily board refuses a date that is no calendar day');
 
+    // A learning-preference write verifies its token for the per-account
+    // limit, and the op reads the caller through lib/auth.ts's tryAuth:
+    // Supabase Auth is asked once for both.
+    authChecks = 0;
+    const preferenceSave = await user('learning-preference', { method: 'PUT', account: A, body: { schemaVersion: 1, baseTrack: 'frontend', specialization: null } });
+    // The stand-in stores nothing, so the op stops after its first read; the
+    // caller was verified by then.
+    assert.notEqual(preferenceSave.statusCode, 401, JSON.stringify(preferenceSave.body));
+    assert.equal(authChecks, 1, 'a learning-preference write asks Supabase Auth once, for the rate limit and the op alike');
+    console.log('PASS verified caller: a learning-preference write verifies its token once');
+
     // A board routine that does not answer in time is the database busy, not
     // a fault: 503, which the client may retry, rather than 500.
     const slowBoard = await call(leaderboard as Handler, { query: { period: 'category', category: 'javascript', min_attempts: String(SLOW_BOARD_MIN_ATTEMPTS) } });
