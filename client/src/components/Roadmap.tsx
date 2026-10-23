@@ -945,11 +945,11 @@ function Roadmap() {
         />
 
         {LEARN_SECTIONS.find((one) => one.id === section)!.paths.length > 0 && (
-          <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.error.catalog')} onRetry={retry} busy={busy} />}>
-            <Suspense fallback={<Skeleton width="100%" height={180} radius="rounded" />}>
+          <Suspense fallback={<Skeleton width="100%" height={180} radius="rounded" />}>
+            <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.error.catalog')} onRetry={retry} busy={busy} />}>
               <PathShelf pathIds={LEARN_SECTIONS.find((one) => one.id === section)!.paths} />
-            </Suspense>
-          </ShellPartBoundary>
+            </ShellPartBoundary>
+          </Suspense>
         )}
 
         <SectionRail
