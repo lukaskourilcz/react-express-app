@@ -596,18 +596,27 @@ const neutral = (id: string, value: string): string[] =>
     ? [`${id} has prose in a value "${value}"; use a note instead`]
     : [];
 
-/** Structural problems an authoring mistake would introduce. Empty is correct. */
+/** A position or level is a whole number in range. `NaN` fails no comparison
+ * and 1.5 passes both, and either one matches nothing, so the figure or its
+ * mark would quietly never show. */
+const isIndex = (value: number, min: number, max: number): boolean =>
+  Number.isInteger(value) && value >= min && value <= max;
 
-export function validateFigures(levelCount: (topic: string) => number): string[] {
+/** Structural problems an authoring mistake would introduce. Empty is correct.
+ * `figures` defaults to the authored set; the contract also passes broken ones. */
+export function validateFigures(
+  levelCount: (topic: string) => number,
+  figures: readonly LessonFigure[] = LESSON_FIGURES,
+): string[] {
   const problems: string[] = [];
   const seen = new Set<string>();
-  for (const figure of LESSON_FIGURES) {
+  for (const figure of figures) {
     if (seen.has(figure.id)) problems.push(`duplicate figure ${figure.id}`);
     seen.add(figure.id);
 
     const levels = levelCount(figure.topic);
     if (levels === 0) problems.push(`${figure.id} names an unknown topic ${figure.topic}`);
-    else if (figure.level < 1 || figure.level > levels) {
+    else if (!isIndex(figure.level, 1, levels)) {
       problems.push(`${figure.id} names level ${figure.level}, outside ${figure.topic}'s 1-${levels}`);
     }
 
@@ -647,7 +656,7 @@ export function validateFigures(levelCount: (topic: string) => number): string[]
         if (row.length !== body.columns.length) problems.push(`${figure.id} has a row of the wrong width`);
       }
       for (const mark of body.marks ?? []) {
-        if (mark.row < 0 || mark.row >= body.rows.length) problems.push(`${figure.id} marks a row that is not there`);
+        if (!isIndex(mark.row, 0, body.rows.length - 1)) problems.push(`${figure.id} marks a row that is not there`);
         // A mark carries a word, so it is never colour alone.
         if (!mark.role.trim()) problems.push(`${figure.id} has a wordless mark`);
       }
@@ -657,7 +666,7 @@ export function validateFigures(levelCount: (topic: string) => number): string[]
         if (!frame.note.trim()) problems.push(`${figure.id} has a frame with no description`);
         if (frame.counter) problems.push(...neutral(figure.id, frame.counter.value));
         for (const mark of frame.marks ?? []) {
-          if (mark.index < 0 || mark.index >= frame.cells.length) {
+          if (!isIndex(mark.index, 0, frame.cells.length - 1)) {
             problems.push(`${figure.id} marks a cell that is not in the frame`);
           }
           if (!mark.role.trim()) problems.push(`${figure.id} has a wordless mark`);

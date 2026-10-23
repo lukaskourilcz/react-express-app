@@ -5887,6 +5887,28 @@ async function main() {
       'every figure must name a real level and carry its content in words',
     );
     assert.ok(LESSON_FIGURES.length >= 15, 'the authored coverage should not silently shrink');
+    // NaN fails no comparison and 1.5 passes both, so a level or a mark like
+    // that matched nothing and the figure or its mark never showed, unreported.
+    {
+      const levelCount = (topic: string) => (isRoadmapTopic(topic) ? topicLevelCount(topic) : 0);
+      const base = LESSON_FIGURES[0];
+      const trace = (index: number): typeof base => ({
+        ...base, id: `synthetic-trace-${index}`,
+        body: { kind: 'steps', frames: [{ cells: ['1', '2'], marks: [{ index, role: 'here' }], note: 'One.' }, { cells: ['1', '2'], note: 'Two.' }] },
+      });
+      const table = (row: number): typeof base => ({
+        ...base, id: `synthetic-table-${row}`,
+        body: { kind: 'table', columns: ['a'], rows: [['1'], ['2']], marks: [{ row, role: 'here' }] },
+      });
+      for (const level of [Number.NaN, 1.5]) {
+        assert.equal(validateFigures(levelCount, [{ ...base, level }]).length, 1, `level ${level} is refused`);
+      }
+      for (const index of [Number.NaN, 0.5]) {
+        assert.equal(validateFigures(levelCount, [trace(index)]).length, 1, `trace mark ${index} is refused`);
+        assert.equal(validateFigures(levelCount, [table(index)]).length, 1, `table mark ${index} is refused`);
+      }
+      assert.deepEqual(validateFigures(levelCount, [trace(1), table(1)]), [], 'whole positions in range pass');
+    }
 
     // A figure only reaches a level it was authored for.
     for (const figure of LESSON_FIGURES) {
