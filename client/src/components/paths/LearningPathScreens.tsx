@@ -37,6 +37,7 @@ import {
   CriteriaList,
   Feedback,
   LessonActivity,
+  STATE_GLYPH,
   StateBadge,
   type DraftStatus,
 } from './ActivityViews';
@@ -122,15 +123,6 @@ function titleWithoutKind(title: string, kindLabel: string): string {
   return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : title;
 }
 
-// The same glyphs as StateBadge (ActivityViews.tsx), for a row that shows a
-// state as one glyph beside its minutes with the words for a screen reader.
-const ROW_STATE_GLYPH: Record<Exclude<EvidenceState, 'not_started'>, string> = {
-  in_progress: '◐',
-  verified_pass: '✓',
-  self_reviewed: '✎',
-  needs_revision: '↻',
-};
-
 // The module page's next row title, which describes a primary whose label cut
 // the title short (UX audit learn-13). One module page shows at a time.
 const NEXT_TITLE_ID = 'lp-module-next-title';
@@ -168,7 +160,7 @@ function ActivityRow({
           state is a glyph beside the minutes, its words read aloud. */}
       {state !== 'not_started' && (
         <span className={`lp-activity__state lp-activity__state--${state}`}>
-          <span aria-hidden="true">{ROW_STATE_GLYPH[state]}</span>
+          <span aria-hidden="true">{STATE_GLYPH[state]}</span>
           <span className="ss-sr-only">{t(`paths.state.${state}` as never)}</span>
         </span>
       )}
