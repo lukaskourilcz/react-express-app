@@ -218,7 +218,15 @@ export async function cancelForDeletedAccount(
   let ended = 0;
   for (const sub of subs.data) {
     if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status) || !isOurs(sub, config)) continue;
-    await deps.stripe.subscriptions.cancel(sub.id, { invoice_now: false, prorate: false });
+    try {
+      await deps.stripe.subscriptions.cancel(sub.id, { invoice_now: false, prorate: false });
+    } catch (error) {
+      // Ended between the list and the cancel: nothing left to stop. Thrown on,
+      // it would read as "no customer" and leave the rest of the list charging
+      // an account that is about to be deleted.
+      if (stripeErrorCode(error).code !== 'resource_missing') throw error;
+      continue;
+    }
     ended += 1;
   }
   return { ended, expired };

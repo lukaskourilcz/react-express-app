@@ -1603,6 +1603,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     await deliver(eventText('checkout.session.completed', e.ids, 'delete2'));
     stripe.failNext.set('subscriptions.list', stripeError(500, 'api_error'));
     assert.equal(await lib.endBillingForDeletedAccount(supabase, e.userId), false, 'an outage stops the deletion');
+    // One subscription gone at Stripe between the list and its cancel does
+    // not leave the next one charging the deleted account.
+    const f = await account('Delete5');
+    await deliver(eventText('checkout.session.completed', f.ids, 'delete5'));
+    const second = { ...f.ids, sub: `${f.ids.sub}b` };
+    stripe.setSub(second);
+    stripe.failNext.set('subscriptions.cancel', stripeError(404, 'resource_missing'));
+    assert.equal(await lib.endBillingForDeletedAccount(supabase, f.userId), true);
+    assert.equal(stripe.subs.get(second.sub).status, 'canceled', 'the other subscription is ended too');
   });
 
   await check('deleting an account expires its open Checkout, so nothing can be paid for it later', async () => {
