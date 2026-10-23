@@ -51,9 +51,13 @@
    it only taught JavaScript. A wrapping grid shows the real breadth instead. */
 .rm-topic-rail {
   display: grid;
-  /* Five tiles a row in the 800px column, so ten tiles fill two full rows,
-     and two a row on a phone (UX audit learn-07). */
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  /* At most five tiles a row in the 800px column, and as many rows as five a
+     row needs, shared evenly (UX audit learn-07): SectionRail sets
+     --rm-rail-cols, so ten tiles are two rows of five, eight two of four and
+     six two of three, with no half-empty last row. A tile is never narrower
+     than 148px, so a phone shows two a row. The 1px keeps rounding from
+     dropping a column. */
+  grid-template-columns: repeat(auto-fill, minmax(max(148px, calc((100% - (var(--rm-rail-cols, 5) - 1) * 10px) / var(--rm-rail-cols, 5) - 1px)), 1fr));
   gap: 10px;
   margin: 0 -4px 12px;
   padding: 4px;

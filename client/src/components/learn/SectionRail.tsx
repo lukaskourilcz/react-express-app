@@ -39,6 +39,16 @@ export const CheckIcon = ({ size = 22 }: { size?: number }) => (
   </svg>
 );
 
+/** Columns for `count` tiles: as many rows as five a row needs, with the
+ * tiles shared evenly across them (ten: 5 + 5, eight: 4 + 4, six: 3 + 3). */
+export function railColumns(count: number): number {
+  if (count <= 0) return 5;
+  const rows = Math.ceil(count / 5);
+  return Math.ceil(count / rows);
+}
+
+const railStyle = (count: number) => ({ ['--rm-rail-cols']: railColumns(count) } as CSSProperties);
+
 export function SectionRail({
   sectionName,
   entries,
@@ -62,7 +72,7 @@ export function SectionRail({
 }) {
   if (loading) {
     return (
-      <div className="rm-topic-rail" aria-busy="true">
+      <div className="rm-topic-rail" aria-busy="true" style={railStyle(loadingCount)}>
         {Array.from({ length: loadingCount }).map((_, i) => (
           <Skeleton key={i} width="100%" height={56} radius="rounded" index={i} />
         ))}
@@ -76,7 +86,7 @@ export function SectionRail({
           assistive technology announces "N of M selected". */}
       {/* Only an open topic reads as chosen: with nothing open in the
           section, no card is checked. */}
-      <RadioCardGroup value={entries.some((entry) => entry.topic === value && entry.state === 'open') ? value : ''} onChange={(next) => onSelect(String(next))} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
+      <RadioCardGroup value={entries.some((entry) => entry.topic === value && entry.state === 'open') ? value : ''} onChange={(next) => onSelect(String(next))} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail" style={railStyle(entries.length)}>
         {entries.map((entry, index) => {
           const { topic, state, premium } = entry;
           const color = getCategoryHexColor(topic);

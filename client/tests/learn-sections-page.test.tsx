@@ -345,6 +345,9 @@ describe('the topic rail (UX audit learn-07)', () => {
       const premium = /, Premium$/.test(tile.getAttribute('aria-label') ?? '');
       expect(within(tile).queryAllByText('Premium')).toHaveLength(premium ? 1 : 0);
     }
+    // The rail shares its tiles evenly across its rows: ten are two of five.
+    const rail = document.querySelector<HTMLElement>('.rm-topic-rail')!;
+    expect(rail.style.getPropertyValue('--rm-rail-cols')).toBe(String(Math.ceil(tiles.length / Math.ceil(tiles.length / 5))));
     const note = screen.getByText(/paths still locked\./);
     expect(note.closest('.rm-skillcheck-row')).not.toBeNull();
     expect(note.closest('.rm-skillcheck-row')!.querySelector('.rm-skillcheck-cta')).not.toBeNull();

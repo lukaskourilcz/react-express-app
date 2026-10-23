@@ -3,6 +3,7 @@
 // read from the sheet (tests/css.ts).
 import { describe, expect, it } from 'vitest';
 import { addSheet, declared, mediaRules } from './css';
+import { railColumns } from '../src/components/learn/SectionRail';
 
 const topRules = (sheet: CSSStyleSheet) =>
   [...sheet.cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
@@ -41,11 +42,20 @@ describe('the section switcher on a phone (learn-20)', () => {
 });
 
 describe('the topic rail (learn-07)', () => {
-  it('fits five tiles a row in the 800px column and two on a phone', () => {
+  it('fits at most five tiles a row in the 800px column, in even rows, and two on a phone', () => {
     const sheet = addSheet('roadmap');
-    expect(declared(topRules(sheet), '.rm-topic-rail', 'grid-template-columns')).toBe('repeat(auto-fill, minmax(148px, 1fr))');
+    // The column count comes from SectionRail (--rm-rail-cols, railColumns);
+    // a tile is never narrower than 148px.
+    expect(declared(topRules(sheet), '.rm-topic-rail', 'grid-template-columns')).toBe(
+      'repeat(auto-fill, minmax(max(148px, calc((100% - (var(--rm-rail-cols, 5) - 1) * 10px) / var(--rm-rail-cols, 5) - 1px)), 1fr))',
+    );
     // No narrower override: 148px tiles give two columns at 360px and 390px.
     expect(declared(mediaRules(sheet, 'max-width'), '.rm-topic-rail', 'grid-template-columns')).toBe('');
+  });
+
+  it('shares the tiles evenly across the rows five a row needs', () => {
+    expect([10, 9, 8, 7, 6, 5, 4, 3, 11].map(railColumns)).toEqual([5, 5, 4, 4, 3, 5, 4, 3, 4]);
+    expect(railColumns(0)).toBe(5);
   });
 
   it('marks a locked tile with its lock glyph only, not a dashed edge or a fade', () => {
