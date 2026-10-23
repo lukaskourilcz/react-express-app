@@ -167,3 +167,24 @@ it.each([
     motion.reduce = false;
   }
 });
+
+// "Choose a topic" scrolls to the picker and takes keyboard focus with it, so
+// the next Tab reaches the topic cards rather than the hero links.
+it('moves focus to the topic picker from the hero call to action', () => {
+  server.use(settingsHandler, freeEntitlementHandler);
+  const original = Element.prototype.scrollIntoView;
+  const scrolled: Element[] = [];
+  Element.prototype.scrollIntoView = function (this: Element) { scrolled.push(this); };
+  try {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+    const cta = screen.getByRole('button', { name: 'Choose a topic' });
+    cta.focus();
+    fireEvent.click(cta);
+    const picker = screen.getByRole('region', { name: 'Pick a topic.' });
+    expect(scrolled).toEqual([picker]);
+    expect(within(picker).getByRole('heading', { level: 2 })).toHaveFocus();
+  } finally {
+    Element.prototype.scrollIntoView = original;
+  }
+});

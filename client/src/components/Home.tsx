@@ -172,6 +172,7 @@ export default function Home() {
   const subject = useActiveSubject();
   const { isAuthenticated } = useAuth();
   const topicsRef = useRef<HTMLElement>(null);
+  const topicsHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const featured = LANDING_TOPICS[subject.id] ?? [];
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
@@ -192,7 +193,12 @@ export default function Home() {
   ];
 
 
-  const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+  // Scrolling alone left keyboard focus on the hero button, so the next Tab
+  // went back to the hero links instead of the topics. Focus follows.
+  const scrollToTopics = () => {
+    topicsRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+    topicsHeadingRef.current?.focus({ preventScroll: true });
+  };
 
   const strip: StripItem[] = [
     { titleKey: 'today.title', textKey: 'today.subtitle', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
@@ -245,7 +251,7 @@ export default function Home() {
       <section id="topics" ref={topicsRef} aria-label={t('home.topicsTitle')} style={{ display: 'flex', flexDirection: 'column', gap: 20, scrollMarginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Kicker>{t('home.topicsKicker')}</Kicker>
-          <h2 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
+          <h2 ref={topicsHeadingRef} tabIndex={-1} style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
             {t('home.topicsTitle')}
           </h2>
         </div>
