@@ -398,17 +398,23 @@ export default function DevQuestions() {
     const ids = [...selected];
     if (ids.length === 0) return;
     setConfirm({ title: `Delete ${ids.length} selected question${ids.length === 1 ? '' : 's'}?`, description: 'This permanently removes the selected questions and cannot be undone.', actionLabel: 'Delete permanently', onConfirm: async () => {
+    let n = 0;
     try {
-      let n = 0;
       for (const id of ids) {
         await setQuestionDeleted(id, true);
         n += 1;
       }
       setSnack(`Removed ${n} question${n === 1 ? '' : 's'}`);
-      setSelected(new Set());
-      reload();
     } catch (err) {
-      setSnack(friendlyError(err));
+      setSnack(`${friendlyError(err)} (removed ${n} of ${ids.length} before stopping)`);
+    } finally {
+      // Those deleted before a failure are gone too: unselect them and
+      // re-read the bank, or they stayed listed and selected as if kept.
+      if (n > 0) {
+        const gone = new Set(ids.slice(0, n));
+        setSelected((prev) => new Set([...prev].filter((id) => !gone.has(id))));
+        reload();
+      }
     }
     }});
   };

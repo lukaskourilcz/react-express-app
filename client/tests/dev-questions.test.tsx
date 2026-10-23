@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import QuestionEditor from '../src/components/dev/QuestionEditor';
 import DevTriage from '../src/components/dev/DevTriage';
+import DevQuestions from '../src/components/dev/DevQuestions';
 import type { AdminQuestion } from '../src/lib/devApi';
 import { server } from './mocks/server';
 
@@ -72,11 +73,11 @@ const question = (id: string): AdminQuestion => ({
 });
 const verdict = (mean: number) => ({ cat: 'react', diff: 2, rel: 2, disc: 2, fit: 2, clar: 2, mean, gate: false, greasons: [], dup: false, dec: 'cut', reasons: [], note: '' });
 
-function renderTriage() {
+function renderTab(tab: 'triage' | 'questions') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
-      <LanguageProvider><DevTriage /></LanguageProvider>
+      <LanguageProvider>{tab === 'triage' ? <DevTriage /> : <DevQuestions />}</LanguageProvider>
     </QueryClientProvider>,
   );
 }
@@ -97,7 +98,7 @@ describe('/dev → Quality triage', () => {
         return HttpResponse.json({ ok: true });
       }),
     );
-    renderTriage();
+    renderTab('triage');
     fireEvent.click(await screen.findByRole('button', { name: 'Delete all 3 shown' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Delete permanently' }));
     expect(await screen.findByText(/deleted 1 before stopping/)).toBeInTheDocument();
@@ -106,5 +107,34 @@ describe('/dev → Quality triage', () => {
     expect(screen.queryByText('Question t1?')).toBeNull();
     expect(screen.getByText('Question t2?')).toBeInTheDocument();
     expect(screen.getByText('Question t3?')).toBeInTheDocument();
+  });
+});
+
+describe('/dev → Question bank', () => {
+  it('unselects and re-reads the questions a bulk delete removed before it stopped on an error', async () => {
+    let bank = ['b1', 'b2', 'b3'];
+    let reads = 0;
+    server.use(
+      http.get('*/api/admin/questions', () => {
+        reads += 1;
+        return HttpResponse.json({ questions: bank.map(question), categories: ['react'], reportCounts: {} });
+      }),
+      http.post('*/api/admin/delete', async ({ request }) => {
+        const { id } = (await request.json()) as { id: string };
+        if (id !== 'b1') return HttpResponse.json({ error: { code: 'internal_error', message: 'Internal error' } }, { status: 500 });
+        bank = bank.filter((one) => one !== id);
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    renderTab('questions');
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select question b1' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select question b2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected (2)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete permanently' }));
+    expect(await screen.findByText(/removed 1 of 2 before stopping/)).toBeInTheDocument();
+    // b1 went: the bank is read again and it leaves the list and the selection.
+    await waitFor(() => expect(screen.queryByText('Question b1?')).toBeNull());
+    expect(reads).toBe(2);
+    expect(screen.getByRole('button', { name: 'Delete selected (1)' })).toBeInTheDocument();
   });
 });
