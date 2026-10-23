@@ -115,7 +115,11 @@ it('keeps the brief, the editor and the actions in one pane, with revealed hints
   const pane = bar.closest('.cd-pane--editor')!;
   const title = screen.getByRole('heading',{level:1,name:'Test task'});
   expect(title.closest('.cd-pane--editor')).toBe(pane);
-  expect(title.closest('.cd-brief__line')?.querySelector('.cd-brief__meta')).toHaveTextContent('JavaScript · Foundations · Level 1');
+  // Two lines (coding-11): the eyebrow says where the task sits, the heading under it names it.
+  const head = title.closest('.cd-brief__head')!;
+  expect(head.firstElementChild).toHaveClass('cd-brief__meta');
+  expect(head.firstElementChild).toHaveTextContent('JavaScript · Foundations · Level 1');
+  expect(title.closest('.cd-brief__line')?.querySelector('.cd-brief__meta')).toBeNull();
   expect(within(pane as HTMLElement).getByText('Return one.')).toBeInTheDocument();
   expect(pane.firstElementChild).toHaveClass('cd-brief');
   expect(pane.lastElementChild).toBe(bar);

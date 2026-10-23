@@ -1059,15 +1059,18 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     ? t(evolution.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length })
     : `${trackLabel} · ${tierLabel}${task.topic === 'dsa' ? ` · ${t('category.dsa')}` : ''}${hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}`;
 
-  // The brief opens the pane the learner works in, whichever pane that is: one
-  // green line with where the task sits and what it is called, then what it asks.
+  // The brief opens the pane the learner works in, whichever pane that is: a
+  // quiet eyebrow saying where the task sits, then its name as the heading
+  // with the difficulty beside it (UX audit coding-11), then what it asks.
   const brief = (
     <div className="cd-brief">
-      <div className="cd-brief__line">
-        <span className="cd-brief__meta">{briefMeta}</span>
-        <Title id={titleId} className="cd-brief__title">{task.title}</Title>
-        <DifficultyBadge difficulty={difficultyOf(task)} />
-        {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+      <div className="cd-brief__head">
+        <p className="cd-brief__meta">{briefMeta}</p>
+        <div className="cd-brief__line">
+          <Title id={titleId} className="cd-brief__title">{task.title}</Title>
+          <DifficultyBadge difficulty={difficultyOf(task)} />
+          {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+        </div>
       </div>
       <Prompt className="cd-prompt" text={task.prompt} />
       {complexity.targetTime && <div className="cd-complexity">

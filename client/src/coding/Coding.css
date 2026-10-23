@@ -295,12 +295,13 @@
 /* The code pane holds the whole task: the brief on top, the editor growing in
    the middle, and the actions at its foot. */
 .cd-brief { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
-.cd-brief__line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 9px; color: var(--color-text-accent); font-family: var(--font-family-heading); font-size: 1.05rem; font-weight: 650; line-height: 1.35; }
-/* The rule before the name is the separator: it wraps with the name, so a
-   narrow screen never leaves a stray bar at the end of the line above. */
-.cd-page .cd-brief__title { margin: 0; padding-left: 9px; border-left: 2px solid color-mix(in srgb, currentColor 50%, transparent); font: inherit; font-weight: 800; color: inherit; overflow-wrap: anywhere; }
-.cd-brief__line .cd-tag,
-.cd-brief__line .cd-difficulty { align-self: center; }
+/* Two fixed lines (UX audit coding-11): where the task sits as a quiet
+   eyebrow, then the task's name as the page heading with its difficulty
+   beside it. The name is no longer the size and green of its breadcrumb. */
+.cd-brief__head { display: grid; gap: 2px; }
+.cd-page .cd-brief__meta { margin: 0; font-family: var(--font-family-body); font-size: 0.8rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.cd-brief__line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.cd-page .cd-brief__title { margin: 0; font-family: var(--font-family-heading); font-size: 1.35rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; color: var(--color-text-primary); overflow-wrap: anywhere; }
 .cd-editor-slot { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
 .cd-pane--editor .cd-editor { flex: 1; background: var(--cd-editor-bg); }
 .cd-workbench .cd-panel pre, .cd-workbench .cd-console { max-height: none; }
