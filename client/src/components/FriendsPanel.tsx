@@ -269,7 +269,8 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
     abort.current = controller;
     setBusy(true); setError(null);
     try {
-      setResult(await lookupFriend(handle, controller.signal));
+      const found = await lookupFriend(handle, controller.signal);
+      if (!controller.signal.aborted) setResult(found);
     } catch (err) {
       if (!controller.signal.aborted) setError(friendlyError(err));
     } finally {
@@ -304,7 +305,15 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
           autoCapitalize="none"
           spellCheck={false}
           placeholder={t('friends.findPlaceholder')}
-          onChange={(event) => { setQuery(event.target.value); setResult(null); }}
+          onChange={(event) => {
+            // A lookup still on its way answers a handle the box no longer
+            // holds: drop it, or it would offer Add under the edited text.
+            abort.current?.abort();
+            abort.current = null;
+            setBusy(false);
+            setQuery(event.target.value);
+            setResult(null);
+          }}
           onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void look(); } }}
         />
         <Button variant="secondary" isDisabled={busy} onClick={() => void look()} label={busy ? t('friends.searching') : t('friends.find')} />

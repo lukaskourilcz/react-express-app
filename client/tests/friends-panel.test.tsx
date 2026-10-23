@@ -93,6 +93,27 @@ describe('the friends list', () => {
     const result = await screen.findByText('Already friends.');
     expect(result.closest('.fr-result')).toHaveTextContent('Ada Lovelaceel-tiburon-loco');
   });
+
+  it('drops a lookup that answers after the box was edited', async () => {
+    serve();
+    let release!: () => void;
+    const gate = new Promise<void>((done) => { release = done; });
+    server.use(http.get('*/api/user/friends-lookup', async () => {
+      await gate;
+      return HttpResponse.json({ found: true, handle: 'el-tiburon-loco', state: 'none' });
+    }));
+    renderPanel();
+    const input = await screen.findByRole('textbox', { name: 'Add a friend' });
+    fireEvent.change(input, { target: { value: 'el-tiburon-loco' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Look up' }));
+    // The learner types on before the answer comes back: it no longer
+    // answers what the box says, and must not offer an Add for it.
+    fireEvent.change(input, { target: { value: 'el-tiburon-lo' } });
+    expect(screen.getByRole('button', { name: 'Look up' })).toBeEnabled();
+    release();
+    await new Promise((done) => setTimeout(done, 50));
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
+  });
 });
 
 describe('a friends read that fails', () => {
