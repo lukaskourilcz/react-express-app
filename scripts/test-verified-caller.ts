@@ -462,6 +462,17 @@ async function main() {
     assert.equal(spelled.statusCode, 200, `a question that spells the escape out saves (${JSON.stringify(spelled.body)})`);
     console.log('PASS verified caller: an admin write holding U+0000 is refused with 400');
 
+    // A report id is a UUID column: one that is not is refused before the
+    // cast fails in Postgres, and a real one is dismissed.
+    seen.length = 0;
+    const notReport = await admin('reports', { method: 'POST', body: { id: 'report-1' } });
+    assert.equal(notReport.statusCode, 400, `dismissing a report by a non-UUID id is refused (${JSON.stringify(notReport.body)})`);
+    assert.deepEqual(reads('/rest/v1/question_reports'), [], 'before the database is asked');
+    const dismissed = await admin('reports', { method: 'POST', body: { id: '5d6a8a4e-1f59-4d6a-9f56-0f7b6c1e2a3b' } });
+    assert.equal(dismissed.statusCode, 200, JSON.stringify(dismissed.body));
+    assert.equal(reads('/rest/v1/question_reports').filter((one) => one.method === 'DELETE').length, 1, 'a report id is dismissed');
+    console.log('PASS verified caller: dismissing a report refuses an id that is not a UUID');
+
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
       ['stats', await user('stats', { account: A })],

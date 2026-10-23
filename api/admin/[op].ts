@@ -29,6 +29,8 @@ const MAX_TAGS = 20;
 const MAX_OPTIONS = 8;
 const MIN_OPTIONS = 2;
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const boundedString = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
 
@@ -311,8 +313,10 @@ async function reportsOp(req: VercelRequest, res: VercelResponse) {
   }
   if (req.method === 'POST') {
     const b = (req.body || {}) as { id?: unknown };
-    const id = boundedString(b.id, 64);
-    if (!id) return jsonError(res, 400, 'bad_request', 'id is required');
+    // A report's id is a UUID column: anything else failed the cast (22P02)
+    // and answered 500.
+    const id = typeof b.id === 'string' && UUID.test(b.id) ? b.id : null;
+    if (!id) return jsonError(res, 400, 'bad_request', 'id must be a report id');
     await dismissReport(id);
     log({ op: 'reports', status: 200, dismissed: id });
     return res.json({ ok: true });
