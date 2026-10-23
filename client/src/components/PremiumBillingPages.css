@@ -24,6 +24,9 @@
 .ss-checkout-card { max-width: 960px; }
 .ss-checkout-price { margin: 0; font-size: 1.35rem; }
 .ss-checkout-form[data-ready="true"] { min-height: 320px; }
+/* Focus lands on the form's box when it opens, so Tab goes on into Stripe's
+   fields; the box itself needs no ring. */
+.ss-checkout-form:focus { outline: none; }
 .ss-billing-form .ss-info-actions,
 .ss-billing-card .ss-info-actions { margin-top: 0.25rem; }
 .ss-billing-confirm { display: flex; flex-direction: column; gap: 0.75rem; }

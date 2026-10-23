@@ -112,6 +112,8 @@ describe('the embedded checkout', () => {
     expect(document.body.textContent).not.toContain(secret);
     expect(screen.getByTestId('location')).not.toHaveTextContent(secret);
     expect(checkbox).toBeDisabled();
+    // The button that opened the form left the page: focus waits on the form.
+    expect(document.getElementById('checkout-form')).toHaveFocus();
     view.unmount(); expect(ui.destroy).toHaveBeenCalledOnce();
   });
 
@@ -136,6 +138,8 @@ describe('the embedded checkout', () => {
     expect(ui.destroy).toHaveBeenCalledOnce();
     expect(screen.getByRole('checkbox')).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Continue to secure payment' })).toBeDisabled();
+    // The form and its fields are gone: focus goes back to the consent.
+    await waitFor(() => expect(screen.getByRole('checkbox')).toHaveFocus());
   });
 
   it('shows the server refusal and lets the learner retry', async () => {

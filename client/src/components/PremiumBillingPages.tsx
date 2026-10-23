@@ -76,6 +76,20 @@ export function PremiumCheckoutPage() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const runtime = useRef<CheckoutRuntime | null>(null);
+  const card = useRef<HTMLElement>(null);
+  const formHost = useRef<HTMLDivElement>(null);
+  // Where focus goes once the form opens or closes: the button that opened it
+  // leaves the page, and an expired form takes its fields with it. Each
+  // request is a new object, applied after the render it came with, since a
+  // form can open and expire before either renders.
+  const [focusRequest, moveFocus] = useState<{ to: 'form' | 'consent' } | null>(null);
+  useEffect(() => {
+    if (!focusRequest) return;
+    const target = focusRequest.to === 'form'
+      ? formHost.current
+      : card.current?.querySelector<HTMLElement>('input[type="checkbox"]');
+    target?.focus();
+  }, [focusRequest]);
   const loading = !billing.known || isLoading || (isAuthenticated && entitlement.loading);
   const paying = entitlement.data?.subscriptionLive === true || (entitlement.tier === 'premium' && entitlement.data?.source === 'provider');
 
@@ -132,12 +146,12 @@ export function PremiumCheckoutPage() {
       }
       current.form = form;
       form.mount('#checkout-form');
-      setReady(true); setBusy(false);
+      setReady(true); setBusy(false); moveFocus({ to: 'form' });
       clearTimeout(current.timer);
       current.timer = window.setTimeout(() => {
         if (runtime.current !== current) return;
         current.controller.abort(); form.destroy(); runtime.current = null;
-        setReady(false); setBusy(false); setConsent(false);
+        setReady(false); setBusy(false); setConsent(false); moveFocus({ to: 'consent' });
         setError(t('billing.success.expiredBody'));
       }, Math.max(0, session.expires_at * 1000 - Date.now()));
     } catch (err) {
@@ -149,7 +163,7 @@ export function PremiumCheckoutPage() {
   };
 
   return <Page title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
-    <section className="ss-info-card ss-billing-card ss-checkout-card">
+    <section className="ss-info-card ss-billing-card ss-checkout-card" ref={card}>
       {billing.failed ? <><Banner status="error" title={t('premium.page.unreachable')} /><Button label={t('profile.plan.retry')} onClick={billing.retry} /></>
         : loading ? <p role="status">{t('billing.checkout.loading')}</p> : !validPlan ? <Banner status="error" title={t('billing.checkout.choosePlan')} />
         : !billing.enabled ? <p>{t('billing.checkout.soon')}</p>
@@ -165,7 +179,7 @@ export function PremiumCheckoutPage() {
               {busy && <p role="status">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
             </>}
       {error && <p role="alert">{error}</p>}
-      <div id="checkout-form" className="ss-checkout-form" data-ready={ready} />
+      <div id="checkout-form" className="ss-checkout-form" data-ready={ready} ref={formHost} tabIndex={-1} />
       <div className="ss-info-actions"><Button variant="secondary" label={t('billing.checkout.back')} onClick={() => navigate('/premium')} /></div>
     </section>
   </Page>;
