@@ -217,6 +217,12 @@
 .cd-row__main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
 .cd-row__title { font-weight: 650; overflow-wrap: anywhere; }
 .cd-row__meta { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--color-text-secondary); white-space: nowrap; }
+/* On a phone the meta often wraps under the title, and a second line that
+   opens with the separator reads as a stray mark. There the separator is
+   dropped: the meta's smaller, quieter type sets it apart on either line. */
+@media (max-width: 599px) {
+  .cd-row__meta > [aria-hidden] { display: none; }
+}
 .cd-row__main .cd-tag { align-self: center; }
 .cd-row__status { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
 .cd-status--passed { color: var(--ss-success-strong, var(--ss-success)); }
