@@ -46,6 +46,18 @@ describe('pages fill the route width', () => {
     expect(source('components/Profile.tsx')).not.toMatch(/maxWidth: 1000/);
   });
 
+  it('the FDE pages fill the route box, which the shell widens while a code activity is open (UX closeout)', () => {
+    const lp = rule(source('components/paths/LearningPaths.css'), '.lp-page');
+    expect(lp).toContain('width: 100%');
+    expect(lp).not.toMatch(/max-width/);
+  });
+
+  it('inner columns that cap themselves use the task token, not a pixel width of their own (UX closeout)', () => {
+    expect(rule(source('coding/Coding.css'), '.cd-complete')).toContain('max-width: var(--ss-width-task)');
+    expect(rule(source('components/Roadmap.css'), '.rm-section-error')).toContain('max-width: var(--ss-width-task)');
+    expect(source('components/Roadmap.tsx')).not.toMatch(/maxWidth: (480|620|1060)\b/);
+  });
+
   it('the Learn page takes the route width and keeps its no-levels note on the column edge (learn-09)', () => {
     const learn = source('components/Roadmap.tsx');
     expect(learn).not.toMatch(/maxWidth: 1060\b/);
