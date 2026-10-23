@@ -201,6 +201,22 @@ describe('/collection', () => {
     // The deck inside the page does not repeat the page heading.
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
+
+  it('asks nobody to sign in on the saved challenges while the session is still being restored', async () => {
+    auth.value = { user: null, isAuthenticated: false, isLoading: true };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    await act(async () => {
+      render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={[{ pathname: '/collection', search: '?tab=challenges', key: 'restoring-session' }]}>
+            <LanguageProvider><Collection /></LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    });
+    expect(screen.getByRole('heading', { level: 1, name: 'Saved coding challenges' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Log in' })).toBeNull();
+  });
 });
 
 describe('a wrong Learn answer', () => {

@@ -21,9 +21,12 @@ import '../coding/Coding.css';
 
 function SavedChallenges() {
   const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const query = useBookmarks(isAuthenticated, { held: true });
   const save = useSaveChallenge();
+  // While the session is restored the learner is not known to be signed out:
+  // a sign-in prompt here flashed before the saved list, as the deck's did not.
+  if (authLoading && !isAuthenticated) return <LoadingScreen label={t('common.loading')} />;
   if (!isAuthenticated) return <div className="cd-note"><p>{t('coding.signInHint')}</p><Button variant="secondary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} /></div>;
   if (query.isPending) return <LoadingScreen label={t('common.loading')} />;
   if (query.isError) return <div role="alert"><p>{t('coding.saved.loadFailed')}</p><Button variant="secondary" label={t('coding.retry')} onClick={() => void query.refetch()} /></div>;
