@@ -707,7 +707,9 @@ export default function Challenge() {
 
   const livesIndicator = useMemo(
     () => (
+      // An image of the fins: a name on a plain div is not read out.
       <div
+        role="img"
         style={{ display: 'flex', gap: 4, alignItems: 'center' }}
         aria-label={t('challenge.livesAria', { left: livesLeft })}
       >

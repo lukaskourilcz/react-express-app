@@ -581,6 +581,16 @@ describe('the verdict', () => {
   });
 });
 
+describe('the fins left', () => {
+  it('are named as an image, so a screen reader reads them', async () => {
+    await mount();
+    await start();
+    expect(screen.getByRole('img', { name: '3 shark fins left' })).toBeInTheDocument();
+    await answer('wrong');
+    expect(screen.getByRole('img', { name: '2 shark fins left' })).toBeInTheDocument();
+  });
+});
+
 describe('a double press', () => {
   // Both presses land before React renders the busy button.
   it('grades the pick once, so its point counts once', async () => {
