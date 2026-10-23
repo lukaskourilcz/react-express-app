@@ -8,7 +8,6 @@ import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { pendingReceiptsFor } from '../lib/pendingQuizReceipts';
 import { queryClient } from '../lib/queryClient';
-import { profileStatsQueryKey } from '../lib/queries';
 import { syncXpWithServer } from '../lib/xp';
 
 export function PendingQuizResults() {
@@ -19,11 +18,12 @@ export function PendingQuizResults() {
 
   const replay = useCallback(async () => {
     if (!userId || pendingReceiptsFor(userId).length === 0) return;
-    // The sender loads only when a result waits, so the first page load
-    // does not carry it. Offline it may not load: the next 'online' tries again.
-    const sender = await import('../lib/pendingQuizReplay').catch(() => null);
-    if (!sender) return;
-    const { replayPendingReceipts } = sender;
+    // The sender and the query keys load only when a result waits, so the
+    // first page load carries neither (the keys module brings every board's
+    // reader with it). Offline they may not load: the next 'online' tries again.
+    const loaded = await Promise.all([import('../lib/pendingQuizReplay'), import('../lib/queries')]).catch(() => null);
+    if (!loaded) return;
+    const [{ replayPendingReceipts }, { profileStatsQueryKey }] = loaded;
     const { recorded, refused } = await replayPendingReceipts(userId, (data) => {
       if (data) queryClient.setQueryData(profileStatsQueryKey(userId), data);
     });
