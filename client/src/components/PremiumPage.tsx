@@ -160,7 +160,7 @@ export default function PremiumPage() {
           <PremiumSmallPrint t={t} link={routerLink} headingId={ids.smallPrint} />
         </section>
 
-        {!voucherLeads && <PremiumVoucher billingClosed={false} />}
+        {!voucherLeads && <PremiumVoucher billingClosed={false} inline />}
 
         <PremiumIncludes t={t} headingId={ids.includes} redemptionOpen={redemptionOpen(config)} />
 

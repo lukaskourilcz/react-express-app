@@ -123,6 +123,9 @@ describe('/premium while checkout is off', () => {
     renderAt('/premium', <PremiumPage />);
     const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(headings.slice(0, 2)).toEqual(['Have a voucher?', 'Choose a plan']);
+    // While it leads, the voucher keeps its card (money-09).
+    expect(voucherSection()).toHaveClass('ss-info-card');
+    expect(voucherSection()).not.toHaveClass('ss-premium-voucher--inline');
     expect(await within(voucherSection()).findByText(/Premium is not on sale yet\. If someone gave you a voucher/)).toBeInTheDocument();
     expect(within(voucherSection()).getByText('Sign in first. The voucher opens Premium on the account you sign in with.')).toBeInTheDocument();
     expect(within(voucherSection()).queryByRole('textbox')).toBeNull();
@@ -297,6 +300,13 @@ describe('/premium with checkout on', () => {
     });
     // With checkout open the title and the field label carry it; no lead sentence.
     expect(within(voucherSection()).queryByText(/Enter the code you were given/)).toBeNull();
+  });
+
+  it('folds the voucher into one row without a card after the plans (money-09)', async () => {
+    serve({ billing: ON });
+    renderAt('/premium', <PremiumPage />);
+    await waitFor(() => expect(voucherSection()).toHaveClass('ss-premium-voucher--inline'));
+    expect(voucherSection()).not.toHaveClass('ss-info-card');
   });
 });
 

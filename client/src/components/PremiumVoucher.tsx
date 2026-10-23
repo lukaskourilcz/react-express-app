@@ -65,7 +65,12 @@ const BANNER_REFUSALS: Partial<Record<VoucherRefusal, TranslationKey>> = {
   'signed-out': 'error.signIn',
 };
 
-export default function PremiumVoucher({ billingClosed }: { billingClosed: boolean }) {
+/**
+ * `inline` (billing on, the voucher after the plans): no card, one row, the
+ * title on the left and the field and its button beside it (UX audit
+ * money-09). While the voucher leads (billing off) it is the card.
+ */
+export default function PremiumVoucher({ billingClosed, inline = false }: { billingClosed: boolean; inline?: boolean }) {
   const { t } = useLanguage();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
@@ -186,7 +191,7 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
     <section
       id={VOUCHER_SECTION_ID}
       ref={section}
-      className="ss-info-card ss-premium-voucher"
+      className={inline ? 'ss-premium-voucher ss-premium-voucher--inline' : 'ss-info-card ss-premium-voucher'}
       aria-labelledby={headingId}
       aria-busy={authLoading || busy || undefined}
     >
@@ -223,20 +228,22 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
             </>
           ) : (
             <form className="ss-premium-voucher__form" noValidate onSubmit={(event) => void submit(event)}>
-              <TextInput
-                ref={inputRef}
-                label={t('premium.voucher.label')}
-                description={t('premium.voucher.hint')}
-                value={code}
-                onChange={(value) => {
-                  setCode(value.slice(0, 64));
-                  if (refusal) setStep({ kind: 'form' });
-                }}
-                status={fieldMessage ? { type: 'error', message: fieldMessage } : undefined}
-                htmlName="voucher"
-                isRequired
-              />
-              {bannerMessage && <Banner status="error" title={bannerMessage} />}
+              <div className="ss-premium-voucher__field">
+                <TextInput
+                  ref={inputRef}
+                  label={t('premium.voucher.label')}
+                  description={t('premium.voucher.hint')}
+                  value={code}
+                  onChange={(value) => {
+                    setCode(value.slice(0, 64));
+                    if (refusal) setStep({ kind: 'form' });
+                  }}
+                  status={fieldMessage ? { type: 'error', message: fieldMessage } : undefined}
+                  htmlName="voucher"
+                  isRequired
+                />
+              </div>
+              {bannerMessage && <div className="ss-premium-voucher__banner"><Banner status="error" title={bannerMessage} /></div>}
               <div className="ss-info-actions">
                 <Button type="submit" variant="primary" label={t('premium.voucher.submit')} isLoading={busy} isDisabled={busy} />
               </div>

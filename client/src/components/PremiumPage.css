@@ -92,5 +92,24 @@
 .ss-premium-voucher__done h3 { margin: 0; font: 750 1.15rem/1.3 var(--font-family-heading); }
 .ss-premium-voucher__done h3:focus { outline: none; }
 .ss-premium-voucher__done h3:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; border-radius: var(--radius-inner); }
-.ss-info-card .ss-premium-voucher__end { color: var(--color-text-primary); font-weight: 650; }
+.ss-premium-voucher .ss-premium-voucher__end { color: var(--color-text-primary); font-weight: 650; }
 .ss-premium-voucher__sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* With billing on the voucher is a secondary path after the plans: no card,
+   one row (UX audit money-09). The title sits on the left; the field (at most
+   320px) and "Redeem voucher" share the row beside it, so the section takes
+   about half the height of the card it was. The done and signed-out states
+   use the same right-hand column. Below 600px everything stacks. */
+.ss-premium-voucher--inline { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 0.75rem 2rem; }
+.ss-premium-voucher--inline > .ss-premium-section-title { grid-column: 1; margin: 0; }
+.ss-premium-voucher--inline > :not(.ss-premium-section-title) { grid-column: 2; }
+.ss-premium-voucher--inline .ss-premium-voucher__form { flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; max-width: none; margin-top: 0; }
+.ss-premium-voucher--inline .ss-premium-voucher__field { flex: 1 1 14rem; max-width: 320px; }
+.ss-premium-voucher--inline .ss-premium-voucher__form .ss-info-actions { margin-top: 0; }
+.ss-premium-voucher--inline .ss-premium-voucher__banner { flex: 1 1 100%; order: 1; }
+.ss-premium-voucher--inline p { margin: 0; color: var(--color-text-secondary); line-height: 1.6; }
+@media (max-width: 599px) {
+  .ss-premium-voucher--inline { grid-template-columns: minmax(0, 1fr); }
+  .ss-premium-voucher--inline > :not(.ss-premium-section-title) { grid-column: 1; }
+  .ss-premium-voucher--inline .ss-premium-voucher__form { flex-direction: column; align-items: stretch; }
+  .ss-premium-voucher--inline .ss-premium-voucher__field { flex-basis: auto; max-width: none; }
+}
