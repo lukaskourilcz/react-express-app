@@ -6198,4 +6198,4 @@ A last round fixed the cross-area leftovers the four section audits could not re
 - **Challenge scoring:** a Challenge score sums the answers the player chooses to send. Enforcing the order needs per-run server state.
 - **Rooms:** abandoned rooms have no cleanup job, and rooms have no participant cap.
 - **Account data export:** there is no export of a learner's own data.
-- **Brittle matching:** two conflicts are matched by message text, and the friend "register" step has no unique key.
+- **Brittle matching:** two conflicts (`challenge_score_conflict`, `handle_taken`) are matched by message text, not by their own SQLSTATE.
