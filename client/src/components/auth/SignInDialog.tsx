@@ -327,7 +327,7 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
                   centred dialog does not move under the pointer when the
                   mode changes (UX audit shell-public-05). */}
               {view !== 'forgot' && (
-                <div className="ss-auth__password" data-mode={view}>
+                <div className="ss-auth__password">
                   <PasswordField
                     label={t('auth.password.label')}
                     value={password}
