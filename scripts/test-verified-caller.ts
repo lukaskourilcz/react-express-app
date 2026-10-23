@@ -436,6 +436,23 @@ async function main() {
     assert.equal(errorCode(foreign), 'invalid_subject_scope');
     console.log('PASS verified caller: this month\'s XP board is shared without a session and the token\'s own with one');
 
+    // ── a Supabase call that does not answer in time ─────────────────────
+    const hung = new Promise<never>(() => {});
+    await assert.rejects(
+      http.withTimeout(hung, 5),
+      (error: unknown) => error instanceof http.ServiceUnavailableError && error.code === 'upstream_timeout',
+      'a timed-out Supabase call is the service being unavailable',
+    );
+    const timedOut = mockResponse();
+    await http.withRequestContext(
+      { method: 'GET', headers: { 'x-forwarded-for': nextAddress() }, query: {}, url: '/api' } as never,
+      timedOut as never,
+      () => http.withTimeout(hung, 5),
+    );
+    assert.equal(timedOut.statusCode, 503, `a handler whose Supabase call timed out answers 503, not 500 (${JSON.stringify(timedOut.body)})`);
+    assert.equal(errorCode(timedOut), 'upstream_timeout');
+    console.log('PASS verified caller: a Supabase timeout answers 503 upstream_timeout');
+
     // ── one-time claims with Upstash configured and failing ──────────────
     upstashCommands.length = 0;
     await assert.rejects(
