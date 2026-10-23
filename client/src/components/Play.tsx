@@ -44,6 +44,7 @@ import { QuoteLoader } from './LoadingScreen';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { StatePanel } from './ui/StatePanel';
+import { PageHeader } from './ui/PageHeader';
 import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
 import './Play.css';
@@ -262,18 +263,9 @@ export function PlayLanding() {
   return (
     <div className="de-page">
       <VStack gap={3}>
-        {/* Page opener in the house voice: kicker + display heading, same as
-            Shop and the Career Roadmap. */}
-        <div className="ss-pop" style={{ width: '100%' }}>
-          <VStack gap={1}>
-            <Kicker as="h1" className="ss-section-title">
-              {t('play.title')}
-            </Kicker>
-            <Text type="large" color="secondary">
-              {t('play.subtitle')}
-            </Text>
-          </VStack>
-        </div>
+        {/* The operational header the social pages share: kicker, an ink
+            h1 at display-3 and one lead (UX audit social-account-11). */}
+        <PageHeader kicker={t('play.kicker')} title={t('play.heading')} lead={t('play.subtitle')} />
 
         {error && (
           <Banner
@@ -856,7 +848,7 @@ function PlayRoom() {
       <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
         <VStack gap={2}>
           {/* The page's heading, so a match that cannot open still has one. */}
-          <Heading level={1} type="display-3">{t('play.title')}</Heading>
+          <PageHeader title={t('play.title')} />
           <Banner status="error" title={error} />
           <HStack gap={1} wrap="wrap">
             <Button
@@ -884,17 +876,16 @@ function PlayRoom() {
     // as on Quiz, Learn and Challenge (UX audit social-account-01).
     <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
       <VStack gap={2}>
-        <HStack justify="between" align="center" gap={2}>
-          <VStack gap={0}>
-            <Heading level={1} type="display-3">
-              {match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
-            </Heading>
-            <Text type="supporting" size="xsm" color="secondary">
-              {t('play.hostedBy', { name: match.host_name })}
-            </Text>
-          </VStack>
+        {/* The shared operational header, with the room's code badge as its
+            one compact action on the right (social-account-11, -15). */}
+        <div className="play-room__head">
+          <PageHeader
+            kicker={t('play.kicker')}
+            title={match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
+            lead={t('play.hostedBy', { name: match.host_name })}
+          />
           <CodeBadge code={code} />
-        </HStack>
+        </div>
 
         {error && (
           <Banner

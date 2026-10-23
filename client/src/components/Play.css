@@ -89,3 +89,8 @@
 @media (max-width: 599.95px) {
   .play-lobby__start { display: grid; }
 }
+
+/* A room's header: the shared PageHeader on the left, the code badge (44px)
+   on the right, bottom-aligned; it wraps under the title on a phone. */
+.play-room__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; }
+.play-room__head > .ss-page-header { flex: 1 1 14rem; min-width: 0; }

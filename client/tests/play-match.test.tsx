@@ -157,6 +157,20 @@ describe('the Play page (social-account-12)', () => {
     sheet.remove();
   });
 
+  it('opens on the shared operational header: a Play live kicker over an ink h1 and one lead (social-account-11)', async () => {
+    await mount('/play');
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    expect(h1).toHaveTextContent('Race or teach live');
+    const header = h1.closest('header.ss-page-header')!;
+    expect(header).not.toBeNull();
+    // The kicker is context, not the heading.
+    const kicker = header.querySelector('.ss-kicker')!;
+    expect(kicker.tagName).toBe('SPAN');
+    expect(kicker).toHaveTextContent('Play live');
+    expect(header.querySelector('.ss-page-header__lead')).toHaveTextContent('Everyone in the room sees the same question at the same time.');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
   it('labels the question count above its toggles, like the time limit', async () => {
     await mount('/play');
     await screen.findByRole('button', { name: 'Create multiplayer match' });
@@ -941,6 +955,19 @@ describe('the lobby (social-account-14, -15)', () => {
     expect(codeBadge).not.toContain('size="sm"');
     fireEvent.click(start);
     expect(api.controlMatch).toHaveBeenCalled();
+  });
+
+  it('heads the room with the shared header and the code badge beside it (social-account-11)', async () => {
+    const lobby = lobbyOf();
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    const h1 = await screen.findByRole('heading', { level: 1, name: 'Multiplayer' });
+    const header = h1.closest('header.ss-page-header')!;
+    expect(header.querySelector('.ss-kicker')).toHaveTextContent('Play live');
+    expect(header.querySelector('.ss-page-header__lead')).toHaveTextContent('Hosted by Hana');
+    expect(header.parentElement).toHaveClass('play-room__head');
+    expect(within(header.parentElement as HTMLElement).getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
   });
 
   it('tells a guest to wait, with no Start', async () => {
