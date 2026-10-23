@@ -257,7 +257,9 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) test(`Motionâ€
   await expect(page).toHaveURL(/\/quiz$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect.poll(opacity).toBe('1');
-  expect(await routeBox.evaluate((node) => getComputedStyle(node).transform)).toBe('none');
+  // Poll like the opacity: right after the navigation the keyed route box is
+  // being replaced, and a read in that tick found the outgoing node.
+  await expect.poll(() => routeBox.evaluate((node) => getComputedStyle(node).transform)).toBe('none');
   // Nothing reloads for it.
   expect(documents).toHaveLength(1);
 });
