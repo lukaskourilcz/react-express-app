@@ -67,6 +67,7 @@ const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL]
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
 const seen: Seen[] = [];
+const SLOW_REPORT = 'stand-in: answer after the timeout';
 const upstashCommands: string[] = [];
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
@@ -112,6 +113,11 @@ async function startStandIns() {
     }
     const raw = req.method === 'GET' ? '' : await readBody(req);
     const body = raw ? JSON.parse(raw) as unknown : undefined;
+    // A database too slow to answer within lib/http.ts's five seconds.
+    if (url.pathname === '/rest/v1/question_reports' && (body as Row | undefined)?.detail === SLOW_REPORT) {
+      setTimeout(() => send(201, [body]), 5_500);
+      return;
+    }
     const filters = Object.fromEntries([...url.searchParams.entries()].filter(([, value]) => value.startsWith('eq.')).map(([key, value]) => [key, value.slice(3)]));
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname)?.[1];
@@ -464,7 +470,10 @@ async function main() {
     const nul = await call(submit as Handler, { method: 'POST', query: { resource: 'report' }, body: { question_id: 'q-report-1', reason: 'other', detail: 'before\u0000after' } });
     assert.equal(nul.statusCode, 400, `Postgres text cannot hold U+0000, so the report is refused before its insert (${JSON.stringify(nul.body)})`);
     assert.equal(reads('/rest/v1/question_reports').length, 0, 'and nothing is written');
-    console.log('PASS verified caller: a question report is saved for its reporter, and one holding U+0000 is refused');
+    const slowReport = await call(submit as Handler, { method: 'POST', query: { resource: 'report' }, body: { question_id: 'q-report-1', reason: 'other', detail: SLOW_REPORT } });
+    assert.equal(slowReport.statusCode, 503, `a report insert that times out answers 503, as every timeout does (${JSON.stringify(slowReport.body)})`);
+    assert.equal(errorCode(slowReport), 'upstream_timeout');
+    console.log('PASS verified caller: a question report is saved for its reporter, one holding U+0000 is refused, and a timed-out one answers 503');
 
     // ── one-time claims with Upstash configured and failing ──────────────
     upstashCommands.length = 0;

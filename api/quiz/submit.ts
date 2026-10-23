@@ -11,7 +11,7 @@ import {
   type DecodedQuizSession,
 } from '../../lib/quiz-tokens';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing, ServiceUnavailableError } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { subjectForCategory } from '../../shared/subject-catalog';
@@ -439,8 +439,11 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
     reportLogger({ status: 200, question_id: body.question_id, reason: body.reason });
     return res.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    reportLogger({ status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    // A timed-out insert is the service being down for a moment: 503, which
+    // the client may retry, as every other handler answers it. Anything else
+    // is a fault, answered 500 by withRequestContext.
+    if (!(err instanceof ServiceUnavailableError)) throw err;
+    reportLogger({ status: 503, error: err.code });
+    return jsonError(res, 503, err.code, err.message);
   }
 }
