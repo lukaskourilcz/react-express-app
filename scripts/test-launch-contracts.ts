@@ -35,7 +35,7 @@ import {
 } from '../lib/quiz-tokens';
 import { checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
-import { handlePaymentWebhook, webhookDecision } from '../lib/rewards/handlers';
+import { handlePaymentWebhook, handleWallet, webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
 import roadmapHandler from '../api/quiz/roadmap';
@@ -5978,6 +5978,43 @@ async function main() {
       if (realEnv.secret === undefined) delete process.env.PAYMENT_WEBHOOK_SECRET; else process.env.PAYMENT_WEBHOOK_SECRET = realEnv.secret;
       if (realEnv.provider === undefined) delete process.env.PAYMENT_PROVIDER; else process.env.PAYMENT_PROVIDER = realEnv.provider;
     }
+  }
+
+  // ── the wallet read, against a stand-in database ────────────────────────
+  {
+    const failing = new Set<string>();
+    const rows: Record<string, unknown> = {
+      token_balances: { balance: 1300 },
+      token_ledger: [],
+      cosmetic_entitlements: [{ cosmetic_id: 'crown', equipped: true }],
+    };
+    const db = {
+      rpc: async () => ({ data: null, error: null }),
+      from: (table: string) => {
+        const answer = () => (failing.has(table)
+          ? { data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }
+          : { data: rows[table] ?? null, error: null });
+        const link = {
+          select: () => link, eq: () => link, order: () => link, limit: () => link,
+          maybeSingle: async () => answer(),
+          then: <A>(resolve: (value: ReturnType<typeof answer>) => A) => resolve(answer()),
+        };
+        return link;
+      },
+    };
+    const read = async () => {
+      const res = mockResponse();
+      await handleWallet({ method: 'GET', headers: {}, query: { op: 'wallet', user_id: 'contract-wallet-reader' } } as never, res as never, db as never);
+      return res;
+    };
+    const ok = await read();
+    assert.equal(ok.statusCode, 200);
+    assert.deepEqual((ok.body as { cosmetics: unknown }).cosmetics, [{ id: 'crown', equipped: true }]);
+    // A cosmetics read that failed is not an account that owns nothing: the
+    // screen would offer the crown again and take it off the avatar.
+    failing.add('cosmetic_entitlements');
+    const broken = await read();
+    assert.equal(broken.statusCode, 500, 'a failed cosmetics read is an error, not an empty list');
   }
 
   // ── lesson figures (#183) ───────────────────────────────────────────────

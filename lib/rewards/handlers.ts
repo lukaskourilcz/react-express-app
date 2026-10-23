@@ -118,7 +118,9 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
       withTimeout(supabase.from('cosmetic_entitlements').select('cosmetic_id,equipped').eq('user_id', userId)),
     ]);
     if (balance.error && isRpcMissing(balance.error)) return migrationRequired(res);
-    if (balance.error || entries.error) return jsonError(res, 500, 'db_error', 'Could not load your coins');
+    // A failed cosmetics read is not "owns nothing": the screen would offer
+    // the crown for sale again and take it off the avatar.
+    if (balance.error || entries.error || cosmetics.error) return jsonError(res, 500, 'db_error', 'Could not load your coins');
     res.setHeader('Cache-Control', 'private, no-store');
     return res.json({
       subject,
