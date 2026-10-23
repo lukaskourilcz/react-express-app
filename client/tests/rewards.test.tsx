@@ -10,6 +10,7 @@ import BrandFooter from '../src/components/BrandFooter';
 import { closeUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
 import type { EarnSummary, WalletResponse } from '../src/lib/rewards';
 import { DEFAULT_COIN_SETTINGS } from '../../shared/rewards';
+import { clearAccountData } from '../src/lib/accountData';
 import { server } from './mocks/server';
 
 // Invented fixtures only; the shapes are the real op=wallet and op=shop ones.
@@ -294,6 +295,29 @@ describe('the Rewards screen', () => {
     await waitFor(() => expect(wear).toBeEnabled());
     fireEvent.click(wear);
     expect(await screen.findByText('Server error. Try again in a moment.')).toBeInTheDocument();
+  });
+
+  it('says nothing about a purchase that answers after the account signed out', async () => {
+    signIn();
+    routes();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let posted = false;
+    server.use(http.post('*/api/user/protection', async () => {
+      posted = true;
+      await held;
+      return HttpResponse.json({ bought: true, remaining: 1, period: '2026-10' });
+    }));
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    await waitFor(() => expect(posted).toBe(true));
+    act(() => { clearAccountData(); });
+    act(() => release());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText('Bought. You have 1 this month.')).toBeNull();
   });
 
   it('offers a retry when the coins cannot load', async () => {

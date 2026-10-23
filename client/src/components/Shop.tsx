@@ -46,6 +46,7 @@ import { ReferralInvite } from './ReferralInvite';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { friendlyError } from '../lib/api';
 import { entitlementQuery, useEntitlement } from '../lib/entitlement';
 import { useGameConfig } from '../lib/gameConfig';
@@ -468,11 +469,17 @@ function Shop() {
   // task after the click, so a double click on Buy sent two purchases and a
   // streak protection charged its coins twice. Held until the wallet re-read
   // lands, so the row stays busy while it still shows the old balance.
+  // `say` reports the outcome only while the account that spent is still the
+  // one here: a purchase answered after a sign-out is not news for the next
+  // person (lib/accountData.ts).
   const spending = useRef(false);
-  const spend = (run: () => Promise<unknown>) => {
+  type Say = (msg: string, ok: boolean) => void;
+  const spend = (run: (say: Say) => Promise<unknown>) => {
     if (spending.current) return;
     spending.current = true;
-    void run().finally(() => { spending.current = false; });
+    const epoch = accountEpoch();
+    const say: Say = (msg, ok) => { if (accountEpoch() === epoch) setToast({ msg, ok }); };
+    void run(say).finally(() => { spending.current = false; });
   };
   const [checkout, setCheckout] = useState<{ sku: MerchSku; variant: string } | null>(null);
   const [address, setAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
@@ -520,53 +527,47 @@ function Shop() {
   const submitOrder = (paymentKind: 'tokens' | 'cash') => {
     if (!checkout) return;
     const items = [{ ...checkout, quantity: 1 }];
-    spend(async () => {
+    spend(async (say) => {
       try {
         const result = await order.mutateAsync({ items, address, paymentKind });
         closeCheckout();
         setAddress(EMPTY_ADDRESS);
-        setToast({
-          msg: result.state === 'paid' ? t('shop.orderPlaced') : t('shop.orderAwaitingPayment'),
-          ok: true,
-        });
+        say(result.state === 'paid' ? t('shop.orderPlaced') : t('shop.orderAwaitingPayment'), true);
       } catch (error) {
-        setToast({ msg: friendlyError(error), ok: false });
+        say(friendlyError(error), false);
       }
     });
   };
 
-  const buyCrown = () => spend(async () => {
+  const buyCrown = () => spend(async (say) => {
     try {
       await cosmetic.mutateAsync({ op: 'buy' });
-      setToast({ msg: t('shop.crownBought'), ok: true });
+      say(t('shop.crownBought'), true);
     } catch (error) {
-      setToast({ msg: friendlyError(error), ok: false });
+      say(friendlyError(error), false);
     }
   });
 
   // A refused Wear or Take it off used to say nothing: the button came back
   // and the crown stayed where it was.
-  const wearCrown = (op: 'equip' | 'unequip') => spend(async () => {
+  const wearCrown = (op: 'equip' | 'unequip') => spend(async (say) => {
     try {
       await cosmetic.mutateAsync({ op });
     } catch (error) {
-      setToast({ msg: friendlyError(error), ok: false });
+      say(friendlyError(error), false);
     }
   });
 
-  const buyProtection = () => spend(async () => {
+  const buyProtection = () => spend(async (say) => {
     try {
       const result = await protection.mutateAsync();
-      setToast({
-        // At the cap nothing was charged, and saying "bought" would be a lie
-        // about a balance that did not move.
-        msg: result.bought
-          ? t('shop.protectionBought', { n: result.remaining })
-          : t('shop.protectionAtCap', { n: result.remaining }),
-        ok: true,
-      });
+      // At the cap nothing was charged, and saying "bought" would be a lie
+      // about a balance that did not move.
+      say(result.bought
+        ? t('shop.protectionBought', { n: result.remaining })
+        : t('shop.protectionAtCap', { n: result.remaining }), true);
     } catch (error) {
-      setToast({ msg: friendlyError(error), ok: false });
+      say(friendlyError(error), false);
     }
   });
 
