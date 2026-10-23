@@ -11,6 +11,11 @@ import { server } from './mocks/server';
 // sharkname when the two differ. The avatar is their photo only when they
 // switched it on, and their initials otherwise.
 
+// jsdom has no modal dialogs; removing a friend confirms in one.
+const dialogProto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
+dialogProto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
+dialogProto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
+
 const friend = (over: Record<string, unknown>) => ({
   handle: 'x', displayName: 'x', picture: null, country: null, crown: false,
   currentStreak: 0, longestStreak: 0, totalCorrect: 0, totalQuestions: 0, accuracyPct: 0, activeToday: false,
@@ -144,6 +149,42 @@ describe('a friends read that fails', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Friends (1)' })).toBeInTheDocument();
     expect(screen.queryByText('Friends are not available yet on this deployment.')).toBeNull();
+  });
+});
+
+describe('removing a friend', () => {
+  // Remove sent the request on the first press: one slip of the thumb ended a
+  // friendship on both sides, and only a new request brought it back.
+  it('asks first, sends nothing on Cancel, and removes on confirm', async () => {
+    const removed: string[] = [];
+    let friends = [friend({ handle: 'fin-de-fiesta', displayName: 'Fin Example' })];
+    serve();
+    server.use(
+      http.get('*/api/user/friends-list', () => HttpResponse.json({ friends, requests: [] })),
+      http.post('*/api/user/friends-remove', async ({ request }) => {
+        removed.push((await request.json() as { handle: string }).handle);
+        friends = [];
+        return HttpResponse.json({ removed: true });
+      }),
+    );
+    renderPanel();
+    const opener = await screen.findByRole('button', { name: 'Remove Fin Example' });
+    opener.focus();
+    fireEvent.click(opener);
+    const dialog = await screen.findByRole('alertdialog', { name: 'Remove Fin Example?' });
+    expect(dialog).toHaveTextContent('You leave each other’s friends lists.');
+    expect(removed).toEqual([]);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(removed).toEqual([]);
+    expect(opener).toHaveFocus();
+
+    fireEvent.click(opener);
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Remove' }));
+    await waitFor(() => expect(removed).toEqual(['fin-de-fiesta']));
+    const heading = await screen.findByRole('heading', { name: 'Friends (0)' });
+    await waitFor(() => expect(heading).toHaveFocus());
   });
 });
 

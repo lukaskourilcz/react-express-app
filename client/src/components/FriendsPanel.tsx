@@ -32,6 +32,7 @@ import { friendlyError } from '../lib/api';
 import { CrownBadge } from './ui/Crown';
 import { CountryFlag, countryOptions } from './ui/CountryFlag';
 import { InitialsAvatar } from './ui/InitialsAvatar';
+import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import {
   getHandle, setDiscoverable, setCountry,
   lookupFriend, requestFriend, respondFriend, removeFriend, listFriends,
@@ -409,16 +410,34 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
   const titleId = useId();
   const removing = useInFlight();
   const [error, setError] = useState<string | null>(null);
+  // Removing a friend is mutual and takes a new request to undo, so it asks
+  // first. Once the row is gone its button is too, and focus moves to the
+  // list's heading instead of falling to the page.
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const [focusList, setFocusList] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    if (!focusList || confirm) return;
+    setFocusList(false);
+    headingRef.current?.focus();
+  }, [focusList, confirm]);
 
   const drop = (handle: string) => removing.run(handle, async () => {
     setError(null);
-    try { await removeFriend(handle); await onChanged(); }
+    try { await removeFriend(handle); await onChanged(); setFocusList(true); }
     catch (err) { setError(friendlyError(err)); }
+  });
+
+  const askToDrop = (friend: Friend) => setConfirm({
+    title: t('friends.removeConfirmTitle', { name: friend.displayName }),
+    description: t('friends.removeConfirmBody'),
+    actionLabel: t('friends.remove'),
+    onConfirm: () => drop(friend.handle),
   });
 
   return (
     <section className="fr-card ss-panel" aria-labelledby={titleId}>
-      <h3 id={titleId} className="fr-card__title">{t('friends.listTitle', { n: friends.length })}</h3>
+      <h3 id={titleId} ref={headingRef} tabIndex={-1} className="fr-card__title">{t('friends.listTitle', { n: friends.length })}</h3>
       {friends.length === 0 ? (
         <p className="fr-note">{hasHandle ? t('friends.empty') : t('friends.emptyNoHandle')}</p>
       ) : (
@@ -450,12 +469,13 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                   {friend.activeToday && <> {' · '}<span className="fr-today">{t('friends.today')}</span></>}
                 </span>
               </span>
-              <Button variant="secondary" isDisabled={removing.isBusy(friend.handle)} aria-label={t('friends.removeOne', { name: friend.displayName })} onClick={() => void drop(friend.handle)} label={t('friends.remove')} />
+              <Button variant="secondary" isDisabled={removing.isBusy(friend.handle)} aria-label={t('friends.removeOne', { name: friend.displayName })} onClick={() => askToDrop(friend)} label={t('friends.remove')} />
             </li>
           ))}
         </ul>
       )}
       {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}
+      <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </section>
   );
 }
