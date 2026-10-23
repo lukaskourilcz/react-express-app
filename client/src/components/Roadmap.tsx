@@ -701,7 +701,11 @@ function Roadmap() {
     open(a);
   };
 
+  // Back on the map, focus returns to the step the level was opened for:
+  // the control that closed it is gone, and focus fell to the top of the page.
+  const returnFocusTo = useRef<{ topic: RoadmapTopic; step: string } | null>(null);
   const exitLesson = () => {
+    if (active) returnFocusTo.current = { topic, step: active.kind === 'level' ? `lvl-${active.ref}` : `test-${active.ref}` };
     lessonAbortRef.current?.abort();
     setActive(null);
     setPlayable(null);
@@ -792,6 +796,16 @@ function Roadmap() {
     });
     return { width: pathWidth, height, cellW, nodes: placed, segments };
   }, [pathWidth, levels, ranges, progress, topic, availability, lockOf, topicInPlan]);
+
+  // The map lays its nodes out once it has measured itself, a render or two
+  // after a level closes, so focus waits for the layout.
+  useEffect(() => {
+    const target = returnFocusTo.current;
+    if (active !== null || !layout || !target) return;
+    returnFocusTo.current = null;
+    if (target.topic !== topic) return;
+    sectionBodyRef.current?.querySelector<HTMLElement>(`.rm-path-canvas [data-step="${target.step}"] button`)?.focus();
+  }, [active, layout, topic]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -1072,6 +1086,7 @@ function Roadmap() {
                 {layout.nodes.map((n) => (
                   <div
                     key={n.key}
+                    data-step={n.key}
                     style={{ position: 'absolute', transform: 'translateX(-50%)', left: n.cx, top: n.cy - n.half }}
                   >
                     <div className="rm-node" style={{ animationDelay: `${n.i * 0.025}s` }}>
