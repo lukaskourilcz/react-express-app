@@ -55,6 +55,13 @@ import { categoryLabelKey } from '../lib/categories';
 import { referralQuery } from '../lib/referral';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
 import {
+  useWallet,
+  walletQuery,
+  type EarnSummary,
+  type ShopItem,
+  type WalletEntry,
+} from '../lib/rewards';
+import {
   formatMoney,
   ordersQuery,
   shopQuery,
@@ -63,12 +70,7 @@ import {
   useOrders,
   useShop,
   useProtectionMutation,
-  useWallet,
-  walletQuery,
-  type EarnSummary,
-  type ShopItem,
-  type WalletEntry,
-} from '../lib/rewards';
+} from '../lib/rewardsShop';
 import { MERCH_IMAGES } from '../lib/merchImages';
 import { MERCH_SHOP } from '../../product-catalog';
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
