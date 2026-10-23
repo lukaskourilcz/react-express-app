@@ -25,7 +25,7 @@ checker.check('', []);
  *
  * The compiler throws instead of answering when it runs out of stack, on a
  * type that keeps recursing or code nested thousands deep. The two steps
- * answer separately, as on the server (lib/coding/ts-check-pool.ts): a check
+ * answer separately, as the server's type-check pool does: a check
  * that threw is `check: null`, the types stopped the checker; code that could
  * not be turned into JavaScript is `js: null`, with the check kept. */
 export function compileTypeScript(code: string, typeTests: TypeTestInput[] = []): { check: TypeCheckResult | null; js: string | null; transpileError: string | null } {
