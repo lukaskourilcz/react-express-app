@@ -213,7 +213,7 @@ function ModuleCard({
           {interactive ? <Link to={moduleHref(pathId, module.id)}>{module.title}</Link> : module.title}
         </h2>
         <span className="lp-module__meta">
-          {module.shelf && <span className="ss-premium-label">{t('premium.badge')}</span>}
+          {module.shelf && <><span className="ss-premium-label">{t('premium.badge')}</span>{' '}</>}
           {t('paths.minutes', { minutes: module.estimatedMinutes })}
           {completed ? ` · ${t('paths.module.complete')}` : ''}
         </span>

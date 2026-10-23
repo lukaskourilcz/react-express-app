@@ -491,6 +491,8 @@ describe('the interview-prep shelf', () => {
     expect(within(shelf).getByText('Optional')).toBeInTheDocument();
     expect(within(shelf).getAllByRole('link', { name: /Interview lesson/ })[0]).toBeInTheDocument();
     expect(within(modulesSection()).queryByText('Learning round')).toBeNull();
+    // The module's Premium mark and its minutes read as two words, not one.
+    expect(shelf.querySelector('.lp-module__meta')!.textContent).toBe('Premium 10 min');
     expect(screen.queryByRole('heading', { name: 'Optional: placement and bridges' })).toBeNull();
   });
 
