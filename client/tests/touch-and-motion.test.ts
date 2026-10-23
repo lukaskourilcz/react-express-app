@@ -29,6 +29,14 @@ describe('touch targets on a coarse pointer', () => {
     const roadmap = [...addSheet('roadmap').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
     expect(declared(roadmap, '.rm-skillcheck-cta', 'min-height')).toBe('var(--ss-control-height)');
   });
+
+  it.each(['.rm-accent-btn', '.rm-outline-btn', '.rm-text-btn'])(
+    'keeps the level runner action %s at the control height on every pointer',
+    (selector) => {
+      const roadmap = [...addSheet('roadmap').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+      expect(declared(roadmap, selector, 'min-height')).toBe('var(--ss-control-height)');
+    },
+  );
 });
 
 // UX audit U1 (#573): one control height on every pointer, set once here and

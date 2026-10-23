@@ -360,7 +360,9 @@
 
 /* Accent-filled action buttons (intro start, continue, finish next/retry).
    The fill is set inline, with --rm-on-accent as its readable text colour;
-   a button on the brand accent falls back to --brand-on-accent. */
+   a button on the brand accent falls back to --brand-on-accent. These, the
+   outlined retry and the text button are the level runner's page actions:
+   44px on every pointer (UX audit learn-18; they measured 41 and 34px). */
 .rm-accent-btn {
   border: none;
   color: var(--rm-on-accent, var(--brand-on-accent));
@@ -368,6 +370,7 @@
   font-weight: 700;
   font-size: 0.9rem;
   padding: 12px 20px;
+  min-height: var(--ss-control-height);
   cursor: pointer;
   font-family: inherit;
   transition: filter 0.15s ease;
@@ -383,6 +386,7 @@
   font-weight: 700;
   font-size: 0.9rem;
   padding: 11px 19px;
+  min-height: var(--ss-control-height);
   cursor: pointer;
   font-family: inherit;
 }
@@ -396,6 +400,7 @@
   font-weight: 600;
   font-size: 0.9rem;
   padding: 10px 12px;
+  min-height: var(--ss-control-height);
   cursor: pointer;
   font-family: inherit;
   border-radius: var(--radius-element);
