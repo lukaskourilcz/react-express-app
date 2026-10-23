@@ -31,7 +31,7 @@ interface Product {
 // sells or names them any more, so they carry no price and no display copy.
 // (Their old prices were read from the game config by a priceOf() that
 // nothing called once the shop stopped selling them.)
-const CATALOGUE: readonly Product[] = [
+const STATIC_CATALOGUE: readonly Product[] = [
   { id: 'ring-emerald', kind: 'ring', marker: '⬤', color: '#10b981' },
   { id: 'ring-gold', kind: 'ring', marker: '⬤', color: '#d4af37' },
   { id: 'ring-violet', kind: 'ring', marker: '⬤', color: '#8b5cf6' },
@@ -41,7 +41,7 @@ const CATALOGUE: readonly Product[] = [
   { id: 'flair-crown', kind: 'flair', marker: 'Ⅰ' },
 ];
 
-const byId = new Map(CATALOGUE.map((p) => [p.id, p]));
+const byId = new Map(STATIC_CATALOGUE.map((p) => [p.id, p]));
 
 interface Inventory {
   /** Cosmetic product ids the learner owns permanently. */
