@@ -12,7 +12,7 @@
 // what paid orders hold is refused. Cash checkout stays off; cash sales happen
 // in the Spreadshop checkout.
 
-import { useEffect, useId, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Switch } from '@astryxdesign/core/Switch';
@@ -490,11 +490,16 @@ function OrderCard({ order, items, onDone }: {
   const [tracking, setTracking] = useState(order.tracking_ref ?? '');
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busy, setBusy] = useState(false);
+  // `busy` disables the buttons a render late, so a double click sent a
+  // cancel twice and the second came back as an error after the refund.
+  const busyRef = useRef(false);
   const sendable = order.state === 'paid' || (order.package && order.state === 'awaiting_payment');
   const shippable = sendable || order.state === 'submitted';
   const cancellable = order.state === 'paid' || order.state === 'awaiting_payment';
 
   const act = async (op: 'submit' | 'ship' | 'cancel', message: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       await advanceOrder(order.order_id, op, op === 'ship' ? { carrier: carrier.trim(), trackingRef: tracking.trim() } : undefined);
@@ -502,6 +507,7 @@ function OrderCard({ order, items, onDone }: {
     } catch (err) {
       await onDone(friendlyError(err));
     } finally {
+      busyRef.current = false;
       setBusy(false);
       setConfirmCancel(false);
     }

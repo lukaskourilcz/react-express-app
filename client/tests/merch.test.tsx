@@ -259,4 +259,34 @@ describe('/dev → Merchandise', () => {
     const mugRow = (await screen.findByLabelText('Mug')).closest('tr')!;
     expect(within(mugRow).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(expect.arrayContaining(['1', '4']));
   });
+
+  it('cancels a coin order once when the confirmation is pressed twice', async () => {
+    const posted: unknown[] = [];
+    const order = {
+      order_id: 'order-0123456789abcdef0123456789', payment_kind: 'tokens', state: 'paid', total_minor: 0,
+      currency: 'EUR', token_total: 1500, ship_name: 'A Learner', ship_line1: '1 Street', ship_line2: null, ship_city: 'Brno',
+      ship_postal: '60200', ship_country: 'CZ', carrier: null, tracking_ref: null, test_mode: false,
+      created_at: '2026-09-24T10:00:00Z', package: false,
+    };
+    server.use(
+      http.get('*/api/admin/settings', () => HttpResponse.json({ settings: { merch: { enabled: false, cashCheckoutEnabled: false, testMode: true, pricing: {}, crownTokenPrice: 1200, streakProtectionTokenPrice: 250, policyUrl: '' } } })),
+      http.get('*/api/user/*', () => HttpResponse.json({ orders: [order], items: [{ order_id: order.order_id, sku: 'mug', variant: '', quantity: 1 }], stock: [] })),
+      http.post('*/api/user/*', async ({ request }) => {
+        posted.push(await request.json());
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return HttpResponse.json({ outcome: 'cancelled' });
+      }),
+    );
+    const { default: DevMerch } = await import('../src/components/dev/DevMerch');
+    render(<DevMerch />, { wrapper });
+    const card = await screen.findByRole('article', { name: /Order order-/ });
+    fireEvent.click(within(card).getByRole('button', { name: 'Cancel order' }));
+    const yes = within(card).getByRole('button', { name: 'Yes, cancel and refund the coins' });
+    act(() => {
+      fireEvent.click(yes);
+      fireEvent.click(yes);
+    });
+    expect(await screen.findByText('Order cancelled')).toBeInTheDocument();
+    expect(posted).toEqual([{ orderId: order.order_id, op: 'cancel' }]);
+  });
 });
