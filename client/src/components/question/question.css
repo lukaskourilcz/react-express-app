@@ -61,7 +61,11 @@
 .ss-question-header { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .ss-question-header__row { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .ss-question-header__title {
-  flex: none;
+  /* Shrinks and wraps before it pushes the progress or the run status out of
+     a 360px panel ("Level 12 · Asynchronous JavaScript" beside a timer). */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin: 0;
   font-family: var(--font-family-heading);
   font-size: var(--ss-question-title-size);

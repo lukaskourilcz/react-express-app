@@ -1,6 +1,7 @@
 // The one question header (UX audit U2, questions-09 and questions-19): an
 // h1 that names the run, progress and status on the first row, tags and 44px
 // icon buttons on the second.
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { createRef } from 'react';
@@ -74,5 +75,13 @@ describe('QuestionIconButton', () => {
     const exit = screen.getByRole('button', { name: 'Exit quiz' });
     expect(exit).not.toHaveAttribute('aria-pressed');
     expect(exit.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('lets a long h1 wrap instead of pushing progress and status out of a 360px panel', () => {
+    const css = readFileSync(new URL('../src/components/question/question.css', import.meta.url), 'utf8');
+    const rule = css.match(/\.ss-question-header__title \{[^}]*\}/)?.[0] ?? '';
+    expect(rule).toMatch(/flex: 0 1 auto/);
+    expect(rule).toMatch(/min-width: 0/);
+    expect(rule).not.toMatch(/flex: none/);
   });
 });
