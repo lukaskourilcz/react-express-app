@@ -5773,6 +5773,22 @@ async function main() {
       await handlePracticeSession(req as never, res as never, unreadable as never);
       assert.equal(res.statusCode, 500, `a run that could not be read back is not answered as no run: ${JSON.stringify(res.body)}`);
     }
+    // A run is built from what the learner has not passed. Passed tasks that
+    // could not be read were an empty set, and the run offered every task the
+    // learner had already done as new work.
+    {
+      const blind = practiceDb();
+      const from = (table: string) => {
+        const chain = blind.client.from(table) as Record<string, unknown>;
+        return table === 'coding_progress'
+          ? { ...chain, select: () => blinded, eq: () => blinded }
+          : chain;
+      };
+      const blinded = { eq: () => blinded, then: (resolve: (value: unknown) => unknown) => resolve({ data: null, error: { code: '57014', message: 'statement timeout' } }) };
+      const refused = await asPremium(handlePracticeSession, { count: 5, order: 'sequential', topic: 'javascript' }, { ...blind, client: { ...blind.client, from } } as never);
+      assert.equal(refused.statusCode, 503, `a run is not built without the passed tasks: ${JSON.stringify(refused.body)}`);
+      assert.equal(blind.started.length, 0, 'no run starts');
+    }
 
     // The task page agrees: it opens the tier-3 task the run holds.
     const taskPage = async (id: string, db: ReturnType<typeof practiceDb>) => {

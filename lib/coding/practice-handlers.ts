@@ -233,12 +233,14 @@ export async function handleCodingBookmarks(req: VercelRequest, res: VercelRespo
 
 /* ── skips ────────────────────────────────────────────────────────────── */
 
-/** The learner's passed tasks, for choosing what to offer next. */
+/** The learner's passed tasks, for choosing what to offer next. Throws when
+ * they cannot be read, as a timeout already did: an empty set would offer
+ * every task the learner already passed as new work. */
 async function passedTaskIds(supabase: SupabaseClient, userId: string): Promise<Set<string>> {
   const rows = await withTimeout(
     supabase.from('coding_progress').select('task_id,status').eq('user_id', userId).eq('status', 'passed'),
   );
-  if (rows.error) return new Set();
+  if (rows.error) throw new Error('progress_unavailable');
   return new Set((rows.data ?? []).map((row) => String(row.task_id)));
 }
 
@@ -276,7 +278,9 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   // the Learn levels that open JavaScript tier 3 included. A plan that cannot
   // be read suggests from the free set, which only narrows.
   const [passed, cleared, plan] = await Promise.all([
-    passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch((): Tier => 'free'),
+    // The skip is recorded; a suggestion read without the passed tasks is
+    // still one the learner may open.
+    passedTaskIds(supabase, userId).catch(() => new Set<string>()), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch((): Tier => 'free'),
   ]);
   const next = nextAfterSkip(task.id, passed, plan, cleared);
 
@@ -473,8 +477,9 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
     // together; none of them needs another.
     const [passed, cleared, plan] = await Promise.all([
       // Unread Learn levels count as none, which only narrows the run.
-      passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch(() => null),
+      passedTaskIds(supabase, userId).catch(() => null), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch(() => null),
     ]);
+    if (passed === null) return jsonError(res, 503, 'progress_unavailable', 'Could not load your progress. Try again in a moment.');
     if (plan === null) return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
     const due = new Set<string>();
 
