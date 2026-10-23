@@ -103,6 +103,11 @@ describe('Big O guide and introduction', () => {
     fireEvent.click(start);
     await screen.findByRole('heading', { name: 'Complexity Basics', level: 1 });
     expect(reads).toEqual(['reading']);
+    // The lesson takes focus so a screen reader starts there, without the
+    // browser's ring round the whole page (it is not a Tab stop).
+    const lessonRoot = document.querySelector<HTMLElement>('.lp-page')!;
+    await waitFor(() => expect(document.activeElement).toBe(lessonRoot));
+    expect(lessonRoot.style.outline).toBe('none');
     // The parameter is dropped once the lesson is open, so Back and a reload
     // land on the introduction.
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/learn\/big-o$/));
