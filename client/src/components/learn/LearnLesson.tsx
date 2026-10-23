@@ -1,6 +1,5 @@
 // Optional reading before Learn starts an attempt. Only the questions write progress.
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { fetchLearnLesson } from '../../lib/roadmap';
@@ -14,12 +13,11 @@ import '../paths/LearningPaths.css';
 
 // The route shell sets the page width (narrow, 800px); the article caps itself
 // at 72ch. Back sits at the top-left at its own width and names where it goes
-// when the page knows: /learn/big-o goes back to the Big O introduction. The
+// (the caller passes the place: the topic's map, the Big O introduction). The
 // note and the one primary share a row at the end of the article's column
 // (UX audit learn-05), so neither stretches across the page.
-export function LearnLesson({ lessonId, onStart, onBack }: { lessonId: string; onStart: () => void; onBack: () => void }) {
+export function LearnLesson({ lessonId, backLabel, onStart, onBack }: { lessonId: string; backLabel: string; onStart: () => void; onBack: () => void }) {
   const t = useT();
-  const { pathname } = useLocation();
   const root = useRef<HTMLDivElement>(null);
   const query = useQuery({ queryKey: ['learn-lesson', lessonId], queryFn: ({ signal }) => fetchLearnLesson(lessonId, signal), staleTime: 5 * 60_000, retry: false });
   useEffect(() => { root.current?.focus(); }, [lessonId]);
@@ -29,7 +27,7 @@ export function LearnLesson({ lessonId, onStart, onBack }: { lessonId: string; o
         className="lp-lesson-back"
         variant="ghost"
         icon={<span aria-hidden="true">←</span>}
-        label={pathname === '/learn/big-o' ? t('bigO.pathTitle') : t('common.back')}
+        label={backLabel}
         onClick={onBack}
       />
       {query.data ? <LessonView lesson={query.data.lesson} headingLevel={1} />

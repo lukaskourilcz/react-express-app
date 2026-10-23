@@ -23,7 +23,7 @@ function mount(failReading = false) {
     }
     return HttpResponse.json({ topics: [], structure: {} });
   }));
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={['/learn/big-o']}><LanguageProvider><BigOIntroduction /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><LanguageProvider><BigOIntroduction /></LanguageProvider></MemoryRouter></QueryClientProvider>);
   return reads;
 }
 describe('Learn lesson reading', () => {

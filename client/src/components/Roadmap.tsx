@@ -828,7 +828,7 @@ function Roadmap() {
   // the moment the invite link is offered (#239).
   const noLevelPassedYet = (TOPICS as RoadmapTopic[]).every((one) => passedLevelCount(progress, one) === 0);
   if (active !== null) {
-    if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} onStart={() => open(active, true)} onBack={exitLesson} />;
+    if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} backLabel={t(categoryLabelKey(topic))} onStart={() => open(active, true)} onBack={exitLesson} />;
     if (loadingLesson) {
       return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     }
@@ -1889,7 +1889,7 @@ export function BigOIntroduction() {
     setLevel(next);
   };
   if (level !== null) {
-    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
+    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
     if (lesson.isPending) return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
     return <LessonStage onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
