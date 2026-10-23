@@ -70,7 +70,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   const difficultyMode = difficultyRaw as DifficultyMode;
 
-  const categoriesParam = (req.query.categories as string) || '';
+  // A repeated parameter arrives as an array, which has no split(): read only
+  // a single string, as the daily and Challenge handlers do.
+  const categoriesParam = typeof req.query.categories === 'string' ? req.query.categories : '';
   const requested = categoriesParam ? categoriesParam.split(',') : defaultDeploymentCategories();
   let selectedCategories = requested.filter((c): c is CategoryType =>
     ALL_CATEGORIES.includes(c as CategoryType),

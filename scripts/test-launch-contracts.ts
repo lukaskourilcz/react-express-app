@@ -2858,6 +2858,12 @@ async function quizDifficultyContracts() {
   const jsBody = js.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
   assert.equal(jsBody.hardestAvailable, undefined, 'a selection with advanced questions is served those');
   assert.ok(jsBody.questions.every((q) => q.difficulty >= 3));
+
+  // A repeated categories parameter arrives as an array: it is not a list to
+  // split, and must not throw into a 500.
+  const repeated = mockResponse();
+  await questionsHandler({ ...(quizRequest('GET', { count: '3', difficulty: 'mixed' }) as object), query: { count: '3', difficulty: 'mixed', categories: ['javascript', 'html'] } } as never, repeated as never);
+  assert.equal(repeated.statusCode, 200, `a repeated categories parameter is read as none given (${JSON.stringify(repeated.body)})`);
 }
 
 /** The /dev "Daily challenge" switch turns the challenge off on the server;
