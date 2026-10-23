@@ -5,17 +5,19 @@
 // than understanding. Where a task has an authored puzzle, this is what the
 // learner gets instead.
 //
-// It is operable three ways, and dragging is not one of them — dragging is an
-// addition we can add later, never the only route:
+// It is operable two ways, and dragging is not one of them — dragging is an
+// addition we can add later, never the only route. Tap a line to select it,
+// then:
 //
-//   * tap a line to select it, then tap where it should go;
-//   * move the selected line with the Up and Down buttons, which are real
-//     buttons at a real size;
-//   * move it with the arrow keys while it has focus.
+//   * move it with the Up and Down buttons, which are real buttons at a real
+//     size;
+//   * or move it with Shift and an arrow key while it has focus.
 //
 // The list is a listbox with one focus stop and a roving tabindex, so a screen
 // reader announces the line, its position and the total, and Tab does not walk
-// through fourteen items to reach the submit button.
+// through fourteen items to reach the submit button. Each move is said in the
+// puzzle's own status line: a line moved up keeps focus, so nothing else would
+// tell a screen reader where it landed.
 
 import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -35,23 +37,25 @@ export function CodePuzzle({
   const [lines, setLines] = useState<PuzzleLine[]>(puzzle.lines);
   const [selected, setSelected] = useState<string | null>(puzzle.lines[0]?.id ?? null);
   const refs = useRef<Record<string, HTMLLIElement | null>>({});
+  const [moved, setMoved] = useState('');
 
   const indexOf = useCallback((id: string) => lines.findIndex((line) => line.id === id), [lines]);
 
   const move = useCallback((id: string, delta: number) => {
-    setLines((current) => {
-      const from = current.findIndex((line) => line.id === id);
-      const to = from + delta;
-      if (from < 0 || to < 0 || to >= current.length) return current;
-      const next = [...current];
-      const [line] = next.splice(from, 1);
-      next.splice(to, 0, line);
-      return next;
-    });
+    // Each key press and tap is its own event, rendered before the next, so
+    // `lines` is the arrangement on screen.
+    const from = lines.findIndex((line) => line.id === id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= lines.length) return;
+    const next = [...lines];
+    const [line] = next.splice(from, 1);
+    next.splice(to, 0, line);
+    setLines(next);
+    setMoved(t('coding.design.moved', { step: line.code.trim(), n: to + 1, total: next.length }));
     // Focus follows the line, not the position: after a move the learner is
     // still on the line they were moving.
     window.requestAnimationFrame(() => refs.current[id]?.focus());
-  }, []);
+  }, [lines, t]);
 
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLLIElement>, id: string) => {
     const index = indexOf(id);
@@ -87,6 +91,7 @@ export function CodePuzzle({
     <section className="cd-puzzle" aria-labelledby="cd-puzzle-title">
       <h3 id="cd-puzzle-title">{t('coding.puzzle.title')}</h3>
       <p className="cd-shortcuts">{t('coding.puzzle.help')}</p>
+      <span className="cd-visually-hidden" role="status" aria-live="polite">{moved}</span>
 
       <ol className="cd-puzzle__list" role="listbox" aria-label={t('coding.puzzle.title')}>
         {lines.map((line, index) => {

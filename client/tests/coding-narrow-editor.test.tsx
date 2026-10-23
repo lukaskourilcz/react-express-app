@@ -175,3 +175,18 @@ it('lets a long puzzle line scroll inside its own box instead of widening the pa
     expect(code).toHaveStyle({ minWidth: '0px' });
   }
 });
+
+// A line moved up keeps focus, so a screen reader heard nothing of where it
+// landed; the puzzle now says it in its own status line.
+it('says where a moved puzzle line landed', () => {
+  mountPuzzle();
+  const status = document.querySelector<HTMLElement>('.cd-puzzle > [role="status"]')!;
+  expect(status).toHaveTextContent('');
+  const second = screen.getAllByRole('option')[1];
+  fireEvent.click(second);
+  fireEvent.keyDown(second, { key: 'ArrowUp', shiftKey: true });
+  expect(screen.getAllByRole('option')[0]).toHaveTextContent('const one = () => {');
+  expect(status).toHaveTextContent('const one = () => { moved to position 1 of 3');
+  fireEvent.click(screen.getByRole('button', { name: 'Move down' }));
+  expect(status).toHaveTextContent('const one = () => { moved to position 2 of 3');
+});
