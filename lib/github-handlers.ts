@@ -212,9 +212,14 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     }
 
     if (op === 'github-disconnect') {
+      // The connection first: a disconnect that failed leaves the learner
+      // connected, and must leave their queued files with them. The queue
+      // goes after it, and a failure there answers 500 so the retry removes it
+      // before a later connection could write those files to another repository.
       const deleted = await withTimeout(supabase.from('github_connections').delete().eq('user_id', userId));
-      await withTimeout(supabase.from('github_commits').delete().eq('user_id', userId));
       if (deleted.error) return jsonError(res, 500, 'db_error', 'Could not disconnect');
+      const dropped = await withTimeout(supabase.from('github_commits').delete().eq('user_id', userId));
+      if (dropped.error) return jsonError(res, 500, 'db_error', 'Could not disconnect');
       logEvent({ status: 200, kind: 'disconnected' });
       return res.json({ ok: true });
     }

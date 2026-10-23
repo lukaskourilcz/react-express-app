@@ -165,8 +165,9 @@ let commitSeq = 0;
 let raceWindow = false;
 // The database not answering in time: every call rejects as withTimeout would.
 let dbTimeout = false;
-// The database answering with an error instead of rows.
+// The database answering with an error instead of rows, everywhere or for one table.
 let dbError = false;
+let failingTable: string | null = null;
 
 function query(name: string) {
   const filters: ((row: Record<string, unknown>) => boolean)[] = [];
@@ -179,7 +180,7 @@ function query(name: string) {
   let single = false;
   let ordered = false;
   const run = () => {
-    if (dbError) return { data: null, error: { code: 'XX000', message: 'stand-in database error' }, count: null };
+    if (dbError || failingTable === name) return { data: null, error: { code: 'XX000', message: 'stand-in database error' }, count: null };
     if (name === 'github_commits') {
       if (insertRow) {
         const id = `commit-${++commitSeq}`;
@@ -477,6 +478,22 @@ async function main() {
   const unread = await pass('const answer = 4;');
   dbError = false;
   assert.equal(unread?.status, 'failed', 'a failed connection read reports the garden write as failed');
+
+  // 18. A disconnect the database refused leaves the learner connected with
+  //     their queue; one that went through removes both.
+  table.get(accountE)!.status = 'broken';
+  assert.equal((await pass('const answer = 5;'))?.status, 'queued');
+  const waiting = () => [...commitRows.values()].filter((row) => row.user_id === accountE && row.status === 'queued').length;
+  failingTable = 'github_connections';
+  const refusedDisconnect = await call('github-disconnect', accountE, 'POST');
+  failingTable = null;
+  assert.equal(refusedDisconnect.statusCode, 500, 'a disconnect the database refused is an error');
+  assert.ok(table.has(accountE), 'the learner is still connected');
+  assert.equal(waiting(), 1, 'a failed disconnect keeps the queued file');
+  const disconnected = await call('github-disconnect', accountE, 'POST');
+  assert.equal(disconnected.statusCode, 200);
+  assert.ok(!table.has(accountE), 'the connection is gone');
+  assert.equal([...commitRows.values()].filter((row) => row.user_id === accountE).length, 0, 'the queue is gone with it');
 
   console.log('GitHub garden connect passed: the code is required and exchanged once, only the installation\'s own GitHub account can connect it, an organisation installation is refused, no user token is kept, one installation belongs to one devShark account, and connect and sync limits are each learner\'s own.');
 }
