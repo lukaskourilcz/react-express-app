@@ -583,6 +583,28 @@ describe('double presses', () => {
     expect(api.controlMatch).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the next question locked when the last one’s answer fails after the room moved on', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    let fail!: () => void;
+    api.submitMatchAnswer
+      .mockImplementationOnce(() => new Promise((_done, reject) => { fail = () => reject(new ApiError('Failed to fetch', 0, 'network')); }))
+      .mockResolvedValue({ ok: true, is_correct: true, advanced: false });
+    await mount();
+    await screen.findByText('Pick one?');
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await fire('match_updated', { status: 'running', current_index: 1 });
+    await screen.findByText('Next one?');
+    fireEvent.click(screen.getByRole('radio', { name: 'delta' }));
+    await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(2));
+    await act(async () => { fail(); });
+    await settle();
+    expect(screen.getByText('Answer locked. Waiting for the other players…')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'gamma' })).toBeDisabled();
+  });
+
   it('creates one room for a double click on Create', async () => {
     let release!: () => void;
     api.createMatch.mockImplementation(() => new Promise((done) => { release = () => done({ id: 'm1', code: 'ABC123', mode: 'multiplayer', status: 'lobby' }); }));

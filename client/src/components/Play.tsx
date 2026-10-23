@@ -677,8 +677,13 @@ export function PlayMatch() {
     return () => window.clearTimeout(id);
   }, [matchStatus, match?.current_index, questionStartedAt, questionDurationS, clockOffsetMs, refresh]);
 
+  // Which question the per-question state belongs to: bumped with each new
+  // one, so an answer's response that lands after the room moved on leaves
+  // the new question's lock alone.
+  const questionSeqRef = useRef(0);
   // Reset per-question UI when the index changes.
   useEffect(() => {
+    questionSeqRef.current += 1;
     setSelected(null);
     setSubmitted(false);
     submitLockRef.current = false;
@@ -764,6 +769,7 @@ export function PlayMatch() {
   const submitAnswer = async (selectedIdx: number) => {
     if (!match || !user?.id || submitLockRef.current) return;
     submitLockRef.current = true;
+    const seq = questionSeqRef.current;
     setSelected(selectedIdx);
     setSubmitted(true);
     try {
@@ -805,9 +811,13 @@ export function PlayMatch() {
         await refresh();
         return;
       }
-      // Genuine failure (network, server): unlock so the player can retry.
-      submitLockRef.current = false;
-      setSubmitted(false);
+      // Genuine failure (network, server): unlock so the player can retry,
+      // unless the room has moved on: the lock then belongs to the next
+      // question, which the player may already have answered.
+      if (questionSeqRef.current === seq) {
+        submitLockRef.current = false;
+        setSubmitted(false);
+      }
       setError(friendlyError(err));
     }
   };
