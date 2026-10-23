@@ -102,6 +102,15 @@ describe('the FDE competency hub', () => {
     expect(rowDetails.open).toBe(false);
     expect(within(rowDetails).getByRole('link', { name: 'Verify the receiver' })).toBeInTheDocument();
     expect(row('Integration')).toHaveTextContent('Work across a boundary.');
+    // An activity in its default state says nothing about it; the row's
+    // '0 of 2 verified' already does.
+    expect(within(board()).queryByText('Not started')).toBeNull();
+  });
+  it('names a recorded state beside its activity and leaves the others unmarked', () => {
+    mount({ progress: progress(['needs_revision']) });
+    const activities = within(board()).getByRole('list', { name: 'Activities supplying this evidence (2)' });
+    expect(within(activities).getByRole('link', { name: 'Verify the receiver' }).closest('li')).toHaveTextContent('Needs revision');
+    expect(within(activities).getByRole('link', { name: 'Review the handoff' }).closest('li')!.textContent).toBe('Review the handoff');
   });
   it('offers a completion card only for the server completion flag, with labels and counts only', () => {
     mount({ progress: progress(['verified_pass', 'self_reviewed'], true) });

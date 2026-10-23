@@ -114,15 +114,22 @@ export function FdeEvidence({ manifest, progress, pending, error, reachable, act
                 </span>
               </summary>
               <ul className="lp-list lp-evidence__activities" aria-label={copy['paths.hub.activities'].replace('{count}', String(activities.length))}>
-                {activities.map(({ module, activity }) => <li key={activity.id}>
-                  {reachable ? <Link to={activityHref('fde', module.id, activity.id)} onClick={event => {
-                    if (!activityLock(activity.id, recorded.get(activity.id) ?? 'not_started')) return;
-                    event.preventDefault();
-                    openUpgradeSheet({ kind: 'learning-path-activity', ref: `fde:${activity.id}` });
-                  }}>{activity.title}</Link> : <span>{activity.title}</span>}
-                  {activityLock(activity.id, recorded.get(activity.id) ?? 'not_started') && <> <span className="ss-premium-label">{t('premium.badge')}</span></>}
-                  {' · '}<StateBadge state={recorded.get(activity.id) ?? 'not_started'} />
-                </li>)}
+                {activities.map(({ module, activity }) => {
+                  const state = recorded.get(activity.id) ?? 'not_started';
+                  const locked = activityLock(activity.id, state);
+                  return <li key={activity.id}>
+                    {reachable ? <Link to={activityHref('fde', module.id, activity.id)} onClick={event => {
+                      if (!locked) return;
+                      event.preventDefault();
+                      openUpgradeSheet({ kind: 'learning-path-activity', ref: `fde:${activity.id}` });
+                    }}>{activity.title}</Link> : <span>{activity.title}</span>}
+                    {locked && <> <span className="ss-premium-label">{t('premium.badge')}</span></>}
+                    {/* 'Not started' is every activity's default and goes
+                        unsaid, as on the module rows (UX audit learn-11, -12):
+                        the row's count above already says none is verified. */}
+                    {state !== 'not_started' && <>{' · '}<StateBadge state={state} /></>}
+                  </li>;
+                })}
               </ul>
             </details>
           </li>)}
