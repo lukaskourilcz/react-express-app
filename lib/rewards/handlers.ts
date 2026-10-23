@@ -717,6 +717,13 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     if (paid.error) {
       if (isRpcMissing(paid.error)) return migrationRequired(res);
       if (/unknown_order/i.test(paid.error.message ?? '')) return jsonError(res, 404, 'not_found', 'Unknown order');
+      // The provider reference is unique per provider: one already recorded
+      // on another order is a mismatch to look at, refused like the others
+      // rather than a 500.
+      if (paid.error.code === '23505') {
+        logEvent({ status: 409, kind: 'webhook_refused', reason: 'provider_ref_conflict' });
+        return jsonError(res, 409, 'provider_ref_conflict', 'The event does not match the order');
+      }
       return jsonError(res, 500, 'db_error', 'Could not record the payment');
     }
     logEvent({ status: 200, kind: 'webhook_paid', applied: paid.data === true });

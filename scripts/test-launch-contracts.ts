@@ -5927,13 +5927,15 @@ async function main() {
     process.env.PAYMENT_WEBHOOK_SECRET = 'contract-webhook-secret';
     process.env.PAYMENT_PROVIDER = 'contract-pay';
     const touched: string[] = [];
+    let orderRow: Record<string, unknown> | null = null;
+    let paidAnswer: { data: unknown; error: { code?: string; message?: string } | null } = { data: true, error: null };
     const db = {
       from: (table: string) => {
         touched.push(`from:${table}`);
-        const link = { select: () => link, eq: () => link, maybeSingle: async () => ({ data: null, error: null }) };
+        const link = { select: () => link, eq: () => link, maybeSingle: async () => ({ data: orderRow, error: null }) };
         return link;
       },
-      rpc: async (fn: string) => { touched.push(`rpc:${fn}`); return { data: true, error: null }; },
+      rpc: async (fn: string) => { touched.push(`rpc:${fn}`); return fn === 'mark_merch_order_paid' ? paidAnswer : { data: true, error: null }; },
     };
     const deliver = async (body: unknown, signature: string) => {
       const res = mockResponse();
@@ -5956,6 +5958,17 @@ async function main() {
       const nul = { type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'ref\u0000' };
       assert.equal((await deliver(nul, sign(JSON.stringify(nul)))).statusCode, 400, 'a provider reference with U+0000 is refused before Postgres sees it');
       assert.deepEqual(touched, [], 'none of them reads the order');
+      // A provider reference already recorded on another order trips the
+      // unique index (23505): refused with 409 like any mismatch, not a 500.
+      orderRow = { state: 'awaiting_payment', total_minor: 2490, currency: 'EUR' };
+      paidAnswer = { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "merch_orders_provider_ref_idx"' } };
+      const reused = { type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'pi_reused', amountMinor: 2490, currency: 'EUR' };
+      const conflict = await deliver(reused, sign(JSON.stringify(reused)));
+      assert.equal(conflict.statusCode, 409, 'a reused provider reference is a refusal, not a 500');
+      assert.equal((conflict.body as { error: { code: string } }).error.code, 'provider_ref_conflict');
+      paidAnswer = { data: true, error: null };
+      const paidNow = await deliver(reused, sign(JSON.stringify(reused)));
+      assert.deepEqual([paidNow.statusCode, paidNow.body], [200, { applied: true }], 'a matching event marks the order paid');
     } finally {
       if (realEnv.secret === undefined) delete process.env.PAYMENT_WEBHOOK_SECRET; else process.env.PAYMENT_WEBHOOK_SECRET = realEnv.secret;
       if (realEnv.provider === undefined) delete process.env.PAYMENT_PROVIDER; else process.env.PAYMENT_PROVIDER = realEnv.provider;
