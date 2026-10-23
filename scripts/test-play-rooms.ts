@@ -35,8 +35,9 @@ const USERS = {
   host: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e01', token: 'play-contract-host', email: 'grace@example.com', identities: [googleIdentity('Grace Hopper')] },
   one: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', token: 'play-contract-one', email: 'ada.lovelace@example.com', identities: [emailIdentity('ada.lovelace@example.com')] },
   two: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e03', token: 'play-contract-two', email: 'alan.turing@example.com', identities: [emailIdentity('alan.turing@example.com')] },
-  // Hosts the rooms of the later checks: one account may open five rooms a minute.
+  // Host the rooms of the later checks: one account may open five rooms a minute.
   three: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e04', token: 'play-contract-three', email: 'edsger.dijkstra@example.com', identities: [emailIdentity('edsger.dijkstra@example.com')] },
+  four: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e05', token: 'play-contract-four', email: 'barbara.liskov@example.com', identities: [emailIdentity('barbara.liskov@example.com')] },
 } as const;
 type Who = keyof typeof USERS;
 
@@ -588,7 +589,14 @@ async function main() {
       assert.equal((await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: options - 1 })).statusCode, 200, 'the last option is an answer');
     }
 
-    // 11. Two hosts drawing the same room code at once: the unique key refuses
+    // 11. A topic list with an entry that is not a topic id is refused as a
+    //     whole, rather than opening a room on the part that was strings.
+    for (const categories of [['javascript', 7], ['javascript', { id: 'react' }], 'javascript']) {
+      const refused = await call('four', 'POST', 'create', { mode: 'multiplayer', count: 5, categories, duration_s: 30 });
+      assert.equal(refused.statusCode, 400, `categories ${JSON.stringify(categories)} are refused (${JSON.stringify(refused.body)})`);
+    }
+
+    // 12. Two hosts drawing the same room code at once: the unique key refuses
     //     the second insert, and that host gets a room under a new code
     //     instead of a 500.
     {

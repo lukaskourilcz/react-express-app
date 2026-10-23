@@ -222,9 +222,13 @@ async function create(req: VercelRequest, res: VercelResponse) {
     typeof body.duration_s === 'number' && playSettings.durationOptionsS.includes(body.duration_s)
       ? body.duration_s
       : playSettings.defaultDurationS;
-  let categories = Array.isArray(body.categories)
-    ? body.categories.filter((c): c is string => typeof c === 'string')
-    : [];
+  // A list with an entry that is not a topic id is malformed as a whole: the
+  // room is not opened on whatever part of it happened to be strings.
+  if (body.categories !== undefined && (!Array.isArray(body.categories) || body.categories.length > 64
+    || body.categories.some((c) => typeof c !== 'string'))) {
+    return jsonError(res, 400, 'bad_request', 'categories must be a list of topic ids');
+  }
+  let categories = (body.categories ?? []) as string[];
 
   // The client always sends the active subject's category list (or a subset
   // of it), so an empty list is a malformed request — falling back to the
