@@ -344,11 +344,11 @@ async function deliver(supabase: SupabaseClient, connection: ConnectionRow, row:
     const repo = connection.repo_full_name;
     const branch = connection.default_branch;
     const author = authorFor(connection);
-    const readme = await getFile(token, repo, 'README.md', branch);
+    // Two reads that do not wait for each other: a pass is answered after them.
+    const [readme, existing] = await Promise.all([getFile(token, repo, 'README.md', branch), getFile(token, repo, row.path, branch)]);
     if (!readme) {
       await putFile(token, repo, 'README.md', { content: readmeFor(connection.account_login), message: 'Start the devShark garden', branch, author });
     }
-    const existing = await getFile(token, repo, row.path, branch);
     if (existing && existing.content === row.content) {
       await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: now }).eq('id', row.id));
       return { status: 'skipped', url: `https://github.com/${repo}/blob/${branch}/${row.path}` };
@@ -394,8 +394,10 @@ export async function commitPassedTask(supabase: SupabaseClient, input: GardenPa
  * copies of one file only the newest is written; the older ones are skipped,
  * so a retry neither writes old code over new nor makes one commit per copy. */
 export async function retryQueued(supabase: SupabaseClient, userId: string, limit = 20): Promise<{ committed: number; failed: number; remaining: number }> {
-  const connection = await loadConnection(supabase, userId);
-  const rows = await withTimeout(supabase.from('github_commits').select('id,path,content,message,attempts').eq('user_id', userId).eq('status', 'queued').order('created_at', { ascending: true }).limit(limit));
+  const [connection, rows] = await Promise.all([
+    loadConnection(supabase, userId),
+    withTimeout(supabase.from('github_commits').select('id,path,content,message,attempts').eq('user_id', userId).eq('status', 'queued').order('created_at', { ascending: true }).limit(limit)),
+  ]);
   if (!connection || rows.error) return { committed: 0, failed: 0, remaining: rows.data?.length ?? 0 };
   const queued = (rows.data ?? []) as QueuedRow[];
   const newest = new Map<string, QueuedRow>();
