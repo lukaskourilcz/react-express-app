@@ -212,6 +212,21 @@
 .cd-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--color-background-muted); font-family: var(--cd-mono); font-size: 0.78rem; }
 
 /* ── workbench ─────────────────────────────────────────────────────────── */
+/* One frame for every task (UX audit coding-01, coding-03). From 1024px the
+   workbench is one viewport-tall frame: the page's header clearance (7rem)
+   and 48px under it are left out, within 600–900px. The audit asked for a
+   560px floor; 600px leaves the editor its own floor beside a capped brief
+   and the action bar. The editor's minimum is one token for every place a
+   task opens: 280px stacked, where it grows with the code, and 240px inside
+   the frame, which normally leaves it far more. */
+:root {
+  --cd-frame-h: clamp(600px, calc(100dvh - 7rem - 48px), 900px);
+  --cd-editor-min: 280px;
+  --cd-brief-cap: 120px;
+}
+@media (min-width: 1024px) {
+  :root { --cd-editor-min: 240px; }
+}
 .cd-workbench { display: flex; flex-direction: column; gap: 16px; }
 .cd-complexity { display: flex; align-items: center; gap: .25rem; font-size: var(--ss-type-label); font-weight: 600; line-height: 1.5; }
 .cd-complexity__info { width: 44px; min-width: 44px; min-height: 44px; padding: 0; }
@@ -247,11 +262,24 @@
     grid-template-columns: minmax(0, var(--cd-split, 58%)) 10px minmax(0, 1fr);
     align-items: stretch;
   }
-  /* The output pane takes the editor's height and no more. Size containment
-     stops its content from growing the row, so the row is as tall as the
-     editor, the pane stretches to fill it, and Run and Submit below stay where
-     the editor ends however many checks a task has. As the code grows the
-     editor grows, and the pane shows more checks with it. Scoped to this
+  /* The frame: the first row is --cd-frame-h on every task, so the editor
+     starts and Run and Submit sit at the same place whatever the brief says.
+     Hints, confirmations and errors take the row under it. */
+  .cd-workbench--section .cd-workbench__grid,
+  .cd-workbench--lesson .cd-workbench__grid { grid-template-rows: var(--cd-frame-h) auto; }
+  /* Inside the frame the code pane is brief, editor, action bar: the brief
+     and the bar keep their size and the editor takes the rest. */
+  .cd-workbench--section .cd-pane--editor,
+  .cd-workbench--lesson .cd-pane--editor { min-height: 0; overflow: hidden; }
+  .cd-workbench--section .cd-pane--editor > *,
+  .cd-workbench--lesson .cd-pane--editor > * { flex: none; }
+  .cd-workbench--section .cd-pane--editor > .cd-editor-slot,
+  .cd-workbench--lesson .cd-pane--editor > .cd-editor-slot { flex: 1 1 0; min-height: 0; }
+  /* The full brief still leaves the editor its floor and the bar its row. */
+  .cd-workbench--section .cd-brief__body[data-capped='false'],
+  .cd-workbench--lesson .cd-brief__body[data-capped='false'] { max-height: calc(var(--cd-frame-h) - var(--cd-editor-min) - 180px); overflow-y: auto; }
+  /* The output pane fills the same frame and scrolls inside. Size
+     containment stops its content from growing the row. Scoped to this
      layout: stacked, the pane has a row of its own and would collapse. */
   .cd-pane--output { position: static; contain: size; }
   .cd-output-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -294,7 +322,18 @@
 .cd-pane[hidden] { display: none; }
 /* The code pane holds the whole task: the brief on top, the editor growing in
    the middle, and the actions at its foot. */
-.cd-brief { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.cd-brief { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; min-width: 0; }
+/* The capped body (BriefZone): about five lines of prompt, then it scrolls
+   inside with a 24px fade at its foot; "Show full brief" lifts the cap. */
+.cd-brief__body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cd-brief__body[data-capped='true'] { max-height: var(--cd-brief-cap); overflow-y: auto; overscroll-behavior: contain; }
+/* The fade is the body's last 24px: pinned to the visible foot while there
+   is more to read, and over empty space once the end is reached. */
+.cd-brief__body[data-fade='true']::after { content: ''; position: sticky; bottom: 0; flex: none; height: 24px; margin-top: -10px; background: linear-gradient(to bottom, transparent, var(--color-background-surface)); pointer-events: none; }
+.cd-brief__body:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+/* A text toggle: the ghost button's inline padding is pulled back so its
+   label lines up with the prompt above it. */
+.cd-brief__toggle { align-self: flex-start; margin-inline-start: -12px; }
 /* Two fixed lines (UX audit coding-11): where the task sits as a quiet
    eyebrow, then the task's name as the page heading with its difficulty
    beside it. The name is no longer the size and green of its breadcrumb. */
@@ -304,6 +343,12 @@
 .cd-page .cd-brief__title { margin: 0; font-family: var(--font-family-heading); font-size: 1.35rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; color: var(--color-text-primary); overflow-wrap: anywhere; }
 .cd-editor-slot { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
 .cd-pane--editor .cd-editor { flex: 1; background: var(--cd-editor-bg); }
+/* An editor that fills its box (Editor fill): a flex column down to
+   CodeMirror, so it takes a fixed frame's height and scrolls inside, and
+   grows with the code where nothing fixes its height. */
+.cd-editor--fill { display: flex; flex-direction: column; min-height: 0; }
+.cd-editor--fill > .cd-editor__cm { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.cd-editor--fill .cm-editor { flex: 1 1 auto; min-height: 0; }
 .cd-workbench .cd-panel pre, .cd-workbench .cd-console { max-height: none; }
 .cd-pane__head h1 { font-size: 1.5em; }
 .cd-pane__head { display: flex; flex-direction: column; gap: 6px; }

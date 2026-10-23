@@ -1615,6 +1615,9 @@ export const en = {
   'coding.offline': 'You are offline. Run still works; Submit needs a connection.',
   'coding.lockedTask': 'This tier is locked for now.',
   'coding.editorLabel': 'Your code',
+  // The capped brief at the top of the coding frame (UX audit coding-01).
+  'coding.brief.showFull': 'Show full brief',
+  'coding.brief.showLess': 'Show less',
   'coding.run': 'Run',
   'coding.submit': 'Submit',
   'coding.submitting': 'Checking…',

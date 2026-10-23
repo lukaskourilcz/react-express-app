@@ -33,6 +33,7 @@ import { resetCoding, revealCoding, submitCoding, useCodingApproaches } from './
 import { RepeatXpNote } from './RepeatXpNote';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
+import { BriefZone } from './BriefZone';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import { complexityGuidance } from '../../../shared/coding-complexity';
 import './Coding.css';
@@ -1062,16 +1063,23 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // The brief opens the pane the learner works in, whichever pane that is: a
   // quiet eyebrow saying where the task sits, then its name as the heading
   // with the difficulty beside it (UX audit coding-11), then what it asks.
+  // The body under the heading is capped (BriefZone, coding-01), so the editor
+  // and the action bar sit at one height on every task.
   const brief = (
-    <div className="cd-brief">
-      <div className="cd-brief__head">
-        <p className="cd-brief__meta">{briefMeta}</p>
-        <div className="cd-brief__line">
-          <Title id={titleId} className="cd-brief__title">{task.title}</Title>
-          <DifficultyBadge difficulty={difficultyOf(task)} />
-          {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+    <BriefZone
+      labelledBy={titleId}
+      head={(
+        <div className="cd-brief__head">
+          <p className="cd-brief__meta">{briefMeta}</p>
+          <div className="cd-brief__line">
+            <Title id={titleId} className="cd-brief__title">{task.title}</Title>
+            <DifficultyBadge difficulty={difficultyOf(task)} />
+            {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+          </div>
         </div>
-      </div>
+      )}
+      after={locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
+    >
       <Prompt className="cd-prompt" text={task.prompt} />
       {complexity.targetTime && <div className="cd-complexity">
         <span>{t('coding.complexity.desired', { complexity: complexity.targetTime })}</span>
@@ -1095,9 +1103,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <TermsBar texts={[task.prompt, task.title]} domain={glossaryDomainFor(task.track)} />
       {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
       {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{task.api.note}</p>}
-      {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
       {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
-    </div>
+    </BriefZone>
   );
 
   // Run, Submit and the rest close the same pane, under the code.
@@ -1220,9 +1227,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           <section className="cd-pane cd-pane--editor" ref={editorPaneRef} tabIndex={-1} hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
             {!puzzleMode && !pendingOnDesktop && brief}
             <div className="cd-editor-slot">
-              {/* Shorter on a narrow screen, so Run and Submit are not a screen
-                  away from the code; it still grows with the code. */}
-              <Editor minHeight={mode === 'landing' ? 160 : narrow ? 280 : 480} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              {/* In the frame (1024px and up) the editor takes what the brief
+                  and the action bar leave and scrolls inside; stacked, it
+                  starts at --cd-editor-min and grows with the code. */}
+              <Editor fill={mode !== 'landing'} minHeight={mode === 'landing' ? 160 : undefined} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
               <span id={`${baseId}-keys`} className="cd-visually-hidden">{t(mode === 'landing' ? 'coding.shortcuts.preview' : 'coding.shortcuts')}</span>
