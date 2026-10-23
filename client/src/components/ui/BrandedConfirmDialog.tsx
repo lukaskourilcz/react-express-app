@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { useT } from '../../i18n/LanguageContext';
 
@@ -14,14 +14,20 @@ export interface ConfirmRequest {
 export function BrandedConfirmDialog({ request, onClose }: { request: ConfirmRequest | null; onClose: () => void }) {
   const t = useT();
   const [busy, setBusy] = useState(false);
+  // `busy` reaches this handler only after a render, so a second press in
+  // that gap (a double click, Enter held down) ran a delete or an account
+  // erasure twice. The ref holds from the first press.
+  const busyRef = useRef(false);
 
   const confirm = async () => {
-    if (!request || busy) return;
+    if (!request || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       await request.onConfirm();
       onClose();
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
