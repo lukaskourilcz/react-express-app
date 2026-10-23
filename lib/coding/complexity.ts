@@ -272,18 +272,51 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       ts.forEachChild(node, collect);
     };
     if (fn.body) collect(fn.body);
+    // Input sizes, before loop indices join `bounds`. A `var` index outlives
+    // its loop, so it joins these too.
+    const sizes = new Set(bounds);
     // A loop index can bound a nested scan (for j < i).
     if (fn.body) {
       const indices = (node: ts.Node) => {
         if (--budget.left < 0) return;
         if (ts.isForStatement(node) && node.condition && inputNames(node.condition.getText(file), bounds) && node.initializer && ts.isVariableDeclarationList(node.initializer)) {
-          for (const declaration of node.initializer.declarations) if (ts.isIdentifier(declaration.name)) bounds.add(declaration.name.text);
+          const blockScoped = (node.initializer.flags & ts.NodeFlags.BlockScoped) !== 0;
+          for (const declaration of node.initializer.declarations) if (ts.isIdentifier(declaration.name)) {
+            bounds.add(declaration.name.text);
+            if (!blockScoped) sizes.add(declaration.name.text);
+          }
         }
         ts.forEachChild(node, indices);
       };
       indices(fn.body);
     }
     const inputBound = (node: ts.Node): boolean => inputNames(node.getText(file), bounds);
+    // A `let` index bounds a loop only inside the loop that declares it. Read
+    // from `bounds`, which holds every index of the function, a later loop
+    // that reuses the name (for (let i = 0; i < 26; i++)) counted as input-
+    // sized, so an O(n) solution read as O(n^2), above target, with less XP.
+    const declaresIndex = (loop: ts.ForStatement, name: string): boolean => !!loop.initializer
+      && ts.isVariableDeclarationList(loop.initializer)
+      && loop.initializer.declarations.some((declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === name);
+    const indexLoops = new Map<ts.ForStatement, boolean>();
+    const indexBounded = (loop: ts.ForStatement): boolean => {
+      let known = indexLoops.get(loop);
+      if (known === undefined) indexLoops.set(loop, known = !!loop.condition && loopInputBound(loop, loop.condition));
+      return known;
+    };
+    const loopInputBound = (loop: ts.Node, condition: ts.Expression): boolean => {
+      const names = condition.getText(file).match(IDENTIFIER_TOKEN) ?? [];
+      if (names.some((name) => sizes.has(name))) return true;
+      return names.some((name) => {
+        if (!bounds.has(name)) return false;
+        for (let scope: ts.Node | undefined = loop; scope; scope = scope.parent) {
+          if (--budget.left < 0) return false;
+          // A loop's own index is not its bound.
+          if (ts.isForStatement(scope) && declaresIndex(scope, name)) return scope !== loop && indexBounded(scope);
+        }
+        return false;
+      });
+    };
     const fixedBound = (operand: ts.Expression): boolean => {
       if (ts.isParenthesizedExpression(operand)) return fixedBound(operand.expression);
       if (numericLiteral(operand) !== null) return true;
@@ -353,7 +386,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
           ts.forEachChild(child, inspectControl);
         };
         inspectControl(node.statement);
-        if (inputBound(condition)) {
+        if (loopInputBound(node, condition)) {
           loop = /\/=\s*2|\*=\s*2|>>=\s*1/.test(increment) ? { power: 0, log: 1 } : linear;
           evidence.add(loop.log ? 'Halving or doubling loop' : 'Input-bounded loop');
         } else if (!(ts.isBinaryExpression(condition) && fixedBound(condition.left) && fixedBound(condition.right))) {

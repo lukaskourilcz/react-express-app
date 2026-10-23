@@ -115,6 +115,14 @@ export function complexityContracts() {
     'function solve(xs) { let t=0; for (let i=0;i<3;i++) t+=i; return xs.length + t; }',
     'function solve(xs) { const fixed=[1,2,3]; let t=0; for (let i=0;i<fixed.length-1;i++) t+=fixed[i]; return xs.length + t; }',
   ]) assert.equal(check(code).time, 'O(1)', code + ': a literal or fixed-collection bound stays constant work');
+  // A loop index bounds a nested loop only inside the loop that declares it.
+  // A later loop reusing the name over a literal read as input-sized, so this
+  // O(n) solution was labelled O(n^2), above target, and paid 15 XP.
+  const reusedIndex = check('function solve(xs) { let t=0; for (let i=0;i<xs.length;i++) t+=xs[i]; for (let i=0;i<3;i++) for (let j=0;j<xs.length;j++) t++; return t; }');
+  assert.equal(reusedIndex.time, 'O(n)', 'a reused index name is not an input size outside its own loop');
+  assert.equal(codingPassXp(reusedIndex), 25);
+  assert.equal(check('function solve(xs) { let t=0; for (let i=0;i<xs.length;i++) for (let j=0;j<i;j++) t++; return t; }').time, 'O(n^2)', 'an enclosing index still bounds a nested loop');
+  assert.equal(check('function solve(xs) { let t=0; for (var i=0;i<xs.length;i++) t++; for (let j=0;j<i;j++) t++; return t; }').time, 'O(n)', 'a var index outlives its loop and still bounds a later one');
   assert.equal(check('const solve = xs => xs.length ? solve(xs.slice(1)) : 0;').assessment, 'unknown');
   assert.equal(check('const solve = xs => mystery(xs);').time, null);
   assert.equal(check('const solve = xs => { while(xs.length) xs = mystery(xs); return 1; };').assessment, 'unknown');
