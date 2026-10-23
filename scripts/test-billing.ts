@@ -925,6 +925,22 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal((await deliver(raw)).body.duplicate, true, 'a processed event stays a 200 duplicate');
   });
 
+  await check('an event applied but not closed says so in the log', async () => {
+    const a = await account('Finish1');
+    const unclosed = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => name === 'finish_billing_event'
+        ? { data: null, error: { code: 'XX000', message: 'boom' } }
+        : supabase.rpc(name, args),
+    } as unknown as SupabaseClient;
+    const raw = eventText('customer.subscription.created', a.ids, 'finish1');
+    const res = mockRes();
+    const lines = await logged(() => lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, res as never, unclosed));
+    assert.equal(res.statusCode, 200);
+    assert.equal(await premium(a.userId), true);
+    assert.ok(lines.some((line) => line.reason === 'finish_failed' && line.level === 'warn'), 'the open row is logged');
+  });
+
   await check('a failure part-way is retried by the next delivery', async () => {
     const a = await account('Retry1');
     const raw = eventText('customer.subscription.created', a.ids, 'retry1');

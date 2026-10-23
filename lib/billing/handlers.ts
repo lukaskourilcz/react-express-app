@@ -372,7 +372,11 @@ export async function handleBillingWebhook(req: VercelRequest, res: VercelRespon
 
   try {
     const result = await processBillingEvent(deps, event);
-    await withTimeout(supabase.rpc('finish_billing_event', { p_event_id: event.id, p_error: result.note ?? null }));
+    const finished = await withTimeout(supabase.rpc('finish_billing_event', { p_event_id: event.id, p_error: result.note ?? null }));
+    // Applied, but the row stays open: a later delivery of the event would
+    // apply it again (harmless, every step is idempotent). Say so instead of
+    // leaving an unfinished row nobody can explain.
+    if (finished.error) log({ level: 'warn', status: 200, kind: 'webhook', type: event.type, reason: 'finish_failed' });
     log({ status: 200, kind: 'webhook', type: event.type, outcome: result.outcome, note: result.note, status_after: result.sync?.status });
     return res.json({ received: true, outcome: result.outcome });
   } catch (error) {
