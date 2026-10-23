@@ -215,6 +215,36 @@ describe('the discoverable switch', () => {
     await waitFor(() => expect(puts).toEqual([{ discoverable: false }, { discoverable: true }]));
     await new Promise((done) => setTimeout(done, 50));
   });
+
+  it('stores a change made while the read after a save is still on its way', async () => {
+    serve();
+    let releaseRead!: () => void;
+    const readGate = new Promise<void>((done) => { releaseRead = done; });
+    let reads = 0;
+    const puts: unknown[] = [];
+    server.use(
+      http.get('*/api/user/friends-list', async () => {
+        reads += 1;
+        if (reads === 2) await readGate;
+        return HttpResponse.json({ friends: [], requests: [] });
+      }),
+      http.put('*/api/user/friends-handle', async ({ request }) => {
+        const body = await request.json() as { discoverable: boolean };
+        puts.push(body);
+        return HttpResponse.json(body);
+      }),
+    );
+    renderPanel();
+    const box = await screen.findByRole('checkbox');
+    fireEvent.click(box);
+    await waitFor(() => expect(reads).toBe(2));
+    // The first save is stored and its re-read is held: this change must
+    // still be sent, not wait for some later click.
+    fireEvent.click(box);
+    releaseRead();
+    await waitFor(() => expect(puts).toEqual([{ discoverable: false }, { discoverable: true }]));
+    await waitFor(() => expect(reads).toBe(3));
+  });
 });
 
 describe('your sharkname on the Friends tab', () => {

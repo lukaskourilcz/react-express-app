@@ -161,18 +161,22 @@ function HandleCard({
   const send = async () => {
     sending.current = true;
     try {
+      // A change made during the re-read is queued too (`sending` is still
+      // set), so after each re-read the loop looks again before it stops.
       while (queued.current) {
-        const next = queued.current;
-        queued.current = null;
-        try {
-          if (next.discoverable !== undefined) await setDiscoverable(next.discoverable);
-          if (next.country !== undefined) await setCountry(next.country);
-        } catch (err) {
-          setError(friendlyError(err));
+        while (queued.current) {
+          const next = queued.current;
           queued.current = null;
+          try {
+            if (next.discoverable !== undefined) await setDiscoverable(next.discoverable);
+            if (next.country !== undefined) await setCountry(next.country);
+          } catch (err) {
+            setError(friendlyError(err));
+            queued.current = null;
+          }
         }
+        await onChanged();
       }
-      await onChanged();
     } finally {
       sending.current = false;
       setShown({});
