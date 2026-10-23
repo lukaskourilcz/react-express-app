@@ -16,10 +16,10 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Card } from '@astryxdesign/core/Card';
 import { VStack } from '@astryxdesign/core/VStack';
 import { Text } from '@astryxdesign/core/Text';
 import { useAuth } from '../../lib/auth';
+import { Kicker } from '../landing/LandingKit';
 import { useT } from '../../i18n/LanguageContext';
 import { friendlyError, isPremiumRequired } from '../../lib/api';
 import { isBarred, useLocks } from '../../lib/locks';
@@ -213,15 +213,13 @@ export default function LearningPathsCard() {
   });
 
   return (
-    // The same card stock as the GitHub card beside it (.ss-raised: the
-    // container radius, the 2px edge and --shadow-low).
-    <div className="ss-raised lp-plan-anchor" id="learning-plan" ref={anchorRef} tabIndex={-1} style={{ display: 'flex', width: '100%' }}>
-    <Card variant="default" padding={3} width="100%">
+    // The stock of every Profile card (UX audit social-account-17): .ss-panel,
+    // 24px padding and a Kicker h2, so its title is no longer the weakest
+    // text on the page.
+    <div className="ss-panel lp-plan-anchor" id="learning-plan" ref={anchorRef} tabIndex={-1} style={{ padding: 24, width: '100%' }}>
       <VStack gap={2}>
         <VStack gap={0.5}>
-          <Text type="supporting" size="xsm" color="secondary">
-            {pickerCopy('profile.pathTitle')}
-          </Text>
+          <Kicker as="h2">{pickerCopy('profile.pathTitle')}</Kicker>
           <Text type="supporting" color="secondary">
             {pickerCopy('profile.pathHelp')}
           </Text>
@@ -271,6 +269,10 @@ export default function LearningPathsCard() {
                 <span className="lp-activity__kind">
                   {t('paths.kicker.role')}
                 </span>
+                {/* The status is a second line under the role name, so the
+                    row never wraps it onto a line of its own (UX audit
+                    social-account-18). */}
+                <span className="de-role-text">
                 <span className="lp-activity__title">{manifest.title}</span>
                 <span className="lp-activity__minutes">
                   {/* A short state that fits its slot: closed, resume a paused
@@ -284,6 +286,7 @@ export default function LearningPathsCard() {
                   {isOpen(entry.availability) && barred(manifest.id) && (
                     <> <span className="ss-premium-label">{t('premium.badge')}</span></>
                   )}
+                </span>
                 </span>
               </Link>
               {/* Only ever visible once the server says the path is finished,
@@ -316,7 +319,6 @@ export default function LearningPathsCard() {
         busy={busy}
         error={dialogError}
       />
-    </Card>
     </div>
   );
 }

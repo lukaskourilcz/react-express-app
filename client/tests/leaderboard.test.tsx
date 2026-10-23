@@ -72,7 +72,7 @@ it('says what the board ranks under the h1 and puts the controls right on the ta
   expect(within(head).getByText(/Five answers put you on the board./)).toBeVisible();
   // One control row: the period control and nothing in between it and the board.
   const controls = document.querySelector('.lb-controls')!;
-  expect(controls.querySelector('.lb-scope')).toBeNull();
+  expect(controls.querySelector('.ss-page-header__lead')).toBeNull();
   expect(controls.nextElementSibling).toHaveClass('lb-board');
 });
 
@@ -342,7 +342,7 @@ it('uses the Profile preference for the pinned line without offering edits on th
   const pinned = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
   expect(within(pinned).getByText('sleepySharkie1')).toBeVisible();
   expect(within(pinned).getByText('You')).toBeVisible();
-  expect(screen.queryByRole('radio', { name: /Account name|Shark nickname/ })).toBeNull();
+  expect(screen.queryByRole('radio', { name: /Account name|Sharkname/ })).toBeNull();
   expect(screen.queryByRole('switch')).toBeNull();
   nicknameBoard.unmount();
 
@@ -352,7 +352,7 @@ it('uses the Profile preference for the pinned line without offering edits on th
   const account = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
   expect(within(account).getByText('Pat Example')).toBeVisible();
   expect(within(account).getByText('You')).toBeVisible();
-  expect(screen.queryByRole('radio', { name: /Account name|Shark nickname/ })).toBeNull();
+  expect(screen.queryByRole('radio', { name: /Account name|Sharkname/ })).toBeNull();
   expect(screen.queryByRole('switch')).toBeNull();
   expect(puts).toEqual([]);
 });
@@ -364,7 +364,7 @@ it('keeps the board available when the Profile name preference cannot load', asy
   );
   await mount();
   expect(await screen.findByText('Workshop learner')).toBeVisible();
-  expect(screen.queryByRole('radio', { name: /Account name|Shark nickname/ })).toBeNull();
+  expect(screen.queryByRole('radio', { name: /Account name|Sharkname/ })).toBeNull();
   expect(screen.queryByRole('switch')).toBeNull();
 });
 

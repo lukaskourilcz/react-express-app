@@ -79,6 +79,22 @@ describe('GitHub garden card', () => {
     expect(screen.getByRole('heading', { name: en['github.title'] })).toBeInTheDocument();
   });
 
+  it('says what connecting does once, puts Connect right under it, and keeps the detail in a disclosure (social-account-22)', async () => {
+    answer(() => HttpResponse.json(NOT_CONNECTED));
+    const { container } = mount();
+    const connect = await screen.findByRole('button', { name: en['github.connect'] });
+    expect(screen.getByText(en['github.tagline'])).toBeInTheDocument();
+    const short = screen.getByText(en['github.introShort']);
+    // Connect follows the one line, on the left, before the disclosure.
+    expect(short.compareDocumentPosition(connect) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const details = container.querySelector('details.de-disclosure') as HTMLDetailsElement;
+    expect(details).not.toBeNull();
+    expect(details.open).toBe(false);
+    expect(connect.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(details.querySelector('summary')).toHaveTextContent(en['github.howItWorks']);
+    expect(details).toHaveTextContent(en['github.introTwo']);
+  });
+
   it('sends one sync for a double click, before the busy state has rendered', async () => {
     answer(() => HttpResponse.json(ACTIVE));
     const sent = posts(async () => { await delay(50); return HttpResponse.json({ committed: 2, failed: 0, remaining: 0 }); });

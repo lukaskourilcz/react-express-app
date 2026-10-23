@@ -4571,11 +4571,18 @@ async function main() {
   assert.match(profileSource, /<StatTile label=\{t\('profile\.averageScore'\)\} value=\{`\$\{totals\.average\}%`\} \/>/);
   // And the last-quiz date is gone: it is a fact nobody acts on.
   assert.doesNotMatch(profileSource, /profile\.lastQuiz/, 'the last-quiz date should not come back');
-  assert.match(
+  // UX audit social-account-08: appearance and sound live in the footer on
+  // every route, the Profile included, so the identity banner does not repeat
+  // them beside the learner's name.
+  assert.doesNotMatch(
     profileSource,
-    /<IdentitySettings \/>/,
-    'Language, appearance and sound must stay reachable from the identity banner',
+    /IdentitySettings|useColorMode|useSettings\(/,
+    'the Profile banner must not repeat the footer\'s appearance and sound controls',
   );
+  const footerSource = readFileSync(join(process.cwd(), 'client/src/components/BrandFooter.tsx'), 'utf8');
+  assert.match(footerSource, /className="ss-footer-settings" role="group"/);
+  assert.match(footerSource, /onClick=\{toggle\}/, 'the footer switches appearance on every route');
+  assert.match(footerSource, /updateSettings\(\{ soundEffects: !settings\.soundEffects \}\)/, 'the footer switches sound on every route');
 
   // A Learn level ends on the third wrong answer, which normally leaves later
   // questions unanswered. That attempt must still complete — as a fail — because

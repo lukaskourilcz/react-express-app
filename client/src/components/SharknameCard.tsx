@@ -1,14 +1,19 @@
 /**
- * "Your sharkname" on the Profile: the handle friends add you by, a Generate
- * button that rolls a funny shark name (shared/sharkname.ts), and what
- * friends see of you: the sharkname or your Google name, and an initials
- * avatar or your Google photo (op=identity, migration 055).
+ * "Your name" on the Profile: one panel for every name the learner shows
+ * (UX audit social-account-04). The sharkname row holds the handle friends
+ * add you by, a Generate button that rolls a funny shark name
+ * (shared/sharkname.ts) and Save. Under it, side by side, 'Friends see'
+ * (the sharkname or your Google name, an initials avatar or your Google
+ * photo; op=identity, migration 055) and 'Leaderboards show'
+ * (LeaderboardVisibilitySwitch, op=leaderboard-name). The two choices stay
+ * independent: each column saves its own setting.
  *
- * The roll is a short slot-machine flip of a few names on the name plate
- * above the field; under reduced motion the new name simply appears. The
- * plate is decoration: the field holds the same text, and a polite status
+ * The roll is a short slot-machine flip of a few names through the field
+ * itself; under reduced motion the new name simply appears. A polite status
  * announces the name that landed. Nothing is saved until Save: a roll only
- * fills the field, so a learner can roll, edit and roll again.
+ * fills the field, so a learner can roll, edit and roll again. A numbered
+ * sharkname shows its server number after the field, so the whole name is
+ * on screen once.
  *
  * Saving the handle goes through the existing friends-handle op. A taken
  * name answers 409 handle_taken, and the card offers a fresh roll in its
@@ -25,6 +30,7 @@ import { Kicker } from './landing/LandingKit';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { InitialsAvatar } from './ui/InitialsAvatar';
+import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { useT } from '../i18n/LanguageContext';
 import { ApiError, friendlyError } from '../lib/api';
 import {
@@ -101,15 +107,22 @@ export default function SharknameCard({ focus = false, onFocused }: { focus?: bo
               }
             }}
           />
-          {handle.handle ? (
-            <FriendsSee
-              handle={handle.handle}
-              identity={identity}
-              onChange={(next, saved) => { setIdentityState(next); if (saved) boardsChanged(); }}
-            />
-          ) : (
-            <p className="fr-note">{t('sharkname.needed')}</p>
-          )}
+          {/* Two independent settings, side by side (stacked below 600px). */}
+          <div className="sn-columns">
+            {handle.handle ? (
+              <FriendsSee
+                handle={handle.handle}
+                identity={identity}
+                onChange={(next, saved) => { setIdentityState(next); if (saved) boardsChanged(); }}
+              />
+            ) : (
+              <div className="sn-see">
+                <p className="sn-column__title">{t('sharkname.friendsSee')}</p>
+                <p className="fr-note">{t('sharkname.needed')}</p>
+              </div>
+            )}
+            <LeaderboardVisibilitySwitch />
+          </div>
         </>
       )}
     </section>
@@ -132,12 +145,12 @@ function SharknameEditor({
   const t = useT();
   const inputId = useId();
   const noteId = useId();
+  const numberId = useId();
   const input = useRef<HTMLInputElement>(null);
   const current = state.base ?? state.handle ?? '';
   const preview = (base: string) => base === current && state.handle ? state.handle : numberedSharkname(base, state.ordinal);
   const [draft, setDraft] = useState(current);
   const [flip, setFlip] = useState<{ name: string; n: number } | null>(null);
-  const [rolls, setRolls] = useState(0);
   const [saving, setSaving] = useState(false);
   // Set at the press: Enter pressed twice, or Save clicked twice, lands
   // before `saving` disables anything, and the second save of a name just
@@ -170,7 +183,6 @@ function SharknameEditor({
   const land = (name: string) => {
     setFlip(null);
     setDraft(name);
-    setRolls((n) => n + 1);
     setAnnounce(t('sharkname.generated', { name: preview(name) }));
   };
 
@@ -215,37 +227,36 @@ function SharknameEditor({
     }
   };
 
-  const plate = rolling ? preview(flip.name) : clean ? preview(clean) : t('sharkname.none');
   const dateLabel = until ? new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' }).format(until) : '';
 
   return (
     <div className="sn-editor">
       <p className="fr-note">{t('sharkname.help')}</p>
-      {/* The plate repeats the field in display type. Keyed per name so each
-          one slides in; aria-hidden because the field and the status below
-          already say it. */}
-      <p className="sn-plate" data-empty={!rolling && !clean ? 'true' : undefined} data-rolling={rolling ? 'true' : undefined} aria-hidden={!state.ordinal}>
-        <span key={rolling ? `flip-${flip.n}` : `name-${rolls}`} className={rolling ? 'sn-plate__name sn-plate__name--flip' : rolls > 0 ? 'sn-plate__name sn-plate__name--land' : 'sn-plate__name'}>
-          {plate}
-        </span>
-      </p>
-      <div className="fr-row">
-        <label className="ss-sr-only" htmlFor={inputId}>{t('sharkname.inputLabel')}</label>
-        <input
-          ref={input}
-          id={inputId}
-          className="fr-input sn-input"
-          value={draft}
-          maxLength={HANDLE_MAX_LENGTH - 1}
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          readOnly={rolling || until !== null}
-          aria-describedby={until ? noteId : undefined}
-          placeholder={t('sharkname.placeholder')}
-          onChange={(event) => { setDraft(event.target.value); setSaved(null); setTaken(null); setError(null); }}
-          onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void submit(); } }}
-        />
+      {/* The field shows the name; a roll flips a few names through it. A
+          numbered sharkname ends in its server number, drawn after the field,
+          so the name is on screen once. Below 600px the field takes the row
+          and Generate and Save share the row under it. */}
+      <div className="sn-row">
+        <div className="sn-field">
+          <label className="ss-sr-only" htmlFor={inputId}>{t('sharkname.inputLabel')}</label>
+          <input
+            ref={input}
+            id={inputId}
+            className="sn-input"
+            value={rolling ? flip.name : draft}
+            data-rolling={rolling ? 'true' : undefined}
+            maxLength={HANDLE_MAX_LENGTH - 1}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            readOnly={rolling || until !== null}
+            aria-describedby={[state.ordinal ? numberId : null, until ? noteId : null].filter(Boolean).join(' ') || undefined}
+            placeholder={t('sharkname.placeholder')}
+            onChange={(event) => { setDraft(event.target.value); setSaved(null); setTaken(null); setError(null); }}
+            onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void submit(); } }}
+          />
+          {state.ordinal && <span id={numberId} className="sn-field__number">{state.ordinal}</span>}
+        </div>
         <Button
           variant="secondary"
           isDisabled={rolling || saving || until !== null}
@@ -269,7 +280,7 @@ function SharknameEditor({
           <p className="fr-note fr-note--error">{t('sharkname.taken', { name: taken.name })}</p>
           <Button
             variant="secondary"
-            onClick={() => { setDraft(taken.suggestion); setTaken(null); setRolls((n) => n + 1); input.current?.focus(); }}
+            onClick={() => { setDraft(taken.suggestion); setTaken(null); input.current?.focus(); }}
             label={t('sharkname.trySuggestion', { name: taken.suggestion })}
           />
         </div>
@@ -321,7 +332,8 @@ function FriendsSee({
         isDisabled={busy !== null}
         onChange={(value) => void change('name', { showRealName: value === 'name' })}
       >
-        <RadioListItem value="sharkname" label={t('sharkname.seeSharkname')} description={handle} />
+        {/* The field above shows the sharkname; the option does not repeat it. */}
+        <RadioListItem value="sharkname" label={t('sharkname.inputLabel')} />
         <RadioListItem
           value="name"
           label={t('sharkname.seeName')}

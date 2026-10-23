@@ -90,6 +90,34 @@ describe('GitHub garden callback', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/settings/github');
   });
 
+  it('shows each phase as one StatePanel with a Kicker and an h1, and no display hero or fin (social-account-21)', async () => {
+    await mount(CALLBACK);
+    const heading = await screen.findByRole('heading', { level: 1, name: en['github.callbackFailed'] });
+    const panel = heading.closest('.ss-state-panel')!;
+    expect(panel).not.toBeNull();
+    expect(panel.querySelector('.ss-kicker')).toHaveTextContent(en['github.title']);
+    expect(document.querySelector('.ss-info-page, .ss-info-page__kicker, .ss-swimming-fin')).toBeNull();
+    // The body is a polite status, so the next phase is read out in place.
+    const body = panel.querySelector('.ss-state-panel__body');
+    expect(body).toHaveAttribute('role', 'status');
+    expect(body).toHaveTextContent(en['github.callbackAuthorize']);
+  });
+
+  it('makes Back to profile the primary when there is nothing to retry or reconnect (social-account-21)', async () => {
+    await mount(CALLBACK);
+    const back = await screen.findByRole('button', { name: en['github.backToProfile'] });
+    expect(back).toHaveAttribute('data-variant', 'primary');
+    expect(document.querySelectorAll('button[data-variant="primary"]')).toHaveLength(1);
+  });
+
+  it('keeps Back to profile secondary while a way forward is the primary', async () => {
+    finishAnswers(refusal(503, 'unavailable', 'Service briefly down'));
+    await mount(`${CALLBACK}&code=one-time-code`);
+    expect(await screen.findByRole('button', { name: en['quiz.retry'] })).toHaveAttribute('data-variant', 'primary');
+    expect(screen.getByRole('button', { name: en['github.backToProfile'] })).toHaveAttribute('data-variant', 'secondary');
+    expect(document.querySelectorAll('button[data-variant="primary"]')).toHaveLength(1);
+  });
+
   it.each([
     ['authorization_missing', 400, en['github.callbackAuthorize']],
     ['authorization_failed', 403, en['github.callbackAuthorize']],

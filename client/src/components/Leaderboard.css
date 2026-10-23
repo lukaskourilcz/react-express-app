@@ -13,8 +13,6 @@
    header, controls and table share one centred left edge (UX audit
    social-account-02). */
 
-.lb-head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; margin-bottom: 8px; }
-
 /* One control row right above the table: the period control on the left,
    the topic filter on the right, both 44px (the shared control floor for the
    segmented items, the shared .ss-select for the topic). On a phone they
@@ -34,8 +32,6 @@
   .lb-filter { align-items: stretch; flex-direction: column; }
   .ss-select.lb-select { width: 100%; }
 }
-
-.lb-scope { margin: 0; max-width: 46rem; font-size: var(--ss-type-compact); line-height: 1.5; color: var(--color-text-secondary); }
 
 .lb-board { overflow: hidden; }
 /* The previous board, kept while the next one loads: dimmed after a short
