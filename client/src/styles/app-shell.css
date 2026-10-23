@@ -9,10 +9,9 @@
    declarations it overrides are left out (they never applied). The same goes
    for the toolbar's height, the nav link's weight and corner, and the
    drawer panel's width, surface and edge. */
+/* The toolbar fills the header, whose own box (--ss-width-chrome) caps it. */
 .ss-toolbar {
-  max-width: 1200px;
   width: 100%;
-  margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -918,8 +917,6 @@
   backdrop-filter: blur(24px) saturate(160%);
   box-shadow: var(--shadow-low);
 }
-/* Keep the edge within the rounded material; an external gradient cut off the border. */
-:root[data-design='apple'] .ss-header::after { content: none; }
 :root[data-design='apple'] .ss-toolbar { min-height: 64px; padding-inline: 1.25rem; }
 :root[data-design='apple'] .ss-app-root[data-chrome='true'] #main-content { padding-top: 7rem !important; }
 :root[data-design='apple'] .ss-navlink { border-radius: 999px; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
