@@ -330,3 +330,7 @@ their props), never drawn again by hand.
   `flex: 1` of its own. The question block keeps one reserved height
   (`--ss-question-block-min`) and scrolls past `--ss-question-block-max`, so
   the answers start at the same y on every question.
+- **One answer list.** `AnswerOptionList`: 48px rows 8px apart, a 26px
+  number chip, the brand accent for the selection (never a track colour), no
+  border or radius of a runner's own. A graded row says what it is in text
+  and glyph as well as colour: "✓ Correct answer" and "✕ Your pick".

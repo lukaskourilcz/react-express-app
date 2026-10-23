@@ -97,18 +97,18 @@
   box-shadow: inset 0 0 0 1px var(--brand-accent);
   background: var(--brand-accent-soft);
 }
-.ss-answer-list .ss-answer-option.ss-radio-card[data-mark='correct'] {
+.ss-answer-list .ss-answer-option.ss-radio-card[data-tone='success'] {
   border-color: var(--ss-success);
   box-shadow: inset 0 0 0 1px var(--ss-success);
   background: var(--ss-success-soft);
 }
-.ss-answer-list .ss-answer-option.ss-radio-card[data-mark='pick'] {
+.ss-answer-list .ss-answer-option.ss-radio-card[data-tone='error'] {
   border-color: var(--ss-error);
   box-shadow: inset 0 0 0 1px var(--ss-error);
   background: var(--ss-error-soft);
 }
 /* A graded list is disabled, but its marks are the answer: full strength. */
-.ss-answer-list .ss-answer-option.ss-radio-card[data-mark]:disabled { opacity: 1; }
+.ss-answer-list .ss-answer-option.ss-radio-card:is([data-tone='success'], [data-tone='error']):disabled { opacity: 1; }
 .ss-answer-option__row { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
 .ss-answer-option__key {
   display: grid;
@@ -133,8 +133,8 @@
   font-size: var(--ss-type-meta);
   font-weight: 700;
 }
-.ss-answer-option[data-mark='correct'] .ss-answer-option__mark { color: var(--ss-success-strong); }
-.ss-answer-option[data-mark='pick'] .ss-answer-option__mark { color: var(--ss-error); }
+.ss-answer-option[data-tone='success'] .ss-answer-option__mark { color: var(--ss-success-strong); }
+.ss-answer-option[data-tone='error'] .ss-answer-option__mark { color: var(--ss-error); }
 
 /* ——— QuestionHint ——— */
 /* One reserved line under the answers in every state: hiding the words never

@@ -375,6 +375,10 @@ export const en = {
   'difficulty.advanced.tip': 'Difficulty 3–5.',
   'difficulty.mixed.tip': 'Difficulty 1 to 5, shuffled.',
 
+  // Question screens: the shared parts in components/question/ (UX audit U2)
+  'question.correctAnswer': 'Correct answer',
+  'question.yourPick': 'Your pick',
+
   // Quiz, in progress
   'quiz.questionOf': 'Question {current} of {total}',
   'quiz.progressAria': 'Quiz progress',

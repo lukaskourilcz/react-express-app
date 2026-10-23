@@ -192,8 +192,9 @@ interface CardProps {
   /** Padding in 4px steps, matching Astryx spacing. */
   padding?: number;
   disabled?: boolean;
-  /** 'success' paints the card green — e.g. revealing the correct answer. */
-  tone?: 'default' | 'success';
+  /** 'success' paints the card green — e.g. revealing the correct answer;
+   *  'error' marks a graded wrong pick (AnswerOptionList draws it). */
+  tone?: 'default' | 'success' | 'error';
   width?: number | string;
   style?: CSSProperties;
   className?: string;
