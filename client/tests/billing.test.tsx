@@ -440,6 +440,29 @@ describe('the plan line and the footer', () => {
     }
   });
 
+  it('opens one portal session for a double press, on the plan line and on the checkout button', async () => {
+    signIn();
+    serve({ plan: PREMIUM });
+    let portals = 0;
+    server.use(http.post('*/api/user/billing-portal', async () => {
+      portals += 1;
+      await delay('infinite');
+      return HttpResponse.json({ url: 'https://billing.stripe.com/p/session/test' });
+    }));
+    const line = renderAt('/profile', <PlanLine />);
+    const manage = await screen.findByRole('button', { name: 'Manage billing' });
+    act(() => { manage.click(); manage.click(); });
+    await waitFor(() => expect(portals).toBe(1));
+    line.unmount();
+    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
+    const button = await screen.findByRole('button', { name: 'Manage billing' });
+    await waitFor(() => expect(button).toBeEnabled());
+    act(() => { button.click(); button.click(); });
+    await waitFor(() => expect(portals).toBe(2));
+    await new Promise((done) => setTimeout(done, 50));
+    expect(portals).toBe(2);
+  });
+
   it('keeps Manage billing away from a complimentary grant without billing', async () => {
     signIn();
     serve({ plan: { ...PREMIUM, source: 'manual', currentPeriodEnd: null } });

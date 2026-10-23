@@ -14,7 +14,7 @@
 // Customer Portal (card, invoices, plan switch, cancel at period end), whichever
 // grant wins the line: a complimentary grant longer than the subscription
 // under it, or a subscription that has ended and left its invoices.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Text } from '@astryxdesign/core/Text';
@@ -59,13 +59,19 @@ function ManageBilling() {
   const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A second press can land before `busy` disables the button; it must not
+  // open a second portal session.
+  const leaving = useRef(false);
   const open = async () => {
+    if (leaving.current) return;
+    leaving.current = true;
     setBusy(true);
     setError(null);
     try {
       await openBillingPortal();
     } catch (err) {
       setError(friendlyError(err) || t('profile.plan.manageFailed'));
+      leaving.current = false;
       setBusy(false);
     }
   };

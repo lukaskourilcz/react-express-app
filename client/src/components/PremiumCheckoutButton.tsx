@@ -9,7 +9,7 @@
 //
 // The button only leads to Stripe's hosted page. The order button that
 // commits to paying is Stripe's, with the wording set on the server.
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -29,16 +29,22 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A second press can land before `busy` disables the button; it must not
+  // open a second portal session.
+  const leaving = useRef(false);
   // Back from Stripe can bring this page back from the cache busy.
-  useClearOnPageRestore(setBusy);
+  useClearOnPageRestore(useCallback((value: boolean) => { leaving.current = value; setBusy(value); }, []));
 
   const run = async (action: () => Promise<void>) => {
+    if (leaving.current) return;
+    leaving.current = true;
     setBusy(true);
     setError(null);
     try {
       await action();
     } catch (err) {
       setError(friendlyError(err));
+      leaving.current = false;
       setBusy(false);
     }
   };
