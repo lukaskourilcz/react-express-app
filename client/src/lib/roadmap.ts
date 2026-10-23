@@ -540,46 +540,6 @@ export async function pushProgressToServer(
   });
 }
 
-/**
- * Fire the same PUT with `keepalive: true` so the request survives the tab
- * closing (Chrome/Safari finish it after unload). Used from the pagehide /
- * visibilitychange flush so no learner ever loses a lesson pass by closing
- * the tab a beat too early. Best-effort — errors are swallowed.
- *
- * Skips itself when signed out (the endpoint would 401 anyway) by only
- * running if a Supabase access token is already in memory.
- */
-export function flushProgressBeacon(): void {
-  try {
-    const account = readAccountExtras();
-    const payload = JSON.stringify({
-      data: readProgress(),
-      extra: {
-        unlocked: readExtraUnlocks(),
-        wallets: account.wallets,
-        inventories: account.inventories,
-      },
-    });
-    // The auth Bearer is read via getAccessToken() inside apiFetch, which is
-    // async — we can't await here. Use the plain fetch with the stored token
-    // reference; if missing we just skip (guest users have nothing to sync).
-    const token = readCachedAccessToken();
-    if (!token) return;
-    void fetch(PROGRESS_PUT, {
-      method: 'PUT',
-      keepalive: true,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: payload,
-    });
-  } catch {
-    // Absolutely best-effort — do not throw during unload.
-  }
-}
-
 // Auth cache accessor set by lib/auth on session change so beacons can read
 // the current token synchronously (supabase-js exposes an async getSession(),
 // which is unusable inside pagehide).
@@ -593,20 +553,13 @@ export function getCachedAccessTokenForBeacon(): string | null {
 }
 
 /**
- * Install one-time listeners that flush any pending sync when the tab
- * becomes hidden or unloads. `pagehide` covers Safari (which doesn't fire
- * `beforeunload` for the back/forward cache); `visibilitychange` covers
- * mobile Chrome swipes. Both use fetch keepalive so the request completes
- * even after the tab dies.
+ * Kept for the module that calls it at start-up; it installs nothing. It
+ * once sent the progress PUT with keepalive on every pagehide and every hide
+ * of a signed-in tab, but that PUT writes nothing: the server keeps progress,
+ * unlocks and extras itself (a pass is written by the level's completion),
+ * so each tab switch only spent a function call, a token check and two reads.
  */
-export function installProgressSyncFlusher(): void {
-  if (typeof window === 'undefined') return;
-  const flush = () => flushProgressBeacon();
-  window.addEventListener('pagehide', flush);
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flush();
-  });
-}
+export function installProgressSyncFlusher(): void {}
 
 // On sign-in: pull the account's progress + per-subject wallets/inventories,
 // merge each with whatever is on this device (progress and unlocks: the

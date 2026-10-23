@@ -3,10 +3,10 @@
 // balances arrive after clearAccountData and must not be written back into
 // the browser for the next person. The response is the real shape of
 // GET /api/quiz/roadmap?resource=progress.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from './mocks/server';
-import { completeRoadmapAttempt, syncProgressWithServer } from '../src/lib/roadmap';
+import { completeRoadmapAttempt, installProgressSyncFlusher, registerAccessTokenReader, syncProgressWithServer } from '../src/lib/roadmap';
 import { clearAccountData } from '../src/lib/accountData';
 
 const PROGRESS = 'devquiz:roadmap:v2';
@@ -121,5 +121,28 @@ describe('a progress sync that answers after a level completion', () => {
     await sync;
     const stored = JSON.parse(localStorage.getItem(PROGRESS) ?? '{}') as Record<string, unknown>;
     expect(Object.keys(stored)).toEqual(['html']);
+  });
+});
+
+// The progress PUT writes nothing: the server keeps progress, unlocks and
+// extras itself and answers it with the GET's read. Sent with keepalive on
+// every hide of a signed-in tab, it cost a function call, a token check and
+// two reads each time a learner switched tabs.
+describe('a signed-in tab that is hidden or closed', () => {
+  it('sends no progress PUT', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    registerAccessTokenReader(() => 'stand-in-token');
+    try {
+      installProgressSyncFlusher();
+      window.dispatchEvent(new Event('pagehide'));
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      const puts = fetchSpy.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PUT');
+      expect(puts).toEqual([]);
+    } finally {
+      registerAccessTokenReader(() => null);
+      Reflect.deleteProperty(document, 'visibilityState');
+      fetchSpy.mockRestore();
+    }
   });
 });
