@@ -260,6 +260,28 @@ describe('a returning visitor with a stored session', () => {
     expect(sb.imports).toBe(1);
   });
 
+  it('keeps the account supabase-js announced when the session read misses its deadline', async () => {
+    // supabase-js says the session is here, but getSession waits on its lock
+    // (another tab holding it): the boot deadline must not sign the page out.
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const original = sb.createClient.getMockImplementation()!;
+    sb.createClient.mockImplementationOnce((url: string, key: string) => {
+      const client = original(url, key);
+      client.auth.getSession.mockImplementation(() => new Promise(() => {}));
+      return client;
+    });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await mountAuth();
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored');
+      await act(async () => { await vi.advanceTimersByTimeAsync(8_001); });
+      expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('restores the user when the client loaded before the provider mounted', async () => {
     localStorage.setItem(KEY, JSON.stringify(STORED));
     const reports = recordSignInReports();
@@ -411,6 +433,31 @@ describe('an OAuth return', () => {
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-oauth'));
     await waitFor(() => expect(reports).toEqual(['Bearer oauth-access-token']));
     expect(window.location.hash).toBe('');
+  });
+
+  it('sends a sign-in report the server never answered again on the next sign-in, and a delivered one only once', async () => {
+    window.history.replaceState(null, '', '/#access_token=oauth-access-token&refresh_token=r&expires_in=3600&token_type=bearer');
+    const statuses = [503, 200];
+    const reports: number[] = [];
+    server.use(http.post('*/api/user/authevent', () => {
+      const status = statuses.shift() ?? 200;
+      reports.push(status);
+      return status === 200
+        ? HttpResponse.json({ ok: true, kind: 'register' })
+        : HttpResponse.json({ error: { code: 'upstream_timeout', message: 'Try again' } }, { status });
+    }));
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-oauth'));
+    await waitFor(() => expect(reports).toEqual([503]));
+    await settle();
+    // supabase-js announces the session again (the tab is shown again).
+    const session = sb.sessionFor('oauth-access-token', 'user-oauth');
+    await act(async () => sb.clients[0].emit('SIGNED_IN', session));
+    await waitFor(() => expect(reports).toEqual([503, 200]));
+    await settle();
+    await act(async () => sb.clients[0].emit('SIGNED_IN', session));
+    await settle();
+    expect(reports).toEqual([503, 200]);
   });
 
   it('imports supabase-js for an error return too, which supabase-js reads', async () => {
@@ -722,6 +769,34 @@ describe('signing out', () => {
     expect(keptDrafts()).toBeNull();
     expect((await openTask()).code).toBeNull();
     expect(kept(localStorage, DRAFTS)).toEqual([]);
+  });
+
+  it('forgets the account’s data when another account’s session replaces it without a sign-out', async () => {
+    // An email link of another account opened in this browser: supabase-js
+    // saves its session over the stored one and announces only SIGNED_IN.
+    const reports = recordSignInReports();
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, { ...ACCOUNT_LOCAL, ...DEVICE_LOCAL });
+    seed(sessionStorage, ACCOUNT_SESSION);
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    const { accountEpoch } = await import('../src/lib/accountData');
+    const before = accountEpoch();
+    // This tab reported a sign-in of the account here earlier.
+    sessionStorage.setItem('devquiz:auth-reported', '1');
+    await signIn('user-other');
+    expect(screen.getByTestId('auth')).toHaveTextContent('user:user-other');
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+    expect(kept(sessionStorage, ACCOUNT_SESSION)).toEqual([]);
+    expect(kept(localStorage, DEVICE_LOCAL)).toEqual(Object.keys(DEVICE_LOCAL));
+    // Work still out for the account that left writes nothing.
+    expect(accountEpoch()).toBeGreaterThan(before);
+    // The arriving account's sign-in is reported, even after one earlier in this tab.
+    await waitFor(() => expect(reports).toEqual(['Bearer user-other-token']));
+    // The same account again (a token refresh) forgets nothing.
+    seed(localStorage, ACCOUNT_LOCAL);
+    await signIn('user-other');
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual(Object.keys(ACCOUNT_LOCAL));
   });
 
   it('opens nothing kept for the account to a guest', async () => {

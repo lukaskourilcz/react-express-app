@@ -82,7 +82,8 @@ export function resolveTier(userId: string): Promise<Tier> {
 
 export interface OpenOptions {
   /** Whether the learner already cleared this content. Called only when the
-   * tier refuses it; true keeps it open for review. */
+   * tier refuses it; true keeps it open for review. A rejection answers 503
+   * `entitlement_unavailable`, never 402. */
   cleared?: () => Promise<boolean>;
 }
 
@@ -92,7 +93,18 @@ export async function assertOpen(userId: string | null, content: GatedContent, o
   if (contentTier(content, serverContentIndex()) === 'free') return;
   if (!userId) throw new PremiumRequiredError(content);
   if ((await resolveTier(userId)) === 'premium') return;
-  if (options.cleared && (await options.cleared().catch(() => false))) return;
+  // A "cleared" read that failed is not a "no": answering 402 would show a
+  // lapsed learner the upgrade sheet for work they passed, so it is the same
+  // 503 as a tier that cannot be read.
+  if (options.cleared) {
+    let cleared: boolean;
+    try {
+      cleared = await options.cleared();
+    } catch {
+      throw new EntitlementUnavailableError();
+    }
+    if (cleared) return;
+  }
   throw new PremiumRequiredError(content);
 }
 

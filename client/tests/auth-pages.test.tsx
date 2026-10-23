@@ -147,6 +147,8 @@ describe('/auth/confirmed', () => {
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Send a new link' }));
     expect(screen.getByText('Enter your email address.')).toBeInTheDocument();
+    // Focus goes to the field, which reads its message out with it.
+    expect(screen.getByLabelText('Email')).toHaveFocus();
     type('Email', 'ada@example.com');
     fireEvent.click(screen.getByRole('button', { name: 'Send a new link' }));
     expect(await status(/still needs confirming/)).toHaveTextContent('If ada@example.com still needs confirming, a new link is on its way.');
@@ -200,9 +202,12 @@ describe('/reset-password', () => {
     type('New password', 'short');
     fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
     expect(screen.getByText('Use at least 8 characters.')).toBeInTheDocument();
+    expect(screen.getByLabelText('New password')).toHaveFocus();
     type('New password', 'a much longer passphrase');
     type('Confirm new password', 'a much longer passphrasf');
     expect(screen.getByText('The two passwords don’t match.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
+    expect(screen.getByLabelText('Confirm new password')).toHaveFocus();
     expect(calls('/user').filter((one) => one.method === 'PUT')).toEqual([]);
 
     type('Confirm new password', 'a much longer passphrase');
@@ -215,6 +220,28 @@ describe('/reset-password', () => {
     expect(calls('/logout')[0].query).toEqual({ scope: 'others' });
     // A reset link is a sign-in too.
     expect(calls('/api/user/authevent')).toHaveLength(1);
+  });
+
+  it('says a password was changed only to the account that changed it', async () => {
+    const OTHER = emailUser({ id: '6b1c2a54-0000-4000-8000-0000000000e2', email: 'grace@example.com' });
+    server.use(
+      http.put(`${AUTH}/user`, () => gotrueOk({ ...USER, updated_at: '2026-10-01T09:05:00Z' })),
+      http.post(`${AUTH}/logout`, () => new HttpResponse(null, { status: 204 })),
+      http.post(`${AUTH}/token`, () => gotrueOk(sessionFor(OTHER, 'other-access-token'))),
+    );
+    await openPage(`/reset-password${linkFragment('recovery')}`);
+    await screen.findByRole('heading', { level: 1, name: 'Set a new password' });
+    type('New password', 'a much longer passphrase');
+    type('Confirm new password', 'a much longer passphrase');
+    fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your password is changed' })).toBeInTheDocument();
+    // The account signs out on this page, and another signs in on it.
+    const { loadedSupabase } = await import('../src/lib/supabaseClient');
+    await act(async () => { await loadedSupabase()!.auth.signOut({ scope: 'local' }); });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reset your password' })).toBeInTheDocument();
+    await act(async () => { await loadedSupabase()!.auth.signInWithPassword({ email: 'grace@example.com', password: 'correct horse battery' }); });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Change your password' })).toBeInTheDocument();
+    expect(screen.getByText('Choose a new password for grace@example.com.')).toBeInTheDocument();
   });
 
   it('says so when the new password is the old one', async () => {
@@ -231,9 +258,14 @@ describe('/reset-password', () => {
     server.use(http.post(`${AUTH}/recover`, () => gotrueOk({})));
     await openPage('/reset-password');
     expect(await h1()).toHaveTextContent('Reset your password');
+    // The live region is on the page, empty, before it has anything to say:
+    // one that arrives with its words is not read out.
+    const region = screen.getAllByRole('status').find((element) => element.classList.contains('ss-auth__status'));
+    expect(region).toBeEmptyDOMElement();
     type('Email', 'ada@example.com');
     fireEvent.click(screen.getByRole('button', { name: 'Send reset link' }));
     expect(await status(/has a devShark account/)).toHaveTextContent('If ada@example.com has a devShark account, we sent it a link to set a new password.');
+    expect(await status(/has a devShark account/)).toBe(region);
     expect(calls('/recover')[0].query.redirect_to).toBe('http://localhost:3000/reset-password');
   });
 
@@ -259,6 +291,92 @@ describe('/reset-password', () => {
     expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
     await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
     expect(calls('/verify')).toEqual([]);
+  });
+});
+
+describe('a press that lands twice on an email-link page', () => {
+  // A double click, or Enter twice: both presses run before React draws the
+  // first one's busy state.
+  const twice = (control: () => HTMLElement, submit = true) => act(() => {
+    const element = control();
+    const target = submit ? element.closest('form')! : element;
+    const fire = submit ? fireEvent.submit : fireEvent.click;
+    fire(target);
+    fire(target);
+  });
+
+  it('sends one email', async () => {
+    server.use(http.post(`${AUTH}/recover`, () => gotrueOk({})));
+    await openPage('/reset-password');
+    await h1();
+    type('Email', 'ada@example.com');
+    twice(() => screen.getByRole('button', { name: 'Send reset link' }));
+    await status(/has a devShark account/);
+    expect(calls('/recover')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('opens a scanner-safe link once', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => gotrueOk(SESSION)));
+    await openPage('/auth/confirmed?token_hash=pkce_0123456789abcdef&type=email');
+    await h1();
+    twice(() => screen.getByRole('button', { name: 'Confirm my email' }), false);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your email is confirmed' })).toBeInTheDocument();
+    expect(calls('/verify')).toHaveLength(1);
+  });
+
+  it('sets the new password once', async () => {
+    server.use(
+      http.put(`${AUTH}/user`, () => gotrueOk({ ...USER, updated_at: '2026-10-01T09:05:00Z' })),
+      http.post(`${AUTH}/logout`, () => new HttpResponse(null, { status: 204 })),
+    );
+    await openPage(`/reset-password${linkFragment('recovery')}`);
+    await screen.findByRole('heading', { level: 1, name: 'Set a new password' });
+    type('New password', 'a much longer passphrase');
+    type('Confirm new password', 'a much longer passphrase');
+    twice(() => screen.getByRole('button', { name: 'Save new password' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your password is changed' })).toBeInTheDocument();
+    expect(calls('/user').filter((one) => one.method === 'PUT')).toHaveLength(1);
+  });
+});
+
+describe('a scanner-safe link opened where another account is signed in', () => {
+  // A shared computer: ada is signed in, and grace opens the link her email
+  // sent her. The link is grace's, so the page opens it, as supabase-js opens
+  // a link that lands with its session in the address.
+  const GRACE = emailUser({ id: '6b1c2a54-0000-4000-8000-0000000000e2', email: 'grace@example.com' });
+  const signedInAsAda = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(SESSION));
+
+  it('confirms the link’s own account instead of saying the one signed in is confirmed', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => gotrueOk(sessionFor(GRACE, 'grace-access-token'))));
+    signedInAsAda();
+    await openPage('/auth/confirmed?token_hash=pkce_0123456789abcdef&type=email');
+    expect(await h1()).toHaveTextContent('Confirm your email');
+    expect(screen.queryByText(/ada@example\.com/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm my email' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your email is confirmed' })).toBeInTheDocument();
+    expect(screen.getByText('You’re signed in as grace@example.com.')).toBeInTheDocument();
+    expect(calls('/verify')).toHaveLength(1);
+  });
+
+  it('opens the reset link instead of offering to change the password of the account signed in', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => gotrueOk(sessionFor(GRACE, 'grace-access-token'))));
+    signedInAsAda();
+    await openPage('/reset-password?token_hash=pkce_0123456789abcdef&type=recovery');
+    expect(await h1()).toHaveTextContent('Reset your password');
+    expect(screen.queryByLabelText('New password')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Set a new password' })).toBeInTheDocument();
+    expect(screen.getByText('Choose a new password for grace@example.com.')).toBeInTheDocument();
+  });
+
+  it('says a refused link expired, without changing the account signed in', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => authError(403, 'otp_expired', 'Email link is invalid or has expired')));
+    signedInAsAda();
+    await openPage('/reset-password?token_hash=pkce_0123456789abcdef&type=recovery');
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'This reset link has expired' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('New password')).toBeNull();
   });
 });
 

@@ -5,6 +5,7 @@ import { createCodingSession as encodeCodingSession } from '../lib/coding/sessio
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
 import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
@@ -60,6 +61,19 @@ assert.equal(special.results[0]?.pass, true);
 const clean = await runInSandbox({code:'function answer(){return 1}',calls:['answer()'],expectations:[1]});
 assert.equal(clean.results[0]?.pass, true, 'an attack must not poison the next run');
 console.log('PASS integrity: lossless values and fresh run');
+
+// Reading a thrown promise releases its handle; releasing it again made the
+// run's error "Lifetime not alive" instead of what the code threw.
+const thrownPromise = await runInSandbox({ code: 'throw Promise.resolve(7);', calls: ['1'], expectations: [1] });
+const thrownObject = await runInSandbox({ code: 'throw {};', calls: ['1'], expectations: [1] });
+assert.notEqual(thrownObject.codeError, null);
+assert.equal(thrownPromise.codeError, thrownObject.codeError, 'a thrown promise reads like any other thrown object');
+// A promise rejected with another promise made `dump` free the inner one twice.
+for (const code of ['throw Promise.reject(Promise.resolve(7));', 'throw Promise.reject(new Promise(() => {}));']) {
+  const nested = await runInSandbox({ code, calls: ['1'], expectations: [1] });
+  assert.equal(nested.codeError, thrownObject.codeError, `${code} reads like any other thrown object`);
+}
+console.log('PASS integrity: a thrown promise is reported as the code\'s error');
 
 // Correct arithmetic can produce -0 (`-a - b` with both zero), and no check
 // asks for a sign of zero: both graders take -0 for 0, and when a result is
@@ -296,6 +310,59 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   assert.equal(deep.body?.graderUnavailable, undefined, 'over-deep code is not a grader outage');
   assert.match(deep.body?.codeError ?? '', /nests too deeply/);
   console.log('PASS integrity: React code nested too deeply for the compiler is an error verdict, not a runner outage');
+}
+
+// ── a slow React VM is a runner outage, not the learner's timeout ────────
+// The isolated runner stops everything at 22 s. Any stop counted as the
+// learner's timeout, also one while the files were written or the verdict
+// was read, or one that left the command less than its 10 s: a slow VM was
+// recorded as a timed-out attempt. Only a command that had its whole budget
+// is the learner's.
+{
+  const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))('./lib/coding/generated/vercel-sandbox.cjs') as { Sandbox: { create: (...args: unknown[]) => Promise<unknown> } };
+  const { runIsolatedReactSuite } = await import('../lib/coding/react-isolated');
+  const realCreate = Sandbox.create;
+  const realTimeout = AbortSignal.timeout;
+  const realNow = Date.now;
+  let skew = 0;
+  const aborted = (signal: AbortSignal) => new Promise<never>((_, reject) => {
+    if (signal.aborted) reject(signal.reason);
+    else signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  });
+  const vm = (overrides: Record<string, unknown>) => {
+    Sandbox.create = async () => ({
+      writeFiles: async () => undefined,
+      runCommand: async () => ({ exitCode: 1, stdout: async () => '' }),
+      stop: async () => undefined,
+      ...overrides,
+    });
+  };
+  const input = { suite: "test('renders', () => {});", appSource: 'export default function App() { return null; }' };
+  process.env.REACT_RUNNER_SNAPSHOT_ID = 'snapshot-test';
+  AbortSignal.timeout = (ms: number) => realTimeout.call(AbortSignal, ms === 22_000 ? 150 : ms);
+  Date.now = () => realNow() + skew;
+  // AbortSignal.timeout does not keep the process alive; this does.
+  const awake = setInterval(() => undefined, 1_000);
+  try {
+    vm({ writeFiles: async (_files: unknown, options: { signal: AbortSignal }) => aborted(options.signal) });
+    await assert.rejects(runIsolatedReactSuite(input), /unavailable/, 'a stop while the files are written is ours');
+    vm({ runCommand: async () => ({ exitCode: 0, stdout: async (options: { signal: AbortSignal }) => aborted(options.signal) }) });
+    await assert.rejects(runIsolatedReactSuite(input), /unavailable/, 'a stop while the verdict is read is ours');
+    vm({ runCommand: async (options: { signal: AbortSignal }) => aborted(options.signal) });
+    await assert.rejects(runIsolatedReactSuite(input), /unavailable/, 'a command stopped before its budget ran out was started late');
+    vm({ runCommand: async (options: { signal: AbortSignal }) => { skew = 10_000; return aborted(options.signal); } });
+    assert.equal((await runIsolatedReactSuite(input)).timedOut, true, 'a command still going after its whole budget is the learner\'s timeout');
+    skew = 0;
+    vm({ runCommand: async () => ({ exitCode: 124, stdout: async () => '' }) });
+    assert.equal((await runIsolatedReactSuite(input)).timedOut, true, 'a command its own limit stopped is the learner\'s timeout');
+  } finally {
+    clearInterval(awake);
+    Sandbox.create = realCreate;
+    AbortSignal.timeout = realTimeout;
+    Date.now = realNow;
+    delete process.env.REACT_RUNNER_SNAPSHOT_ID;
+  }
+  console.log('PASS integrity: a slow React VM is a runner outage, not the learner\'s timeout');
 }
 
 // ── a checkpoint hands over nothing that passes its milestone ───────────
@@ -1251,6 +1318,17 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
   assert.equal(response.statusCode, 200);
   assert.ok(JSON.stringify(response.body).length < 200_000, `the Submit response stays small (${JSON.stringify(response.body).length} bytes)`);
   console.log('PASS integrity: console output is capped by size');
+
+  // What the code throws is capped the same way: a top-level throw of five
+  // million characters came back whole as the run's error.
+  const thrown = await runInSandbox({ code: 'throw new Error("z".repeat(5e6));', calls: ['1'], expectations: [1] });
+  assert.ok(thrown.codeError!.length <= MAX_LOG_LINE_CHARS + LOG_LINE_CUT.length, `the run's error is cut (${thrown.codeError!.length})`);
+  assert.ok(thrown.codeError!.endsWith(LOG_LINE_CUT), 'the cut is marked');
+  const perCall = await runInSandbox({ code: 'const f = () => { throw new Error("a" + "\u{1F988}".repeat(2e5)); };', calls: ['f()'], expectations: [1] });
+  const callError = perCall.results[0]?.error ?? '';
+  assert.ok(callError.length <= MAX_LOG_LINE_CHARS + LOG_LINE_CUT.length, `a call's error is cut (${callError.length})`);
+  assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(callError), 'the cut keeps surrogate pairs whole');
+  console.log('PASS integrity: thrown error text is capped by size');
 }
 
 // ── hidden checks cannot be answered by call order (CODE-11) ─────────────
@@ -1727,6 +1805,29 @@ for (const name of ['sandbox', 'ts_check']) {
     writeFileSync(typesBundle, typesSource);
   }
   console.log('PASS integrity: a thread that would not start is tried again after a pause, and no run moves to the request thread on a deployment');
+}
+
+// ── a thread that cannot run the program says the grader is busy ─────────
+// A thread that started but could not run the program (QuickJS would not
+// load or allocate, before any learner code ran) answered with a plain error,
+// which the Submit handler turned into HTTP 500. It is the host's fault, so
+// the caller is told the grader is busy, as for a thread that would not start.
+{
+  const sandboxBundle = join(process.cwd(), SANDBOX_WORKER_FILE);
+  const sandboxSource = readFileSync(sandboxBundle);
+  try {
+    writeFileSync(sandboxBundle, "const { parentPort } = require('node:worker_threads');\nparentPort.on('message', () => { parentPort.postMessage({ type: 'start' }); parentPort.postMessage({ type: 'fail', message: 'QuickJS would not load' }); });\n");
+    process.env.VERCEL = '1';
+    // Two threads stay loaded with the real bundle, so four runs at once
+    // need at least two new ones.
+    const runs = await Promise.all(Array.from({ length: 4 }, () => timed(runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] }))));
+    assert.ok(runs.some((run) => run.busy === 'sandbox_worker_run_failed'), runs.map((run) => run.busy).join(', '));
+    assert.ok(runs.every((run) => run.busy === 'sandbox_worker_run_failed' || (run.value as { results: { pass: boolean | null }[] }).results[0]?.pass === true), 'the loaded threads still grade');
+  } finally {
+    delete process.env.VERCEL;
+    writeFileSync(sandboxBundle, sandboxSource);
+  }
+  console.log('PASS integrity: a thread that cannot run the program says the grader is busy');
 }
 
 // ── deeply nested TypeScript gets a verdict (C1-5) ───────────────────────

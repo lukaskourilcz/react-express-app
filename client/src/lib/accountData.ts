@@ -140,9 +140,10 @@ export function forgetOthersKeptDrafts(userId: string): void {
     removeStored(KEPT_PATH_DRAFTS);
     if (paths.userId === userId) {
       try {
-        // A copy written here since is newer than the one kept.
+        // A copy written here since is newer than the one kept. Storage that
+        // was changed by hand can hold anything; only text was ever kept.
         for (const [key, value] of Object.entries(paths.drafts)) {
-          if (PATH_DRAFT_KEY.test(key) && localStorage.getItem(key) === null) localStorage.setItem(key, value);
+          if (typeof value === 'string' && PATH_DRAFT_KEY.test(key) && localStorage.getItem(key) === null) localStorage.setItem(key, value);
         }
       } catch { /* storage may be disabled */ }
     }

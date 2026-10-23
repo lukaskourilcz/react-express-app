@@ -53,6 +53,20 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
   const [submitted, setSubmitted] = useState(false);
   const [failure, setFailure] = useState<{ kind: AuthFailure; from: 'google' | 'form' } | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
+  // The same, read at once: a second press in the same task (a double click,
+  // Enter pressed twice) runs before React draws the first one's busy state,
+  // and would send a second sign-in, account or email.
+  const running = useRef<Busy>(null);
+  const begin = (kind: Exclude<Busy, null>): boolean => {
+    if (running.current) return false;
+    running.current = kind;
+    setBusy(kind);
+    return true;
+  };
+  const finish = () => {
+    running.current = null;
+    setBusy(null);
+  };
   const [sentVersion, setSentVersion] = useState(0);
   const [resent, setResent] = useState(false);
   const emailInput = useRef<HTMLInputElement>(null);
@@ -71,7 +85,10 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
   });
   // Back from Google's account chooser can bring this page back from the
   // cache with the Google button still busy.
-  const clearGoogle = useCallback(() => setBusy((now) => (now === 'google' ? null : now)), []);
+  const clearGoogle = useCallback(() => {
+    if (running.current === 'google') running.current = null;
+    setBusy((now) => (now === 'google' ? null : now));
+  }, []);
   useClearOnPageRestore(clearGoogle);
 
   const emailIssue = emailProblem(email);
@@ -81,7 +98,12 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
   const showEmailIssue = submitted || (blurred.email && email.trim() !== '') ? emailIssue : null;
   const showPasswordIssue = submitted || (blurred.password && password !== '') ? passwordIssue : null;
 
+  // Which form is on screen: a new one each time the learner moves to
+  // another. An answer that arrives for a form the learner left is not that
+  // form's to show; the email it may have sent still counts for the wait.
+  const shown = useRef(0);
   const switchView = (next: SignInView, focusEmail = false) => {
+    shown.current += 1;
     setView(next);
     setFailure(null);
     setSubmitted(false);
@@ -100,22 +122,21 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
   };
 
   const continueWithGoogle = async () => {
-    if (busy) return;
+    if (!begin('google')) return;
     setFailure(null);
-    setBusy('google');
     try {
       // On success the page leaves for Google.
       await signInWithGoogle(request.returnTo);
     } catch (error) {
       if (!mounted.current) return;
-      setBusy(null);
+      finish();
       setFailure({ kind: authFailure(error), from: 'google' });
     }
   };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (running.current) return;
     setSubmitted(true);
     setFailure(null);
     if (emailIssue) {
@@ -126,11 +147,16 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
       passwordInput.current?.focus();
       return;
     }
-    setBusy('submit');
+    begin('submit');
+    const on = shown.current;
     if (view === 'forgot') {
       const outcome = await sendPasswordReset(email);
       if (!mounted.current) return;
-      setBusy(null);
+      finish();
+      if (on !== shown.current) {
+        if (outcome.ok) markEmailSent('reset', email);
+        return;
+      }
       if (outcome.ok) showSent('reset', email);
       else setFailure({ kind: outcome.failure, from: 'form' });
       return;
@@ -141,26 +167,34 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
       // Signed in: the host closes the dialog as the account arrives, so the
       // button stays busy until then.
       if (outcome.ok) return;
-      setBusy(null);
-      setFailure({ kind: outcome.failure, from: 'form' });
+      finish();
+      if (on === shown.current) setFailure({ kind: outcome.failure, from: 'form' });
       return;
     }
     const outcome = await signUpWithEmail(email, password, request.returnTo);
     if (!mounted.current) return;
     if (outcome.ok && outcome.signedIn) return;
-    setBusy(null);
+    finish();
+    if (on !== shown.current) {
+      if (outcome.ok) markEmailSent('confirm', email);
+      return;
+    }
     if (outcome.ok) showSent('confirm', email);
     else setFailure({ kind: outcome.failure, from: 'form' });
   };
 
   const resend = async (purpose: 'confirm' | 'reset', address: string) => {
-    if (busy) return;
-    setBusy('resend');
+    if (!begin('resend')) return;
     setFailure(null);
     setResent(false);
+    const on = shown.current;
     const outcome = purpose === 'confirm' ? await resendConfirmation(address, request.returnTo) : await sendPasswordReset(address);
     if (!mounted.current) return;
-    setBusy(null);
+    finish();
+    if (on !== shown.current) {
+      if (outcome.ok || outcome.failure === 'emailRateLimited') markEmailSent(purpose, address);
+      return;
+    }
     if (!outcome.ok) {
       // Supabase refused for sending too often: wait the minute out here too.
       if (outcome.failure === 'emailRateLimited') {
@@ -224,7 +258,9 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
               {withEmail(t(stage.purpose === 'confirm' ? 'auth.sent.confirmBody' : 'auth.sent.resetBody'), stage.email)}
             </p>
             <p className="ss-auth__note">{t('auth.sent.spamHint')}</p>
-            {resent && <p className="ss-auth__status" role="status">{t('auth.sent.resent')}</p>}
+            {/* On the page before it has words: a live region that arrives
+                with them is not read out. */}
+            <p className="ss-auth__status" role="status">{resent ? t('auth.sent.resent') : ''}</p>
             {formFailure && <FailureBanner failure={formFailure} />}
             <div className="ss-auth__actions">
               <ResendButton

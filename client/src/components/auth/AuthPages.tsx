@@ -12,8 +12,10 @@
 //
 // Both also take the scanner-safe link (`?token_hash=…&type=…`): the session
 // opens when the learner presses the button, not when a mail filter fetches
-// the link. Neither page is a new API handler: both talk to Supabase Auth.
-import { useState, type FormEvent } from 'react';
+// the link. The button shows where another account is signed in too: the link
+// is for the account it was sent to. Neither page is a new API handler: both
+// talk to Supabase Auth.
+import { useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { useT } from '../../i18n/LanguageContext';
@@ -46,6 +48,23 @@ function continuePath(next: string | null): string {
 }
 
 /**
+ * Where a scanner-safe link stands. It belongs to the account its email was
+ * sent to, which need not be the one signed in here (a shared computer), so
+ * it waits for its press and a refusal says so whoever is signed in, as a
+ * link that lands with its session in the address replaces the account here.
+ * Once it opened, the account it opened is the one signed in.
+ */
+function linkState(
+  tokenLink: unknown,
+  opened: boolean,
+  verifyFailure: AuthFailure | null,
+): 'none' | 'waiting' | 'refused' {
+  if (!tokenLink || opened) return 'none';
+  if (!verifyFailure || verifyFailure === 'network' || verifyFailure === 'serviceError') return 'waiting';
+  return 'refused';
+}
+
+/**
  * Asks for an email to be sent again: a confirmation link, or a reset link.
  * Supabase answers the same whether or not the address has an account, so
  * the sentence after sending says "if".
@@ -56,6 +75,10 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Read at once, as the sign-in dialog's is: a second press in the same task
+  // sent a second email, which Supabase refused beside the first one's "sent".
+  const sending = useRef(false);
+  const emailInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<AuthFailure | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -64,12 +87,19 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy || wait > 0) return;
+    if (sending.current || wait > 0) return;
     setSubmitted(true);
     setFailure(null);
-    if (problem) return;
+    // To the field that says what is wrong, as the sign-in dialog does: its
+    // message is read with it.
+    if (problem) {
+      emailInput.current?.focus();
+      return;
+    }
+    sending.current = true;
     setBusy(true);
     const outcome = purpose === 'confirm' ? await resendConfirmation(email, returnTo) : await sendPasswordReset(email);
+    sending.current = false;
     setBusy(false);
     if (outcome.ok || outcome.failure === 'emailRateLimited') {
       markEmailSent(purpose, email);
@@ -91,13 +121,14 @@ function EmailLinkRequest({ purpose, returnTo }: { purpose: 'confirm' | 'reset';
           value={email}
           onChange={(value) => { setEmail(value); setFailure(null); }}
           error={submitted ? fieldMessage(problem) : null}
+          inputRef={emailInput}
         />
         {failure && <FailureBanner failure={failure} />}
-        {sentTo && (
-          <p className="ss-auth__status" role="status">
-            {withEmail(t(purpose === 'confirm' ? 'authPage.resendSent' : 'auth.sent.resetBody'), sentTo)}
-          </p>
-        )}
+        {/* On the page before it has words: a live region that arrives
+            with them is not read out. */}
+        <p className="ss-auth__status" role="status">
+          {sentTo && withEmail(t(purpose === 'confirm' ? 'authPage.resendSent' : 'auth.sent.resetBody'), sentTo)}
+        </p>
         <div className="ss-info-actions" style={{ marginTop: 0 }}>
           <Button type="submit" variant="primary" label={label} isLoading={busy} isDisabled={busy || wait > 0} />
         </div>
@@ -117,12 +148,17 @@ export function EmailConfirmedPage() {
   const [linkError] = useState(() => linkErrorIn(location));
   const [tokenLink] = useState(() => tokenLinkIn(location.search, 'confirm'));
   const [verifying, setVerifying] = useState(false);
+  // A link opens once: a second press in the same task spent it again, and
+  // its refusal could show "expired" over the session the first one opened.
+  const opening = useRef(false);
+  const [opened, setOpened] = useState(false);
   const [verifyFailure, setVerifyFailure] = useState<AuthFailure | null>(null);
   const next = continuePath(params.get('next'));
 
   if (isLoading) return <LoadingScreen label={t('authPage.confirming')} />;
 
-  if (user) {
+  const link = linkState(tokenLink, opened, verifyFailure);
+  if (user && link === 'none') {
     const email = user.email ?? '';
     return (
       <Page
@@ -138,18 +174,22 @@ export function EmailConfirmedPage() {
   }
 
   const confirm = async () => {
-    if (!tokenLink || verifying) return;
+    if (!tokenLink || opening.current) return;
+    opening.current = true;
     setVerifying(true);
     setVerifyFailure(null);
     const outcome = await verifyEmailLink(tokenLink);
     // Confirmed: supabase-js announces SIGNED_IN and the page above takes over.
-    if (!outcome.ok) {
-      setVerifying(false);
-      setVerifyFailure(outcome.failure);
+    if (outcome.ok) {
+      setOpened(true);
+      return;
     }
+    opening.current = false;
+    setVerifying(false);
+    setVerifyFailure(outcome.failure);
   };
 
-  if (tokenLink && (!verifyFailure || verifyFailure === 'network' || verifyFailure === 'serviceError')) {
+  if (link === 'waiting') {
     return (
       <Page kicker={t('authPage.kicker')} title={t('authPage.confirmTitle')} lead={t('authPage.confirmTokenLead')}>
         <section className="ss-info-card ss-auth-page">
@@ -176,9 +216,12 @@ export function EmailConfirmedPage() {
       title={t(expired ? 'authPage.expiredTitle' : 'authPage.confirmTitle')}
       lead={t(expired ? 'authPage.expiredLead' : 'authPage.confirmVisitLead')}
     >
-      <div className="ss-info-actions" style={{ marginTop: 0 }}>
-        <Button variant="secondary" label={t('authPage.signIn')} onClick={() => openSignIn({ view: 'signIn' })} />
-      </div>
+      {/* The sign-in dialog opens for a signed-out visitor only. */}
+      {!user && (
+        <div className="ss-info-actions" style={{ marginTop: 0 }}>
+          <Button variant="secondary" label={t('authPage.signIn')} onClick={() => openSignIn({ view: 'signIn' })} />
+        </div>
+      )}
       <EmailLinkRequest purpose="confirm" returnTo={next !== '/' ? next : undefined} />
     </Page>
   );
@@ -192,18 +235,30 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
   const [again, setAgain] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const passwordInput = useRef<HTMLInputElement>(null);
+  const againInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<AuthFailure | null>(null);
   const problem = newPasswordProblem(password);
   const mismatch = again !== password ? 'passwordMismatch' as const : null;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (saving.current) return;
     setSubmitted(true);
     setFailure(null);
-    if (problem || mismatch || !again) return;
+    if (problem) {
+      passwordInput.current?.focus();
+      return;
+    }
+    if (mismatch || !again) {
+      againInput.current?.focus();
+      return;
+    }
+    saving.current = true;
     setBusy(true);
     const outcome = await updatePassword(password);
+    saving.current = false;
     setBusy(false);
     if (outcome.ok) onDone(outcome.otherDevicesSignedOut);
     else setFailure(outcome.failure);
@@ -219,6 +274,7 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
           error={submitted ? fieldMessage(problem) : null}
           hint={t('auth.password.rule', { min: PASSWORD_MIN_LENGTH })}
           autoComplete="new-password"
+          inputRef={passwordInput}
         />
         <PasswordField
           label={t('auth.password.confirmLabel')}
@@ -226,6 +282,7 @@ function SetPasswordForm({ onDone }: { onDone: (otherDevicesSignedOut: boolean) 
           onChange={(value) => { setAgain(value); setFailure(null); }}
           error={submitted && !problem ? fieldMessage(again ? mismatch : 'passwordRequired') : null}
           autoComplete="new-password"
+          inputRef={againInput}
         />
         {failure && <FailureBanner failure={failure} />}
         <div className="ss-info-actions" style={{ marginTop: 0 }}>
@@ -244,12 +301,18 @@ export function ResetPasswordPage() {
   const [linkError] = useState(() => linkErrorIn(location));
   const [tokenLink] = useState(() => tokenLinkIn(location.search, 'recovery'));
   const [verifying, setVerifying] = useState(false);
+  // A link opens once: a second press in the same task spent it again, and
+  // its refusal could show "expired" over the session the first one opened.
+  const opening = useRef(false);
+  const [opened, setOpened] = useState(false);
   const [verifyFailure, setVerifyFailure] = useState<AuthFailure | null>(null);
-  const [done, setDone] = useState<{ otherDevicesSignedOut: boolean } | null>(null);
+  // Whose password was set: another account signing in on this page has
+  // changed nothing yet.
+  const [done, setDone] = useState<{ userId: string; otherDevicesSignedOut: boolean } | null>(null);
 
   if (isLoading) return <LoadingScreen label={t('authPage.resetLoading')} />;
 
-  if (user && done) {
+  if (user && done?.userId === user.id) {
     return (
       <Page kicker={t('authPage.kicker')} title={t('authPage.setDoneTitle')} lead={t('authPage.setDoneLead', { email: user.email ?? '' })}>
         {done.otherDevicesSignedOut && <p className="ss-auth__note">{t('authPage.setDoneOthers')}</p>}
@@ -260,31 +323,36 @@ export function ResetPasswordPage() {
     );
   }
 
-  if (user) {
+  const link = linkState(tokenLink, opened, verifyFailure);
+  if (user && link === 'none') {
     return (
       <Page
         kicker={t('authPage.kicker')}
         title={t(passwordRecovery ? 'authPage.setTitle' : 'authPage.changeTitle')}
         lead={t('authPage.setLead', { email: user.email ?? '' })}
       >
-        <SetPasswordForm onDone={(otherDevicesSignedOut) => setDone({ otherDevicesSignedOut })} />
+        <SetPasswordForm onDone={(otherDevicesSignedOut) => setDone({ userId: user.id, otherDevicesSignedOut })} />
       </Page>
     );
   }
 
   const open = async () => {
-    if (!tokenLink || verifying) return;
+    if (!tokenLink || opening.current) return;
+    opening.current = true;
     setVerifying(true);
     setVerifyFailure(null);
     const outcome = await verifyEmailLink(tokenLink);
     // Opened: supabase-js announces PASSWORD_RECOVERY and the form above shows.
-    if (!outcome.ok) {
-      setVerifying(false);
-      setVerifyFailure(outcome.failure);
+    if (outcome.ok) {
+      setOpened(true);
+      return;
     }
+    opening.current = false;
+    setVerifying(false);
+    setVerifyFailure(outcome.failure);
   };
 
-  if (tokenLink && (!verifyFailure || verifyFailure === 'network' || verifyFailure === 'serviceError')) {
+  if (link === 'waiting') {
     return (
       <Page kicker={t('authPage.kicker')} title={t('auth.dialog.forgotTitle')} lead={t('authPage.resetTokenLead')}>
         <section className="ss-info-card ss-auth-page">
