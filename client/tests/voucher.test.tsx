@@ -16,6 +16,7 @@ import { clearAccountData } from '../src/lib/accountData';
 import UpgradeSheet from '../src/components/UpgradeSheet';
 import { closeUpgradeSheet } from '../src/lib/upgradeSheet';
 import { server } from './mocks/server';
+import { Button } from '@astryxdesign/core/Button';
 
 const auth = vi.hoisted(() => ({
   value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false },
@@ -307,6 +308,23 @@ describe('/premium with checkout on', () => {
     renderAt('/premium', <PremiumPage />);
     await waitFor(() => expect(voucherSection()).toHaveClass('ss-premium-voucher--inline'));
     expect(voucherSection()).not.toHaveClass('ss-info-card');
+  });
+
+  it('gives the folded voucher a secondary button, as the plans hold the primaries (money-09)', async () => {
+    // The Astryx variant shows only in its generated classes, so compare with
+    // a reference secondary and primary drawn the same way.
+    const reference = render(<><Button variant="secondary" label="ref-secondary" /><Button variant="primary" label="ref-primary" /></>);
+    const [secondary, primary] = [...reference.container.querySelectorAll('button')].map((button) => button.className);
+    reference.unmount();
+    expect(secondary).not.toBe(primary);
+    serve({ billing: ON });
+    const page = renderAt('/premium', <PremiumPage />);
+    await waitFor(() => expect(voucherSection()).toHaveClass('ss-premium-voucher--inline'));
+    expect(within(voucherSection()).getByRole('button', { name: 'Sign in to redeem' }).className).toBe(secondary);
+    page.unmount();
+    signIn();
+    renderAt('/premium', <PremiumVoucher billingClosed={false} inline />);
+    expect((await screen.findByRole('button', { name: 'Redeem voucher' })).className).toBe(secondary);
   });
 });
 

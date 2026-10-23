@@ -223,7 +223,7 @@ export default function PremiumVoucher({ billingClosed, inline = false }: { bill
             <>
               <p className="ss-premium-note">{t('premium.voucher.signedOut')}</p>
               <div className="ss-info-actions">
-                <Button variant="primary" label={t('premium.voucher.signIn')} aria-haspopup="dialog" onClick={signIn} />
+                <Button variant={inline ? 'secondary' : 'primary'} label={t('premium.voucher.signIn')} aria-haspopup="dialog" onClick={signIn} />
               </div>
             </>
           ) : (
@@ -245,7 +245,9 @@ export default function PremiumVoucher({ billingClosed, inline = false }: { bill
               </div>
               {bannerMessage && <div className="ss-premium-voucher__banner"><Banner status="error" title={bannerMessage} /></div>}
               <div className="ss-info-actions">
-                <Button type="submit" variant="primary" label={t('premium.voucher.submit')} isLoading={busy} isDisabled={busy} />
+                {/* After the plans the voucher is a secondary path, so its
+                    button is secondary; while it leads it is the primary. */}
+                <Button type="submit" variant={inline ? 'secondary' : 'primary'} label={t('premium.voucher.submit')} isLoading={busy} isDisabled={busy} />
               </div>
             </form>
           )}
