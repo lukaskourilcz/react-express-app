@@ -8,7 +8,7 @@
 // ones.
 
 import { createServiceClient, withTimeout } from './http';
-import { getEffectiveQuestionsById } from './questions-store';
+import { getQuestionsForHistoryById } from './questions-store';
 
 const supabase = createServiceClient();
 const TABLE = 'question_reports';
@@ -41,19 +41,24 @@ interface ReportRow {
 /** Recent reports, newest first, each with a short summary of its question. */
 export async function listReports(limit = 300): Promise<AdminReport[]> {
   if (!supabase) throw new Error('not_configured');
-  const { data, error } = await withTimeout(
-    supabase
-      .from(TABLE)
-      .select('id, question_id, reason, detail, reporter_sub, created_at')
-      .order('created_at', { ascending: false })
-      .limit(limit),
-    5000,
-  );
+  // The reports and the questions they name load together. The questions are
+  // the merged set before the eligibility gate: a reported question is often
+  // retired or withheld because of the report, and still has a summary.
+  const [{ data, error }, known] = await Promise.all([
+    withTimeout(
+      supabase
+        .from(TABLE)
+        .select('id, question_id, reason, detail, reporter_sub, created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      5000,
+    ),
+    getQuestionsForHistoryById(),
+  ]);
   if (error) throw new Error(error.message);
 
-  const effective = await getEffectiveQuestionsById();
   const summaryFor = (id: string): string | null => {
-    const q = effective.get(id);
+    const q = known.get(id);
     return q ? summarize(q.question) : null;
   };
 

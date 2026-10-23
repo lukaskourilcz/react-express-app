@@ -124,7 +124,18 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
-  const allQuestions = await getEffectiveQuestions(scope.subject);
+  // A signed-in learner gets one claim for this subject/day even if they
+  // refetch the deterministic questions, and quiz/submit ranks only that one.
+  // Anonymous practice stays useful but never receives a ranked receipt.
+  const attemptId = auth ? stableAttemptId('daily', auth.sub, scope.subject, dateParam) : undefined;
+  // When the learner first saw today's questions does not depend on which
+  // questions they are, so the bank and the start marker load together.
+  const [allQuestions, start] = await Promise.all([
+    getEffectiveQuestions(scope.subject),
+    auth && attemptId
+      ? dailyStart({ attemptId, userId: auth.sub, subject: scope.subject })
+      : Promise.resolve({ startedAt: null, completed: false }),
+  ]);
   const selected: Question[] = [];
   for (const diff of DAILY_DIFFICULTIES) {
     // Never surface private (owner-only) categories in the shared daily mix.
@@ -161,13 +172,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     };
   });
 
-  // A signed-in learner gets one claim for this subject/day even if they
-  // refetch the deterministic questions, and quiz/submit ranks only that one.
-  // Anonymous practice stays useful but never receives a ranked receipt.
-  const attemptId = auth ? stableAttemptId('daily', auth.sub, scope.subject, dateParam) : undefined;
-  const start = auth && attemptId
-    ? await dailyStart({ attemptId, userId: auth.sub, subject: scope.subject })
-    : { startedAt: null, completed: false };
   const issuedAt = Date.now();
   const sessionId = encodeSession(sessionData, {
     scope: 'daily',

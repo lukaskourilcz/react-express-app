@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
@@ -25,8 +25,10 @@ vi.mock('../src/lib/play', async (importOriginal) => ({
   ...api,
 }));
 const USER = { id: 'player-1', user_metadata: {} };
+// A session refresh hands the screen a new object for the same account.
+let currentUser = USER;
 vi.mock('../src/lib/auth', () => ({
-  useAuth: () => ({ user: USER, isAuthenticated: true, isLoading: false, signInWithGoogle: vi.fn() }),
+  useAuth: () => ({ user: currentUser, isAuthenticated: true, isLoading: false, signInWithGoogle: vi.fn() }),
   getUserProfile: () => ({}),
   displayNameFromProfile: (_profile: unknown, fallback: string) => fallback,
 }));
@@ -83,9 +85,28 @@ async function mount(path = '/play/ABC123', multiplayerOn = true) {
   });
 }
 
+/** mount(), with a way to draw the tree again after the account changed. */
+async function mountWithRerender() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
+  client.setQueryData(GAME_CONFIG_KEY, DEFAULT_CONFIG);
+  const tree = () => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/play/ABC123']}>
+        <LanguageProvider>
+          <Routes><Route path="/play/:code" element={<PlayMatch />} /></Routes>
+        </LanguageProvider>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  let view!: ReturnType<typeof render>;
+  await act(async () => { view = render(tree()); });
+  return { rerender: () => view.rerender(tree()) };
+}
+
 const settle = () => act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
 
 beforeEach(() => {
+  currentUser = USER;
   for (const fn of Object.values(api)) fn.mockReset();
   api.sendHeartbeat.mockResolvedValue({ ok: true });
   live.listeners.clear();
@@ -117,6 +138,27 @@ describe('a timed question', () => {
     expect(api.fetchMatchState.mock.calls.length).toBe(readsAtMount + 1);
   });
 
+  it('sends a browsed answer once at 0 s, even when that send fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const match = running({ question_started_at: new Date(Date.now() - 28_000).toISOString(), question_duration_s: 30 });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.submitMatchAnswer.mockRejectedValue(new Error('Failed to fetch'));
+    await mount();
+    await screen.findByText('Pick one?');
+    // Arrow keys browse to an option without locking it in.
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'alpha' }), { key: 'ArrowDown' });
+    expect(api.submitMatchAnswer).not.toHaveBeenCalled();
+    const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+    await tick(2_500);
+    await settle();
+    await tick(3_000);
+    await settle();
+    // The failed send unlocks the answer, but the clock is out: the auto-lock
+    // must not send it again on every render that follows.
+    expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1);
+  });
+
   it('says a refused late answer did not count and reads the room again', async () => {
     const match = running({ question_duration_s: 30 });
     api.joinMatch.mockResolvedValue(match);
@@ -143,6 +185,68 @@ describe('recovery', () => {
     expect(api.joinMatch).toHaveBeenCalledTimes(2);
     fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
     await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not join again when a session refresh hands over a new user object', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    await screen.findByText('Pick one?');
+    currentUser = { ...USER };
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await fire('match_updated', { status: 'running', current_index: 1 });
+    await screen.findByText('Next one?');
+    await settle();
+    expect(api.joinMatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the previous room behind when the address moves straight to another room', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValueOnce(match).mockReturnValue(new Promise(() => undefined));
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    let go: (path: string) => void = () => undefined;
+    function Navigator() {
+      const navigate = useNavigate();
+      go = navigate;
+      return null;
+    }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
+    client.setQueryData(GAME_CONFIG_KEY, DEFAULT_CONFIG);
+    await act(async () => {
+      render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/play/ABC123']}>
+            <LanguageProvider>
+              <Navigator />
+              <Routes><Route path="/play/:code" element={<PlayMatch />} /></Routes>
+            </LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    });
+    await screen.findByText('Pick one?');
+    await act(async () => { go('/play/XYZ789'); });
+    await settle();
+    expect(api.joinMatch).toHaveBeenLastCalledWith(expect.objectContaining({ code: 'XYZ789' }));
+    // The new room is still joining: nothing of ABC123 is left to answer.
+    expect(screen.queryByText('Pick one?')).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'beta' })).toBeNull();
+  });
+
+  it('drops the previous account\'s pick and room when another account signs in mid-room', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValueOnce(match).mockReturnValue(new Promise(() => undefined));
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.submitMatchAnswer.mockResolvedValue({ ok: true, is_correct: true, advanced: false });
+    const { rerender } = await mountWithRerender();
+    fireEvent.click(await screen.findByRole('radio', { name: 'beta' }));
+    await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1));
+    currentUser = { id: 'player-2', user_metadata: {} };
+    await act(async () => { rerender(); });
+    await settle();
+    expect(api.joinMatch).toHaveBeenLastCalledWith(expect.objectContaining({ user_id: 'player-2' }));
+    expect(screen.queryByText('Pick one?')).toBeNull();
   });
 
   it('shows the results of a room that finished instead of an error', async () => {
@@ -308,6 +412,20 @@ describe('the classroom presenter screen', () => {
     expect(tone('gamma')).toBe('default');
     expect(histogramKey()).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Reveal answer' })).toBeInTheDocument();
+  });
+
+  it('keeps one answer count read in flight on a slow connection', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    presenting({ question_duration_s: 0 });
+    let release!: () => void;
+    api.fetchDistribution.mockImplementation(() => new Promise((done) => { release = () => done({ buckets: [] }); }));
+    await mount();
+    await screen.findByText('Pick one?');
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(api.fetchDistribution).toHaveBeenCalledTimes(1);
+    await act(async () => { release(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_600); });
+    expect(api.fetchDistribution).toHaveBeenCalledTimes(2);
   });
 
   it('never gives a player the key or the button', async () => {
@@ -542,6 +660,73 @@ describe('what a room broadcasts', () => {
     await screen.findByText('Next one?');
     expect(api.controlMatch).toHaveBeenCalledWith(expect.objectContaining({ action: 'advance' }));
     expect(roomEvents()).toEqual([{ event: 'match_updated', payload: { status: 'running', current_index: 1 } }]);
+  });
+});
+
+describe('double presses', () => {
+  // Two presses in one task land before React disables the button, so a
+  // double click on Next asked the server to advance twice and skipped a
+  // question for the whole room.
+  it('sends one control for a double click on the presenter’s Next', async () => {
+    const match = running({ mode: 'classroom', host_id: USER.id, questions: KEYED_QUESTIONS });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.fetchDistribution.mockResolvedValue({ buckets: [] });
+    let release!: () => void;
+    api.controlMatch.mockImplementation(() => new Promise((done) => { release = () => done({ ok: true, status: 'running', current_index: 1 }); }));
+    await mount();
+    const next = await screen.findByRole('button', { name: 'Next question →' });
+    act(() => { next.click(); next.click(); });
+    expect(api.controlMatch).toHaveBeenCalledTimes(1);
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await act(async () => { release(); });
+    await screen.findByText('Next one?');
+    expect(api.controlMatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the next question locked when the last one’s answer fails after the room moved on', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    let fail!: () => void;
+    api.submitMatchAnswer
+      .mockImplementationOnce(() => new Promise((_done, reject) => { fail = () => reject(new ApiError('Failed to fetch', 0, 'network')); }))
+      .mockResolvedValue({ ok: true, is_correct: true, advanced: false });
+    await mount();
+    await screen.findByText('Pick one?');
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await fire('match_updated', { status: 'running', current_index: 1 });
+    await screen.findByText('Next one?');
+    fireEvent.click(screen.getByRole('radio', { name: 'delta' }));
+    await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(2));
+    await act(async () => { fail(); });
+    await settle();
+    expect(screen.getByText('Answer locked. Waiting for the other players…')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'gamma' })).toBeDisabled();
+  });
+
+  it('creates one room for a double click on Create', async () => {
+    let release!: () => void;
+    api.createMatch.mockImplementation(() => new Promise((done) => { release = () => done({ id: 'm1', code: 'ABC123', mode: 'multiplayer', status: 'lobby' }); }));
+    await mount('/play');
+    const create = await screen.findByRole('button', { name: /Create/ });
+    act(() => { create.click(); create.click(); });
+    expect(api.createMatch).toHaveBeenCalledTimes(1);
+    await act(async () => { release(); });
+  });
+});
+
+describe('joining by code', () => {
+  it('joins on Enter in the code field, once for a held key', async () => {
+    api.joinMatch.mockImplementation(() => new Promise(() => undefined));
+    await mount('/play');
+    const field = await screen.findByLabelText('Match code');
+    fireEvent.change(field, { target: { value: 'xyz789' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    await waitFor(() => expect(api.joinMatch).toHaveBeenCalledTimes(1));
+    expect(api.joinMatch).toHaveBeenCalledWith(expect.objectContaining({ code: 'XYZ789' }));
   });
 });
 

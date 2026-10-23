@@ -8,7 +8,7 @@ import {
   generateMatchCode,
   withTimeout,
 } from '../../lib/play-helpers';
-import { requireAuthResult, requireAuthSub, isRpcMissing, withRequestContext } from '../../lib/http';
+import { requireAuthResult, requireAuthSub, isRpcMissing, withRequestContext, ServiceUnavailableError } from '../../lib/http';
 import { roomDisplayName } from '../../lib/public-identity';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
@@ -137,6 +137,20 @@ async function tryAdvance(match: {
   return data && data.length > 0 ? (data[0] as Record<string, unknown>) : null;
 }
 
+/** The answer for an exception an action caught. A Supabase call that timed
+ * out (lib/http.ts `UpstreamTimeoutError`) is the database busy for a moment,
+ * which a client may retry: 503 with its code, as every handler answers it.
+ * Anything else is a fault here, logged as one, and no timeout. */
+function caughtError(route: string, res: VercelResponse, err: unknown) {
+  const message = err instanceof Error ? err.message : 'unknown';
+  if (err instanceof ServiceUnavailableError) {
+    logEvent(route, { status: 503, error: message });
+    return jsonError(res, 503, err.code, err.message);
+  }
+  logEvent(route, { level: 'error', status: 500, error: message });
+  return jsonError(res, 500, 'internal_error', 'Internal error');
+}
+
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Match backend is not configured');
 
@@ -210,9 +224,6 @@ async function create(req: VercelRequest, res: VercelResponse) {
   };
 
   const { play: playSettings } = await getGameSettings();
-  // The Google name, the sharkname, or "Player" and a number; never anything
-  // from the address (lib/public-identity.ts).
-  const hostName = await roomDisplayName(hostAuth, supabase);
   const mode = body.mode === 'classroom' ? 'classroom' : 'multiplayer';
   const requestedCount = typeof body.count === 'number' ? body.count : 10;
   const count = Math.min(
@@ -225,9 +236,13 @@ async function create(req: VercelRequest, res: VercelResponse) {
     typeof body.duration_s === 'number' && playSettings.durationOptionsS.includes(body.duration_s)
       ? body.duration_s
       : playSettings.defaultDurationS;
-  let categories = Array.isArray(body.categories)
-    ? body.categories.filter((c): c is string => typeof c === 'string')
-    : [];
+  // A list with an entry that is not a topic id is malformed as a whole: the
+  // room is not opened on whatever part of it happened to be strings.
+  if (body.categories !== undefined && (!Array.isArray(body.categories) || body.categories.length > 64
+    || body.categories.some((c) => typeof c !== 'string'))) {
+    return jsonError(res, 400, 'bad_request', 'categories must be a list of topic ids');
+  }
+  let categories = (body.categories ?? []) as string[];
 
   // The client always sends the active subject's category list (or a subset
   // of it), so an empty list is a malformed request — falling back to the
@@ -242,7 +257,13 @@ async function create(req: VercelRequest, res: VercelResponse) {
   }
   categories = scope.categories;
 
-  const allQuestions = await getEffectiveQuestions(scope.subject);
+  // The host's name (the Google name, the sharkname, or "Player" and a
+  // number; never anything from the address, lib/public-identity.ts) is
+  // worked out while the question bank loads.
+  const [hostName, allQuestions] = await Promise.all([
+    roomDisplayName(hostAuth, supabase),
+    getEffectiveQuestions(scope.subject),
+  ]);
   const pool = allQuestions.filter((q) => categories.includes(q.category));
   if (pool.length < playSettings.minQuestions) {
     return jsonError(res, 400, 'too_few_questions', 'Not enough questions for these filters');
@@ -263,34 +284,35 @@ async function create(req: VercelRequest, res: VercelResponse) {
     };
   });
 
+  const insertRoom = (code: string) => withTimeout(
+    supabase!
+      .from('matches')
+      .insert({
+        code,
+        mode,
+        subject: scope.subject,
+        host_id: hostSub,
+        host_name: hostName,
+        status: 'lobby',
+        questions: matchQuestions,
+        current_index: 0,
+        question_duration_s: durationS,
+        last_heartbeat_at: new Date().toISOString(),
+      })
+      .select('id, code, mode, host_id, host_name, status')
+      .single(),
+  );
+
   let code = generateMatchCode();
   try {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const { data: clash } = await withTimeout(
-        supabase!.from('matches').select('id').eq('code', code).maybeSingle(),
-      );
-      if (!clash) break;
+    // The unique key on matches.code decides a clash, so two hosts drawing
+    // the same code at once cannot both pass a read first and then fail the
+    // insert with a 500. A clash draws a new code and tries again.
+    let { data, error } = await insertRoom(code);
+    for (let attempt = 1; attempt < 5 && error?.code === '23505'; attempt++) {
       code = generateMatchCode();
+      ({ data, error } = await insertRoom(code));
     }
-
-    const { data, error } = await withTimeout(
-      supabase!
-        .from('matches')
-        .insert({
-          code,
-          mode,
-          subject: scope.subject,
-          host_id: hostSub,
-          host_name: hostName,
-          status: 'lobby',
-          questions: matchQuestions,
-          current_index: 0,
-          question_duration_s: durationS,
-          last_heartbeat_at: new Date().toISOString(),
-        })
-        .select('id, code, mode, host_id, host_name, status')
-        .single(),
-    );
 
     if (error || !data) {
       logEvent('play/create', { status: 500, error: error?.message });
@@ -318,9 +340,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
       status: data.status,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/create', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/create', res, err);
   }
 }
 
@@ -341,16 +361,22 @@ async function join(req: VercelRequest, res: VercelResponse) {
 
   const code = body.code.toUpperCase();
   try {
-    const { data: match, error } = await withTimeout(
-      supabase!
-        .from('matches')
-        .select(
-          'id, code, mode, subject, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s, revealed_idx',
-        )
-        .eq('code', code)
-        .in('subject', deploymentSubjectIds())
-        .maybeSingle(),
-    );
+    // The player's name is worked out while the room is read: a class joins
+    // from one code at once, and the two waits added up for every pupil.
+    // roomDisplayName never throws; it falls back to "Player" and a number.
+    const [{ data: match, error }, displayName] = await Promise.all([
+      withTimeout(
+        supabase!
+          .from('matches')
+          .select(
+            'id, code, mode, subject, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s, revealed_idx',
+          )
+          .eq('code', code)
+          .in('subject', deploymentSubjectIds())
+          .maybeSingle(),
+      ),
+      roomDisplayName(auth, supabase),
+    ]);
 
     if (error) {
       logEvent('play/join', { status: 500, error: error.message });
@@ -361,7 +387,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
 
     const participantInsert = await withTimeout(
       supabase!.from('match_participants').upsert(
-        { match_id: match.id, user_id: sub, display_name: await roomDisplayName(auth, supabase) },
+        { match_id: match.id, user_id: sub, display_name: displayName },
         { onConflict: 'match_id,user_id' },
       ),
     );
@@ -392,9 +418,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
       server_now: new Date().toISOString(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/join', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/join', res, err);
   }
 }
 
@@ -403,10 +427,11 @@ async function state(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const code = (req.query.code as string)?.toUpperCase();
-  if (!code) return jsonError(res, 400, 'bad_request', 'code required');
   // State is public to room-code holders. Validate the code before performing
-  // optional remote authentication so malformed probes remain cheap.
+  // optional remote authentication so malformed probes remain cheap. A code
+  // repeated in the query string arrives as an array, which is no code.
+  if (!isShortString(req.query.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
+  const code = req.query.code.toUpperCase();
   const auth = await tryAuth(req);
   const sub = auth?.sub ?? null;
 
@@ -534,9 +559,7 @@ async function state(req: VercelRequest, res: VercelResponse) {
       server_now: new Date().toISOString(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/state', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/state', res, err);
   }
 }
 
@@ -651,9 +674,7 @@ async function control(req: VercelRequest, res: VercelResponse) {
     logEvent('play/control', { status: 200, code, action: ctrl });
     return res.json({ ok: true, ...patch });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/control', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/control', res, err);
   }
 }
 
@@ -690,7 +711,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
 
   const code = body.code.toUpperCase();
   try {
-    const { data: match } = await withTimeout(
+    const { data: match, error: matchError } = await withTimeout(
       supabase!
         .from('matches')
         .select('id, mode, subject, host_id, status, current_index, questions, question_started_at, question_duration_s, revealed_idx')
@@ -698,6 +719,8 @@ async function answer(req: VercelRequest, res: VercelResponse) {
         .in('subject', deploymentSubjectIds())
         .maybeSingle(),
     );
+    // A failed read is no missing room: a 404 tells the player the room is gone.
+    if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (match.status !== 'running')
       return jsonError(res, 409, 'bad_state', 'Match is not in progress');
@@ -707,6 +730,11 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     const matchQuestions = match.questions as MatchQuestion[];
     const q = matchQuestions[body.question_idx];
     if (!q) return jsonError(res, 400, 'bad_request', 'question_idx out of range');
+    // An index past the question's options would be recorded as a wrong
+    // answer and counted in the distribution as an option nobody was shown.
+    if (!Array.isArray(q.options) || body.selected_idx >= q.options.length) {
+      return jsonError(res, 400, 'bad_request', 'selected_idx out of range');
+    }
 
     // A classroom host holds the answer key while the room runs; they present
     // and never compete.
@@ -716,9 +744,23 @@ async function answer(req: VercelRequest, res: VercelResponse) {
 
     // Only players who joined the lobby may answer — otherwise anyone with
     // the code could inject rows that count toward the all-answered advance.
-    const { data: participantRows, error: participantError } = await withTimeout(
-      supabase!.from('match_participants').select('user_id').eq('match_id', match.id),
-    );
+    // The caller's recorded answer is read beside the membership: the two
+    // reads are independent, and a non-member's answer is never used.
+    const [
+      { data: participantRows, error: participantError },
+      { data: existing, error: existingError },
+    ] = await Promise.all([
+      withTimeout(supabase!.from('match_participants').select('user_id').eq('match_id', match.id)),
+      withTimeout(
+        supabase!
+          .from('match_answers')
+          .select('is_correct, speed_bonus')
+          .eq('match_id', match.id)
+          .eq('user_id', sub)
+          .eq('question_idx', body.question_idx)
+          .maybeSingle(),
+      ),
+    ]);
     if (participantError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify match membership');
     const participantIds = (participantRows ?? []).map((r: { user_id: string }) => r.user_id);
     if (!participantIds.includes(sub)) {
@@ -739,15 +781,6 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     // An answer is final. A duplicate submit (network retry, double click)
     // replays the recorded result instead of re-grading, so a player can't
     // keep swapping options after seeing is_correct.
-    const { data: existing, error: existingError } = await withTimeout(
-      supabase!
-        .from('match_answers')
-        .select('is_correct, speed_bonus')
-        .eq('match_id', match.id)
-        .eq('user_id', sub)
-        .eq('question_idx', body.question_idx)
-        .maybeSingle(),
-    );
     if (existingError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify existing answer');
     if (existing) return res.json(reply(existing, false));
 
@@ -855,9 +888,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     });
     return res.json(reply({ is_correct: isCorrect, speed_bonus: speedBonus }, advanced));
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/answer', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/answer', res, err);
   }
 }
 
@@ -870,17 +901,18 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
   if (!sub) return;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.playDistributionPerUser, `user:${sub}`))) return;
 
-  const code = (req.query.code as string)?.toUpperCase();
+  if (!isShortString(req.query.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
+  const code = req.query.code.toUpperCase();
   const qParam = parseInt(req.query.q as string, 10);
-  if (!code) return jsonError(res, 400, 'bad_request', 'code required');
   if (!Number.isFinite(qParam) || qParam < 0)
     return jsonError(res, 400, 'bad_request', 'q (question index) required');
 
   try {
-    const { data: match } = await withTimeout(
+    const { data: match, error: matchError } = await withTimeout(
       supabase!.from('matches').select('id, host_id, mode, status').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
 
+    if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (sub !== match.host_id) {
       return jsonError(res, 403, 'forbidden', 'Only the host can view distribution');
@@ -908,9 +940,7 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ buckets: data ?? [] });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/distribution', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/distribution', res, err);
   }
 }
 
@@ -928,9 +958,10 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
 
   const code = body.code.toUpperCase();
   try {
-    const { data: match } = await withTimeout(
+    const { data: match, error: matchError } = await withTimeout(
       supabase!.from('matches').select('id, host_id, status').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
+    if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (match.host_id !== sub)
       return jsonError(res, 403, 'forbidden', 'Only the host can send heartbeats');
@@ -951,8 +982,6 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
 
     return res.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('play/heartbeat', { status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    return caughtError('play/heartbeat', res, err);
   }
 }

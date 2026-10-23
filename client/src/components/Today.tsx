@@ -25,6 +25,7 @@ import { HELD_READ, lazyPart, readOnce, settled, useFirstData } from '../lib/rou
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
 import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
+import { useUtcDay } from '../lib/utcDay';
 import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
@@ -107,8 +108,7 @@ function availabilityFor(
 /** Distinct levels passed today (mirrors buildToday's completedToday signal),
  *  capped at the target — drives the "N / target done" line. Needs lastPassDay,
  *  which is written by the server on a verified pass, so guests may read 0. */
-function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number): number {
-  const todayKey = masteryDayKey();
+function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number, todayKey: string): number {
   const seen = new Set<string>();
   for (const topic of topicsForSubject(subject)) {
     const levels = progress[topic]?.levels ?? {};
@@ -118,6 +118,11 @@ function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number
   }
   return Math.min(seen.size, target);
 }
+
+/** The UTC day the plan is for, moved on when 00:00 UTC passes. Read once,
+ * a Today left open overnight, or brought back from the background the next
+ * day, kept yesterday's target, its count of levels done and its reviews. */
+const usePlanDay = (): string => useUtcDay(masteryDayKey);
 
 /** The structure and, signed in, the plan, the three sections' code and what
  * they read, in the cache before the first render. The sections used to
@@ -174,6 +179,7 @@ export default function Today() {
   // The server serves nothing new outside the learner's chosen track.
   const inPlan = useInPlan();
   const topicOrder = useMemo(() => planTopics(learnerProfileOf(user)), [user]);
+  const day = usePlanDay();
 
   // buildToday is pure and offline: it reads local roadmap progress + the shared
   // spaced-mastery rules, so the plan renders even when the structure fetch
@@ -181,7 +187,7 @@ export default function Today() {
   const plan = useMemo(
     () =>
       buildToday(progress, subject, {
-        today: masteryDayKey(),
+        today: day,
         levelCounts: levelCountsFor(structure, subject),
         availability: availabilityFor(structure, subject),
         extraUnlocks,
@@ -189,9 +195,9 @@ export default function Today() {
         inPlan,
         topicOrder,
       }),
-    [progress, subject, extraUnlocks, structure, canStart, inPlan, topicOrder],
+    [progress, subject, extraUnlocks, structure, canStart, inPlan, topicOrder, day],
   );
-  const done = useMemo(() => doneToday(progress, subject, plan.target), [progress, subject, plan.target]);
+  const done = useMemo(() => doneToday(progress, subject, plan.target, day), [progress, subject, plan.target, day]);
 
   // Wait for the structure before showing a plan, so a fully-completed topic
   // can't flash a phantom "new" level. A warm cache resolves instantly.

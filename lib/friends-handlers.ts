@@ -19,7 +19,7 @@
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { jsonError, requireAuthResult, requireAuthSub, withTimeout, createLogger } from './http';
+import { jsonError, requireAuthResult, requireAuthSub, withTimeout, createLogger, ServiceUnavailableError } from './http';
 import type { AuthResult } from './auth';
 import { defaultDeploymentCategories } from './product-scope';
 import { isValidHandle } from '../shared/handles';
@@ -46,6 +46,9 @@ const KNOWN: Record<string, { status: number; code: string; message: string }> =
 };
 
 function rpcError(res: VercelResponse, error: { message?: string } | null, fallback: string, migration = '033') {
+  // A sharkname allocation that timed out (lib/http.ts) is the database busy
+  // for a moment, which the client may retry: 503, never a 500.
+  if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);
   const raised = Object.keys(KNOWN).find((key) => error?.message?.includes(key));
   if (raised) {
     const known = KNOWN[raised];
@@ -173,6 +176,14 @@ export async function handleFriends(
     }
     const handle = readHandle(body.handle);
     if (!handle) return jsonError(res, 400, 'invalid_handle', KNOWN.invalid_handle.message);
+    // Answering and blocking are decisions, so they are read only from a real
+    // true or false: an `accept` of "yes" used to decline the request.
+    if (op === 'friends-respond' && typeof body.accept !== 'boolean') {
+      return jsonError(res, 400, 'bad_request', 'accept must be true or false');
+    }
+    if (op === 'friends-remove' && body.block !== undefined && typeof body.block !== 'boolean') {
+      return jsonError(res, 400, 'bad_request', 'block must be true or false');
+    }
 
     if (op === 'friends-request') {
       const { data, error } = await withTimeout(
@@ -337,7 +348,9 @@ export async function handleIdentity(
     logEvent({ status: 200, op: 'identity', showRealName, showPhoto });
     return answer(Array.isArray(data) ? data[0] : data);
   } catch (err) {
-    logEvent({ status: 500, op: 'identity', reason: 'exception', error: err instanceof Error ? err.message : 'unknown' });
+    const timedOut = err instanceof ServiceUnavailableError;
+    logEvent({ status: timedOut ? 503 : 500, op: 'identity', reason: 'exception', error: err instanceof Error ? err.message : 'unknown' });
+    if (timedOut) return jsonError(res, 503, err.code, err.message);
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }

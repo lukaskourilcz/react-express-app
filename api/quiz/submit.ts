@@ -1,19 +1,17 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { createHash } from 'node:crypto';
 import {
-  decodeAnswerProof,
   decodeSessionEnvelope,
   encodeScoreProof,
   encodeQuizResultReceipt,
-  encodeAnswerProof,
   dailyDurationMs,
   stableAttemptId,
   type DecodedQuizSession,
 } from '../../lib/quiz-tokens';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing, ServiceUnavailableError, tryAuthOnce } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { subjectForCategory } from '../../shared/subject-catalog';
 import { deploymentSubjectIds } from '../../lib/product-scope';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
@@ -70,7 +68,10 @@ async function claimSubmission(input: {
   );
   if (result.error) {
     if (isRpcMissing(result.error)) return 'unavailable';
-    throw new Error('quiz_submission_claim_failed');
+    // The claim is what makes grading one-time, so without it nothing is
+    // graded: the database being unreachable is a 503 to retry, not a 500.
+    logEvent({ status: 503, reason: 'claim_failed', error: result.error.message });
+    throw new ServiceUnavailableError('claim_unavailable', 'This could not be checked right now. Try again in a minute.');
   }
   return result.data === 'claimed' || result.data === 'replay' || result.data === 'conflict'
     ? result.data
@@ -226,6 +227,16 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const gradeKey = session.scope === 'challenge'
     ? `${session.attemptId}:${validated[0].questionId}`
     : session.attemptId;
+  // The question bank and the learner's review states do not depend on the
+  // one-time claim, so they load while it is taken. Nothing is graded or
+  // recorded until the claim has answered; a failed load is answered where it
+  // is awaited, below, and the handler here only keeps it from counting as
+  // unhandled while the claim is in flight.
+  const loading = Promise.all([
+    getEffectiveQuestionsById(subject),
+    auth && session.scope !== 'challenge' ? loadReviewStates(serviceSupabase, auth.sub, subject) : Promise.resolve([]),
+  ]);
+  loading.catch(() => {});
   const claim = await claimSubmission({
     gradeKey,
     attemptId: session.attemptId,
@@ -246,7 +257,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // nor against the learner, it earns no proof, and it is reported back so
   // the result screen can say why the total is short. The key stays sealed
   // either way; nothing here reveals it.
-  const questionsById = await getEffectiveQuestionsById(subject);
+  const [questionsById, reviewStates] = await loading;
   const voided = validated.filter(({ questionId }) => !questionsById.has(questionId)).map(({ questionId }) => questionId);
   const gradable = validated.filter(({ questionId }) => questionsById.has(questionId));
 
@@ -262,7 +273,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       correctAnswer: sessionQ?.correctAnswer ?? -1,
       isCorrect,
       explanation: q?.explanation ?? '',
-      answerProof: sessionQ && session.scope !== 'qotd' ? encodeAnswerProof(questionId, subject, isCorrect) : undefined,
     };
     return session.scope === 'challenge' && session.runId && sessionQ
       ? { ...result, scoreProof: encodeScoreProof(session.runId, questionId, subject, isCorrect) }
@@ -327,7 +337,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // concept, idempotent on the attempt id, and never a source of XP: review
   // reuses the existing reward rules and grants nothing of its own.
   if (auth && session.scope !== 'challenge') {
-    const states = await loadReviewStates(serviceSupabase, auth.sub, subject);
     await recordConceptReviews(
       serviceSupabase,
       {
@@ -347,7 +356,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           }];
         }),
       },
-      states,
+      reviewStates,
     );
   }
 
@@ -372,8 +381,9 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 // Anonymous posts are allowed; when a token is present the verified sub is
 // recorded so reporter_sub can't be forged.
 async function handleReport(req: VercelRequest, res: VercelResponse) {
-  // Anonymous inserts allowed, so throttle per-IP against spam.
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.questionReport))) return;
+  // Anonymous inserts allowed, so throttle against spam: a class-sized
+  // address bucket, then the reporter's account, or the address for a guest.
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.questionReportAddress, RATE_LIMITS.questionReport))) return;
 
   if (!serviceSupabase) {
     return jsonError(res, 503, 'not_configured', 'Reporting backend is not configured');
@@ -381,7 +391,7 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
 
   let reporter_sub: string | null = null;
   try {
-    const auth = await tryAuth(req);
+    const auth = await tryAuthOnce(req);
     if (auth) reporter_sub = auth.sub;
   } catch (e) {
     if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
@@ -400,6 +410,11 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
   }
   if (typeof body.reason !== 'string' || !REPORT_REASONS.includes(body.reason as ReportReason)) {
     return jsonError(res, 400, 'bad_request', `reason must be one of: ${REPORT_REASONS.join(', ')}`);
+  }
+  // Postgres text cannot hold U+0000, so a report carrying one failed its
+  // insert and answered 500. It is the reporter's text, refused as such.
+  if ([body.question_id, body.detail].some((value) => typeof value === 'string' && value.includes('\u0000'))) {
+    return jsonError(res, 400, 'bad_request', 'A report cannot contain a null character');
   }
   const detail =
     typeof body.detail === 'string' && body.detail.length <= 1000 ? body.detail : null;
@@ -434,8 +449,11 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
     reportLogger({ status: 200, question_id: body.question_id, reason: body.reason });
     return res.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown';
-    reportLogger({ status: 504, error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+    // A timed-out insert is the service being down for a moment: 503, which
+    // the client may retry, as every other handler answers it. Anything else
+    // is a fault, answered 500 by withRequestContext.
+    if (!(err instanceof ServiceUnavailableError)) throw err;
+    reportLogger({ status: 503, error: err.code });
+    return jsonError(res, 503, err.code, err.message);
   }
 }

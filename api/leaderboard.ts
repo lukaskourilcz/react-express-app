@@ -7,6 +7,7 @@ import {
   isRpcMissing,
   STATS_CATEGORIES,
   withRequestContext,
+  ServiceUnavailableError,
 } from '../lib/http';
 import {
   defaultDeploymentCategories,
@@ -18,9 +19,11 @@ import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 
 // Public responses are served by this scoped API, but leaderboard RPCs are
 // service-only so callers cannot bypass deployment/category validation through
-// the Supabase Data API. Every routine returns a learner's name and picture
-// only when they switched on user_stats.show_on_leaderboards (migration 049);
-// otherwise both are null and the client shows "Learner".
+// the Supabase Data API. Every routine names a learner through
+// board_display_name() (migration 064): their sharkname, or the account name
+// they chose for boards (user_handles.leaderboard_name_mode). Only the picture
+// still follows user_stats.show_on_leaderboards (049); a learner with no
+// sharkname row is null and the client shows "Learner".
 const supabase = createServiceClient();
 
 const logEvent = createLogger('leaderboard');
@@ -41,6 +44,15 @@ function boardLimit(raw: unknown): number {
   return LIMIT_STEPS.find((step) => step >= asked) ?? 200;
 }
 
+/** A real UTC calendar day in YYYY-MM-DD. The shape alone let 2026-02-30
+ * through to the routine, whose date cast then failed with a 500. Postgres
+ * has no year 0, which JavaScript's calendar does. */
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000')) return false;
+  const day = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(day.getTime()) && day.toISOString().slice(0, 10) === value;
+}
+
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -54,8 +66,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // query string would make every read one of those.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
 
-  const period = (req.query.period as string) || 'global';
-  const dateParam = (req.query.date as string) || new Date().toISOString().slice(0, 10);
+  // A parameter repeated in the query string arrives as an array, which names
+  // no period and no date.
+  const period = req.query.period === undefined ? 'global' : typeof req.query.period === 'string' ? req.query.period || 'global' : '';
+  const dateParam = req.query.date === undefined ? new Date().toISOString().slice(0, 10) : typeof req.query.date === 'string' ? req.query.date || new Date().toISOString().slice(0, 10) : '';
   const limit = boardLimit(req.query.limit);
 
   try {
@@ -125,7 +139,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (period === 'daily') {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      if (!isCalendarDate(dateParam)) {
         return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
       }
       const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
@@ -157,6 +171,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'period must be "30d", "7d", "month", "global", "daily", or "category"');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
+    // A board routine that timed out is the database busy for a moment,
+    // which the client may retry: 503, as every other handler answers it.
+    if (err instanceof ServiceUnavailableError) {
+      logEvent({ status: 503, error: message });
+      return jsonError(res, 503, err.code, err.message);
+    }
     logEvent({ status: 500, error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }

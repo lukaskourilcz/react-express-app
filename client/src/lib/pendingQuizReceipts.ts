@@ -2,15 +2,15 @@
 //
 // A graded quiz hands back a sealed receipt; POST /api/user/stats records it,
 // once per attempt however often it is sent. When that write fails the
-// receipt waits here and is sent again later (PendingQuizResults, when the
-// learner is signed in and when the browser comes back online). A receipt
+// receipt waits here and is sent again later (pendingQuizReplay.ts, which
+// PendingQuizResults loads when the learner is signed in and has one waiting,
+// and again when the browser comes back online). A receipt
 // lives for an hour on the server: one it refuses as expired or invalid can
 // never be recorded, so it is dropped rather than resent forever, and the
 // caller says so. One entry per attempt, so a second failure does not
 // overwrite the first.
 import { ApiError } from './api';
 import { readJSON, removeStored, writeJSON } from './storage';
-import { recordQuizResult, type UserStats } from './supabase';
 
 const STORE_KEY = 'devshark:pending-quiz-receipts:v2';
 /** The single slot used before results were kept per attempt. */
@@ -68,28 +68,3 @@ export function pendingReceiptsFor(userId: string): [string, PendingReceipt][] {
  * account's. Resending it cannot help. */
 export const isReceiptRefused = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 400 && error.code === 'invalid_receipt';
-
-/** Send every waiting result of this learner again. Recorded ones and ones
- * the server refuses leave the queue; anything else (offline, a server
- * error) stays for the next try. */
-export async function replayPendingReceipts(
-  userId: string,
-  onRecorded?: (data: UserStats | null) => void,
-): Promise<{ recorded: number; refused: number }> {
-  let recorded = 0;
-  let refused = 0;
-  for (const [key, pending] of pendingReceiptsFor(userId)) {
-    try {
-      const saved = await recordQuizResult(pending.receipt, pending.profile);
-      dropPendingReceipt(key);
-      recorded++;
-      onRecorded?.(saved.data);
-    } catch (error) {
-      if (isReceiptRefused(error)) {
-        dropPendingReceipt(key);
-        refused++;
-      }
-    }
-  }
-  return { recorded, refused };
-}

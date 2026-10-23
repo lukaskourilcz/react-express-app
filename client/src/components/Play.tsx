@@ -163,6 +163,9 @@ export function PlayLanding() {
     );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
+  // Set at the press itself: `loading` disables the buttons a render later,
+  // after a double click has already sent its second create (a second room).
+  const busyRef = useRef(false);
   const [playOff, setPlayOff] = useState(false);
 
   if (!config.features.multiplayer || playOff) return <PlayUnavailable />;
@@ -192,7 +195,8 @@ export function PlayLanding() {
   }
 
   const handleCreate = async () => {
-    if (!user?.id) return;
+    if (!user?.id || busyRef.current) return;
+    busyRef.current = true;
     setError(null);
     setLoading('create');
     try {
@@ -213,17 +217,19 @@ export function PlayLanding() {
       if (isPlayOff(err)) setPlayOff(true);
       else setError(friendlyError(err));
     } finally {
+      busyRef.current = false;
       setLoading(null);
     }
   };
 
   const handleJoin = async () => {
-    if (!user?.id) return;
+    if (!user?.id || busyRef.current) return;
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) {
       setError(t('play.enterCode'));
       return;
     }
+    busyRef.current = true;
     setError(null);
     setLoading('join');
     try {
@@ -237,6 +243,7 @@ export function PlayLanding() {
       if (isPlayOff(err)) setPlayOff(true);
       else setError(friendlyError(err));
     } finally {
+      busyRef.current = false;
       setLoading(null);
     }
   };
@@ -417,6 +424,9 @@ export function PlayLanding() {
                       value={joinCode}
                       placeholder="ABC123"
                       onChange={(v) => setJoinCode(v.toUpperCase())}
+                      // Enter in the code joins, as it would in a form; the
+                      // join's own ref guard keeps a held key to one join.
+                      onEnter={() => void handleJoin()}
                     />
                   </div>
                 </div>
@@ -441,7 +451,18 @@ export function PlayLanding() {
   );
 }
 
+/** One room per code and account. Going from one /play/:code straight to
+ * another keeps the route element, and an account change keeps the screen,
+ * so without the key the previous room's question, pick and scoreboard stayed
+ * on screen (and answerable) until the new join landed. Keyed by the
+ * account's id, not the user object, which every session refresh replaces. */
 export function PlayMatch() {
+  const { code } = useParams<{ code: string }>();
+  const { user } = useAuth();
+  return <PlayRoom key={`${(code || '').toUpperCase()}:${user?.id ?? ''}`} />;
+}
+
+function PlayRoom() {
   const { code: codeParam } = useParams<{ code: string }>();
   const code = (codeParam || '').toUpperCase();
   const navigate = useNavigate();
@@ -510,9 +531,12 @@ export function PlayMatch() {
   // so the first click is the one that counts.
   const submitLockRef = useRef(false);
 
-  // Initial join + state load.
+  // Initial join + state load. Keyed by the account's id, not the user
+  // object: every session refresh hands over a new object for the same
+  // account, and joining again mid-round would redraw the room from scratch.
+  const userId = user?.id;
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || !code || !playOn) return;
+    if (!isAuthenticated || !userId || !code || !playOn) return;
     let cancelled = false;
     (async () => {
       try {
@@ -521,7 +545,7 @@ export function PlayMatch() {
         try {
           const { server_now: serverNow, ...room } = await joinMatch({
             code,
-            user_id: user.id,
+            user_id: userId,
           });
           noteServerClock(serverNow, sentAt);
           joined = room;
@@ -533,7 +557,7 @@ export function PlayMatch() {
         if (cancelled) return;
         if (joined) setMatch(joined);
         sentAt = Date.now();
-        const state = await fetchMatchState(code, user.id);
+        const state = await fetchMatchState(code, userId);
         if (cancelled) return;
         noteServerClock(state.server_now, sentAt);
         if (!joined) setMatch(state.match);
@@ -550,7 +574,7 @@ export function PlayMatch() {
     return () => {
       cancelled = true;
     };
-  }, [code, isAuthenticated, user, joinAttempt, playOn]);
+  }, [code, isAuthenticated, userId, joinAttempt, playOn, noteServerClock]);
 
   // Pull the latest match state. Shared by the realtime/poll loop and by
   // submitAnswer so an auto-advance is reflected immediately for the answerer.
@@ -667,8 +691,13 @@ export function PlayMatch() {
     return () => window.clearTimeout(id);
   }, [matchStatus, match?.current_index, questionStartedAt, questionDurationS, clockOffsetMs, refresh]);
 
+  // Which question the per-question state belongs to: bumped with each new
+  // one, so an answer's response that lands after the room moved on leaves
+  // the new question's lock alone.
+  const questionSeqRef = useRef(0);
   // Reset per-question UI when the index changes.
   useEffect(() => {
+    questionSeqRef.current += 1;
     setSelected(null);
     setSubmitted(false);
     submitLockRef.current = false;
@@ -698,8 +727,13 @@ export function PlayMatch() {
     };
   }, [isHost, user?.id, code, match?.status]);
 
+  // Synchronous control lock, like the submit lock: a double click on Next
+  // lands both clicks before `controlPending` disables the button, and the
+  // server would advance twice, skipping a question for the whole room.
+  const controlLockRef = useRef(false);
   const runHostControl = async (action: 'start' | 'advance' | 'finish' | 'reveal') => {
-    if (!user?.id || !match || controlPending) return;
+    if (!user?.id || !match || controlLockRef.current) return;
+    controlLockRef.current = true;
     setControlPending(true);
     try {
       const result = await controlMatch({ code, host_id: user.id, action });
@@ -727,6 +761,7 @@ export function PlayMatch() {
     } catch (err) {
       setError(friendlyError(err));
     } finally {
+      controlLockRef.current = false;
       setControlPending(false);
     }
   };
@@ -748,6 +783,7 @@ export function PlayMatch() {
   const submitAnswer = async (selectedIdx: number) => {
     if (!match || !user?.id || submitLockRef.current) return;
     submitLockRef.current = true;
+    const seq = questionSeqRef.current;
     setSelected(selectedIdx);
     setSubmitted(true);
     try {
@@ -789,9 +825,13 @@ export function PlayMatch() {
         await refresh();
         return;
       }
-      // Genuine failure (network, server): unlock so the player can retry.
-      submitLockRef.current = false;
-      setSubmitted(false);
+      // Genuine failure (network, server): unlock so the player can retry,
+      // unless the room has moved on: the lock then belongs to the next
+      // question, which the player may already have answered.
+      if (questionSeqRef.current === seq) {
+        submitLockRef.current = false;
+        setSubmitted(false);
+      }
       setError(friendlyError(err));
     }
   };
@@ -1146,8 +1186,14 @@ function RunningQuestion({
   useEffect(() => {
     if (!isPresenter || !hostSub) return;
     let cancelled = false;
+    // One read at a time: on a slow connection a read outlasting the 1.5 s
+    // tick stacked up more, and an older answer landing last drew counts
+    // that had already gone up.
+    let inFlight = false;
     setBuckets([]);
     const load = () => {
+      if (inFlight) return;
+      inFlight = true;
       fetchDistribution(code, questionIdx, hostSub)
         .then((r) => {
           if (!cancelled) {
@@ -1157,6 +1203,9 @@ function RunningQuestion({
         })
         .catch(() => {
           if (!cancelled) setDistributionStale(true);
+        })
+        .finally(() => {
+          inFlight = false;
         });
     };
     load();
@@ -1213,11 +1262,17 @@ function RunningQuestion({
 
   // Time-up auto-lock: clicking locks instantly, so this only catches a
   // keyboard user who arrow-browsed to an option but never pressed Enter.
+  // Once per question: a send that fails unlocks the answer, and `onAnswer`
+  // is new on every render, so without the mark a failing connection sent it
+  // again on every render, as fast as each request failed.
+  const autoLockedRef = useRef<string | null>(null);
+  const questionKey = `${match.id}:${questionIdx}`;
   useEffect(() => {
-    if (!noLimit && isPlayer && !submitted && !closedByTeacher && remainingMs === 0 && selected !== null) {
+    if (!noLimit && isPlayer && !submitted && !closedByTeacher && remainingMs === 0 && selected !== null && autoLockedRef.current !== questionKey) {
+      autoLockedRef.current = questionKey;
       onAnswer(selected);
     }
-  }, [remainingMs, noLimit, isPlayer, submitted, closedByTeacher, selected, onAnswer]);
+  }, [remainingMs, noLimit, isPlayer, submitted, closedByTeacher, selected, onAnswer, questionKey]);
 
   const timerColor = noLimit || closedByTeacher
     ? 'var(--astryx-color-text-secondary, currentColor)'

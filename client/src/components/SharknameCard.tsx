@@ -139,6 +139,10 @@ function SharknameEditor({
   const [flip, setFlip] = useState<{ name: string; n: number } | null>(null);
   const [rolls, setRolls] = useState(0);
   const [saving, setSaving] = useState(false);
+  // Set at the press: Enter pressed twice, or Save clicked twice, lands
+  // before `saving` disables anything, and the second save of a name just
+  // saved is refused by the 30-day rule.
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [taken, setTaken] = useState<{ name: string; suggestion: string } | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -191,8 +195,9 @@ function SharknameEditor({
   };
 
   const submit = async () => {
-    if (rolling || saving || unchanged || locked) return;
+    if (rolling || savingRef.current || unchanged || locked) return;
     if (!isAllowedSharkBase(clean)) { setError(t('sharkname.invalidBase')); setTaken(null); return; }
+    savingRef.current = true;
     setSaving(true); setError(null); setTaken(null); setSaved(null);
     try {
       const result = await saveHandle(clean);
@@ -205,6 +210,7 @@ function SharknameEditor({
         setError(friendlyError(err));
       }
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

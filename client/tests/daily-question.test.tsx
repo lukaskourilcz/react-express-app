@@ -139,6 +139,25 @@ describe('/daily', () => {
     expect(saved[0]).toMatchObject({ question_id: 'q-1', correct_answer: '"object"', explanation: 'It is "object".', category: QUESTION.question.category });
   });
 
+  it('moves focus to the verdict, since Check answer leaves with the check', async () => {
+    server.use(
+      http.get('*/api/quiz/daily', () => HttpResponse.json(QUESTION)),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({
+        totalQuestions: 1, correctAnswers: 0, percentage: 0, questXp: 0,
+        results: [{ questionId: 'q-1', selectedIndex: 0, correctAnswer: 1, isCorrect: false, explanation: 'It is "object".' }],
+      })),
+    );
+    renderAt('/daily');
+    fireEvent.click((await screen.findAllByRole('radio'))[0]);
+    const check = screen.getByRole('button', { name: 'Check answer' });
+    check.focus();
+    fireEvent.click(check);
+    await screen.findByText('Not this one');
+    await waitFor(() => expect(document.activeElement).toHaveClass('ss-daily__result'));
+    expect(document.activeElement).toHaveTextContent('Not this one');
+    expect(document.activeElement).toHaveTextContent('It is "object".');
+  });
+
   it('does not ask the server for a day that has not come yet', () => {
     const tomorrow = addDays(today, 1);
     renderAt(`/daily/${tomorrow}`);
@@ -190,6 +209,23 @@ describe('/daily', () => {
     expect(checkedWith).toEqual(['sealed-session-1', 'sealed-session-2']);
     // Each read goes to the server, never to a response the browser kept.
     expect(reads).toEqual(['no-store', 'no-store']);
+  });
+
+  it('keeps the focus through an expired check and the reload that follows', async () => {
+    let reads = 0;
+    server.use(
+      http.get('*/api/quiz/daily', () => { reads++; return HttpResponse.json({ ...QUESTION, sessionId: `sealed-session-${reads}` }); }),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ error: { code: 'invalid_session', message: 'expired' } }, { status: 400 })),
+    );
+    renderAt('/daily');
+    fireEvent.click((await screen.findAllByRole('radio'))[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
+    const again = await screen.findByRole('button', { name: 'Load it again' });
+    await waitFor(() => expect(document.activeElement).toContainElement(again));
+    expect(document.activeElement).not.toBe(document.body);
+    fireEvent.click(again);
+    await screen.findByRole('button', { name: 'Check answer' });
+    await waitFor(() => expect(document.activeElement).toHaveClass('ss-daily__question'));
   });
 
   it('starts the question over even if a reload brings back the same session', async () => {

@@ -1,6 +1,6 @@
 ---
 name: section-code-audit
-description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564) and Software Engineer audits of 22–23 October 2026.
+description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564), Software Engineer (#565) and Quiz/Play/Profile/Leaderboard audits of 22–23 October 2026.
 ---
 
 # Section code audit
@@ -49,6 +49,12 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Shuffles that can return the answer: a dealt puzzle must never start solved. Redraw, and test the identity shuffle.
 - Lookups by id on plain objects: use `Object.hasOwn` (or a `Map`), or `constructor` and `__proto__` resolve to Object members.
 - Arrays from the client: refuse entries of the wrong type with 400 instead of filtering them out and accepting the rest.
+- Timeouts: `withTimeout` rejects with `UpstreamTimeoutError` (503 `upstream_timeout`). A handler's own catch-all must not turn it back into 500, and an Auth outage must not answer 401, because that tells a signed-in learner their session ended.
+- Query parameters can arrive as arrays (`?code=a&code=b`). Read them as one string, or refuse them; `.split()` on an array throws.
+- Failed reads that feed a write: a failed review-state read returned `[]`, and the submit then reset every concept to its first stage. Return `null` and skip the write.
+- Inserts that rely on a unique key: insert and retry on `23505` instead of check-then-insert.
+- Rate limits for writes a class makes together: use a class-sized address bucket plus a per-account bucket (`enforceClassRateLimit`).
+- Calendar input: `2026-02-30` and year 0 parse in JavaScript and fail in Postgres. Validate real dates.
 - Repeated work over the whole catalogue per call (`filter` over 769 tasks on each unlock check): index it once in a `WeakMap` keyed by the readonly list.
 
 **Client**
@@ -74,6 +80,13 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Head tags: write `og:url` beside the canonical on client navigation, and treat a trailing slash as the same route.
 - Initial-chunk weight: strings and defaults nothing reads (fallback labels, dev tips) still ship. Delete them, and measure with `check:bundle`.
 - Touch targets: every button is at least 44px tall.
+- Realtime and polling: every subscribe returns a working unsubscribe, keep one poll in flight, and key a room component by code and account so moving between rooms remounts it.
+- Effects keyed on objects that auth replaces on every token refresh (`user`): depend on `user.id`.
+- Server state bound straight to a checkbox or select snaps back until the re-read lands: keep a local value and send saves from a queue.
+- Sequence numbers on list reads: only the latest read draws.
+- Dates that roll over: a page left open overnight must move to the new UTC day at midnight and when the tab becomes visible again.
+- Proofs, tokens or fields nothing decodes: grep for a reader, and remove both sides if there is none.
+- `aria-live` on a region mounted together with its content is not announced. Keep the live region on the page and change its text.
 
 ## 3. How to work
 

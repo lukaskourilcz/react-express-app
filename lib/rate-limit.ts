@@ -96,7 +96,12 @@ export const RATE_LIMITS = {
   // A signed-in leaderboard read skips the CDN (it carries the learner's own
   // rank), so it gets a bucket; the anonymous board is cached and needs none.
   leaderboardPersonal: { key: 'leaderboard_personal', capacity: 30, refillPerSecond: 30 / 60 },
+  // A question report, in two tiers like the writes below: the address bucket
+  // holds a class behind one NAT, which used to share three reports and got
+  // 429 on the fourth; `questionReport` is then the verified account's own,
+  // or the address's for a reporter without one, the rate it had before.
   questionReport: { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 },
+  questionReportAddress: { key: 'question_report_address', capacity: SHARED_NETWORK_SEATS * 3, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 3600 },
   // Every write to `api/user/[op].ts`, in two tiers like play's: an address
   // backstop that holds a class behind one NAT, then `userMutation` keyed by
   // the verified account. A caller without an account keeps `userMutation` by
@@ -104,14 +109,12 @@ export const RATE_LIMITS = {
   userMutation: { key: 'user_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   userMutationAddress: { key: 'user_mutation_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
   flashcardMutation: { key: 'flashcard_mutation', capacity: 20, refillPerSecond: 20 / 60 },
-  roadmapMutation: { key: 'roadmap_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapAnswer: { key: 'roadmap_answer', capacity: 80, refillPerSecond: 80 / 60 },
   roadmapComplete: { key: 'roadmap_complete', capacity: 12, refillPerSecond: 12 / 60 },
-  // The four above are each a caller's own bucket (`enforceClassRateLimit`),
+  // The three above are each a caller's own bucket (`enforceClassRateLimit`),
   // per account, or per address for a caller without one. These are their
   // address backstops: a class at the per-person rate.
   flashcardMutationAddress: { key: 'flashcard_mutation_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
-  roadmapMutationAddress: { key: 'roadmap_mutation_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
   roadmapAnswerAddress: { key: 'roadmap_answer_address', capacity: SHARED_NETWORK_SEATS * 80, refillPerSecond: (SHARED_NETWORK_SEATS * 80) / 60 },
   roadmapCompleteAddress: { key: 'roadmap_complete_address', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 60 },
   // Play has two tiers (ported by hand from fa884b7). The address buckets

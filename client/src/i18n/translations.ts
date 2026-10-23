@@ -542,6 +542,8 @@ export const en = {
   'friends.emptyNoHandle': 'Pick a sharkname first, then add someone by theirs.',
   'friends.remove': 'Remove',
   'friends.removeOne': 'Remove {name}',
+  'friends.removeConfirmTitle': 'Remove {name}?',
+  'friends.removeConfirmBody': 'You leave each other’s friends lists. To be friends again, one of you sends a new request.',
   'friends.countryLabel': 'Country',
   'friends.countryNone': 'No flag',
   'friends.countryHelp': 'A flag beside your avatar, visible to friends only.',

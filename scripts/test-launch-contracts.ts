@@ -24,11 +24,9 @@ import {
   subjectForTopic,
 } from '../shared/subject-catalog';
 import {
-  decodeAnswerProof,
   decodeChallengeRun,
   decodeQuizResultReceipt,
   decodeSession,
-  encodeAnswerProof,
   encodeQuizResultReceipt,
   encodeSession,
   encodeScoreProof,
@@ -204,6 +202,7 @@ import { EVOLVING_CHALLENGES, evolvingStage, evolvingUnlocked, isEvolvingCheckpo
 import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, hasLearnLevel, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
+import { loadReviewStates, recordConceptReviews } from '../lib/concept-review';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
 import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
 import { handleFriends, handleIdentity } from '../lib/friends-handlers';
@@ -473,6 +472,9 @@ async function auditGateContracts() {
   assert.equal(graded.totalQuestions, 1, 'the void item is left out of the total');
   assert.equal(graded.correctAnswers, 1, 'the served item still counts');
   assert.ok(graded.results.every((r) => r.questionId !== 'retired-while-open'), 'no proof is minted for a void item');
+  // Each graded answer used to carry a sealed answerProof that nothing ever
+  // opened: up to fifty AES-GCM seals per submit, for bytes the client dropped.
+  assert.ok(graded.results.every((r) => !('answerProof' in r)), 'a graded answer carries no unread answer proof');
 
   // A placement round voids a retired item and tops the run up instead of
   // ending it short of the budget.
@@ -2366,8 +2368,8 @@ async function challengeSelectionContracts() {
  * CODE-8, PROF-7). Each route below charged one person's budget to the whole
  * address, so the pupil past it got 429: a quiz, the due list, the daily
  * challenge, the question of the day, a Challenge batch or answer, placement,
- * a Learn answer, completion or progress sync, a coding task, Submit, reveal
- * or draft save, a flashcard. Each now takes a class-sized address bucket,
+ * a Learn answer or completion, a coding task, Submit, reveal
+ * or draft save, a flashcard, a question report. Each now takes a class-sized address bucket,
  * then the caller's own. Run through the real handlers: thirty signed-in
  * pupils behind one address all get through, one pupil hammering is still
  * refused while a classmate is not, and guests still share their address's
@@ -2381,7 +2383,7 @@ async function classroomLimitContracts() {
   type Route = {
     name: string;
     handler: Handler;
-    method: 'GET' | 'POST' | 'PUT';
+    method: 'GET' | 'POST';
     query: Record<string, string>;
     body?: Record<string, unknown>;
     /** What one person may do in a full bucket; before the split, the whole address. */
@@ -2417,13 +2419,15 @@ async function classroomLimitContracts() {
     { name: 'a Learn answer', handler: roadmapHandler, method: 'POST', query: { resource: 'answer' }, body: { sessionId: 'x' }, ...learnAnswer },
     { name: 'a Learn completion', handler: roadmapHandler, method: 'POST', query: { resource: 'complete' }, body: { sessionId: 'x' }, ...learnComplete },
     { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
-    { name: 'a progress sync', handler: roadmapHandler, method: 'PUT', query: {}, body: {}, perPerson: 20, own: 'roadmapMutation', address: 'roadmapMutationAddress' },
     { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
     // A Submit's own budget is per task (owner decision 9), so it carries a
     // session for one; with no code it is refused after the limits.
     { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: encodeCodingSession({ taskId: freeTask.id, track: freeTask.track, userId: null }) }, perPerson: 30, own: 'codingSubmit', address: 'codingSubmitAddress' },
     { name: 'a coding reveal', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-reveal' }, body: { session: 'x' }, perPerson: 10, own: 'codingReveal', address: 'codingRevealAddress' },
     { name: 'a flashcard write', handler: flashcardsHandler, method: 'POST', query: {}, body: { subject: 'webdev', question_id: 'q1', question: 'Q?', correct_answer: 'A' }, perPerson: 20, own: 'flashcardMutation', address: 'flashcardMutationAddress' },
+    // A class reporting a confusing question shared three reports, and the
+    // fourth pupil got 429. With no reason it is refused after the limits.
+    { name: 'a question report', handler: submitHandler, method: 'POST', query: { resource: 'report' }, body: { question_id: 'q1' }, perPerson: 3, own: 'questionReport', address: 'questionReportAddress' },
   ];
 
   // 1. Thirty pupils behind one address, each with an account, together send
@@ -2858,6 +2862,12 @@ async function quizDifficultyContracts() {
   const jsBody = js.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
   assert.equal(jsBody.hardestAvailable, undefined, 'a selection with advanced questions is served those');
   assert.ok(jsBody.questions.every((q) => q.difficulty >= 3));
+
+  // A repeated categories parameter arrives as an array: it is not a list to
+  // split, and must not throw into a 500.
+  const repeated = mockResponse();
+  await questionsHandler({ ...(quizRequest('GET', { count: '3', difficulty: 'mixed' }) as object), query: { count: '3', difficulty: 'mixed', categories: ['javascript', 'html'] } } as never, repeated as never);
+  assert.equal(repeated.statusCode, 200, `a repeated categories parameter is read as none given (${JSON.stringify(repeated.body)})`);
 }
 
 /** The /dev "Daily challenge" switch turns the challenge off on the server;
@@ -3484,6 +3494,19 @@ async function identityContracts() {
   const list = (await friends('friends-list', 'GET')).body as { friends: { handle: string; displayName: string; picture: string | null }[]; requests: unknown[] };
   assert.deepEqual([list.friends[0].handle, list.friends[0].displayName, list.friends[0].picture], ['thirsty-sharkie', 'Ada Lovelace', null]);
   assert.deepEqual(list.requests, [{ handle: 'fin-de-fiesta', displayName: 'Dee Example', direction: 'incoming' }]);
+
+  // Answering a request and blocking are decisions: a value that is not a
+  // real true or false is refused before the database, never read as "no".
+  friendCalls.length = 0;
+  for (const [op, body] of [
+    ['friends-respond', { handle: 'fin-de-fiesta', accept: 'yes' }],
+    ['friends-respond', { handle: 'fin-de-fiesta' }],
+    ['friends-remove', { handle: 'fin-de-fiesta', block: 'true' }],
+  ] as const) {
+    const refused = await friends(op, 'POST', { body });
+    assert.equal(refused.statusCode, 400, `${op} ${JSON.stringify(body)} is refused (${JSON.stringify(refused.body)})`);
+  }
+  assert.deepEqual(friendCalls, [], 'and nothing is answered or removed');
 }
 
 async function main() {
@@ -3529,8 +3552,6 @@ async function main() {
 
   const run = createChallengeRun();
   assert.equal(decodeChallengeRun(run.runToken)?.runId, run.runId);
-  const proof = encodeAnswerProof('q-1', 'webdev', true);
-  assert.deepEqual(decodeAnswerProof(proof), { questionId: 'q-1', subject: 'webdev', isCorrect: true });
   const receipt = encodeQuizResultReceipt({
     userId: 'user-0001', correct: 1, total: 2,
     breakdown: { javascript: { correct: 1, total: 2 } },
@@ -5460,6 +5481,27 @@ async function main() {
     assert.equal(dueConcepts(states, () => true, t0, 0).length, 0);
     // Nothing due, nothing owed — a fresh learner gets ordinary practice.
     assert.deepEqual(dueConcepts([], () => true, t0), []);
+
+    // A review state that cannot be read is not an empty one. Each record
+    // sets the stage, so a write built on an empty list after a failed read
+    // sent every practised concept back to its first stage.
+    {
+      const writes: unknown[] = [];
+      const query = { select: () => query, eq: () => query, then: (done: (value: unknown) => unknown) => Promise.resolve({ data: null, error: { message: 'down' } }).then(done) };
+      const database = { from: () => query, rpc: async (_name: string, args: unknown) => { writes.push(args); return { data: null, error: null }; } } as never;
+      const read = await loadReviewStates(database, 'review-reader', 'webdev');
+      assert.equal(read, null, 'an unreadable review state is reported as unreadable');
+      await recordConceptReviews(database, {
+        userId: 'review-reader', subject: 'webdev', eventId: 'event-1',
+        items: [{ itemId: 'map-1', category: 'javascript', tags: ['map'], correct: true, kind: 'independent' }],
+      }, read, t0);
+      assert.deepEqual(writes, [], 'nothing is recorded over states that could not be read');
+      await recordConceptReviews(database, {
+        userId: 'review-reader', subject: 'webdev', eventId: 'event-2',
+        items: [{ itemId: 'map-1', category: 'javascript', tags: ['map'], correct: true, kind: 'independent' }],
+      }, [], t0);
+      assert.equal(writes.length, 1, 'a learner with no states yet still records the first review');
+    }
 
     // A due concept must reach the session, not merely be preferred in a list
     // the ranking is free to re-sort. It was: the handler built a due-first

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { onXpToast, primeRankMarker, type XpToast } from '../src/lib/xp';
+import { clearAccountData } from '../src/lib/accountData';
 
 // The Biggest Shark Challenge against a small stand-in for the three endpoints
 // it calls: the batch (GET /api/quiz/challenge), grading (POST
@@ -24,6 +25,8 @@ const api = vi.hoisted(() => ({
   grade: null as Grade | null,
   completions: [] as { runToken: string; proofs: string[]; status: number }[],
   completeStatus: (_runToken: string): { status: number; code?: string } => ({ status: 200 }),
+  /** Run completions wait for this when it is set. */
+  holdComplete: null as null | Promise<void>,
   auth: { user: null as null | { id: string; email?: string; user_metadata?: Record<string, unknown> }, isAuthenticated: false, isLoading: false },
   /** Refuses the nth batch request (1-based) when it returns a status. */
   batchRefusal: null as null | ((n: number) => { status: number; code: string } | null),
@@ -91,6 +94,7 @@ vi.mock('../src/lib/api', async (importOriginal) => {
     }
     if (parsed.pathname === '/api/quiz/challenge' && parsed.searchParams.get('resource') === 'complete') {
       const body = JSON.parse(String(opts.body)) as { runToken: string; proofs: string[] };
+      if (api.holdComplete) await api.holdComplete;
       const outcome = api.completeStatus(body.runToken);
       api.completions.push({ runToken: body.runToken, proofs: body.proofs, status: outcome.status });
       if (outcome.status !== 200) return fail(outcome.status, outcome.code ?? 'error');
@@ -177,6 +181,7 @@ beforeEach(() => {
   api.grade = null;
   api.completions.length = 0;
   api.completeStatus = () => ({ status: 200 });
+  api.holdComplete = null;
   api.auth = { user: null, isAuthenticated: false, isLoading: false };
   api.batchRefusal = null;
   api.holdBatch = 0;
@@ -298,6 +303,45 @@ describe('the timeout strike', () => {
   });
 });
 
+describe('focus at time up', () => {
+  it('goes to the verdict\'s button when the clock disabled the focused Submit', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let timeouts = 0;
+    api.grade = (body) => {
+      if (Object.values(body.answers)[0] === -1) timeouts += 1;
+      return null;
+    };
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('radio', { name: 'right' }));
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    submit.focus();
+    const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+    // A browser drops the focus of a control that disables itself; jsdom
+    // keeps it, so the test drops it as the browser would.
+    // (jsdom's blur() ignores a disabled element, so the focus is moved to a
+    // stand-in that is then removed, which leaves it on the page.)
+    const fixup = new MutationObserver(() => {
+      if (!(document.activeElement instanceof HTMLButtonElement && document.activeElement.disabled)) return;
+      const standIn = document.createElement('span');
+      standIn.tabIndex = -1;
+      document.body.append(standIn);
+      standIn.focus();
+      standIn.remove();
+    });
+    fixup.observe(document.body, { attributes: true, attributeFilter: ['disabled'], subtree: true });
+    let second = 0;
+    while (timeouts === 0 && second < 95) {
+      await tick(1000);
+      second += 1;
+    }
+    await screen.findByText('Time ran out. One strike.');
+    await settle();
+    fixup.disconnect();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Next question|See result/ }));
+  });
+});
+
 describe('the run reward', () => {
   async function strikeOut(correctFirst = 0) {
     for (let n = 0; n < correctFirst; n += 1) {
@@ -344,6 +388,15 @@ describe('the run reward', () => {
     expect(JSON.parse(localStorage.getItem(PENDING) ?? '[]')).toEqual([expect.objectContaining({ runToken: 'OFFLINE' })]);
   });
 
+  it('drops a saved run the board already holds with another result, instead of sending it at every game over', async () => {
+    api.auth = { user: { id: 'learner-1' }, isAuthenticated: true, isLoading: false };
+    localStorage.setItem(PENDING, JSON.stringify([{ userId: 'learner-1', runToken: 'SAVED-ELSEWHERE', proofs: [] }]));
+    api.completeStatus = () => ({ status: 409, code: 'run_already_saved' });
+    await mount();
+    await waitFor(() => expect(api.completions.map((one) => one.runToken)).toEqual(['SAVED-ELSEWHERE']));
+    await waitFor(() => expect(localStorage.getItem(PENDING)).toBeNull());
+  });
+
   it('announces the XP the server credited to a signed-in learner, and counts the same amount signed out', async () => {
     const gains: number[] = [];
     const stop = onXpToast((toast: XpToast) => { if (toast.kind === 'gain') gains.push(toast.amount); });
@@ -362,6 +415,26 @@ describe('the run reward', () => {
       await strikeOut(2);
       expect(gains).toEqual([10, 10]);
       expect(api.completions).toHaveLength(2);
+    } finally {
+      stop();
+    }
+  });
+
+  it('announces nothing when the account signs out while the run’s reward is on its way', async () => {
+    const gains: number[] = [];
+    const stop = onXpToast((toast: XpToast) => { if (toast.kind === 'gain') gains.push(toast.amount); });
+    let release!: () => void;
+    api.holdComplete = new Promise<void>((resolve) => { release = resolve; });
+    try {
+      api.auth = { user: { id: 'learner-1' }, isAuthenticated: true, isLoading: false };
+      await mount();
+      await start();
+      await strikeOut(2);
+      clearAccountData();
+      await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+      await settle();
+      expect(api.completions).toHaveLength(1);
+      expect(gains).toEqual([]);
     } finally {
       stop();
     }
@@ -530,6 +603,95 @@ describe('a grade whose response was lost', () => {
     expect(api.completions[0].status).toBe(200);
     expect(api.completions[0].proofs.filter((proof) => proof.endsWith(':true'))).toHaveLength(1);
     expect(api.completions[0].proofs.filter((proof) => proof.endsWith(':false'))).toHaveLength(3);
+  });
+});
+
+describe('focus', () => {
+  it('goes to each new question, from Start and from Next', async () => {
+    await mount();
+    await start();
+    expect(document.activeElement?.id).toBe('challenge-question');
+    expect(document.activeElement).toHaveTextContent('Batch 1 question 1?');
+    await answer('right');
+    await next();
+    expect(document.activeElement?.id).toBe('challenge-question');
+    expect(document.activeElement).toHaveTextContent('Batch 1 question 2?');
+  });
+
+  // Supabase hands a new user object on a token refresh or a return to the
+  // tab. The game-over screen took the focus back from wherever it was then.
+  it('stays where the learner put it on the game-over screen when the session refreshes', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const tree = () => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/challenge']}>
+          <LanguageProvider><Challenge /></LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const frame = () => act(async () => { await new Promise((resolve) => requestAnimationFrame(() => resolve(null))); });
+    api.auth = { ...SIGNED_IN, user: { id: 'learner-1' } };
+    let view!: ReturnType<typeof render>;
+    await act(async () => { view = render(tree()); });
+    await start();
+    await strikeOutNow();
+    await frame();
+    const playAgain = screen.getByRole('button', { name: 'Play again' });
+    act(() => playAgain.focus());
+    api.auth = { ...SIGNED_IN, user: { id: 'learner-1' } };
+    await act(async () => { view.rerender(tree()); });
+    await frame();
+    expect(document.activeElement).toBe(playAgain);
+  });
+});
+
+describe('the verdict', () => {
+  it('is read from a live region that was on the page before the answer', async () => {
+    await mount();
+    await start();
+    const regions = [...document.querySelectorAll('[aria-live]')];
+    await answer('right');
+    expect(regions.some((region) => region.isConnected && region.textContent?.includes('Correct') && region.textContent.includes('Because.'))).toBe(true);
+  });
+});
+
+describe('the fins left', () => {
+  it('are named as an image, so a screen reader reads them', async () => {
+    await mount();
+    await start();
+    expect(screen.getByRole('img', { name: '3 shark fins left' })).toBeInTheDocument();
+    await answer('wrong');
+    expect(screen.getByRole('img', { name: '2 shark fins left' })).toBeInTheDocument();
+  });
+});
+
+describe('a double press', () => {
+  // Both presses land before React renders the busy button.
+  it('grades the pick once, so its point counts once', async () => {
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('radio', { name: 'right' }));
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+      fireEvent.keyDown(document.body, { key: 'Enter' });
+    });
+    await screen.findByRole('button', { name: /Next question|See result/ });
+    await settle();
+    expect(api.submits).toHaveLength(1);
+    expect(screen.getByText('Score').nextElementSibling).toHaveTextContent('1');
+  });
+
+  it('moves on one question, so none is skipped unseen', async () => {
+    await mount();
+    await start();
+    expect(shownQuestion()).toBe('Batch 1 question 1?');
+    await answer('right');
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+      fireEvent.click(screen.getByRole('button', { name: /Next question|Submit/ }));
+    });
+    await settle();
+    expect(shownQuestion()).toBe('Batch 1 question 2?');
   });
 });
 

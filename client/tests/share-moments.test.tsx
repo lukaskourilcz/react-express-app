@@ -11,6 +11,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import ReferralMoment from '../src/components/ReferralMoment';
 import ResultShareActions from '../src/components/ResultShareActions';
 import TypingRacer from '../src/components/TypingRacer';
+import { clearAccountData } from '../src/lib/accountData';
 import type { ReferralSummary } from '../src/lib/referral';
 import { server } from './mocks/server';
 
@@ -127,5 +128,48 @@ describe('the result card', () => {
     expect(await screen.findByRole('button', { name: 'Race again' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Download card' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Share result' })).toBeNull();
+  });
+});
+
+describe('the typing best', () => {
+  /** A clean race that takes `ms` of the clock. */
+  async function race(ms: number) {
+    const input = await screen.findByRole('textbox', { name: 'Type this' });
+    const snippet = document.querySelector('.ss-typing__guide')!.textContent!;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    try {
+      fireEvent.change(input, { target: { value: snippet[0] } });
+      now.mockReturnValue(1_000_000 + ms);
+      fireEvent.change(input, { target: { value: snippet } });
+    } finally {
+      now.mockRestore();
+    }
+  }
+
+  it('records a new best over a stored one of another shape', async () => {
+    localStorage.setItem('devshark:typing:v1', JSON.stringify({ bestWpm: 'fast' }));
+    render(<TypingRacer />, { wrapper });
+    await race(6_000);
+    expect(await screen.findByText('New personal best')).toBeInTheDocument();
+    expect((JSON.parse(localStorage.getItem('devshark:typing:v1')!) as { bestWpm: unknown }).bestWpm).toEqual(expect.any(Number));
+  });
+
+  it('reads the outcome from a status that was on the page before the race ended', async () => {
+    render(<TypingRacer />, { wrapper });
+    await screen.findByRole('textbox', { name: 'Type this' });
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('');
+    await race(6_000);
+    await screen.findByRole('button', { name: 'Race again' });
+    expect(status).toBeInTheDocument();
+    expect(status).toHaveTextContent(/^Race finished\. \d+ WPM at 100% accuracy\. New personal best$/);
+  });
+
+  it('leaves with the account that signs out', async () => {
+    localStorage.setItem('devshark:typing:v1', JSON.stringify({ bestWpm: 40 }));
+    render(<TypingRacer />, { wrapper });
+    expect(await screen.findByText('Best: 40 WPM')).toBeInTheDocument();
+    act(() => { clearAccountData(); });
+    expect(screen.queryByText('Best: 40 WPM')).toBeNull();
   });
 });

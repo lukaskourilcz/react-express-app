@@ -4,7 +4,7 @@
 // part, the boards say "Learner" even with the name switch on, and the
 // address never reaches a board.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -108,6 +108,50 @@ describe('an account made with an email and password', () => {
     // The learner's own sharkname, which friends see, is on the Overview.
     fireEvent.click(screen.getByRole('tab', { name: 'Overview' }));
     expect((await screen.findAllByText('el-tiburon-loco')).length).toBeGreaterThan(0);
+  });
+
+  it('moves between the Profile tabs with the arrow keys, from one Tab stop', async () => {
+    serveAccount(false);
+    await mount('/profile', <Profile />);
+    const overview = await screen.findByRole('tab', { name: 'Overview' });
+    const friends = screen.getByRole('tab', { name: 'Friends' });
+    expect(overview).toHaveAttribute('tabindex', '0');
+    expect(friends).toHaveAttribute('tabindex', '-1');
+    overview.focus();
+    fireEvent.keyDown(overview, { key: 'ArrowRight' });
+    expect(friends).toHaveAttribute('aria-selected', 'true');
+    expect(friends).toHaveFocus();
+    expect(await screen.findByText('gracias-sharkie')).toBeInTheDocument();
+    fireEvent.keyDown(friends, { key: 'Home' });
+    expect(overview).toHaveAttribute('aria-selected', 'true');
+    expect(overview).toHaveAttribute('tabindex', '0');
+    expect(friends).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('starts the cards’ reads with the stats read instead of after it', async () => {
+    serveAccount(false);
+    let release!: () => void;
+    const gate = new Promise<void>((done) => { release = done; });
+    const asked: string[] = [];
+    server.use(
+      http.get('*/api/user/stats', async () => { await gate; return HttpResponse.json({ data: STATS }); }),
+      http.get('*/api/user/freezes', () => {
+        asked.push('freezes');
+        return HttpResponse.json({ remaining: 2, period: '2026-10', used: [], shieldUntil: null, shieldDays: [], shieldSupported: true });
+      }),
+      http.get('*/api/user/advisor', () => {
+        asked.push('advisor');
+        return HttpResponse.json({ weakAreas: [], suggestedWeek: [], generatedAt: '2026-10-01T09:00:00Z' });
+      }),
+    );
+    await mount('/profile', <Profile />);
+    await waitFor(() => expect([...asked].sort()).toEqual(['advisor', 'freezes']));
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    await act(async () => { release(); });
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('ada.lovelace');
+    await new Promise((done) => setTimeout(done, 50));
+    // The cards took the reads already made.
+    expect([...asked].sort()).toEqual(['advisor', 'freezes']);
   });
 
   it('uses the server-confirmed account name on the boards without publishing the full email or photo', async () => {

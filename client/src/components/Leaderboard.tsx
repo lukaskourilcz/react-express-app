@@ -47,6 +47,7 @@ import type {
 } from '../lib/play';
 import { visibleCategoryOptionsFor, categoryLabelKey } from '../lib/categories';
 import { useActiveSubject, categoriesForSubject } from '../lib/subjects';
+import { useUtcDay } from '../lib/utcDay';
 import './Leaderboard.css';
 
 type Tab = '30d' | 'month' | 'all' | 'today';
@@ -70,6 +71,11 @@ interface Row {
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** The UTC day the Today board is for, moved on when 00:00 UTC passes (as
+ * Today's plan day is): read once at mount, a board left open past midnight
+ * kept asking for yesterday's board under "Today". */
+const useBoardDay = (): string => useUtcDay(today);
 
 // The last board that loaded, per board, so opening this screen offline still
 // shows something true with its age beside it. A per-viewer convenience: it
@@ -154,7 +160,7 @@ function Leaderboard() {
   // '' is "All topics". The filter applies to the 30-day and all-time boards.
   const [category, setCategory] = useState('');
   const [windowUnavailable, setWindowUnavailable] = useState(false);
-  const [date] = useState(today);
+  const date = useBoardDay();
 
   const subjectCategories = categoriesForSubject(subject.id);
   const request: LeaderboardRequest =
@@ -178,8 +184,16 @@ function Leaderboard() {
   // cached under the new board's key.
   const settledTab = useRef<Tab>(tab);
   if (data && !isPlaceholderData) settledTab.current = tab;
-  const drawTab: Tab = isPlaceholderData ? settledTab.current : tab;
-  const refreshing = isPlaceholderData || (isFetching && !!data);
+
+  // Offline shows up two ways: a request that failed on the network, or one
+  // React Query holds back because the browser already reports no connection.
+  const offline = fetchStatus === 'paused' || (!!error && isOffline(error));
+  // Offline, the previous tab's board is not on its way out: nothing will
+  // replace it. The tab picked shows its own last copy, or says it has none,
+  // rather than the previous tab's rows under the new tab's name.
+  const heldOver = offline && isPlaceholderData;
+  const drawTab: Tab = isPlaceholderData && !heldOver ? settledTab.current : tab;
+  const refreshing = (isPlaceholderData && !heldOver) || (isFetching && !!data);
 
   useEffect(() => {
     if (data && !error && !isPlaceholderData) writeCachedBoard(cacheKey, data);
@@ -194,11 +208,8 @@ function Leaderboard() {
     setTab('all');
   }, [missingWindow]);
 
-  // Offline shows up two ways: a request that failed on the network, or one
-  // React Query holds back because the browser already reports no connection.
-  const offline = fetchStatus === 'paused' || (!!error && isOffline(error));
   const stale: CachedBoard | null = offline
-    ? data
+    ? data && !heldOver
       ? { savedAt: dataUpdatedAt, data }
       : readCachedBoard(cacheKey)
     : null;

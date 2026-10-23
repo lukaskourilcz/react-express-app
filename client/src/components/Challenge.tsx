@@ -35,6 +35,7 @@ import { challengeRunXp } from '../../../shared/progression';
 import type { QuestionXpHeld } from '../../../shared/repeat-xp';
 import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
+import { accountEpoch } from '../lib/accountData';
 import './DeepEndScreens.css';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import { categoryLabelKey } from '../lib/categories';
@@ -98,12 +99,15 @@ const dropPendingReward = (runToken: string) =>
  * lands, or that can never land, leaves the list; one the network or the rate
  * limit turned away stays for the next try. `held` counts the right answers
  * whose question paid XP less than an hour ago (migration 060), with the time
- * the last of them pays again. */
+ * the last of them pays again. The sending stops when the account signs
+ * out: the rest are no longer this browser's to send. */
 async function sendPendingRewards(userId: string | null): Promise<{ kept: number; xp: number; held: QuestionXpHeld | null }> {
+  const epoch = accountEpoch();
   let kept = 0;
   let xp = 0;
   let held = null as QuestionXpHeld | null;
   for (const run of readPendingRewards().filter((one) => one.userId === userId)) {
+    if (accountEpoch() !== epoch) break;
     try {
       const res = await completeChallengeRun({ runToken: run.runToken, proofs: run.proofs });
       if (userId && res.awarded) xp += res.xp ?? 0;
@@ -115,7 +119,9 @@ async function sendPendingRewards(userId: string | null): Promise<{ kept: number
       }
       dropPendingReward(run.runToken);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 400 && PERMANENT_REWARD_ERRORS.has(err.code ?? '')) {
+      // 409: the run is already on the board with another result, and
+      // sending it again is refused the same way.
+      if (err instanceof ApiError && ((err.status === 400 && PERMANENT_REWARD_ERRORS.has(err.code ?? '')) || (err.status === 409 && err.code === 'run_already_saved'))) {
         dropPendingReward(run.runToken);
         continue;
       }
@@ -218,6 +224,11 @@ export default function Challenge() {
   // 12): each can be saved as a Shark Card with its answer and explanation.
   const [missed, setMissed] = useState<AnsweredQ[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  // One grade at a time, for a pick or the timeout. `submitting` reaches the
+  // handlers only after a render, and a second Enter or press in that gap
+  // sent the pick again: the server replays a pick's grade, so the point or
+  // the strike counted twice.
+  const gradingRef = useRef(false);
   const [snack, setSnack] = useState<string | null>(null);
   // The question's deadline, set when it is shown. The clock counts down to
   // it rather than counting ticks, so time the page spends in the background
@@ -246,6 +257,10 @@ export default function Challenge() {
   // Retry asks for the batch again under the same run.
   const [refillError, setRefillError] = useState<string | null>(null);
   const [refilling, setRefilling] = useState(false);
+  // One move to the next question at a time, held until that question has
+  // rendered. A second press of Next before then popped another one, and the
+  // question between them was skipped unseen.
+  const advancingRef = useRef(false);
   // The picks sent for the question on screen, in order. The server grades a
   // question once: when the response to a graded pick is lost, another pick
   // (or the timeout) is refused as already graded, and sending the earlier
@@ -273,7 +288,11 @@ export default function Challenge() {
   const rewardSync = useRef<Promise<void>>(Promise.resolve());
   const syncRewards = useCallback((userId: string | null) => {
     rewardSync.current = rewardSync.current.then(async () => {
+      const epoch = accountEpoch();
       const { kept, xp, held } = await sendPendingRewards(userId);
+      // Signed out while the runs were on their way: what they earned is not
+      // news for whoever is here now, and its rank marker is not theirs.
+      if (accountEpoch() !== epoch) return;
       if (xp > 0) announceVerifiedQuestXp(xp);
       if (held) announceXpHeld({ on: 'questions', count: held.questions, availableAt: held.availableAt });
       if (xp > 0) {
@@ -299,6 +318,28 @@ export default function Challenge() {
   }, [syncRewards, user?.id]);
   // Focus target when the run ends, so AT users hear the transition.
   const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
+  // Each new question takes the focus. Start unmounts with the intro, and
+  // Next turns into a Submit that is disabled until a pick, so focus fell to
+  // the page and a screen reader heard nothing of the question.
+  const questionRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (phase === 'playing' && current) questionRef.current?.focus({ preventScroll: true });
+  }, [phase, current]);
+
+  // The verdict's button takes the focus the clock took away. At time up the
+  // focused answer or Submit disables itself, and the browser drops the focus
+  // to the page, where a keyboard learner could not reach Next without
+  // tabbing back through the page. Focus anywhere else is left alone.
+  const actionsRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!lastResult) return;
+    const active = document.activeElement as HTMLElement | null;
+    const lost = !active || active === document.body || !active.isConnected || active.matches(':disabled');
+    if (!lost) return;
+    actionsRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
+    // Next is disabled while the next questions load: it is focused when
+    // they have, if the focus is still nowhere.
+  }, [lastResult, refilling]);
 
   const livesLeft = MAX_LIVES - livesLost;
 
@@ -376,6 +417,9 @@ export default function Challenge() {
     setClockNow(shownAt);
   }, [clearStrikeRetry, timeLimitS]);
 
+  // The question a Next press moved to is on screen: the next press is its own.
+  useEffect(() => { advancingRef.current = false; }, [current]);
+
   /* ─── game flow ─────────────────────────────────────────────── */
 
   const startRun = useCallback(async () => {
@@ -421,44 +465,52 @@ export default function Challenge() {
         setPhase('gameover');
         return;
       }
-      if (refilling) return;
-      const generation = runGeneration.current;
-      // Eagerly refill so the next question is ready before we render it.
-      const remaining = buffer.current?.queue.length ?? 0;
-      if (remaining <= LOW_BATCH_THRESHOLD && !topupInFlight.current) {
-        // fire-and-forget; the next pop below uses whatever's available
-        void ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
-      }
-      let next = popNext();
-      let failure: string | null = null;
-      if (!next) {
-        // Buffer ran dry while topping up — await it.
-        setRefilling(true);
-        try {
-          failure = await ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
-        } finally {
-          setRefilling(false);
+      if (advancingRef.current) return;
+      advancingRef.current = true;
+      let moved = false;
+      try {
+        const generation = runGeneration.current;
+        // Eagerly refill so the next question is ready before we render it.
+        const remaining = buffer.current?.queue.length ?? 0;
+        if (remaining <= LOW_BATCH_THRESHOLD && !topupInFlight.current) {
+          // fire-and-forget; the next pop below uses whatever's available
+          void ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
         }
-        if (generation !== runGeneration.current) return;
-        next = popNext();
+        let next = popNext();
+        let failure: string | null = null;
+        if (!next) {
+          // Buffer ran dry while topping up — await it.
+          setRefilling(true);
+          try {
+            failure = await ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
+          } finally {
+            setRefilling(false);
+          }
+          if (generation !== runGeneration.current) return;
+          next = popNext();
+        }
+        if (!next) {
+          // Offline, rate limited or a server fault. The run, its score and
+          // its proofs stay; the graded card stays up and Retry asks again.
+          setRefillError(failure ?? t('challenge.noQuestions'));
+          return;
+        }
+        setRefillError(null);
+        showQuestion(next);
+        moved = true;
+        // Cap the seen-ids list so a long run doesn't grow the `exclude`
+        // query string without bound. The server caps at 500 already; we keep
+        // the most recent 300 client-side to keep `advance` and the request
+        // payload light.
+        const shown = next.question.id;
+        setSeenIds((prev) => [...prev, shown].slice(-300));
+        setSelected(null);
+        setLastResult(null);
+      } finally {
+        if (!moved) advancingRef.current = false;
       }
-      if (!next) {
-        // Offline, rate limited or a server fault. The run, its score and
-        // its proofs stay; the graded card stays up and Retry asks again.
-        setRefillError(failure ?? t('challenge.noQuestions'));
-        return;
-      }
-      setRefillError(null);
-      showQuestion(next);
-      // Cap the seen-ids list so a long run doesn't grow the `exclude`
-      // query string without bound. The server caps at 500 already; we keep
-      // the most recent 300 client-side to keep `advance` and the request
-      // payload light.
-      setSeenIds((prev) => [...prev, next!.question.id].slice(-300));
-      setSelected(null);
-      setLastResult(null);
     },
-    [ensureBufferTopUp, popNext, refilling, seenIds, showQuestion, t],
+    [ensureBufferTopUp, popNext, seenIds, showQuestion, t],
   );
 
   // Record the server's grade for the question on screen. A question retired
@@ -522,7 +574,8 @@ export default function Challenge() {
   }, []);
 
   const submitAnswer = useCallback(async () => {
-    if (selected == null || !current || submitting || timeLeft <= 0) return;
+    if (selected == null || !current || gradingRef.current || timeLeft <= 0) return;
+    gradingRef.current = true;
     const question = current;
     const sessionId = currentSessionRef.current;
     setSubmitting(true);
@@ -534,9 +587,10 @@ export default function Challenge() {
       if (isSessionRefusal(err)) expireQuestion(question, selected, sessionId);
       else setSnack(friendlyError(err));
     } finally {
+      gradingRef.current = false;
       setSubmitting(false);
     }
-  }, [selected, current, submitting, timeLeft, applyGrade, expireQuestion, gradeOrReplay]);
+  }, [selected, current, timeLeft, applyGrade, expireQuestion, gradeOrReplay]);
 
   const onContinue = useCallback(() => {
     const willGameOver = lastResult ? !lastResult.notCounted && !lastResult.isCorrect && livesLost >= MAX_LIVES : false;
@@ -547,7 +601,8 @@ export default function Challenge() {
   // fin, exactly like a wrong answer; the graded feedback card then lets the
   // learner continue (or ends the run if it was the third strike).
   const handleTimeout = useCallback(async () => {
-    if (!current || lastResult || submitting || strikeSentFor.current === current.id) return;
+    if (!current || lastResult || submitting || gradingRef.current || strikeSentFor.current === current.id) return;
+    gradingRef.current = true;
     strikeSentFor.current = current.id;
     const question = current;
     const sessionId = currentSessionRef.current;
@@ -584,6 +639,7 @@ export default function Challenge() {
         setLastResult({ questionId: question.id, selectedIndex: -1, correctAnswer: -1, isCorrect: false, explanation: '', question, timedOut: true });
       }
     } finally {
+      gradingRef.current = false;
       setSubmitting(false);
     }
   }, [current, lastResult, submitting, applyGrade, expireQuestion, gradeOrReplay]);
@@ -628,11 +684,16 @@ export default function Challenge() {
       }
       if (!user) awardQuestXp(challengeRunXp(score), 'quiz');
     }
-    // Announce the run's end to AT by moving focus to the game-over heading.
-    if (phase === 'gameover') {
-      requestAnimationFrame(() => gameOverHeadingRef.current?.focus());
-    }
   }, [phase, score, user, syncRewards]);
+  // Announce the run's end to AT by moving focus to the game-over heading,
+  // once per game over. In the effect above it ran again on every new user
+  // object (a token refresh, a return to the tab) and took the focus back
+  // from Play again or the name field.
+  useEffect(() => {
+    if (phase !== 'gameover') return;
+    const frame = requestAnimationFrame(() => gameOverHeadingRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [phase]);
 
   /* ─── keyboard during play ──────────────────────────────────── */
 
@@ -668,7 +729,9 @@ export default function Challenge() {
 
   const livesIndicator = useMemo(
     () => (
+      // An image of the fins: a name on a plain div is not read out.
       <div
+        role="img"
         style={{ display: 'flex', gap: 4, alignItems: 'center' }}
         aria-label={t('challenge.livesAria', { left: livesLeft })}
       >
@@ -953,7 +1016,7 @@ export default function Challenge() {
           </HStack>
 
           {/* Scrollable question region — answers below keep their position. */}
-          <div id="challenge-question" style={{ marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+          <div id="challenge-question" ref={questionRef} tabIndex={-1} style={{ marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             {renderQuestion(current.question)}
           </div>
 
@@ -1020,23 +1083,25 @@ export default function Challenge() {
       </div>
 
       {/* Feedback overlay: a floating card that sits over the answer options
-          so the grade doesn't push the layout around. */}
-      {lastResult && (
-        <div
-          aria-live="assertive"
-          style={{
-            position: 'absolute',
-            left: isMobile ? 8 : 16,
-            right: isMobile ? 8 : 16,
-            bottom: isMobile ? 68 : 72,
-            zIndex: 5,
-            maxHeight: '48vh',
-            overflowY: 'auto',
-            borderRadius: 'var(--radius-container)',
-            backgroundColor: 'var(--color-background-surface)',
-            boxShadow: 'var(--shadow-high)',
-          }}
-        >
+          so the grade doesn't push the layout around. The live region stays
+          on the page and becomes the card while a verdict shows: a live
+          region drawn together with its words, as the card was, is not read. */}
+      <div
+        aria-live="assertive"
+        style={lastResult ? {
+          position: 'absolute',
+          left: isMobile ? 8 : 16,
+          right: isMobile ? 8 : 16,
+          bottom: isMobile ? 68 : 72,
+          zIndex: 5,
+          maxHeight: '48vh',
+          overflowY: 'auto',
+          borderRadius: 'var(--radius-container)',
+          backgroundColor: 'var(--color-background-surface)',
+          boxShadow: 'var(--shadow-high)',
+        } : undefined}
+      >
+        {lastResult && (
           <Banner
             status={lastResult.notCounted ? 'info' : lastResult.isCorrect ? 'success' : 'error'}
             title={
@@ -1052,8 +1117,8 @@ export default function Challenge() {
             }
             description={lastResult.explanation || undefined}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {!lastResult && strikeWaiting && (
         <div style={{ marginTop: 12, flexShrink: 0 }}>
@@ -1067,7 +1132,7 @@ export default function Challenge() {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
+      <div ref={actionsRef} style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
         {!lastResult ? (
           <Button
             variant="primary"

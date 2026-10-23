@@ -8,10 +8,10 @@ import {
   type Question,
 } from '../../lib/quiz-runtime';
 import { encodeSession, createChallengeRun, decodeChallengeRun, decodeScoreProof } from '../../lib/quiz-tokens';
-import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing, withRequestContext } from '../../lib/http';
+import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing, withRequestContext, tryAuthOnce } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions, getEffectiveQuestionsById } from '../../lib/questions-store';
-import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
+import { ChallengeScoreConflictError, getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
 import { enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
@@ -113,7 +113,9 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   const topics = scope.categories.filter(topic => available.includes(topic)).sort();
   if (topics.length === 0) return jsonError(res, 404, 'no_questions', 'No challenge questions available');
   let auth;
-  try { auth = assessment ? null : await tryAuth(req); }
+  // The class rate limit above already verified the token; read that result
+  // rather than asking Supabase Auth a second time.
+  try { auth = assessment ? null : await tryAuthOnce(req); }
   catch (error) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
@@ -213,7 +215,10 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   let record;
   try {
     record = await recordChallengeScore({ score, runId: run.runId, subject: run.subject, userId: auth?.sub ?? null, topics: run.topics, allTopics: run.allTopics });
-  } catch {
+  } catch (error) {
+    // The run is already on the board with another score or owner: a retry
+    // would be refused the same way, so it is a conflict, not an outage.
+    if (error instanceof ChallengeScoreConflictError) return jsonError(res, 409, 'run_already_saved', 'This run was already saved with a different result');
     return jsonError(res, 503, 'leaderboard_unavailable', 'Could not save the score right now');
   }
   if (!auth) return res.json({ ok: true, awarded: false, score, record });

@@ -53,37 +53,51 @@ const AuthButton = lazyShellPart(() => import('./components/AuthButton'));
 // are `lazyPage`, not `lazy`: React.lazy keeps a failed load for good, and a
 // page whose code failed must be able to ask again (lib/routeRecovery.ts).
 const exact = (...paths: string[]) => (pathname: string) => paths.includes(pathname);
-const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+// The paths of the <Route>s below that render a chunk, in their own syntax:
+// `:name` is one segment and a last `:name?` may be left out; a trailing slash
+// is the same route, as React Router reads it. A prefix matcher also took the
+// deeper paths no route serves (/play/a/b, /coding/a/b/c), which draw the 404
+// page and so loaded a chunk for nothing.
+const routes = (...patterns: string[]) => {
+  const shapes = patterns.map((pattern) => pattern.split('/').slice(1));
+  return (pathname: string) => {
+    const parts = (pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname).split('/').slice(1);
+    return shapes.some((shape) => {
+      const optional = shape[shape.length - 1].endsWith('?');
+      if (parts.length !== shape.length && !(optional && parts.length === shape.length - 1)) return false;
+      return parts.every((part, i) => (shape[i].startsWith(':') ? part.length > 0 : part === shape[i]));
+    });
+  };
+};
 const loadHome = routeChunk(exact('/'), () => import('./components/Home'));
 const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
 // The FDE path's pages sit inside its Learn section (#489) but load the path
 // screens, not the Learn page. lib/learningPaths.ts names the same address.
 const FDE_PATH = '/learn/forward-deployed-engineer/path';
-const inLearn = under('/learn');
-const inFdePath = under(FDE_PATH);
-const loadRoadmap = routeChunk((pathname) => inLearn(pathname) && !inFdePath(pathname), () => import('./components/Roadmap'));
+// /learn/big-o is one of them: BigOIntroduction lives in the Learn chunk.
+const loadRoadmap = routeChunk(routes('/learn/:section?'), () => import('./components/Roadmap'));
 const loadBigO = routeChunk(exact('/big-o'), () => import('./components/BigOPage'));
 const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
 const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
 const loadLeaderboard = routeChunk(exact('/leaderboard'), () => import('./components/Leaderboard'));
 const loadFlashcards = routeChunk(exact('/cards'), () => import('./components/Flashcards'));
 const loadShop = routeChunk(exact('/shop'), () => import('./components/Shop'));
-const loadPlay = routeChunk(under('/play'), () => import('./components/Play'));
+const loadPlay = routeChunk(routes('/play/:code?'), () => import('./components/Play'));
 const loadChallenge = routeChunk(exact('/challenge'), () => import('./components/Challenge'));
-const loadDev = routeChunk(under('/dev'), () => import('./components/dev/DevPage'));
+const loadDev = routeChunk(routes('/dev'), () => import('./components/dev/DevPage'));
 const loadLegal = routeChunk(exact('/privacy', '/terms'), () => import('./components/LegalPages'));
 const loadPublicInfo = routeChunk(exact('/classroom'), () => import('./components/PublicInfoPages'));
-const loadTopic = routeChunk(under('/topics'), () => import('./components/TopicLandingPage'));
+const loadTopic = routeChunk(routes('/topics/:slug'), () => import('./components/TopicLandingPage'));
 const loadToday = routeChunk(exact('/today'), () => import('./components/Today'));
 const loadCollection = routeChunk(exact('/collection'), () => import('./components/Collection'));
 const loadTyping = routeChunk(exact('/typing'), () => import('./components/TypingRacer'));
-const loadCoding = routeChunk(under('/coding'), () => import('./components/coding/CodingSection'));
+const loadCoding = routeChunk(routes('/coding/:track?', '/coding/:track/:taskId'), () => import('./components/coding/CodingSection'));
 const loadGithubSettings = routeChunk(exact('/settings/github'), () => import('./components/coding/GithubSettingsPage'));
 // Only the FDE path's own pages: /roadmap/paths/* now only redirects to Learn.
-const loadPaths = routeChunk(under(FDE_PATH), () => import('./components/paths/LearningPathScreens'));
+const loadPaths = routeChunk(routes(FDE_PATH, `${FDE_PATH}/:moduleId`), () => import('./components/paths/LearningPathScreens'));
 const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
 const loadBilling = routeChunk(exact('/premium/checkout', '/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
-const loadDaily = routeChunk(under('/daily'), () => import('./components/DailyQuestionPage'));
+const loadDaily = routeChunk(routes('/daily/:date?'), () => import('./components/DailyQuestionPage'));
 const loadAuthPages = routeChunk(exact('/auth/confirmed', '/reset-password'), () => import('./components/auth/AuthPages'));
 
 const Home = lazyPage(loadHome);

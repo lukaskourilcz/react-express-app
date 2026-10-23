@@ -12,6 +12,7 @@
 // are always recomputed from (subject progress + subject quest).
 
 import { apiFetch } from './api';
+import { accountEpoch } from './accountData';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { useRoadmapProgress, getRoadmapProgress } from './roadmap';
@@ -264,7 +265,24 @@ export function flushQuestXpBeacon(): void {
 // is never celebrated. `announceRankUp` is for the one caller whose new XP
 // exists only on the server: a verified quiz result it has just recorded. Its
 // rank-up would otherwise be marked seen here without ever being shown.
+//
+// Syncs answer in any order. A read that left before a quiz result was
+// recorded and answers after a later sync's read holds the balance from before
+// that result: written over it, it lowered the XP and the rank marker until
+// the next sync, and the later sync's rank-up was marked seen unannounced. So
+// a read older than the last one written is dropped, and a rank-up a sync
+// was asked to announce is announced by whichever write of a sync started
+// with or after it comes first, for the same account.
+let syncsStarted = 0;
+let newestWritten = 0;
+let announceOwed: { turn: number; epoch: number } | null = null;
+
 export async function syncXpWithServer({ announceRankUp = false }: { announceRankUp?: boolean } = {}): Promise<void> {
+  // The account this read is for. Signed out while it was out, its XP was
+  // written back into the browser after the account's data was cleared.
+  const epoch = accountEpoch();
+  const turn = ++syncsStarted;
+  if (announceRankUp) announceOwed = { turn, epoch };
   let serverMap: QuestMap = {};
   try {
     const { data } = await apiFetch<{ data: { quest_xp: number; by_subject?: Record<string, number> } }>(XP_GET);
@@ -276,8 +294,12 @@ export async function syncXpWithServer({ announceRankUp = false }: { announceRan
   } catch {
     return; // not signed in or offline — keep local only
   }
+  if (epoch !== accountEpoch() || turn < newestWritten) return;
+  newestWritten = turn;
   writeQuestMap(serverMap);
-  reconcileRank(announceRankUp);
+  const announce = announceOwed !== null && announceOwed.epoch === epoch && turn >= announceOwed.turn;
+  if (announce || announceOwed?.epoch !== epoch) announceOwed = null;
+  reconcileRank(announce);
 }
 
 /**

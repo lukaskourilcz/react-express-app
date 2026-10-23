@@ -26,8 +26,7 @@ async function renderLearn() {
         topics: ['html'],
         structure: { html: { levels: [level(1), level(2), level(3)], checkpoints: [] } },
       })),
-    // A signed-in map syncs its progress and reads the plan.
-    http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: {}, extra: { unlocked: [] } })),
+    // A signed-in map reads the plan.
     http.get('*/api/user/*', ({ request }) => {
       const op = new URL(request.url).searchParams.get('op');
       if (op === 'entitlement') return HttpResponse.json(FREE);

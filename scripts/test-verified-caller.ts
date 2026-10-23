@@ -62,12 +62,32 @@ const EMAIL: Account = {
     identity_data: { email: 'ada@example.invalid', email_verified: true, phone_verified: false, sub: '1a2b3c4d-0000-4000-8000-00000000000f' },
   }],
 };
-const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL];
+// An account whose own rows the database is too slow to read.
+const SLOW: Account = { id: '1a2b3c4d-0000-4000-8000-000000000010', token: 'slow-rows', email: 'slow@example.invalid', confirmed: true };
+// An account whose sharkname row the database fails to read.
+const HANDLES_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-000000000011', token: 'handles-down', email: 'handles@example.invalid', confirmed: true };
+// An account whose data erasure the database is too slow to run.
+const SLOW_ERASURE: Account = { id: '1a2b3c4d-0000-4000-8000-000000000012', token: 'slow-erasure', email: 'erasure@example.invalid', confirmed: true };
+const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE];
+// A token presented while Supabase Auth answers 500 (not one of ACCOUNTS).
+const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 'auth-is-down', email: 'down@example.invalid', confirmed: true };
 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
 const seen: Seen[] = [];
+/** A Learn question the eligibility gate retires, reported before it was. */
+const RETIRED_REPORTED = 'rm-js-21';
+/** While true, the one-time quiz claim fails as an unreachable database would. */
+let claimFails = false;
+/** Token checks Supabase Auth answered, so a test can count a request's. */
+let authChecks = 0;
+const SLOW_REPORT = 'stand-in: answer after the timeout';
+// A topic board asked with this minimum answers after the timeout too.
+const SLOW_BOARD_MIN_ATTEMPTS = 97;
 const upstashCommands: string[] = [];
+// A Challenge run saved with this score finds the run already on the board
+// with another one.
+const CONFLICTING_CHALLENGE_SCORE = 2;
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   let text = '';
@@ -90,7 +110,10 @@ async function startStandIns() {
     res.setHeader('content-type', 'application/json');
     const send = (status: number, body: unknown) => { res.statusCode = status; res.end(JSON.stringify(body)); };
     if (url.pathname === '/auth/v1/user') {
+      authChecks += 1;
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+      // Supabase Auth itself failing, for any token.
+      if (token === AUTH_DOWN.token) return send(500, { message: 'stand-in auth is down' });
       const account = ACCOUNTS.find((one) => one.token === token);
       if (!account) return send(401, { message: 'invalid token' });
       return send(200, {
@@ -112,19 +135,47 @@ async function startStandIns() {
     }
     const raw = req.method === 'GET' ? '' : await readBody(req);
     const body = raw ? JSON.parse(raw) as unknown : undefined;
+    // A database too slow to answer within lib/http.ts's five seconds.
+    if (url.pathname === '/rest/v1/question_reports' && (body as Row | undefined)?.detail === SLOW_REPORT) {
+      setTimeout(() => send(201, [body]), 5_500);
+      return;
+    }
+    if (url.pathname === '/rest/v1/rpc/allocate_shark_name' && (body as Row | undefined)?.p_user_id === SLOW.id) {
+      setTimeout(() => send(200, { handle: 'slowSharkie1', ordinal: '1', base: 'slowSharkie' }), 5_500);
+      return;
+    }
+    if (url.pathname === '/rest/v1/rpc/delete_user_data' && (body as Row | undefined)?.p_user_id === SLOW_ERASURE.id) {
+      setTimeout(() => send(200, null), 8_500);
+      return;
+    }
+    if (req.method === 'GET' && url.searchParams.get('user_id') === `eq.${SLOW.id}`) {
+      setTimeout(() => send(200, []), 5_500);
+      return;
+    }
+    if (url.pathname === '/rest/v1/rpc/category_leaderboard' && (body as Row | undefined)?.p_min_attempts === SLOW_BOARD_MIN_ATTEMPTS) {
+      setTimeout(() => send(200, []), 5_500);
+      return;
+    }
     const filters = Object.fromEntries([...url.searchParams.entries()].filter(([, value]) => value.startsWith('eq.')).map(([key, value]) => [key, value.slice(3)]));
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname)?.[1];
     if (rpc) {
+      if (rpc === 'claim_quiz_submission' && claimFails) return send(500, { code: '08006', message: 'stand-in: connection failure' });
       if (rpc === 'allocate_shark_name') return send(200, { handle: 'sleepySharkie17', ordinal: '17', base: 'sleepySharkie' });
+      // Migration 064 raises for a run already saved with another score.
+      if (rpc === 'save_completed_challenge_score' && (body as Row).p_score === CONFLICTING_CHALLENGE_SCORE) return send(400, { code: 'P0001', message: 'challenge_score_conflict' });
       if (rpc === 'save_completed_challenge_score') return send(200, { id: 'score-17', name: 'sleepySharkie17', score: (body as Row).p_score, selected_topics: (body as Row).p_topics, all_topics: (body as Row).p_all_topics, created_at: new Date().toISOString() });
       // The Premium check: account A is Premium, so every coding task opens.
       if (rpc === 'is_premium') return send(200, (body as Row | undefined)?.p_user === A.id);
       if (rpc.endsWith('leaderboard') || rpc === 'friend_lookup') return send(200, []);
       return send(200, null);
     }
+    if (url.pathname === '/rest/v1/question_reports' && req.method === 'GET') {
+      return send(200, [{ id: 'report-retired', question_id: RETIRED_REPORTED, reason: 'incorrect-answer', detail: null, reporter_sub: null, created_at: '2026-10-01T10:00:00Z' }]);
+    }
     if (url.pathname.startsWith('/rest/v1/')) {
       const single = String(req.headers.accept ?? '').includes('vnd.pgrst.object');
+      if (url.pathname === '/rest/v1/user_handles' && req.method === 'GET' && filters.user_id === HANDLES_DOWN.id) return send(500, { code: '08006', message: 'stand-in: connection failure' });
       if (url.pathname === '/rest/v1/user_handles' && req.method === 'GET') return send(200, single ? { leaderboard_name_mode: 'nickname' } : []);
       if (req.method === 'POST' || req.method === 'PATCH') {
         const row = (Array.isArray(body) ? body[0] : body) as Row;
@@ -199,6 +250,10 @@ async function main() {
       http,
       { CODING_TASKS },
       { default: challenge },
+      { default: submit },
+      { default: questions },
+      reportsStore,
+      questionsStore,
     ] = await Promise.all([
       import('../api/user/[op]'),
       import('../api/quiz/roadmap'),
@@ -211,6 +266,10 @@ async function main() {
       import('../lib/http'),
       import('../lib/coding/catalog'),
       import('../api/quiz/challenge'),
+      import('../api/quiz/submit'),
+      import('../api/quiz/questions'),
+      import('../lib/reports-store'),
+      import('../lib/questions-store'),
     ]);
 
     type Handler = (req: never, res: never) => unknown;
@@ -242,7 +301,23 @@ async function main() {
     const unavailable = await user('leaderboard-name', { method: 'PUT', account: LISTED_UNCONFIRMED, body: { mode: 'account' } });
     assert.equal(unavailable.statusCode, 409);
     assert.equal(errorCode(unavailable), 'account_name_unavailable');
+    // A photo switch whose name row cannot be read changes nothing: a write
+    // beside a failed read answered 503, and the Profile put the old switch
+    // back while the photo was already on the boards.
+    seen.length = 0;
+    const photoBlind = await user('leaderboard-name', { method: 'PUT', account: HANDLES_DOWN, body: { showPhoto: true } });
+    assert.equal(photoBlind.statusCode, 503, JSON.stringify(photoBlind.body));
+    assert.equal(errorCode(photoBlind), 'leaderboard_name_unavailable');
+    assert.ok(!reads('/rest/v1/user_stats').some((one) => one.method === 'POST'), 'no photo switch is written when the setting cannot be read');
     console.log('PASS verified caller: leaderboard names use the verified profile or confirmed email prefix, independently of friends');
+
+    // A signed-in Challenge batch verifies its token once, for the rate limit
+    // and the run alike.
+    authChecks = 0;
+    const signedInBatch = await call(challenge as Handler, { account: A, query: { categories: 'javascript' } });
+    assert.equal(signedInBatch.statusCode, 200, JSON.stringify(signedInBatch.body));
+    assert.equal(tokens.decodeChallengeRun((signedInBatch.body as { runToken: string }).runToken)?.userId, A.id, 'the run is the token\'s account\'s');
+    assert.equal(authChecks, 1, 'a Challenge batch asks Supabase Auth once');
 
     // Completion writes positive scores automatically; zero allocates nothing.
     const completedRun = tokens.createChallengeRun(true, 'webdev', { topics: ['javascript'], allTopics: false, userId: null });
@@ -263,7 +338,10 @@ async function main() {
     const foreignRun = await call(challenge as Handler, { method: 'POST', account: B, query: { resource: 'complete' }, body: { runToken: completedRun.runToken, proofs: [...strikes, tokens.encodeScoreProof(completedRun.runId, 'right', 'webdev', true)] } });
     assert.equal(foreignRun.statusCode, 400);
     assert.equal(reads('/rest/v1/rpc/save_completed_challenge_score').length, 1);
-    console.log('PASS verified caller: completed positive Challenge runs save automatically; zero and foreign sessions write nothing');
+    const conflicting = await call(challenge as Handler, { method: 'POST', query: { resource: 'complete' }, body: { runToken: completedRun.runToken, proofs: [...strikes, ...['right', 'also-right'].map((id) => tokens.encodeScoreProof(completedRun.runId, id, 'webdev', true))] } });
+    assert.equal(conflicting.statusCode, 409, `a run already saved with another score is a conflict, not an outage (${JSON.stringify(conflicting.body)})`);
+    assert.equal(errorCode(conflicting), 'run_already_saved');
+    console.log('PASS verified caller: completed positive Challenge runs save automatically; zero and foreign sessions write nothing; a conflicting save answers 409');
 
     // ── a token for A with a user_id of B acts for A ──────────────────────
     seen.length = 0;
@@ -358,6 +436,16 @@ async function main() {
     }
     console.log('PASS verified caller: personal answers are private, no-store; public ones keep their headers');
 
+    // ── the retired progress PUT ─────────────────────────────────────────
+    // It answered with the progress read and wrote nothing; the server writes
+    // progress itself on each completion. Retired, it reads nothing either.
+    seen.length = 0;
+    const progressPut = await call(roadmap as Handler, { method: 'PUT', account: A, body: { data: {}, extra: { unlocked: ['react'], wallets: { webdev: { balance: 999 } } } } });
+    assert.equal(progressPut.statusCode, 405, `a progress PUT is refused (${JSON.stringify(progressPut.body)})`);
+    assert.equal(progressPut.headers.allow, 'GET, POST', 'and the route names the methods it serves');
+    assert.deepEqual(reads('/rest/v1/roadmap_progress'), [], 'and the progress row is neither read nor written');
+    console.log('PASS verified caller: the retired progress PUT answers 405 and touches no progress row');
+
     // ── reads a script can drive ─────────────────────────────────────────
     const lookup = (account: Account) => user('friends-lookup', { account, query: { handle: 'shark_fan' } });
     assert.equal((await lookup(A)).statusCode, 200);
@@ -404,6 +492,34 @@ async function main() {
     }
     console.log('PASS verified caller: a leaderboard limit is one of a few sizes');
 
+    // A daily board names a real day: 2026-02-30 has the right shape, and the
+    // routine's date cast would fail on it. A period or date repeated in the
+    // query string names neither.
+    for (const query of [{ period: 'daily', date: '2026-02-30' }, { period: 'daily', date: '2026-13-01' }, { period: 'daily', date: '0000-01-01' }, { period: 'daily', date: ['2026-10-01', '2026-10-02'] }, { period: ['daily', 'global'] }] as Record<string, string>[]) {
+      seen.length = 0;
+      const refused = await call(leaderboard as Handler, { query });
+      assert.equal(refused.statusCode, 400, `${JSON.stringify(query)} is a bad request (${JSON.stringify(refused.body)})`);
+      assert.equal(reads('/rest/v1/rpc/daily_leaderboard_v2').length, 0, 'and asks no routine');
+    }
+    const leapDay = await call(leaderboard as Handler, { query: { period: 'daily', date: '2028-02-29' } });
+    assert.equal(leapDay.statusCode, 200, `a leap day is a day (${JSON.stringify(leapDay.body)})`);
+    console.log('PASS verified caller: a daily board refuses a date that is no calendar day');
+
+    // A board routine that does not answer in time is the database busy, not
+    // a fault: 503, which the client may retry, rather than 500.
+    const slowBoard = await call(leaderboard as Handler, { query: { period: 'category', category: 'javascript', min_attempts: String(SLOW_BOARD_MIN_ATTEMPTS) } });
+    assert.equal(slowBoard.statusCode, 503, `a board whose routine timed out answers 503 (${JSON.stringify(slowBoard.body)})`);
+    assert.equal(errorCode(slowBoard), 'upstream_timeout');
+    console.log('PASS verified caller: a timed-out leaderboard answers 503');
+
+    // So do the account ops whose own catch used to answer 500.
+    const slowOps = await Promise.all(['streak', 'xp', 'stats', 'leaderboard-visibility', 'identity', 'friends-handle'].map(async (op) => [op, await user(op, { account: SLOW })] as const));
+    for (const [op, res] of slowOps) {
+      assert.equal(res.statusCode, 503, `op=${op} whose read timed out answers 503 (${JSON.stringify(res.body)})`);
+      assert.equal(errorCode(res), 'upstream_timeout');
+    }
+    console.log('PASS verified caller: account ops whose read timed out answer 503');
+
     // ── this month's XP board (migration 056) ───────────────────────────
     // Shared and cached for a minute without a session; with one it is the
     // token's own line, never the account a query names, and private.
@@ -435,6 +551,104 @@ async function main() {
     assert.equal(foreign.statusCode, 400, 'a month board for another subject is refused');
     assert.equal(errorCode(foreign), 'invalid_subject_scope');
     console.log('PASS verified caller: this month\'s XP board is shared without a session and the token\'s own with one');
+
+    // ── a Supabase call that does not answer in time ─────────────────────
+    const hung = new Promise<never>(() => {});
+    await assert.rejects(
+      http.withTimeout(hung, 5),
+      (error: unknown) => error instanceof http.ServiceUnavailableError && error.code === 'upstream_timeout',
+      'a timed-out Supabase call is the service being unavailable',
+    );
+    const timedOut = mockResponse();
+    await http.withRequestContext(
+      { method: 'GET', headers: { 'x-forwarded-for': nextAddress() }, query: {}, url: '/api' } as never,
+      timedOut as never,
+      () => http.withTimeout(hung, 5),
+    );
+    assert.equal(timedOut.statusCode, 503, `a handler whose Supabase call timed out answers 503, not 500 (${JSON.stringify(timedOut.body)})`);
+    assert.equal(errorCode(timedOut), 'upstream_timeout');
+    console.log('PASS verified caller: a Supabase timeout answers 503 upstream_timeout');
+
+    // ── what an escaped error logs ───────────────────────────────────────
+    const { AuthError } = await import('../lib/auth');
+    const escapedLogs = async (thrown: Error) => {
+      const lines: Row[] = [];
+      const original = console.log;
+      console.log = (line: unknown) => {
+        try { lines.push(JSON.parse(String(line)) as Row); } catch { original(line); }
+      };
+      const res = mockResponse();
+      try {
+        await http.withRequestContext(
+          { method: 'GET', headers: { 'x-forwarded-for': nextAddress() }, query: {}, url: '/api/escaped' } as never,
+          res as never,
+          () => { throw thrown; },
+        );
+      } finally {
+        console.log = original;
+      }
+      return { res, failure: lines.find((line) => line.route === 'request' && 'level' in line) };
+    };
+    const refused = await escapedLogs(new AuthError(401, 'unauthorized', 'Sign in again'));
+    assert.equal(refused.res.statusCode, 401);
+    assert.deepEqual({ level: refused.failure?.level, status: refused.failure?.status }, { level: 'warn', status: 401 },
+      'a refused token is logged as the 401 it answers, not as a 500 error');
+    const authDown = await escapedLogs(new AuthError(503, 'auth_unavailable', 'Sign-in is unavailable'));
+    assert.equal(authDown.res.statusCode, 503);
+    assert.deepEqual({ level: authDown.failure?.level, status: authDown.failure?.status }, { level: 'error', status: 503 },
+      'Auth being down is an error logged with the 503 it answers');
+    const timedOutLog = await escapedLogs(new http.UpstreamTimeoutError());
+    assert.equal(timedOutLog.res.statusCode, 503);
+    assert.deepEqual(
+      { level: timedOutLog.failure?.level, status: timedOutLog.failure?.status, category: timedOutLog.failure?.category },
+      { level: 'error', status: 503, category: 'upstream_timeout' },
+      'a timeout answered 503 is still logged at level error, as the 500 it replaced was',
+    );
+    console.log('PASS verified caller: an escaped AuthError is logged with the status it answers, and a 503 at level error');
+
+    // ── Supabase Auth down ───────────────────────────────────────────────
+    for (const query of [{ resource: 'due' }, { resource: 'review', count: '5', categories: 'javascript' }] as Record<string, string>[]) {
+      const down = await call(questions as Handler, { account: AUTH_DOWN, query });
+      assert.equal(down.statusCode, 503, `${query.resource}: a sign-in service that is down is not an invalid session (${JSON.stringify(down.body)})`);
+      assert.equal(errorCode(down), 'auth_unavailable');
+    }
+    const refusedToken = await call(questions as Handler, { account: { ...A, token: 'not-a-token' }, query: { resource: 'due' } });
+    assert.equal(refusedToken.statusCode, 401, 'a token Supabase refuses is still 401');
+    assert.equal(errorCode(refusedToken), 'unauthorized');
+    console.log('PASS verified caller: Today\'s due list and a review keep 503 when Supabase Auth is down, and 401 for a refused token');
+
+    // ── a quiz submit whose one-time claim cannot be taken ───────────────
+    claimFails = true;
+    try {
+      const sessionId = tokens.encodeSession([{ questionId: 'q-claim-1', correctAnswer: 0 }], { subject: 'webdev' });
+      const unclaimed = await call(submit as Handler, { method: 'POST', account: A, body: { sessionId, answers: { 'q-claim-1': 0 } } });
+      assert.equal(unclaimed.statusCode, 503, `a submit is not graded without its claim, and says to retry (${JSON.stringify(unclaimed.body)})`);
+      assert.equal(errorCode(unclaimed), 'claim_unavailable');
+    } finally {
+      claimFails = false;
+    }
+    console.log('PASS verified caller: a quiz submit whose one-time claim fails answers 503');
+
+    // ── the admin's report list ──────────────────────────────────────────
+    assert.equal((await questionsStore.getWithheldQuestions()).get(RETIRED_REPORTED), 'retired', 'the fixture is a question the gate withholds');
+    const [retiredReport] = await reportsStore.listReports();
+    assert.equal(retiredReport?.questionId, RETIRED_REPORTED);
+    assert.ok(retiredReport.questionSummary, 'a report on a question retired since still shows what the question was');
+    console.log('PASS verified caller: the admin report list summarises a reported question the gate has retired');
+
+    // ── question reports ─────────────────────────────────────────────────
+    seen.length = 0;
+    const reported = await call(submit as Handler, { method: 'POST', account: A, query: { resource: 'report' }, body: { question_id: 'q-report-1', reason: 'typo', detail: 'A typo in the second option' } });
+    assert.equal(reported.statusCode, 200, JSON.stringify(reported.body));
+    assert.equal((reads('/rest/v1/question_reports')[0]?.body as Row | undefined)?.reporter_sub, A.id, 'a report names the token\'s account');
+    seen.length = 0;
+    const nul = await call(submit as Handler, { method: 'POST', query: { resource: 'report' }, body: { question_id: 'q-report-1', reason: 'other', detail: 'before\u0000after' } });
+    assert.equal(nul.statusCode, 400, `Postgres text cannot hold U+0000, so the report is refused before its insert (${JSON.stringify(nul.body)})`);
+    assert.equal(reads('/rest/v1/question_reports').length, 0, 'and nothing is written');
+    const slowReport = await call(submit as Handler, { method: 'POST', query: { resource: 'report' }, body: { question_id: 'q-report-1', reason: 'other', detail: SLOW_REPORT } });
+    assert.equal(slowReport.statusCode, 503, `a report insert that times out answers 503, as every timeout does (${JSON.stringify(slowReport.body)})`);
+    assert.equal(errorCode(slowReport), 'upstream_timeout');
+    console.log('PASS verified caller: a question report is saved for its reporter, one holding U+0000 is refused, and a timed-out one answers 503');
 
     // ── one-time claims with Upstash configured and failing ──────────────
     upstashCommands.length = 0;
@@ -485,6 +699,11 @@ async function main() {
     assert.deepEqual(reads('/rest/v1/rpc/delete_user_data').map((one) => (one.body as Row).p_user_id), [EMAIL.id, EMAIL.id], 'its data is erased, before and after the identity');
     assert.equal(seen.filter((one) => one.method === 'DELETE' && one.path === `/auth/v1/admin/users/${EMAIL.id}`).length, 1, 'and its sign-in identity is deleted');
     console.log('PASS verified caller: an email and password account signs in, stays unnamed on boards, and deletes');
+
+    const slowErasure = await user('delete-account', { method: 'DELETE', account: SLOW_ERASURE, body: { confirmation: 'DELETE' } });
+    assert.equal(slowErasure.statusCode, 503, `an erasure that timed out answers 503 like every other timeout, not 504 (${JSON.stringify(slowErasure.body)})`);
+    assert.equal(errorCode(slowErasure), 'upstream_timeout');
+    console.log('PASS verified caller: an account erasure that times out answers 503 upstream_timeout');
 
     console.log('Verified-caller contracts passed: a token acts for its own account whatever user_id says, admin by confirmed address or role, private caching by default, read limits, and one-time claims that fail closed.');
   } finally {

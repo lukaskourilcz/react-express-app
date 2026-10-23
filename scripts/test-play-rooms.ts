@@ -35,6 +35,9 @@ const USERS = {
   host: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e01', token: 'play-contract-host', email: 'grace@example.com', identities: [googleIdentity('Grace Hopper')] },
   one: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', token: 'play-contract-one', email: 'ada.lovelace@example.com', identities: [emailIdentity('ada.lovelace@example.com')] },
   two: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e03', token: 'play-contract-two', email: 'alan.turing@example.com', identities: [emailIdentity('alan.turing@example.com')] },
+  // Host the rooms of the later checks: one account may open five rooms a minute.
+  three: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e04', token: 'play-contract-three', email: 'edsger.dijkstra@example.com', identities: [emailIdentity('edsger.dijkstra@example.com')] },
+  four: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e05', token: 'play-contract-four', email: 'barbara.liskov@example.com', identities: [emailIdentity('barbara.liskov@example.com')] },
 } as const;
 type Who = keyof typeof USERS;
 
@@ -51,6 +54,11 @@ const UNIQUE: Record<string, string[][]> = {
   user_handles: [['user_id']],
 };
 let clock = 0;
+/** Errors the database answers once each: the next request with this method
+ * and path gets the status and body instead of its rows. A 500, because
+ * supabase-js retries a read that met a 503. */
+const faults: Array<{ method: string; path: string; status: number; body: Row; delayMs?: number }> = [];
+const DB_DOWN = { code: 'XX000', details: null, hint: null, message: 'the database could not answer' };
 /** The arguments of every match_scoreboard call, in order. */
 const scoreboardCalls: Row[] = [];
 
@@ -145,6 +153,16 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       return;
     }
     res.end(JSON.stringify({ id: user.id, aud: 'authenticated', role: 'authenticated', email: user.email, app_metadata: {}, user_metadata: {}, identities: user.identities }));
+    return;
+  }
+
+  const fault = faults.findIndex((one) => one.method === req.method && one.path === url.pathname);
+  if (fault >= 0) {
+    const [one] = faults.splice(fault, 1);
+    setTimeout(() => {
+      res.statusCode = one.status;
+      res.end(JSON.stringify(one.body));
+    }, one.delayMs ?? 0);
     return;
   }
 
@@ -295,15 +313,15 @@ async function main() {
     };
     const room = (code: string) => tables.matches.find((match) => match.code === code)!;
     const correctIndex = (code: string, idx: number) => (room(code).questions as Array<{ correct_index: number }>)[idx].correct_index;
-    const open = async (mode: 'multiplayer' | 'classroom', players: Who[]) => {
-      const created = await call('host', 'POST', 'create', { host_name: 'Host', mode, count: 5, categories: ['javascript'], duration_s: 30 });
+    const open = async (mode: 'multiplayer' | 'classroom', players: Who[], host: Who = 'host') => {
+      const created = await call(host, 'POST', 'create', { host_name: 'Host', mode, count: 5, categories: ['javascript'], duration_s: 30 });
       assert.equal(created.statusCode, 200, `a ${mode} room opens (${JSON.stringify(created.body)})`);
       const code = created.body.code as string;
       for (const who of players) {
         const joined = await call(who, 'POST', 'join', { code, display_name: who });
         assert.equal(joined.statusCode, 200, `${who} joins the ${mode} room`);
       }
-      assert.equal((await call('host', 'POST', 'control', { code, action: 'start' })).statusCode, 200, `the ${mode} room starts`);
+      assert.equal((await call(host, 'POST', 'control', { code, action: 'start' })).statusCode, 200, `the ${mode} room starts`);
       return code;
     };
     const rewind = (code: string, ms: number) => {
@@ -532,6 +550,70 @@ async function main() {
       const board = (await call('two', 'GET', 'state', { code })).body.scoreboard as Array<{ user_id: string; score: number }>;
       assert.ok(board.find((row) => row.user_id === USERS.one.id)!.score >= 100, 'the open question counts in multiplayer, as before');
       assert.equal('p_before_idx' in (scoreboardCalls.at(-1) ?? {}), false, 'with the call it always made');
+    }
+
+    // 8. A code repeated in the query string arrives as an array: the reads
+    //    refuse it as a bad request instead of failing with a 500.
+    {
+      const code = await open('multiplayer', ['one'], 'three');
+      const doubled = await call('one', 'GET', 'state', { code: [code, code] });
+      assert.equal(doubled.statusCode, 400, `a repeated code is a bad request (${JSON.stringify(doubled.body)})`);
+      assert.equal(doubled.body.error.code, 'bad_request');
+      const peek = await call('three', 'GET', 'distribution', { code: [code, code], q: '0' });
+      assert.equal(peek.statusCode, 400, 'the distribution refuses it too');
+      assert.equal((await call('one', 'GET', 'state', { code: 'X'.repeat(17) })).statusCode, 400, 'a code longer than any room code is refused');
+
+      // 9. A room the database could not read is not a room that is gone: a
+      //    404 would tell the player to leave a room that is still running.
+      for (const [who, method, action, input] of [
+        ['one', 'POST', 'answer', { code, question_idx: 0, selected_idx: 0 }],
+        ['three', 'GET', 'distribution', { code, q: '0' }],
+        ['three', 'POST', 'heartbeat', { code }],
+      ] as const) {
+        faults.push({ method: 'GET', path: '/rest/v1/matches', status: 500, body: DB_DOWN });
+        const failed = await call(who, method, action, input);
+        assert.equal(failed.statusCode, 503, `${action} answers 503 when the room cannot be read (${JSON.stringify(failed.body)})`);
+        assert.equal(failed.body.error.code, 'backend_unavailable');
+      }
+      assert.equal(faults.length, 0, 'every injected failure was met');
+      assert.equal((await call('three', 'POST', 'heartbeat', { code })).statusCode, 200, 'the room is still there');
+
+      // A read that does not answer within lib/http.ts's five seconds is the
+      // database busy: 503 upstream_timeout, as every handler answers it.
+      faults.push({ method: 'GET', path: '/rest/v1/matches', status: 200, body: {}, delayMs: 5_500 });
+      const slow = await call('one', 'GET', 'state', { code });
+      assert.equal(slow.statusCode, 503, `a room read that timed out answers 503 (${JSON.stringify(slow.body)})`);
+      assert.equal(slow.body.error.code, 'upstream_timeout');
+    }
+
+    // 10. An answer names one of the options the question showed: an index
+    //     past them is refused and not recorded, so it never reaches the
+    //     scoreboard or the distribution as an option nobody saw.
+    {
+      const code = await open('multiplayer', ['one'], 'three');
+      const options = (room(code).questions as Array<{ options: string[] }>)[0].options.length;
+      const past = await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: options });
+      assert.equal(past.statusCode, 400, `an option index past the question's ${options} is refused (${JSON.stringify(past.body)})`);
+      assert.equal(tables.match_answers.filter((a) => a.match_id === room(code).id).length, 0, 'and not recorded');
+      assert.equal((await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: options - 1 })).statusCode, 200, 'the last option is an answer');
+    }
+
+    // 11. A topic list with an entry that is not a topic id is refused as a
+    //     whole, rather than opening a room on the part that was strings.
+    for (const categories of [['javascript', 7], ['javascript', { id: 'react' }], 'javascript']) {
+      const refused = await call('four', 'POST', 'create', { mode: 'multiplayer', count: 5, categories, duration_s: 30 });
+      assert.equal(refused.statusCode, 400, `categories ${JSON.stringify(categories)} are refused (${JSON.stringify(refused.body)})`);
+    }
+
+    // 12. Two hosts drawing the same room code at once: the unique key refuses
+    //     the second insert, and that host gets a room under a new code
+    //     instead of a 500.
+    {
+      faults.push({ method: 'POST', path: '/rest/v1/matches', status: 409, body: { code: '23505', details: 'Key (code)=(TAKEN1) already exists.', hint: null, message: 'duplicate key value violates unique constraint "matches_code_key"' } });
+      const created = await call('three', 'POST', 'create', { mode: 'multiplayer', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(created.statusCode, 200, `a code clash draws a new code (${JSON.stringify(created.body)})`);
+      assert.equal(faults.length, 0, 'the clash happened');
+      assert.equal(room(created.body.code).host_id, USERS.three.id, 'the room is stored under the code it answered');
     }
 
     // 5. The Play switch turns every action off, rooms already open included.

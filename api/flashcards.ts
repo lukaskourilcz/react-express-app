@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createServiceClient, jsonError, withTimeout, requireAuthSub, withRequestContext } from '../lib/http';
+import { createServiceClient, jsonError, withTimeout, requireAuthSub, withRequestContext, ServiceUnavailableError } from '../lib/http';
 import { enforceClassRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 import { deploymentSubjectIds } from '../lib/product-scope';
 import { isScopeSubject, subjectForCategory } from '../shared/subject-catalog';
@@ -65,6 +65,11 @@ export async function handleFlashcards(req: VercelRequest, res: VercelResponse, 
       if (!question_id || !question || !correct_answer) {
         return jsonError(res, 400, 'bad_request', 'question_id, question and correct_answer are required');
       }
+      // Postgres text cannot hold U+0000, so a card carrying one would fail
+      // the write and answer 500. It is the browser's text, refused as such.
+      if ([body.question_id, body.question, body.correct_answer, body.explanation].some((value) => typeof value === 'string' && value.includes('\u0000'))) {
+        return jsonError(res, 400, 'bad_request', 'Card text cannot contain a null character');
+      }
       const bank = await getEffectiveQuestionsById(subject);
       const source = bank.get(question_id);
       if (!source || subjectForCategory(source.category) !== subject) {
@@ -87,11 +92,12 @@ export async function handleFlashcards(req: VercelRequest, res: VercelResponse, 
     }
 
     if (req.method === 'DELETE') {
+      // Bounded as a saved card's id is, so an id no card can have is refused
+      // here rather than sent to the database.
       const qid =
-        (typeof req.query.question_id === 'string' && req.query.question_id) ||
-        (typeof (req.body as { question_id?: unknown })?.question_id === 'string' &&
-          (req.body as { question_id: string }).question_id);
-      if (!qid) return jsonError(res, 400, 'bad_request', 'question_id is required');
+        str(req.query.question_id, MAX.id) ??
+        str((req.body as { question_id?: unknown } | undefined)?.question_id, MAX.id);
+      if (!qid || qid.includes('\u0000')) return jsonError(res, 400, 'bad_request', 'question_id is required');
       const { error } = await withTimeout(
         db.from('flashcards').delete().eq('user_id', userId).eq('subject', subject).eq('question_id', qid),
       );
@@ -101,7 +107,10 @@ export async function handleFlashcards(req: VercelRequest, res: VercelResponse, 
 
     res.setHeader('Allow', 'GET, POST, DELETE');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
-  } catch {
+  } catch (error) {
+    // A Supabase call that timed out is the service being down for a moment,
+    // which the client may retry: 503, as every other handler answers it.
+    if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }

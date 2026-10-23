@@ -10,6 +10,7 @@ import {
   verifiedCallerId,
   logEvent as emit,
   withRequestContext,
+  ServiceUnavailableError,
 } from '../../lib/http';
 import { requireAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
@@ -62,6 +63,14 @@ const MAX_STR = 512;
 
 // Log under a `user/<op>` route so stats and category-stats are distinguishable.
 const logEvent = (op: string, event: Record<string, unknown>) => emit(`user/${op}`, event);
+
+/** The answer for an exception an op caught: a Supabase call that timed out
+ * (lib/http.ts `UpstreamTimeoutError`) is the database busy for a moment,
+ * which the client may retry, so 503 with its code; anything else is 500. */
+function caughtError(res: VercelResponse, error: unknown) {
+  if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);
+  return jsonError(res, 500, 'internal_error', 'Internal error');
+}
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
@@ -201,9 +210,14 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
     logEvent('delete-account', { status: 200, user_id: auth.sub });
     return res.json({ ok: true });
   } catch (err) {
+    // A timeout is the database busy for a moment: 503 with its code, as
+    // caughtError answers every other op. Anything else is a fault, not a
+    // timeout, and is logged and answered as one.
     const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('delete-account', { status: 504, reason: 'timeout', error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Account deletion timed out; please try again');
+    const timedOut = err instanceof ServiceUnavailableError;
+    logEvent('delete-account', { status: timedOut ? 503 : 500, reason: timedOut ? 'timeout' : 'exception', error: message });
+    if (timedOut) return jsonError(res, 503, err.code, 'Account deletion timed out; please try again');
+    return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }
 
@@ -313,8 +327,8 @@ async function xp(req: VercelRequest, res: VercelResponse) {
 
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
-  } catch {
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+  } catch (err) {
+    return caughtError(res, err);
   }
 }
 
@@ -341,8 +355,8 @@ async function streak(req: VercelRequest, res: VercelResponse) {
 
     res.setHeader('Allow', 'GET, PUT');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
-  } catch {
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+  } catch (err) {
+    return caughtError(res, err);
   }
 }
 
@@ -509,8 +523,8 @@ async function stats(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('stats', { status: 500, reason: 'exception', error: message });
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+    logEvent('stats', { status: err instanceof ServiceUnavailableError ? 503 : 500, reason: 'exception', error: message });
+    return caughtError(res, err);
   }
 }
 
@@ -597,8 +611,8 @@ export async function handleLeaderboardVisibility(
     return res.json({ visible: row?.show_on_leaderboards === true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('leaderboard-visibility', { status: 500, reason: 'exception', error: message });
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+    logEvent('leaderboard-visibility', { status: err instanceof ServiceUnavailableError ? 503 : 500, reason: 'exception', error: message });
+    return caughtError(res, err);
   }
 }
 
@@ -700,8 +714,8 @@ async function badges(req: VercelRequest, res: VercelResponse) {
       earned: rows.map((r) => ({ id: r.badge_id, earnedAt: r.earned_at })),
       masteredLevels,
     });
-  } catch {
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+  } catch (err) {
+    return caughtError(res, err);
   }
 }
 
@@ -777,8 +791,8 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
       shieldDays: shieldDaysOf(freezeRow),
       shieldSupported,
     });
-  } catch {
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+  } catch (err) {
+    return caughtError(res, err);
   }
 }
 
@@ -833,7 +847,7 @@ async function advisor(req: VercelRequest, res: VercelResponse) {
         });
 
     return res.json({ weakAreas, suggestedWeek, generatedAt: new Date().toISOString() });
-  } catch {
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+  } catch (err) {
+    return caughtError(res, err);
   }
 }

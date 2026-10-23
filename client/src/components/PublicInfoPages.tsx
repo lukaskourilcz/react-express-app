@@ -4,7 +4,7 @@
 // redirects to /premium.
 import { useEffect } from 'react';
 import { Button } from '@astryxdesign/core/Button';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useT } from '../i18n/LanguageContext';
 import { SwimmingFin } from './SharkFin';
 
@@ -26,7 +26,13 @@ export function ClassroomPage() {
 }
 
 export function NotFoundPage() {
-  const t = useT(); const navigate = useNavigate();
+  const t = useT(); const navigate = useNavigate(); const location = useLocation();
+  // A missing page opened in a new tab has nothing behind it, and "Go back"
+  // did nothing at all: there it goes home instead.
+  const back = () => {
+    if (location.key === 'default' && window.history.length <= 1) navigate('/');
+    else navigate(-1);
+  };
   // A missing page stays out of search results: noindex while it shows, gone
   // once it does not. The mark keeps the shell's head (lib/routeHead.ts),
   // which rewrites the robots line on every route, off this one.
@@ -36,5 +42,5 @@ export function NotFoundPage() {
     document.head.append(robots);
     return () => robots.remove();
   }, []);
-  return <Page title={t('notFoundPage.title')} lead={t('notFoundPage.lead')}><div className="ss-info-actions"><Button variant="primary" label={t('notFoundPage.home')} onClick={() => navigate('/')} /><Button variant="secondary" label={t('notFoundPage.back')} onClick={() => navigate(-1)} /></div></Page>;
+  return <Page title={t('notFoundPage.title')} lead={t('notFoundPage.lead')}><div className="ss-info-actions"><Button variant="primary" label={t('notFoundPage.home')} onClick={() => navigate('/')} /><Button variant="secondary" label={t('notFoundPage.back')} onClick={back} /></div></Page>;
 }

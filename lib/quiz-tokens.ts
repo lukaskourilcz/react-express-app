@@ -99,15 +99,6 @@ interface QuizResultOutcome {
   xp?: number;
 }
 
-interface AnswerProofPayload {
-  kind: 'answer-proof';
-  questionId: string;
-  subject: ScopeSubjectId;
-  isCorrect: boolean;
-  iat: number;
-  exp: number;
-}
-
 // A single adaptive-placement round in flight. `history` carries the
 // server-graded outcomes of every prior round and `items` the (hidden) answer
 // key of the round currently being answered. The whole payload is sealed, so
@@ -201,7 +192,6 @@ type TokenPayload =
   | ChallengeRunPayload
   | ScoreProofPayload
   | QuizResultReceiptPayload
-  | AnswerProofPayload
   | PlacementRunPayload
   | CodingSessionPayload
   | LearningPathSessionPayload
@@ -501,17 +491,6 @@ export function decodePlacementRun(token: string): PlacementRunState | null {
     history,
     items,
   };
-}
-
-export function encodeAnswerProof(questionId: string, subject: ScopeSubjectId, isCorrect: boolean): string {
-  const now = Date.now();
-  return sealToken({ kind: 'answer-proof', questionId, subject, isCorrect, iat: now, exp: now + TOKEN_TTL_MS });
-}
-
-export function decodeAnswerProof(token: string): { questionId: string; subject: ScopeSubjectId; isCorrect: boolean } | null {
-  const payload = openToken(token) as Partial<AnswerProofPayload> | null;
-  if (!payload || payload.kind !== 'answer-proof' || !validLifetime(payload, TOKEN_TTL_MS) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || !isScopeSubject(payload.subject) || typeof payload.isCorrect !== 'boolean') return null;
-  return { questionId: payload.questionId, subject: payload.subject, isCorrect: payload.isCorrect };
 }
 
 /* ── coding sessions ───────────────────────────────────────────────────── */

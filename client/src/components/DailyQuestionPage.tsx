@@ -15,7 +15,7 @@
 //   ready              the question, its options and Check answer
 //   checked            correct or not in words and colour, the right option
 //                      marked, the explanation, practice more and share
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -84,7 +84,7 @@ export default function DailyQuestionPage() {
       ) : query.isError ? (
         <Unavailable problem={qotdProblem(query.error)} date={date} onRetry={() => void query.refetch()} />
       ) : (
-        <DailyQuestion key={`${query.data.sessionId}:${reloads}`} data={query.data} onReload={() => void reload()} />
+        <DailyQuestion key={`${query.data.sessionId}:${reloads}`} data={query.data} onReload={() => void reload()} focusQuestion={reloads > 0} />
       )}
 
       {valid && (
@@ -96,8 +96,14 @@ export default function DailyQuestionPage() {
   );
 }
 
-function Unavailable({ problem, date, onRetry }: { problem: QotdProblem; date: string | null; onRetry?: () => void }) {
+function Unavailable({ problem, date, onRetry, focus = false }: { problem: QotdProblem; date: string | null; onRetry?: () => void; focus?: boolean }) {
   const t = useT();
+  // Shown in place of a check whose session was over, it takes the focus the
+  // Check answer button had.
+  const boxRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (focus) boxRef.current?.focus();
+  }, [focus]);
   const toToday = <Button variant="secondary" as={Link} href={qotdPath()} label={t('daily.toToday')} />;
   switch (problem) {
     case 'not-yet':
@@ -116,7 +122,7 @@ function Unavailable({ problem, date, onRetry }: { problem: QotdProblem; date: s
       );
     case 'expired':
       return (
-        <section className="ss-info-card ss-daily__card">
+        <section className="ss-info-card ss-daily__card" ref={boxRef} tabIndex={focus ? -1 : undefined}>
           <Banner status="info" title={t('daily.expired')} />
           <div className="ss-info-actions"><Button variant="primary" label={t('daily.reload')} onClick={onRetry} /></div>
         </section>
@@ -133,7 +139,7 @@ function Unavailable({ problem, date, onRetry }: { problem: QotdProblem; date: s
   }
 }
 
-function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () => void }) {
+function DailyQuestion({ data, onReload, focusQuestion }: { data: QotdResponse; onReload: () => void; focusQuestion: boolean }) {
   const t = useT();
   const questionId = useId();
   const [selected, setSelected] = useState<number | null>(null);
@@ -144,6 +150,18 @@ function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () =>
   const { question, track, date } = data;
   const trackName = t(categoryLabelKey(track));
   const url = useMemo(() => `${window.location.origin}${qotdPath(date)}`, [date]);
+  // The verdict takes the focus. Check answer leaves with the check, so focus
+  // fell to the page, and a live region drawn with its content is not read.
+  const verdictRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (result) verdictRef.current?.focus();
+  }, [result]);
+  // Loaded again after an expired session, the question takes the focus the
+  // Load it again button had.
+  const questionRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (focusQuestion) questionRef.current?.focus();
+  }, [focusQuestion]);
 
   const check = async () => {
     if (selected === null || checking || result) return;
@@ -170,7 +188,7 @@ function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () =>
     setShare((await copyText(url)) ? 'copied' : 'failed');
   };
 
-  if (problem === 'expired') return <Unavailable problem="expired" date={date} onRetry={onReload} />;
+  if (problem === 'expired') return <Unavailable problem="expired" date={date} onRetry={onReload} focus />;
 
   return (
     <section className="ss-info-card ss-daily__card" aria-labelledby={questionId}>
@@ -178,7 +196,7 @@ function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () =>
         <CategoryTag category={question.category as CategoryType} />
         <Badge variant="neutral" label={t('challenge.difficultyLevel', { level: question.difficulty })} />
       </div>
-      <div id={questionId} className="ss-daily__question">{renderQuestion(question.question)}</div>
+      <div id={questionId} ref={questionRef} tabIndex={focusQuestion ? -1 : undefined} className="ss-daily__question">{renderQuestion(question.question)}</div>
 
       <RadioCardGroup value={selected} onChange={(value) => { if (!result) setSelected(Number(value)); }} labelledBy={questionId}>
         <div className="ss-daily__options">
@@ -215,7 +233,7 @@ function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () =>
       )}
 
       {result ? (
-        <div className="ss-daily__result" aria-live="polite">
+        <div className="ss-daily__result" ref={verdictRef} tabIndex={-1}>
           <Banner
             status={result.isCorrect ? 'success' : 'error'}
             title={result.isCorrect ? t('daily.right') : t('daily.wrong')}

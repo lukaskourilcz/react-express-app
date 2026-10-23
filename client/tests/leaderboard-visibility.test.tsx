@@ -77,4 +77,35 @@ describe('independent leaderboard names', () => {
     expect(await screen.findByRole('radio', { name: /Account name/ })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /Shark nickname/ })).toBeChecked();
   });
+
+  it('writes a save that lands after an account change to the account that made it', async () => {
+    let gets = 0;
+    server.use(http.get('*/api/user/leaderboard-name', () => {
+      gets += 1;
+      return HttpResponse.json(gets === 1 ? SETTING : { ...SETTING, nickname: 'otherShark2', accountName: 'Other Person' });
+    }));
+    let release!: () => void;
+    const gate = new Promise<void>((done) => { release = done; });
+    server.use(http.put('*/api/user/leaderboard-name', async () => {
+      await gate;
+      return HttpResponse.json({ ...SETTING, mode: 'account' });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
+    const tree = () => (
+      <QueryClientProvider client={client}><MemoryRouter><LanguageProvider><LeaderboardVisibilitySwitch /></LanguageProvider></MemoryRouter></QueryClientProvider>
+    );
+    const view = render(tree());
+    const account = await screen.findByRole('radio', { name: /Account name/ });
+    await waitFor(() => expect(account).toBeEnabled());
+    fireEvent.click(account);
+    auth.value = { user: { id: 'user-2' }, isAuthenticated: true, isLoading: false };
+    view.rerender(tree());
+    expect(await screen.findByText('otherShark2')).toBeInTheDocument();
+    release();
+    await waitFor(() => expect(client.isMutating()).toBe(0));
+    expect(screen.getByText('otherShark2')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Shark nickname/ })).toBeChecked();
+    expect(client.getQueryData(['leaderboard-name', 'user-1'])).toMatchObject({ mode: 'account' });
+  });
+
 });

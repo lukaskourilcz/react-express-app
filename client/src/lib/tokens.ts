@@ -43,13 +43,6 @@ function readBalances(): BalanceMap {
   return migrated;
 }
 
-/** Snapshot of every subject's wallet, for the account sync. */
-export function getWalletsSnapshot(): Record<string, { balance: number }> {
-  const out: Record<string, { balance: number }> = {};
-  for (const [k, v] of Object.entries(readBalances())) out[k] = { balance: v ?? 0 };
-  return out;
-}
-
 /**
  * Merge authoritative per-subject balances from the account sync: per-subject
  * max (tokens only grow across devices — no one gets refunded twice).

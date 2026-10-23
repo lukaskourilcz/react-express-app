@@ -14,9 +14,11 @@ import { Kicker } from './landing/LandingKit';
 import { useT } from '../i18n/LanguageContext';
 import { WaterlineProgress, SwimmingShark } from './SharkFin';
 import { readJSON, writeJSON } from '../lib/storage';
+import { createStore, useStore } from '../lib/store';
 import { FlagIcon } from './ui/icons';
 import './TypingRacer.css';
 import BrandCase from './BrandCase';
+import { visuallyHidden } from '../theme/MuiTheme';
 
 const GATE = 95; // accuracy % required to score (the gate)
 const STAR_T2 = 35; // WPM that earns a 2nd star
@@ -27,6 +29,18 @@ interface TypingStats {
   bestWpm: number;
 }
 const DEFAULT_STATS: TypingStats = { bestWpm: 0 };
+
+// The best is the account's (lib/accountData.ts clears it at sign-out), so it
+// lives in a store the sign-out refreshes: read once at mount, the leaving
+// account's best stayed on screen and decided the next "New personal best".
+// A copy of another shape counts as none: a best that was not a number never
+// let a race beat it, so no best was recorded again.
+function readBest(): TypingStats {
+  const raw = readJSON<unknown>(BEST_KEY, null);
+  const wpm = raw && typeof raw === 'object' ? (raw as { bestWpm?: unknown }).bestWpm : undefined;
+  return typeof wpm === 'number' && Number.isFinite(wpm) && wpm > 0 ? { bestWpm: Math.round(wpm) } : DEFAULT_STATS;
+}
+const bestStore = createStore<TypingStats>(readBest);
 
 // Short, real, single-line dev snippets across a handful of languages. Kept
 // inline on purpose — this surface needs no server and no content pipeline.
@@ -110,7 +124,7 @@ export default function TypingRacer() {
   const [keystrokes, setKeystrokes] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [result, setResult] = useState<RaceResult | null>(null);
-  const [best, setBest] = useState<TypingStats>(() => readJSON<TypingStats>(BEST_KEY, DEFAULT_STATS));
+  const best = useStore(bestStore);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const retryRef = useRef<HTMLButtonElement | null>(null);
@@ -164,8 +178,8 @@ export default function TypingRacer() {
       const isBest = passed && wpm > best.bestWpm;
       if (isBest) {
         const nextStats: TypingStats = { bestWpm: wpm };
-        setBest(nextStats);
         writeJSON(BEST_KEY, nextStats);
+        bestStore.emit();
       }
       setResult({ wpm, accuracy, passed, stars, isBest });
       setPhase('finished');
@@ -323,9 +337,22 @@ export default function TypingRacer() {
         </div>
       )}
 
-      {/* Result. role=status announces the outcome when it renders. */}
+      {/* The outcome, read out from a status that is always on the page: the
+          result card below was the status, and one drawn together with its
+          words is not read. Focus goes to Race again, which says nothing of
+          the race. */}
+      <span role="status" style={visuallyHidden}>
+        {phase === 'finished' && result
+          ? [
+              t('typing.finished'),
+              result.passed ? t('typing.result', { wpm: result.wpm, pct: result.accuracy }) : t('typing.accuracyGateFail', { pct: GATE }),
+              result.isBest ? t('typing.newBest') : '',
+            ].filter(Boolean).join('. ')
+          : ''}
+      </span>
+
       {phase === 'finished' && result && (
-        <div className="ss-typing__result ss-pop" role="status" aria-live="polite">
+        <div className="ss-typing__result ss-pop">
           <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-secondary)' }}>
             {t('typing.finished')}
           </span>

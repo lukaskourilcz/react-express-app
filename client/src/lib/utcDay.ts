@@ -6,7 +6,7 @@
 // locally, so a learner in Prague knows the day changes at 02:00 (01:00 in
 // winter) and one in New York at 20:00 the evening before.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const DAY_MS = 86_400_000;
 
@@ -34,4 +34,34 @@ export function localDayChangeTime(
 export function useDayChangeTime(): string {
   const [time] = useState(() => localDayChangeTime());
   return time;
+}
+
+/** The UTC day `read` names (a "YYYY-MM-DD" key), moved on when 00:00 UTC
+ * passes. Read once, a screen left open overnight kept yesterday's day. A
+ * background tab's timer may wait, so a return to the tab reads the day too.
+ * `read` must be a stable, module-level function. */
+export function useUtcDay(read: () => string): string {
+  const [day, setDay] = useState(read);
+  useEffect(() => {
+    let timer = 0;
+    const arm = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        setDay(read());
+        arm();
+      }, Math.max(1_000, nextUtcDayStart() - Date.now() + 1_000));
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setDay(read());
+      arm();
+    };
+    arm();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [read]);
+  return day;
 }

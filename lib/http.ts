@@ -55,12 +55,26 @@ export function withRequestContext<T>(
     } catch (error) {
       // A refusal of locked content is an answer, not a failure.
       if (error instanceof PremiumRequiredError && !res.headersSent) return jsonPremiumRequired(res, error);
-      if (error instanceof ServiceUnavailableError && !res.headersSent) return jsonError(res, 503, error.code, error.message);
+      if (error instanceof ServiceUnavailableError && !res.headersSent) {
+        // A timeout or an unrecordable claim is still a failure monitoring
+        // should see at level error, as the 500 path logs one.
+        logEvent('request', {
+          level: 'error',
+          method: req.method ?? 'UNKNOWN',
+          path: req.url?.split('?')[0] ?? 'unknown',
+          status: 503,
+          category: error.code,
+        });
+        return jsonError(res, 503, error.code, error.message);
+      }
+      // Log the status the caller gets: an escaped AuthError answers its own
+      // 401 or 503, and a refused token is a warning, not a server fault.
+      const status = error instanceof AuthError ? error.status : 500;
       logEvent('request', {
-        level: 'error',
+        level: status >= 500 ? 'error' : 'warn',
         method: req.method ?? 'UNKNOWN',
         path: req.url?.split('?')[0] ?? 'unknown',
-        status: 500,
+        status,
         category: error instanceof AuthError ? error.code : error instanceof Error ? error.name : 'unknown',
       });
       if (res.headersSent) return;
@@ -180,10 +194,23 @@ export function createLogger(route: string) {
   return (event: Record<string, unknown>) => logEvent(route, event);
 }
 
-/** Reject if the Supabase call hasn't settled within `ms`, so a hung upstream can't hang the request. */
+/** A Supabase call that did not settle in time (`withTimeout`). The database
+ * is busy or unreachable, which is the service being unavailable rather than
+ * a fault in the request or the handler, so `withRequestContext` (and every
+ * handler that answers a `ServiceUnavailableError` itself) answers 503
+ * `upstream_timeout`, which a client may retry, instead of 500. */
+export class UpstreamTimeoutError extends ServiceUnavailableError {
+  constructor() {
+    super('upstream_timeout', 'The service took too long to answer. Try again in a moment.');
+    this.name = 'UpstreamTimeoutError';
+  }
+}
+
+/** Reject with `UpstreamTimeoutError` if the Supabase call hasn't settled
+ * within `ms`, so a hung upstream can't hang the request. */
 export function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('supabase_timeout')), ms);
+    const timer = setTimeout(() => reject(new UpstreamTimeoutError()), ms);
     Promise.resolve(p).then(
       (value) => {
         clearTimeout(timer);

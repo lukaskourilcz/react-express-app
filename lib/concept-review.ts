@@ -49,17 +49,19 @@ const toState = (row: ReviewRow): ReviewState => ({
 });
 
 /**
- * The learner's review state for one subject.
+ * The learner's review state for one subject, or null when it cannot be read.
  *
- * An unreadable table is an empty list, not an error: review is an enhancement
- * to practice, and a learner whose scheduling cannot be read should still get a
- * session. The failure is logged rather than shown.
+ * Review is an enhancement to practice, so a reader treats null as an empty
+ * list and the learner still gets a session; the failure is logged rather
+ * than shown. A writer must not: `recordConceptReviews` builds each concept's
+ * next state on the one read here, and building it on an empty list sent
+ * every practised concept back to its first stage.
  */
 export async function loadReviewStates(
   supabase: SupabaseClient | null,
   userId: string,
   subject: ScopeSubjectId,
-): Promise<ReviewState[]> {
+): Promise<ReviewState[] | null> {
   if (!supabase) return [];
   try {
     const { data, error } = await withTimeout(
@@ -71,12 +73,12 @@ export async function loadReviewStates(
     );
     if (error || !data) {
       logEvent({ status: 200, reason: 'states_unavailable', error: error?.message ?? 'no_rows' });
-      return [];
+      return null;
     }
     return (data as ReviewRow[]).map(toState);
   } catch (err) {
     logEvent({ status: 200, reason: 'states_failed', error: err instanceof Error ? err.message : 'unknown' });
-    return [];
+    return null;
   }
 }
 
@@ -122,6 +124,7 @@ export interface GradedItem {
  *
  * `eventId` makes the write idempotent. A retried submit, or the same attempt
  * arriving from two devices, reports the stored state and applies nothing.
+ * `states` is what `loadReviewStates` read; null records nothing.
  */
 export async function recordConceptReviews(
   supabase: SupabaseClient | null,
@@ -132,10 +135,17 @@ export async function recordConceptReviews(
     eventId: string;
     items: readonly GradedItem[];
   },
-  states: readonly ReviewState[],
+  states: readonly ReviewState[] | null,
   now = Date.now(),
 ): Promise<void> {
   if (!supabase) return;
+  // The stored states could not be read. Each write below sets the stage, so
+  // one built from nothing would restart every concept this session touched.
+  // Skipping one session's review costs less than losing the ladder.
+  if (states === null) {
+    logEvent({ status: 200, reason: 'record_skipped', detail: 'states_unavailable' });
+    return;
+  }
 
   // Collapse the session to one outcome per concept, worst-first.
   const worst = new Map<string, GradedItem>();

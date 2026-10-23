@@ -54,7 +54,6 @@ function answer(repeatXp: LearnRepeatXp | undefined, accountXp = 0) {
       if (params.get('level')) return HttpResponse.json(PLAYABLE as never);
       return HttpResponse.json(STRUCTURE as never);
     }),
-    http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: PROGRESS, extra: { unlocked: [] } })),
     http.post('*/api/quiz/roadmap', ({ request }) => {
       const resource = new URL(request.url).searchParams.get('resource');
       if (resource === 'answer') return HttpResponse.json({ selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: 'Because it is first.' });

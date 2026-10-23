@@ -32,6 +32,7 @@ import { friendlyError } from '../lib/api';
 import { CrownBadge } from './ui/Crown';
 import { CountryFlag, countryOptions } from './ui/CountryFlag';
 import { InitialsAvatar } from './ui/InitialsAvatar';
+import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import {
   getHandle, setDiscoverable, setCountry,
   lookupFriend, requestFriend, respondFriend, removeFriend, listFriends,
@@ -52,24 +53,48 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // The tab has drawn the learner's list once. A read after a change that
+  // fails then keeps that list on screen, with the error above it.
+  const loaded = useRef(false);
+  // Two answers in a row start two reads; only the later one may draw, or
+  // the earlier, older list brings back a request already answered.
+  const readSeq = useRef(0);
+  // The newest read. A read a later one overtook settles with that one, so a
+  // caller waiting on it (a save showing its value until the read lands)
+  // waits for the read that draws, not for one that drew nothing.
+  const latestRead = useRef<Promise<void>>(Promise.resolve());
 
-  const refresh = useCallback(async () => {
-    try {
-      const [own, list] = await Promise.all([getHandle(), listFriends()]);
-      setHandleState(own);
-      setFriends(list.friends);
-      setRequests(list.requests);
-      setState('ready');
-    } catch (err) {
-      // The most likely cause is the migration not being applied yet. Either
-      // way the honest thing is to say the tab is not available, not to show an
-      // empty friends list that looks like nobody has been added.
-      setError(friendlyError(err));
-      setState('unavailable');
-    }
+  const refresh = useCallback((): Promise<void> => {
+    const seq = ++readSeq.current;
+    const read = (async (): Promise<void> => {
+      try {
+        const [own, list] = await Promise.all([getHandle(), listFriends()]);
+        if (seq !== readSeq.current) return latestRead.current;
+        setHandleState(own);
+        setFriends(list.friends);
+        setRequests(list.requests);
+        setError(null);
+        loaded.current = true;
+        setState('ready');
+      } catch (err) {
+        if (seq !== readSeq.current) return latestRead.current;
+        setError(friendlyError(err));
+        // The most likely cause of a first read failing is the migration not
+        // being applied yet. Either way the honest thing is to say the tab is
+        // not available, not to show an empty friends list that looks like
+        // nobody has been added.
+        if (!loaded.current) setState('unavailable');
+      }
+    })();
+    latestRead.current = read;
+    return read;
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  const retry = () => {
+    setState('loading');
+    void refresh();
+  };
 
   if (state === 'loading') {
     return <LoadingScreen label={t('friends.loading')} sx={{ minHeight: 160 }} />;
@@ -79,18 +104,43 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
       <div className="fr-empty ss-panel" style={{ padding: 24 }}>
         <p className="fr-note">{t('friends.unavailable')}</p>
         {error && <p className="fr-note fr-note--error">{error}</p>}
+        <div>
+          <Button variant="secondary" label={t('quiz.retry')} onClick={retry} />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="fr">
+      {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}
       <HandleCard state={handle} onChanged={refresh} onEditSharkname={onEditSharkname} />
       {handle?.handle && <FindFriend onChanged={refresh} ownHandle={handle.handle} />}
       {requests.length > 0 && <Requests requests={requests} onChanged={refresh} />}
       <FriendList friends={friends} hasHandle={Boolean(handle?.handle)} onChanged={refresh} />
     </div>
   );
+}
+
+/** The rows with a change in flight. The ref holds a row at the press,
+ * because the disabled state reaches its buttons a render later, after a
+ * double click has sent its second answer; a set, so one row's answer that
+ * ends does not re-enable another row's buttons while that one runs. */
+function useInFlight() {
+  const running = useRef(new Set<string>());
+  const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
+  const run = async (key: string, work: () => Promise<void>) => {
+    if (running.current.has(key)) return;
+    running.current.add(key);
+    setBusy(new Set(running.current));
+    try {
+      await work();
+    } finally {
+      running.current.delete(key);
+      setBusy(new Set(running.current));
+    }
+  };
+  return { isBusy: (key: string) => busy.has(key), run };
 }
 
 /* ── your own sharkname ─────────────────────────────────────────────────── */
@@ -101,24 +151,54 @@ function HandleCard({
   onEditSharkname,
 }: {
   state: HandleState | null;
-  onChanged: () => void;
+  onChanged: () => Promise<void> | void;
   onEditSharkname?: () => void;
 }) {
   const t = useT();
   const inputId = useId();
   const [error, setError] = useState<string | null>(null);
+  // The values being saved, shown until the read after the saves lands: the
+  // controls are bound to the server's state, so without them the box ticked
+  // a moment ago sprang back, and a second click sent the same change again.
+  // The controls stay enabled (disabling one drops its focus), and a change
+  // made while a save runs follows it, so the last choice is the one stored.
+  type Change = { discoverable?: boolean; country?: string };
+  const [shown, setShown] = useState<Change>({});
+  const queued = useRef<Change | null>(null);
+  const sending = useRef(false);
 
-  const toggleDiscoverable = async (next: boolean) => {
-    setError(null);
-    try { await setDiscoverable(next); onChanged(); }
-    catch (err) { setError(friendlyError(err)); }
+  const send = async () => {
+    sending.current = true;
+    try {
+      // A change made during the re-read is queued too (`sending` is still
+      // set), so after each re-read the loop looks again before it stops.
+      while (queued.current) {
+        while (queued.current) {
+          const next = queued.current;
+          queued.current = null;
+          try {
+            if (next.discoverable !== undefined) await setDiscoverable(next.discoverable);
+            if (next.country !== undefined) await setCountry(next.country);
+          } catch (err) {
+            setError(friendlyError(err));
+            queued.current = null;
+          }
+        }
+        await onChanged();
+      }
+    } finally {
+      sending.current = false;
+      setShown({});
+    }
   };
-
-  const chooseCountry = async (next: string) => {
+  const save = (change: Change) => {
     setError(null);
-    try { await setCountry(next); onChanged(); }
-    catch (err) { setError(friendlyError(err)); }
+    setShown((current) => ({ ...current, ...change }));
+    queued.current = { ...queued.current, ...change };
+    if (!sending.current) void send();
   };
+  const shownCountry = shown.country ?? state?.country ?? '';
+  const shownDiscoverable = shown.discoverable ?? state?.discoverable ?? false;
 
   // 249 codes named and sorted in English. Memoised because that is 249 Intl
   // lookups and a collated sort.
@@ -147,12 +227,12 @@ function HandleCard({
           <div className="fr-row fr-row--country">
             <label className="fr-label" htmlFor={`${inputId}-country`}>{t('friends.countryLabel')}</label>
             <span className="fr-country">
-              <CountryFlag code={state.country} size={20} />
+              <CountryFlag code={shownCountry || null} size={20} />
               <select
                 id={`${inputId}-country`}
                 className="fr-select"
-                value={state.country ?? ''}
-                onChange={(event) => void chooseCountry(event.target.value)}
+                value={shownCountry}
+                onChange={(event) => save({ country: event.target.value })}
               >
                 <option value="">{t('friends.countryNone')}</option>
                 {countries.map((country) => (
@@ -165,8 +245,8 @@ function HandleCard({
           <label className="fr-check">
             <input
               type="checkbox"
-              checked={state.discoverable}
-              onChange={(event) => void toggleDiscoverable(event.target.checked)}
+              checked={shownDiscoverable}
+              onChange={(event) => save({ discoverable: event.target.checked })}
             />
             <span>
               {t('friends.discoverable')}
@@ -198,7 +278,8 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
     abort.current = controller;
     setBusy(true); setError(null);
     try {
-      setResult(await lookupFriend(handle, controller.signal));
+      const found = await lookupFriend(handle, controller.signal);
+      if (!controller.signal.aborted) setResult(found);
     } catch (err) {
       if (!controller.signal.aborted) setError(friendlyError(err));
     } finally {
@@ -206,18 +287,17 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
     }
   };
 
-  const ask = async (handle: string) => {
-    setBusy(true); setError(null);
+  const asking = useInFlight();
+  const ask = (handle: string) => asking.run(handle, async () => {
+    setError(null);
     try {
       const { state } = await requestFriend(handle);
       setResult({ found: true, handle, state });
       onChanged();
     } catch (err) {
       setError(friendlyError(err));
-    } finally {
-      setBusy(false);
     }
-  };
+  });
 
   return (
     <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
@@ -234,7 +314,15 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
           autoCapitalize="none"
           spellCheck={false}
           placeholder={t('friends.findPlaceholder')}
-          onChange={(event) => { setQuery(event.target.value); setResult(null); }}
+          onChange={(event) => {
+            // A lookup still on its way answers a handle the box no longer
+            // holds: drop it, or it would offer Add under the edited text.
+            abort.current?.abort();
+            abort.current = null;
+            setBusy(false);
+            setQuery(event.target.value);
+            setResult(null);
+          }}
           onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void look(); } }}
         />
         <Button variant="secondary" isDisabled={busy} onClick={() => void look()} label={busy ? t('friends.searching') : t('friends.find')} />
@@ -250,7 +338,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
             {result.displayName && result.displayName !== result.handle && <span className="fr-handle">{result.handle}</span>}
           </span>
           {result.state === 'none' && (
-            <Button variant="primary" isDisabled={busy} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
+            <Button variant="primary" isDisabled={busy || asking.isBusy(result.handle)} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
           )}
           {result.state === 'self' && <span className="fr-note">{t('friends.isYou')}</span>}
           {result.state === 'accepted' && <span className="fr-note">{t('friends.alreadyFriends')}</span>}
@@ -258,7 +346,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
           {result.state === 'pending_in' && <span className="fr-note">{t('friends.theyAsked')}</span>}
           {result.state === 'declined_out' && <span className="fr-note">{t('friends.wasDeclined')}</span>}
           {result.state === 'declined_in' && (
-            <Button variant="primary" isDisabled={busy} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
+            <Button variant="primary" isDisabled={busy || asking.isBusy(result.handle)} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
           )}
           {result.state === 'blocked' && <span className="fr-note">{t('friends.blocked')}</span>}
         </div>
@@ -270,18 +358,19 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
 
 /* ── requests waiting for an answer ─────────────────────────────────────── */
 
-function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChanged: () => void }) {
+function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChanged: () => Promise<void> }) {
   const t = useT();
   const titleId = useId();
-  const [busy, setBusy] = useState<string | null>(null);
+  const answering = useInFlight();
   const [error, setError] = useState<string | null>(null);
 
-  const answer = async (handle: string, accept: boolean) => {
-    setBusy(handle); setError(null);
-    try { await respondFriend(handle, accept); onChanged(); }
+  const answer = (handle: string, accept: boolean) => answering.run(handle, async () => {
+    setError(null);
+    // The row stays busy until the read that removes it lands: re-enabled
+    // before, a third press sent the answer again.
+    try { await respondFriend(handle, accept); await onChanged(); }
     catch (err) { setError(friendlyError(err)); }
-    finally { setBusy(null); }
-  };
+  });
 
   const incoming = requests.filter((one) => one.direction === 'incoming');
   const outgoing = requests.filter((one) => one.direction === 'outgoing');
@@ -297,8 +386,8 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
               {one.displayName !== one.handle && <span className="fr-handle">{one.handle}</span>}
             </span>
             <span className="fr-item__actions">
-              <Button variant="primary" isDisabled={busy === one.handle} aria-label={t('friends.acceptOne', { name: one.displayName })} onClick={() => void answer(one.handle, true)} label={t('friends.accept')} />
-              <Button variant="secondary" isDisabled={busy === one.handle} aria-label={t('friends.declineOne', { name: one.displayName })} onClick={() => void answer(one.handle, false)} label={t('friends.decline')} />
+              <Button variant="primary" isDisabled={answering.isBusy(one.handle)} aria-label={t('friends.acceptOne', { name: one.displayName })} onClick={() => void answer(one.handle, true)} label={t('friends.accept')} />
+              <Button variant="secondary" isDisabled={answering.isBusy(one.handle)} aria-label={t('friends.declineOne', { name: one.displayName })} onClick={() => void answer(one.handle, false)} label={t('friends.decline')} />
             </span>
           </li>
         ))}
@@ -316,22 +405,39 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
 
 /* ── the list ───────────────────────────────────────────────────────────── */
 
-function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasHandle: boolean; onChanged: () => void }) {
+function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasHandle: boolean; onChanged: () => Promise<void> }) {
   const t = useT();
   const titleId = useId();
-  const [busy, setBusy] = useState<string | null>(null);
+  const removing = useInFlight();
   const [error, setError] = useState<string | null>(null);
+  // Removing a friend is mutual and takes a new request to undo, so it asks
+  // first. Once the row is gone its button is too, and focus moves to the
+  // list's heading instead of falling to the page.
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const [focusList, setFocusList] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    if (!focusList || confirm) return;
+    setFocusList(false);
+    headingRef.current?.focus();
+  }, [focusList, confirm]);
 
-  const drop = async (handle: string) => {
-    setBusy(handle); setError(null);
-    try { await removeFriend(handle); onChanged(); }
+  const drop = (handle: string) => removing.run(handle, async () => {
+    setError(null);
+    try { await removeFriend(handle); await onChanged(); setFocusList(true); }
     catch (err) { setError(friendlyError(err)); }
-    finally { setBusy(null); }
-  };
+  });
+
+  const askToDrop = (friend: Friend) => setConfirm({
+    title: t('friends.removeConfirmTitle', { name: friend.displayName }),
+    description: t('friends.removeConfirmBody'),
+    actionLabel: t('friends.remove'),
+    onConfirm: () => drop(friend.handle),
+  });
 
   return (
     <section className="fr-card ss-panel" aria-labelledby={titleId}>
-      <h3 id={titleId} className="fr-card__title">{t('friends.listTitle', { n: friends.length })}</h3>
+      <h3 id={titleId} ref={headingRef} tabIndex={-1} className="fr-card__title">{t('friends.listTitle', { n: friends.length })}</h3>
       {friends.length === 0 ? (
         <p className="fr-note">{hasHandle ? t('friends.empty') : t('friends.emptyNoHandle')}</p>
       ) : (
@@ -363,12 +469,13 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                   {friend.activeToday && <> {' · '}<span className="fr-today">{t('friends.today')}</span></>}
                 </span>
               </span>
-              <Button variant="secondary" isDisabled={busy === friend.handle} aria-label={t('friends.removeOne', { name: friend.displayName })} onClick={() => void drop(friend.handle)} label={t('friends.remove')} />
+              <Button variant="secondary" isDisabled={removing.isBusy(friend.handle)} aria-label={t('friends.removeOne', { name: friend.displayName })} onClick={() => askToDrop(friend)} label={t('friends.remove')} />
             </li>
           ))}
         </ul>
       )}
       {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}
+      <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </section>
   );
 }
