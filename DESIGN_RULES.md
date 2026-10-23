@@ -331,6 +331,14 @@ coming back. The tokens and the map are in
   the two settings stay independent. Account actions are settings rows whose
   title never repeats the button. The banner does not repeat the footer's
   appearance and sound controls (UX audit U6, #578).
+- **A Learn section names itself once** (UX audit U4, #576). The h1 is
+  'Learn' in every auth state; the section switcher is the only place the
+  section's name appears, and the section line is the one supporting line.
+  A locked topic carries one lock signal (the lock glyph, plus 'Premium'
+  only where Premium opens it), and Premium is said once per topic, on its
+  tile and in the next-step card, whose button then says 'See Premium'
+  rather than 'Continue'. An empty section sits on the column's left edge
+  with one row of next steps, not a centred card.
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
 
 ## 11. One question system
