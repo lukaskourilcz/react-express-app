@@ -413,6 +413,31 @@ describe('an OAuth return', () => {
     expect(window.location.hash).toBe('');
   });
 
+  it('sends a sign-in report the server never answered again on the next sign-in, and a delivered one only once', async () => {
+    window.history.replaceState(null, '', '/#access_token=oauth-access-token&refresh_token=r&expires_in=3600&token_type=bearer');
+    const statuses = [503, 200];
+    const reports: number[] = [];
+    server.use(http.post('*/api/user/authevent', () => {
+      const status = statuses.shift() ?? 200;
+      reports.push(status);
+      return status === 200
+        ? HttpResponse.json({ ok: true, kind: 'register' })
+        : HttpResponse.json({ error: { code: 'upstream_timeout', message: 'Try again' } }, { status });
+    }));
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-oauth'));
+    await waitFor(() => expect(reports).toEqual([503]));
+    await settle();
+    // supabase-js announces the session again (the tab is shown again).
+    const session = sb.sessionFor('oauth-access-token', 'user-oauth');
+    await act(async () => sb.clients[0].emit('SIGNED_IN', session));
+    await waitFor(() => expect(reports).toEqual([503, 200]));
+    await settle();
+    await act(async () => sb.clients[0].emit('SIGNED_IN', session));
+    await settle();
+    expect(reports).toEqual([503, 200]);
+  });
+
   it('imports supabase-js for an error return too, which supabase-js reads', async () => {
     window.history.replaceState(null, '', '/#error=access_denied&error_description=The+user+denied+the+request');
     const { renders } = await mountAuth();
