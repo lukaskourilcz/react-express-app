@@ -50,6 +50,7 @@ import { planText } from './PlanLine';
 import './PremiumBillingPages.css';
 import { CHECKOUT_APPEARANCE, loadCheckoutStripe, type CheckoutView } from '../lib/stripeCheckoutForm';
 import { isOnline } from '../lib/routeRecovery';
+import { accountEpoch } from '../lib/accountData';
 
 const SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{8,240}$/;
 /** How often, and how many times, the page asks again while a payment is
@@ -192,25 +193,50 @@ export function PremiumSuccessPage() {
   const offer = useLaunchOffer();
   const rechecks = useRef(0);
   const started = useRef(false);
+  const userId = user?.id ?? null;
+  // The lookup on its way, so a newer one, another account or leaving the
+  // page drops its answer.
+  const lookup = useRef<AbortController | null>(null);
 
   const check = useCallback(async () => {
+    lookup.current?.abort();
+    const controller = new AbortController();
+    lookup.current = controller;
+    const epoch = accountEpoch();
+    const stale = () => controller.signal.aborted || accountEpoch() !== epoch;
     setState({ kind: 'checking' });
     try {
-      const result = await lookupCheckout(sessionId);
+      const result = await lookupCheckout(sessionId, controller.signal);
+      if (stale()) return;
       // Only a completed checkout is a purchase. A voucher or complimentary
       // grant already reads Premium while this payment is still processing.
       if (result.status === 'complete' && result.entitlement.tier === 'premium') {
-        if (user) queryClient.setQueryData(entitlementKeys.user(user.id), result.entitlement);
+        if (userId) queryClient.setQueryData(entitlementKeys.user(userId), result.entitlement);
         void queryClient.invalidateQueries({ queryKey: entitlementKeys.all });
         setState({ kind: 'done', plan: result.entitlement });
         return;
       }
       setState(result.status === 'expired' ? { kind: 'expired' } : { kind: 'pending' });
     } catch (error) {
+      if (stale()) return;
       if (error instanceof ApiError && error.status === 404) setState({ kind: 'missing' });
       else setState({ kind: 'error', message: friendlyError(error) });
+    } finally {
+      if (lookup.current === controller) lookup.current = null;
     }
-  }, [sessionId, queryClient, user]);
+  }, [sessionId, queryClient, userId]);
+
+  // Another account (or none) starts over: what this page learnt belongs to
+  // the account that asked. Leaving drops the answer still on its way.
+  useEffect(() => {
+    started.current = false;
+    rechecks.current = 0;
+    setState((current) => (current.kind === 'checking' ? current : { kind: 'checking' }));
+    return () => {
+      lookup.current?.abort();
+      lookup.current = null;
+    };
+  }, [userId]);
 
   // Once the account and its plan are known: a subscription that is already
   // live (the webhook came first) needs no lookup; otherwise ask the server.

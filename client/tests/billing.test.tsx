@@ -196,6 +196,38 @@ describe('/premium/success', () => {
     expect(looked).toBe(1);
   });
 
+  it('drops a lookup answered after the account changed, and asks again for the new one', async () => {
+    signIn();
+    serve();
+    const asked: string[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((done) => { releaseFirst = done; });
+    server.use(http.get('*/api/user/billing-checkout', async () => {
+      asked.push(auth.value.user?.id ?? 'none');
+      if (asked.length === 1) {
+        await firstGate;
+        return HttpResponse.json({ status: 'complete', entitlement: PREMIUM });
+      }
+      return HttpResponse.json({ error: { code: 'not_found', message: 'No such checkout' } }, { status: 404 });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const tree = () => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[`/premium/success?session_id=${SESSION}`]}>
+          <LanguageProvider><PremiumSuccessPage /></LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const view = render(tree());
+    await waitFor(() => expect(asked).toEqual(['user-1']));
+    auth.value = { ...auth.value, user: { id: 'user-2' }, isAuthenticated: true };
+    view.rerender(tree());
+    expect(await screen.findByRole('heading', { level: 1, name: 'We could not find this checkout' })).toBeInTheDocument();
+    await act(async () => { releaseFirst(); await new Promise((done) => setTimeout(done, 50)); });
+    expect(screen.queryByRole('heading', { level: 1, name: 'Everything is open now.' })).toBeNull();
+    expect(asked).toEqual(['user-1', 'user-2']);
+  });
+
   it('says a payment is still processing and offers to check again', async () => {
     signIn();
     serve();
