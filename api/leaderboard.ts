@@ -19,9 +19,11 @@ import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 
 // Public responses are served by this scoped API, but leaderboard RPCs are
 // service-only so callers cannot bypass deployment/category validation through
-// the Supabase Data API. Every routine returns a learner's name and picture
-// only when they switched on user_stats.show_on_leaderboards (migration 049);
-// otherwise both are null and the client shows "Learner".
+// the Supabase Data API. Every routine names a learner through
+// board_display_name() (migration 064): their sharkname, or the account name
+// they chose for boards (user_handles.leaderboard_name_mode). Only the picture
+// still follows user_stats.show_on_leaderboards (049); a learner with no
+// sharkname row is null and the client shows "Learner".
 const supabase = createServiceClient();
 
 const logEvent = createLogger('leaderboard');
