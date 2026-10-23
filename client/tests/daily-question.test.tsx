@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import DailyQuestionPage from '../src/components/DailyQuestionPage';
 import { en } from '../src/i18n/translations';
@@ -29,6 +29,11 @@ const QUESTION = {
   question: { id: 'q-1', question: 'Which value does `typeof null` return?', options: ['"null"', '"object"', '"undefined"', '"number"'], category: qotdTrack(today), difficulty: 2 },
 };
 
+function Where() {
+  const at = useLocation();
+  return <p>{`At ${at.pathname}${at.search}`}</p>;
+}
+
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
@@ -38,6 +43,7 @@ function renderAt(path: string) {
           <Routes>
             <Route path="/daily" element={<DailyQuestionPage />} />
             <Route path="/daily/:date" element={<DailyQuestionPage />} />
+            <Route path="/quiz" element={<Where />} />
           </Routes>
         </LanguageProvider>
       </MemoryRouter>
@@ -82,14 +88,18 @@ describe('/daily', () => {
     expect(await screen.findByText('Right answer')).toBeInTheDocument();
     expect(screen.getByText('typeof null is "object", a historical quirk.')).toBeInTheDocument();
     expect(sent).toEqual([{ sessionId: 'sealed-session', answers: { 'q-1': 1 } }]);
-    expect(screen.getByRole('radio', { name: /"object", correct answer/ })).toBeDisabled();
-    expect(screen.getByRole('link', { name: `Practice ${trackName(today)} questions` })).toHaveAttribute('href', `/quiz?category=${qotdTrack(today)}`);
+    expect(screen.getByRole('radio', { name: '"object", Correct answer' })).toBeDisabled();
+    // The one primary after the check, in the shared action row (UX audit U2).
+    expect(screen.getByRole('button', { name: `Practice ${trackName(today)} questions` })).toHaveClass('ss-swim-cta');
     expect(screen.getByText(/nothing is recorded/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Share this question' }));
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/daily/${today}`));
     expect(analytics.capture).toHaveBeenCalledWith('share_initiated', { kind: 'daily_question', source: 'daily', method: 'copy' });
     expect(await screen.findByText('Link copied.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: `Practice ${trackName(today)} questions` }));
+    expect(await screen.findByText(`At /quiz?category=${qotdTrack(today)}`)).toBeInTheDocument();
   });
 
   it('marks a wrong pick in words, not colour alone', async () => {
@@ -104,8 +114,11 @@ describe('/daily', () => {
     fireEvent.click((await screen.findAllByRole('radio'))[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
     expect(await screen.findByText('Not this one')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /"null", your answer/ })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /"object", correct answer/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '"null", Your pick' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '"object", Correct answer' })).toBeInTheDocument();
+    // The verdict sits under the answers it grades, never over them (questions-01).
+    const verdict = screen.getByText('Not this one').closest('.ss-question-feedback')!;
+    expect(screen.getByRole('radiogroup').compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Signed out, there is no account to keep a Shark Card in.
     expect(screen.queryByRole('button', { name: /Shark Card/ })).toBeNull();
   });
@@ -153,7 +166,7 @@ describe('/daily', () => {
     check.focus();
     fireEvent.click(check);
     await screen.findByText('Not this one');
-    await waitFor(() => expect(document.activeElement).toHaveClass('ss-daily__result'));
+    await waitFor(() => expect(document.activeElement).toHaveClass('ss-question-feedback'));
     expect(document.activeElement).toHaveTextContent('Not this one');
     expect(document.activeElement).toHaveTextContent('It is "object".');
   });
@@ -225,7 +238,7 @@ describe('/daily', () => {
     expect(document.activeElement).not.toBe(document.body);
     fireEvent.click(again);
     await screen.findByRole('button', { name: 'Check answer' });
-    await waitFor(() => expect(document.activeElement).toHaveClass('ss-daily__question'));
+    await waitFor(() => expect(document.activeElement).toHaveClass('ss-question__block'));
   });
 
   it('starts the question over even if a reload brings back the same session', async () => {
