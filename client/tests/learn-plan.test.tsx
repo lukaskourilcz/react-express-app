@@ -33,11 +33,12 @@ const auth = vi.hoisted(() => ({
 vi.mock('../src/lib/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/auth')>()), useAuth: () => auth.value }));
 
 // The /roadmap track switch saves the plan through this one writer.
-const saves = vi.hoisted(() => ({ calls: [] as unknown[][] }));
+const saves = vi.hoisted(() => ({ calls: [] as unknown[][], hold: null as null | Promise<void> }));
 vi.mock('../src/lib/trackPref', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/trackPref')>()),
   saveLearningPreference: async (...args: unknown[]) => {
     saves.calls.push(args);
+    if (saves.hold) await saves.hold;
     return { ok: true, preference: args[1] };
   },
 }));
@@ -73,6 +74,7 @@ const signInAs = (preference: unknown = null) => {
 afterEach(() => {
   auth.value = { ...auth.value, user: null, isAuthenticated: false };
   saves.calls.length = 0;
+  saves.hold = null;
   closeUpgradeSheet();
   setTrackValue('fullstack');
 });
@@ -263,6 +265,23 @@ describe('the plan', () => {
     expect(await screen.findByText('Saved: Frontend')).toBeInTheDocument();
     expect(saves.calls).toHaveLength(1);
     expect(saves.calls[0][1]).toMatchObject({ baseTrack: 'frontend' });
+  });
+
+  // A sign-out while the save was in flight still announced "Saved" to
+  // whoever used the page next.
+  it('announces nothing for a /roadmap track save once the account has signed out', async () => {
+    signInAs(BACKEND);
+    answer();
+    let release = () => {};
+    saves.hold = new Promise<void>((resolve) => { release = resolve; });
+    await mountAt('/roadmap', <CareerRoadmap />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Frontend' }));
+    await waitFor(() => expect(saves.calls).toHaveLength(1));
+    act(() => { clearAccountData(); });
+    await act(async () => { release(); });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByText('Saved: Frontend')).toBeNull();
+    expect(screen.getByRole('radio', { name: 'Backend' })).not.toBeDisabled();
   });
 
   it('only changes the view for a visitor', async () => {

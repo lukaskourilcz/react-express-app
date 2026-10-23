@@ -32,6 +32,7 @@ import {
 } from '../lib/roadmap';
 import { roadmapStructureQuery, useRoadmapStructure } from '../lib/queries';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { enrollmentsQuery, pathCatalogQuery } from '../lib/learningPaths';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
 import { useTrack, trackTopics, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
@@ -162,12 +163,16 @@ export default function CareerRoadmap() {
     if (!user) return;
     savingRef.current = true;
     setSavingTrack(true);
+    const epoch = accountEpoch();
     try {
       const saved = await saveLearningPreference(user.id, {
         schemaVersion: 1,
         baseTrack: next,
         specialization: preferredLearningOf(user)?.specialization ?? null,
       });
+      // The account signed out during the save (as Learn's section join
+      // checks): its outcome is not this page's to announce.
+      if (accountEpoch() !== epoch) return;
       if (saved.ok) await queryClient.invalidateQueries({ queryKey: eligibilityKeys.all });
       setTrackNotice(saved.ok
         ? t('profile.pathSaved', { track: t(trackLabelKey(subject, next)), role: '' })
