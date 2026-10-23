@@ -18,6 +18,7 @@ Read `docs/design/visual-qa-checklist.md` and inspect real rendered behavior whe
 - Keyboard order and expected arrow-key patterns.
 - Visible focus, route focus, skip link, dialog/drawer trap, Escape, and restoration.
 - Names, labels, descriptions, errors, headings, landmarks, live status, timers, and answer state.
+- Focus after a change: when a pressed control disables or is replaced (Submit, Next on the last step, an answer at time up), focus moves to the nearest working control or the verdict, never to the page. A live region exists before its text changes; one mounted with its words is not announced. A destructive action (Reset, Remove friend) asks first and returns focus to its opener or the list heading.
 - Non-color success/error/ranking cues, contrast, 44px targets, 400% reflow where practical.
 - No horizontal overflow, clipped code/options, unstable answers, hidden waterline content, broken media crops, or decorative motion in dense flows.
 
