@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import { handleGithub } from '../lib/github-handlers';
 import { encodeGithubConnectState } from '../lib/quiz-tokens';
+import { UpstreamTimeoutError } from '../lib/http';
 import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 
 // The GitHub garden's connect step, run through the real handler against a
@@ -119,6 +120,8 @@ const table = new Map<string, Row>();
 // Hides rows from the pre-check only, to stand for a second account whose
 // upsert lands between the check and the write.
 let raceWindow = false;
+// The database not answering in time: every call rejects as withTimeout would.
+let dbTimeout = false;
 
 function query(name: string) {
   const filters: ((row: Row) => boolean)[] = [];
@@ -147,7 +150,9 @@ function query(name: string) {
     limit() { return builder; },
     maybeSingle() { single = true; return builder; },
     upsert(row: Row, options: { onConflict: string }) { assert.equal(options.onConflict, 'user_id'); upsertRow = row; return builder; },
-    then<A, B>(resolve: (value: ReturnType<typeof run>) => A, reject?: (reason: unknown) => B) { return Promise.resolve(run()).then(resolve, reject); },
+    then<A, B>(resolve: (value: ReturnType<typeof run>) => A, reject?: (reason: unknown) => B) {
+      return Promise.resolve().then(() => { if (dbTimeout) throw new UpstreamTimeoutError(); return run(); }).then(resolve, reject);
+    },
   };
   return builder;
 }
@@ -279,7 +284,18 @@ async function main() {
   assert.equal(table.has(accountC), false, 'nothing is stored for an organisation installation');
   assert.ok(![...table.values()].some((row) => row.installation_id === ORGANISATION_INSTALLATION), 'no account holds the organisation installation');
 
-  // 12. Rate limits are each learner's own, with an address backstop that
+  // 12. A database that does not answer in time is the service busy for a
+  //     moment: 503 upstream_timeout, which the client may retry, not a 500.
+  dbTimeout = true;
+  const busyRead = await call('github-connection', accountA, 'GET');
+  const busySync = await call('github-sync', accountA, 'POST');
+  dbTimeout = false;
+  assert.equal(busyRead.statusCode, 503, 'a timed-out connection read is a 503');
+  assert.equal(errorCode(busyRead.body), 'upstream_timeout');
+  assert.equal(busySync.statusCode, 503, 'a timed-out sync is a 503');
+  assert.equal(errorCode(busySync.body), 'upstream_timeout');
+
+  // 13. Rate limits are each learner's own, with an address backstop that
   //     holds a class: every seat of a class behind one address spends its
   //     whole connect and sync budget without a 429, one learner past their
   //     budget is refused, and the next learner at that address is not.

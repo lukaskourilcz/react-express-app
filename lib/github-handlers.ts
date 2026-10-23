@@ -4,7 +4,7 @@
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { jsonError, requireAuthSub, withTimeout, createLogger } from './http';
+import { jsonError, requireAuthSub, withTimeout, createLogger, ServiceUnavailableError } from './http';
 import { enforceRateLimit, RATE_LIMITS, type RateLimitConfig } from './rate-limit';
 import { deploymentSubjectIds } from './product-scope';
 import { decodeGithubConnectState, encodeGithubConnectState } from './quiz-tokens';
@@ -218,6 +218,15 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
 
     return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
   } catch (error) {
+    // A Supabase or GitHub call that did not answer in time (lib/http.ts
+    // `UpstreamTimeoutError`) is the service busy for a moment: 503, which the
+    // client may retry. Not on connect-finish: by then GitHub may have spent
+    // the one-time code, and the callback page sends the same code again
+    // after a 503, so that op keeps answering a failure the code cannot fix.
+    if (error instanceof ServiceUnavailableError && op !== 'github-connect-finish') {
+      logEvent({ status: 503, kind: 'unavailable', op, code: error.code });
+      return jsonError(res, 503, error.code, error.message);
+    }
     if (error instanceof GithubError) {
       logEvent({ status: error.status, kind: 'github_error', op });
       return jsonError(res, 502, 'github_error', 'GitHub did not accept the request. Try again in a moment.');
