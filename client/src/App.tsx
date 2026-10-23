@@ -788,7 +788,8 @@ function App() {
               The footer sits inside this Suspense too, after the keyed box, so
               it arrives with the first page. It keeps its own box, the
               header's (--ss-width-chrome), so it stands still from route to
-              route whatever the page width (shell-public-01). Under the fallback it sat at the
+              route whatever the page width (shell-public-01). Under the
+              fallback it sat at the
               bottom of the empty box, and the landing page threw it below the
               fold: a move longer than the viewport, which scored 0.05 of CLS on
               a desktop and 0.15 on a phone, and 0.98 when the header settled in
