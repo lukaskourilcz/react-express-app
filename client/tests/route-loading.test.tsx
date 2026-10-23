@@ -15,6 +15,17 @@ vi.mock('../src/components/paths/LearningPathScreens', () => {
   pathScreens.loaded = true;
   return { FdeOverview: () => null, FdeModule: () => null };
 });
+// The pages whose chunk a prefix matcher used to preload for any deeper path.
+const pageChunks = vi.hoisted(() => new Set<string>());
+vi.mock('../src/components/Roadmap', () => { pageChunks.add('learn'); return { default: () => null, BigOIntroduction: () => null }; });
+vi.mock('../src/components/Play', () => { pageChunks.add('play'); return { PlayLanding: () => null, PlayMatch: () => null }; });
+vi.mock('../src/components/coding/CodingSection', () => {
+  pageChunks.add('coding');
+  return { CodingHome: () => null, CodingTrackScreen: () => null, FullStackScreen: () => null, CodingTaskScreen: () => null, CodingReviewScreen: () => null };
+});
+vi.mock('../src/components/dev/DevPage', () => { pageChunks.add('dev'); return { default: () => null }; });
+vi.mock('../src/components/TopicLandingPage', () => { pageChunks.add('topics'); return { default: () => null }; });
+vi.mock('../src/components/DailyQuestionPage', () => { pageChunks.add('daily'); return { default: () => null }; });
 
 // The two halves of a navigation that draws once: the next page's code starts
 // loading on intent, and a page can hold its first render for its data.
@@ -50,8 +61,25 @@ describe('the app\'s route chunks', () => {
     pathScreens.loaded = false;
     await preloadPath('/roadmap/paths/dsa-foundations');
     expect(pathScreens.loaded).toBe(false);
+    await preloadPath('/learn/forward-deployed-engineer/path/m03/extra');
+    expect(pathScreens.loaded).toBe(false);
     await preloadPath('/learn/forward-deployed-engineer/path/m03');
     expect(pathScreens.loaded).toBe(true);
+  }, 60_000);
+
+  // Software Engineer audit item 23: a deeper path no route serves draws the
+  // 404 page, so it must not fetch the chunk of the page above it.
+  it('preloads a page only for the paths its routes serve', async () => {
+    await import('../src/App');
+    pageChunks.clear();
+    for (const path of ['/learn/web-developer/extra', '/play/ABCD/extra', '/coding/javascript/task/extra', '/dev/extra', '/topics', '/topics/react/extra', '/daily/2026-10-23/extra', '/learning', '/player']) {
+      await preloadPath(path);
+    }
+    expect([...pageChunks]).toEqual([]);
+    for (const path of ['/learn/web-developer/', '/learn/big-o', '/play/ABCD', '/coding/javascript/task-1', '/dev', '/topics/react', '/daily/2026-10-23']) {
+      await preloadPath(path);
+    }
+    expect([...pageChunks].sort()).toEqual(['coding', 'daily', 'dev', 'learn', 'play', 'topics']);
   }, 60_000);
 });
 
