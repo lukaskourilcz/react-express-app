@@ -151,13 +151,16 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 
-  test(`${theme} ${width}px: Big O guide reflows at 200% text size and links to its free intro`, async ({ page }, info) => {
+  test(`${theme} ${width}px: Big O guide reflows at 200% text size and opens its first free lesson`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await prepare(page, theme);
     await page.route('**/api/**', route => route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'local fixture' } } }));
     await page.goto('/big-o');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Big O');
-    await expect(page.locator('main a[href="/learn/big-o"]')).toBeVisible();
+    // The guide ends on one row whose one primary opens lesson 1 itself
+    // (UX audit learn-19), not a link to the page that lists the lessons.
+    const start = page.getByRole('button', { name: 'Start lesson 1', exact: true });
+    await expect(start).toBeVisible();
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const brand = await page.getByRole('link', { name: 'devShark home', exact: true }).boundingBox();
@@ -173,6 +176,9 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     const findings = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
     expect(findings.violations.map(v => v.id)).toEqual([]);
     await page.screenshot({ path: info.outputPath(`big-o-${theme}-${width}-200.png`), fullPage: true });
+    await start.click();
+    await expect(page.getByRole('button', { name: 'Big O introduction', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/learn\/big-o$/);
   });
 }
 
