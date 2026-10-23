@@ -268,6 +268,11 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       passedIds = passed;
       const mine = rows.find((row) => row.task_id === task.id);
       progress = mine ? toProgress(mine) : null;
+      // An unreadable draft is not "no draft": the page would open the
+      // starter (or an evolving stage's previous code) over the account's
+      // saved code, which a stage Submit then overwrites. The previous
+      // stage's read below already fails the same way.
+      if (draftRow.error) throw new Error('draft_unavailable');
       draft = typeof draftRow.data?.code === 'string' ? draftRow.data.code : null;
       draftUpdatedAt = draft !== null && typeof draftRow.data?.updated_at === 'string' ? draftRow.data.updated_at : null;
       locked = tierLockReason({ track: task.track, tier: task.tier, progress: { passed }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: cleared });
