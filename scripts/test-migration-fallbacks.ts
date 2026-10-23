@@ -325,6 +325,12 @@ async function main() {
     assert.equal(await access.refuseLocked(locked as never, USER.id, level, { cleared: async () => false }), true);
     assert.equal(locked.statusCode, 402, 'a Premium level answers 402 before 039, not 503');
     assert.equal(locked.body?.error?.code, 'premium_required');
+    // A "cleared" read that fails is not a "no": the learner may have passed
+    // the level, so the gate says it could not check instead of selling it.
+    const unread = mockResponse();
+    assert.equal(await access.refuseLocked(unread as never, USER.id, level, { cleared: async () => { throw new Error('progress read timed out'); } }), true);
+    assert.equal(unread.statusCode, 503, 'a failed cleared read answers 503, not the upgrade sheet');
+    assert.equal(unread.body?.error?.code, 'entitlement_unavailable');
 
     // After 044 and before 045: the plan routines of 039 answer, the voucher
     // routines of 045 do not.
