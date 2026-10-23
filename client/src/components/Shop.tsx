@@ -43,6 +43,7 @@ import { CoinIcon, ShieldIcon } from './ui/icons';
 import { LockedButton } from './ui/LockedButton';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
+import { Page } from './PublicInfoPages';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
@@ -152,7 +153,9 @@ function Wallet({ signedIn, restoring = false }: { signedIn: boolean; restoring?
       <div className="rw-wallet__head">
         <CoinIcon size={44} />
         <div className="rw-wallet__balance">
-          <h2 id="rw-wallet-title" className="rw-label">{t('shop.balanceLabel')}</h2>
+          {/* The h1 says Coins and the number says coins: the label names
+              the section for a screen reader only (UX audit money-12). */}
+          <h2 id="rw-wallet-title" className="ss-sr-only">{t('shop.balanceLabel')}</h2>
           <p className="rw-wallet__amount">
             <strong>{signedIn && wallet.data ? wallet.data.balance.toLocaleString('en-GB') : '—'}</strong>
             <span>{t('shop.tokensUnit')}</span>
@@ -582,14 +585,11 @@ function Shop() {
 
   // The page fills the route's narrow 800px column (components/ui/pageWidth.ts),
   // which centres it; it sets no width of its own (UX audit money-01).
+  // The editorial header every money page has (UX audit money-08): fin,
+  // kicker, h1. The lead adds what the sections below do not say (money-12).
   return (
+    <Page kicker={t('shop.kicker')} title={t('shop.title')} lead={`${t('shop.subtitle')}${merchOpen ? ` ${t('shop.subtitleMerch')}` : ''}`}>
     <VStack gap={5} width="100%">
-      <VStack gap={1}>
-        <Heading level={1} type="display-3">{t('shop.title')}</Heading>
-        <Text type="large" color="secondary">
-          {t('shop.subtitle')}{merchOpen ? ` ${t('shop.subtitleMerch')}` : ''}
-        </Text>
-      </VStack>
 
       {/* Test mode is for the owner's staging checks; production never shows it. */}
       {!import.meta.env.PROD && shop.data?.testMode && <Banner status="warning" title={t('shop.testMode')} />}
@@ -817,6 +817,7 @@ function Shop() {
         message={toast?.msg ?? ''}
       />
     </VStack>
+    </Page>
   );
 }
 
