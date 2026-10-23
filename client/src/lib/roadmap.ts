@@ -169,7 +169,18 @@ export function applySkillCheckReceipt(resultReceipt: string): Promise<{ applied
 
 /* ──── Progress store (localStorage-backed) ─────────────────────────────── */
 
-const readProgress = (): RoadmapProgress => readJSON<RoadmapProgress>(PROGRESS_KEY, {});
+// This device's copies are read as what they should be, not trusted: a value
+// of another shape (an older build's, or one edited by hand) reads as empty
+// rather than taking the Learn page down with it.
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const isTopicId = (id: unknown): id is RoadmapTopic =>
+  typeof id === 'string' && Object.prototype.hasOwnProperty.call(TOPIC_PREREQS, id);
+
+const readProgress = (): RoadmapProgress => {
+  const stored = readJSON<unknown>(PROGRESS_KEY, {});
+  return isRecord(stored) ? stored as RoadmapProgress : {};
+};
 
 const store = createStore<RoadmapProgress>(readProgress);
 
@@ -251,8 +262,10 @@ export function passedLevelCount(p: RoadmapProgress, topic: RoadmapTopic): numbe
 
 // Extra-unlocked topics live in their own localStorage entry so resetting
 // roadmap progress doesn't accidentally relock skill-check rewards.
-const readExtraUnlocks = (): RoadmapTopic[] =>
-  readJSON<RoadmapTopic[]>(UNLOCKS_KEY, []);
+const readExtraUnlocks = (): RoadmapTopic[] => {
+  const stored = readJSON<unknown>(UNLOCKS_KEY, []);
+  return Array.isArray(stored) ? stored.filter(isTopicId) : [];
+};
 
 const writeExtraUnlocks = (next: RoadmapTopic[]): void => {
   writeJSON(UNLOCKS_KEY, next);
@@ -644,9 +657,7 @@ async function syncOnce(epoch: number): Promise<void> {
   // Unlocks are the server's too. A guest's skill-check unlocks, or ones this
   // device granted itself when applying a receipt failed, would draw a topic
   // as open that the server refuses with topic_locked.
-  const serverUnlocked = (serverExtras.unlocked ?? []).filter((id): id is RoadmapTopic =>
-    (Object.keys(TOPIC_PREREQS) as string[]).includes(id),
-  ) as RoadmapTopic[];
+  const serverUnlocked = (Array.isArray(serverExtras.unlocked) ? serverExtras.unlocked : []).filter(isTopicId);
   const local = readExtraUnlocks();
   const accountUnlocks = Array.from(new Set<RoadmapTopic>(serverUnlocked));
   if (accountUnlocks.length !== local.length || accountUnlocks.some((id) => !local.includes(id))) writeExtraUnlocks(accountUnlocks);

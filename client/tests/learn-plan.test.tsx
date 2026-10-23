@@ -250,6 +250,20 @@ describe('the account’s record', () => {
     expect(getExtraUnlocks()).toEqual(['typescript']);
   });
 
+  // `new Set(...)` of an unlock list stored in another shape threw, and the
+  // Learn page fell to its error screen with no way back but clearing storage.
+  it('reads this device’s copies of another shape as empty instead of failing the page', async () => {
+    localStorage.setItem('devquiz:roadmap:unlocks:v1', JSON.stringify({ react: true }));
+    localStorage.setItem('devquiz:roadmap:v2', JSON.stringify(['javascript']));
+    answer();
+    await mountAt('/learn', <Roadmap />);
+    expect(await screen.findByRole('radio', { name: /^JavaScript/ })).toBeInTheDocument();
+    expect(getExtraUnlocks()).toEqual([]);
+    expect(getRoadmapProgress()).toEqual({});
+    localStorage.setItem('devquiz:roadmap:unlocks:v1', JSON.stringify(['react', 42, 'not-a-topic']));
+    expect(getExtraUnlocks()).toEqual(['react']);
+  });
+
   it('keeps the spaced-mastery days a completion returns', async () => {
     const progress = {
       html: {
