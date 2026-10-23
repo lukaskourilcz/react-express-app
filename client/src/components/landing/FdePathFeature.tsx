@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useT } from '../../i18n/LanguageContext';
 import { entryFor, FDE_PATH_ROUTE, usePathCatalog } from '../../lib/learningPaths';
 import { pathInventory } from '../../../../shared/learning-paths';
-import { FadeFinCta, Kicker } from './LandingKit';
+import { FadeFinCta, Kicker, StatItem } from './LandingKit';
 
 /** True once `ref` is within about a screen of the visible part of the page.
  * The app scrolls inside <main>, so that is the root the margin applies to.
@@ -36,18 +36,31 @@ export function FdePathFeature() {
   const catalog = usePathCatalog(useNearView(sectionRef));
   const entry = entryFor(catalog.data, 'fde');
   const inventory = entry ? pathInventory(entry.manifest) : null;
+  // Two columns from 1024px (UX audit shell-public-08): the pitch and its
+  // action on the left, the path's size as four hero-style stats on the
+  // right, instead of four stacked paragraphs in a 68ch measure that left a
+  // third of the section empty. The access sentence is one line, and it says
+  // whether work is recorded yet only once the catalog has said.
+  const recording = entry ? t(entry.availability === 'available' ? 'home.fde.recorded' : 'home.fde.preview') : '';
   return <section ref={sectionRef} className="ss-fde-feature" aria-labelledby="home-fde-title">
-    <Kicker>{t('home.fde.kicker')}</Kicker>
-    <h2 id="home-fde-title" className="ss-section-title">{t('home.fde.title')}</h2>
-    <p>{t('home.fde.body')}</p>
-    {inventory && <p className="ss-fde-feature__inventory">{t('home.fde.inventory', {
-      modules: inventory.modules, lessons: inventory.lessons,
-      questions: inventory.moduleChecks + inventory.finalChecks,
-      exercises: inventory.moduleCodeExercises + inventory.finalCodeExercises,
-    })}</p>}
-    <p>{t('home.fde.access')}</p>
-    {!entry && <p role="status">{t(catalog.isPending ? 'home.fde.loading' : 'home.fde.unavailable')}</p>}
-    {entry && entry.availability !== 'available' && <p>{t('home.fde.preview')}</p>}
-    <div><FadeFinCta label={t('home.fde.cta')} onClick={() => navigate(FDE_PATH_ROUTE)} finLeft="-12px" finSize={60} accent="var(--brand-accent)" /></div>
+    <div className="ss-fde-feature__copy">
+      <Kicker>{t('home.fde.kicker')}</Kicker>
+      <h2 id="home-fde-title" className="ss-section-title">{t('home.fde.title')}</h2>
+      <p>{t('home.fde.body')}</p>
+      <p>{recording ? `${t('home.fde.access')} ${recording}` : t('home.fde.access')}</p>
+      <div><FadeFinCta label={t('home.fde.cta')} onClick={() => navigate(FDE_PATH_ROUTE)} finLeft="-12px" finSize={60} accent="var(--brand-accent)" /></div>
+    </div>
+    <div className="ss-fde-feature__aside">
+      {inventory ? (
+        <div className="ss-fde-feature__stats">
+          <StatItem value={String(inventory.modules)} label={t('home.fde.statModules')} />
+          <StatItem value={String(inventory.lessons)} label={t('home.fde.statLessons')} />
+          <StatItem value={String(inventory.moduleChecks + inventory.finalChecks)} label={t('home.fde.statQuestions')} />
+          <StatItem value={String(inventory.moduleCodeExercises + inventory.finalCodeExercises)} label={t('home.fde.statExercises')} />
+        </div>
+      ) : (
+        !entry && <p role="status">{t(catalog.isPending ? 'home.fde.loading' : 'home.fde.unavailable')}</p>
+      )}
+    </div>
   </section>;
 }

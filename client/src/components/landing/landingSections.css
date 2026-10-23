@@ -149,7 +149,14 @@
   border-radius: var(--radius-inner);
 }
 
-/* FDE outline uses the landing typography and waterline kicker. */
-.ss-fde-feature { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* The FDE section (UX audit shell-public-08): the pitch and its action on the
+   left, the path's size as four stats in a 2×2 grid on the right from 1024px,
+   stacked below that. No card: the section sits on the page like its
+   neighbours. */
+.ss-fde-feature { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; min-width: 0; }
+.ss-fde-feature__copy { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .ss-fde-feature p { margin: 0; max-width: 68ch; color: var(--color-text-secondary); line-height: 1.6; overflow-wrap: anywhere; }
-.ss-fde-feature .ss-fde-feature__inventory { color: var(--color-text-primary); font-size: var(--ss-type-compact); }
+.ss-fde-feature__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 32px; }
+@media (min-width: 1024px) {
+  .ss-fde-feature { grid-template-columns: minmax(0, 1fr) 320px; gap: 48px; align-items: center; }
+}
