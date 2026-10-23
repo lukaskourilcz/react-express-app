@@ -386,11 +386,17 @@
   .ss-brand-footer__meta { align-items: flex-start; flex-direction: column; }
 }
 
-.ss-info-page { width: 100%; max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
+/* The shared Page layout. It fills the route's page column (800px on every
+   Page route) and sets no max-width of its own, so every Page h1 starts at
+   the same x (UX audit shell-public-01); a task card inside it is
+   var(--ss-width-task). */
+.ss-info-page { width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
 .ss-info-page__header { display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; padding: 1rem 0; }
 .ss-info-page__header h1 { margin: 0; font: 800 var(--ss-type-title)/1.08 var(--font-family-heading); letter-spacing: -0.03em; }
 .ss-info-page__header p { max-width: 68ch; margin: 0; color: var(--color-text-secondary); font-size: 1.05rem; }
-.ss-info-page__kicker { color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); letter-spacing: 0.08em; text-transform: uppercase; }
+/* The kicker line is always there, empty when a Page passes none, so the h1
+   sits at one y on every Page (UX audit shell-public-13). */
+.ss-info-page__kicker { min-height: 1.4em; color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; }
 
 .topic-practice { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); padding: 14px 16px; }
 .topic-practice summary { cursor: pointer; font-weight: 700; }

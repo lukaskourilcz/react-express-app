@@ -1070,6 +1070,7 @@ export const en = {
   'classroomPage.create': 'Create a classroom',
   'classroomPage.join': 'Join with a room code',
   'classroomPage.note': 'Participants sign in, open the room link, and the host controls question progress.',
+  'notFoundPage.kicker': 'Page not found',
   'notFoundPage.title': 'That page is out of the water.',
   'notFoundPage.lead': 'The address may be old or incomplete. Your learning progress is safe.',
   'notFoundPage.home': 'Go home',
