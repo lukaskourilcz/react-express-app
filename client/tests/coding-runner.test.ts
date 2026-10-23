@@ -111,5 +111,5 @@ it('names a checker that ran out of stack a stopped type check, as Submit does',
   const onmessage = (self as unknown as { onmessage: (event: { data: unknown }) => Promise<void> }).onmessage;
   await onmessage({ data: { track: 'typescript', code: 'type Loop<T> = Loop<[T]>;', calls: ['f()'], expectations: [1], typeTests: [] } });
   expect(posted.map((message) => message.phase)).toEqual(['compiling', 'checking', 'done']);
-  expect(posted.at(-1)).toMatchObject({ codeError: TYPE_CHECK_STOPPED_MESSAGE, timedOut: true, check: null, results: [] });
+  expect(posted[posted.length - 1]).toMatchObject({ codeError: TYPE_CHECK_STOPPED_MESSAGE, timedOut: true, check: null, results: [] });
 });

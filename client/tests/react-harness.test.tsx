@@ -102,7 +102,8 @@ it('draws console lines together and keeps them in the settled run', async () =>
   expect(renders - before).toBeLessThanOrEqual(2);
   message({type:'console', token, level:'log', text:'last'});
   message({type:'done', token, passed:0, failed:0, total:0, ran:false});
-  expect((await run).logs.at(-1)).toEqual({level:'log', text:'last'});
+  const settled = await run;
+  expect(settled.logs[settled.logs.length - 1]).toEqual({level:'log', text:'last'});
   expect(hook.result.current.run?.logs).toHaveLength(51);
   hook.unmount();
   frame.remove();
