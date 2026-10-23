@@ -101,7 +101,7 @@ function PlayUnavailable() {
   const navigate = useNavigate();
   const t = useT();
   return (
-    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
       <Card padding={6} width="100%">
         <VStack gap={2} align="center">
           <Heading level={1} justify="center">{t('play.unavailableTitle')}</Heading>
@@ -176,7 +176,7 @@ export function PlayLanding() {
 
   if (!isAuthenticated) {
     return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
             <Heading level={1} justify="center">
@@ -844,7 +844,7 @@ function PlayRoom() {
 
   if (!isAuthenticated) {
     return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
             <Heading level={1} justify="center">{t('play.signInTitle')}</Heading>
@@ -870,7 +870,7 @@ function PlayRoom() {
 
   if (error && !match) {
     return (
-      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
         <VStack gap={2}>
           {/* The page's heading, so a match that cannot open still has one. */}
           <Heading level={1} type="display-3">{t('play.title')}</Heading>
@@ -897,8 +897,9 @@ function PlayRoom() {
   const currentQuestion = match.questions[match.current_index];
 
   return (
-    // Same question-column width as Quiz / Learn / Challenge.
-    <div style={{ maxWidth: 620, margin: '0 auto', width: '100%' }}>
+    // The shared task column (--ss-width-task, 640px) inside the route's page,
+    // as on Quiz, Learn and Challenge (UX audit social-account-01).
+    <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
       <VStack gap={2}>
         <HStack justify="between" align="center" gap={2}>
           <VStack gap={0}>

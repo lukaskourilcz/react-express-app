@@ -39,6 +39,19 @@ describe('pages fill the route width', () => {
     expect(source('components/Flashcards.tsx')).toContain('<div className="sc-deck">');
   });
 
+  it('the shared .de-page fills the route width, so /profile and /play take the standard width from the shell (social-account-01)', () => {
+    const dePage = rule(source('components/DeepEndScreens.css'), '.de-page');
+    expect(dePage).toContain('width:100%');
+    expect(dePage).not.toMatch(/max-width/);
+    expect(source('components/Profile.tsx')).not.toMatch(/maxWidth: 1000/);
+  });
+
+  it('the Play lobby and its gates use the shared 640px task column, not 620 or 480px (social-account-01)', () => {
+    const play = source('components/Play.tsx');
+    expect(play).not.toMatch(/maxWidth: (480|620)\b/);
+    expect(play).toMatch(/maxWidth: 'var\(--ss-width-task\)'/);
+  });
+
   it('gives the Leaderboard figures fixed 96px columns so the name takes the rest (social-account-02)', () => {
     expect(rule(source('components/Leaderboard.css'), '.lb-col-num')).toContain('width: 96px');
   });

@@ -167,7 +167,7 @@ function Profile() {
 
   if (error && !stats) {
     return (
-      <div className="de-page" style={{ maxWidth: 1000 }}>
+      <div className="de-page">
         <VStack gap={2}>
           <Heading level={1}>{t('nav.profile')}</Heading>
           <StreakCard stats={null} unavailable />
@@ -233,7 +233,7 @@ function ProfileBody({
   const [focusSharkname, setFocusSharkname] = useState(false);
 
   return (
-    <div className="de-page" style={{ maxWidth: 1000 }}>
+    <div className="de-page">
       <VStack gap={2}>
         {/* Identity header — subject-accented top edge, avatar and name on the
             left, the three account switches on the right. */}
