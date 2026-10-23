@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -66,8 +67,14 @@ describe('the Shark Cards deck', () => {
     serveDeck([LEARN_CARD, QUIZ_CARD]);
     await mount(<Flashcards />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Shark Cards' })).toBeInTheDocument();
-    expect(screen.getByText('Card 1 of 2')).toBeInTheDocument();
     const card = screen.getByRole('article');
+    // One label before the question (UX audit questions-14): the position sits
+    // in the card's meta row beside the topic, and no kicker or 'Question'
+    // side label repeats what the page and the card already say.
+    expect(within(card).getByText('Card 1 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Card 1 of 2' })).toContainElement(card);
+    expect(screen.queryByText('Saved questions')).toBeNull();
+    expect(within(card).queryByText('Question')).toBeNull();
     expect(within(card).getByText('What does typeof null return?')).toBeInTheDocument();
     expect(within(card).getByText('JavaScript')).toBeInTheDocument();
     expect(within(card).queryByText('"object"')).toBeNull();
@@ -93,6 +100,64 @@ describe('the Shark Cards deck', () => {
     expect(screen.getByText('Card 2 of 2')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Show the answer' }));
     expect(screen.getByRole('link', { name: 'Learn this topic: React' })).toHaveAttribute('href', '/learn?topic=react');
+  });
+
+  it('draws Previous and Next together on the left of the one action row, and Got it on its right (questions-14)', async () => {
+    signIn();
+    serveDeck([LEARN_CARD, QUIZ_CARD]);
+    await mount(<Flashcards />);
+    const previous = await screen.findByRole('button', { name: 'Previous' });
+    const row = previous.closest('.ss-question-actions');
+    expect(row).not.toBeNull();
+    const left = row!.querySelector('.ss-question-actions__secondary')!;
+    expect(left).toContainElement(previous);
+    expect(left).toContainElement(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('button', { name: 'Got it' })).toHaveAccessibleDescription(
+      'Got it takes the card out of your deck. The arrow keys move between cards.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Show the answer' }));
+    expect(row!.querySelector('.ss-question-actions__primary')).toContainElement(screen.getByRole('button', { name: 'Got it' }));
+  });
+
+  it('makes Show the answer the one filled primary face down, and Got it the one turned (social-account-19)', async () => {
+    signIn();
+    serveDeck([LEARN_CARD, QUIZ_CARD]);
+    await mount(<Flashcards />);
+    const card = await screen.findByRole('article');
+    // Face down: the card's turn button is the next step; Got it is a
+    // secondary at the right end of the row, and no SwimCta is drawn.
+    expect(card).toHaveAttribute('data-side', 'front');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(0);
+    const gotIt = screen.getByRole('button', { name: 'Got it' });
+    expect(gotIt).toHaveClass('sc-deck__got-it');
+    expect(gotIt).not.toHaveClass('ss-swim-cta');
+    expect(screen.getAllByRole('button', { name: 'Got it' })).toHaveLength(1);
+
+    // Turned: Got it is the one SwimCta, still described by the hint.
+    fireEvent.click(screen.getByRole('button', { name: 'Show the answer' }));
+    expect(card).toHaveAttribute('data-side', 'back');
+    const primaries = document.querySelectorAll('.ss-swim-cta');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveAccessibleName('Got it');
+    expect(primaries[0]).toHaveAccessibleDescription('Got it takes the card out of your deck. The arrow keys move between cards.');
+    expect(screen.getAllByRole('button', { name: 'Got it' })).toHaveLength(1);
+
+    // Got it from the turned card takes it out and the next card opens face down.
+    fireEvent.click(primaries[0]);
+    expect(await screen.findByText('Card 1 of 1')).toBeInTheDocument();
+    expect(screen.getByRole('article')).toHaveAttribute('data-side', 'front');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Show the answer' })).toHaveFocus());
+  });
+
+  it('announces the new position from the card as the deck steps (questions-14)', async () => {
+    signIn();
+    serveDeck([LEARN_CARD, QUIZ_CARD]);
+    await mount(<Flashcards />);
+    const position = await screen.findByText('Card 1 of 2');
+    expect(position).toHaveAttribute('aria-live', 'polite');
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    // The same live region, so a screen reader reads the change.
+    expect(position).toHaveTextContent('Card 2 of 2');
   });
 
   it('steps with Previous, Next and the arrow keys, and turns each new card face down', async () => {
@@ -187,6 +252,34 @@ describe('the Shark Cards deck', () => {
     fail = false;
     fireEvent.click(retry);
     expect(await screen.findByText(QUIZ_CARD.question)).toBeInTheDocument();
+  });
+});
+
+describe('the Shark Card layout', () => {
+  const css = readFileSync(new URL('../src/components/SharkCards.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = (selector: string) => css.match(new RegExp(`(?:^|[}\\s])${selector.replace(/[.]/g, '\\.')}\\s*\\{([^}]*)\\}`, 'm'))?.[1] ?? '';
+
+  it('hugs its content with no 300px floor, and keeps three lines for the question so a short one leaves the actions at one y (questions-14)', () => {
+    expect(rule('.sc-card')).not.toMatch(/min-height/);
+    // The card takes .ss-raised's edge like every card, with no accent top edge.
+    expect(rule('.sc-card')).not.toMatch(/border-top/);
+    expect(css).not.toMatch(/\.sc-card\.is-turned\s*\{/);
+    expect(css).not.toMatch(/min-height:\s*(300|260)px/);
+    expect(rule('.sc-card__question')).toContain('min-height: calc(3 * 1.55em)');
+  });
+
+  it('fills the face-down turn button with the accent and quiets it once turned (social-account-19)', () => {
+    expect(rule('.sc-card__turn')).toContain('background: var(--brand-accent)');
+    expect(rule('.sc-card__turn')).toContain('color: var(--brand-on-accent)');
+    expect(rule('.sc-card.is-turned .sc-card__turn')).toContain('background: transparent');
+    expect(rule('.sc-deck__actions .sc-deck__got-it')).toContain('margin-inline-start: auto');
+  });
+
+  it('darkens the filled turn button toward the ink on hover, never to the light accent under the dark label', () => {
+    // --brand-accent-hover is the light accent in dark mode as well, where the
+    // label is the dark --brand-on-accent: that pair falls below 4.5:1.
+    expect(rule('.sc-card__turn:hover')).toContain('color-mix(in srgb, var(--brand-accent) 85%, var(--ss-ink))');
+    expect(css).not.toContain('--brand-accent-hover');
   });
 });
 

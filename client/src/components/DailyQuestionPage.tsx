@@ -16,7 +16,7 @@
 //   checked            correct or not in words and colour, the right option
 //                      marked, the explanation, practice more and share
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
@@ -31,9 +31,10 @@ import { addDays, isIsoDate, qotdAvailability, qotdPath, qotdTrack, utcToday, ty
 import type { CategoryType } from '../types/quiz';
 import { renderQuestion } from './CodeBlock';
 import { CategoryTag } from './ui/CategoryTag';
-import { RadioCard, RadioCardGroup } from './ui/RadioCards';
+import { AnswerOptionList, QuestionActions, QuestionFeedback, QuestionShell } from './question';
+import { questionText } from '../i18n/translations.question';
 import { SaveSharkCard } from './SaveSharkCard';
-import BrandCase from './BrandCase';
+import { DailyHeader } from './DailyStaticArticle';
 import './DailyQuestion.css';
 
 const longDate = (iso: string) =>
@@ -64,12 +65,7 @@ export default function DailyQuestionPage() {
 
   return (
     <article className="ss-info-page ss-daily" aria-busy={query.isFetching || undefined}>
-      <header className="ss-info-page__header">
-        <span className="ss-info-page__kicker"><BrandCase text={t('daily.kicker')} /></span>
-        <h1>{track ? t('daily.title', { track: trackName }) : t('daily.titlePlain')}</h1>
-        {valid && <p className="ss-daily__date"><time dateTime={shownDate}>{longDate(shownDate)}</time></p>}
-        <p>{t('daily.lead')}</p>
-      </header>
+      <DailyHeader t={t} track={track ? trackName : undefined} date={valid ? shownDate : undefined} dateLabel={valid ? longDate(shownDate) : undefined} />
 
       {availability !== 'open' ? (
         <Unavailable problem={availability === 'not-yet' ? 'not-yet' : 'before-start'} date={valid ? date : null} />
@@ -141,6 +137,7 @@ function Unavailable({ problem, date, onRetry, focus = false }: { problem: QotdP
 
 function DailyQuestion({ data, onReload, focusQuestion }: { data: QotdResponse; onReload: () => void; focusQuestion: boolean }) {
   const t = useT();
+  const navigate = useNavigate();
   const questionId = useId();
   const [selected, setSelected] = useState<number | null>(null);
   const [checking, setChecking] = useState(false);
@@ -150,12 +147,6 @@ function DailyQuestion({ data, onReload, focusQuestion }: { data: QotdResponse; 
   const { question, track, date } = data;
   const trackName = t(categoryLabelKey(track));
   const url = useMemo(() => `${window.location.origin}${qotdPath(date)}`, [date]);
-  // The verdict takes the focus. Check answer leaves with the check, so focus
-  // fell to the page, and a live region drawn with its content is not read.
-  const verdictRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (result) verdictRef.current?.focus();
-  }, [result]);
   // Loaded again after an expired session, the question takes the focus the
   // Load it again button had.
   const questionRef = useRef<HTMLDivElement | null>(null);
@@ -191,40 +182,50 @@ function DailyQuestion({ data, onReload, focusQuestion }: { data: QotdResponse; 
   if (problem === 'expired') return <Unavailable problem="expired" date={date} onRetry={onReload} focus />;
 
   return (
-    <section className="ss-info-card ss-daily__card" aria-labelledby={questionId}>
-      <div className="ss-daily__meta">
-        <CategoryTag category={question.category as CategoryType} />
-        <Badge variant="neutral" label={t('challenge.difficultyLevel', { level: question.difficulty })} />
-      </div>
-      <div id={questionId} ref={questionRef} tabIndex={focusQuestion ? -1 : undefined} className="ss-daily__question">{renderQuestion(question.question)}</div>
-
-      <RadioCardGroup value={selected} onChange={(value) => { if (!result) setSelected(Number(value)); }} labelledBy={questionId}>
-        <div className="ss-daily__options">
-          {question.options.map((option, index) => {
-            const isCorrect = !!result && index === result.correctAnswer;
-            const isWrongPick = !!result && !result.isCorrect && index === result.selectedIndex;
-            return (
-              <RadioCard
-                key={index}
-                value={index}
-                index={index}
-                label={isCorrect ? `${option}, ${t('daily.correctOption')}` : isWrongPick ? `${option}, ${t('daily.yourPick')}` : option}
-                disabled={!!result || checking}
-                tone={isCorrect ? 'success' : 'default'}
-                padding={2}
-                className={isWrongPick ? 'ss-daily__option--wrong' : undefined}
-              >
-                <span className="ss-daily__option">
-                  <span className="ss-daily__option-key" aria-hidden>{index + 1}</span>
-                  <span>{option}</span>
-                  {isCorrect && <span className="ss-daily__option-mark">{t('daily.correctOption')}</span>}
-                  {isWrongPick && <span className="ss-daily__option-mark">{t('daily.yourPick')}</span>}
-                </span>
-              </RadioCard>
-            );
-          })}
+    // The shared question parts (UX audit U2, questions-01): the 640px shell,
+    // the one answer list with the right answer and a wrong pick marked in
+    // words, the verdict under it, and the one action row.
+    <QuestionShell
+      ref={questionRef}
+      questionId={questionId}
+      labelledBy={questionId}
+      stable={false}
+      focusable={focusQuestion}
+      header={
+        <div className="ss-daily__meta">
+          <CategoryTag category={question.category as CategoryType} />
+          <Badge variant="neutral" label={questionText('question.difficultyLevel', { level: question.difficulty })} />
         </div>
-      </RadioCardGroup>
+      }
+      question={renderQuestion(question.question)}
+      actions={
+        result ? (
+          <>
+            <QuestionActions
+              secondary={<Button variant="secondary" label={t('daily.share')} onClick={() => void onShare()} />}
+              primary={{ label: t('daily.practice', { track: trackName }), onClick: () => navigate(`/quiz?category=${encodeURIComponent(track)}`) }}
+            />
+            {/* Takes no space until it has something to say (questions-11):
+                empty, it kept a 1.4em line and two gaps under the actions. */}
+            <p className="ss-daily__status" role="status">
+              {share === 'shared' ? t('daily.shared') : share === 'copied' ? t('daily.copied') : share === 'failed' ? t('daily.copyFailed', { url }) : ''}
+            </p>
+          </>
+        ) : (
+          <QuestionActions
+            primary={{ label: t('daily.check'), onClick: () => void check(), disabled: selected === null || checking }}
+          />
+        )
+      }
+    >
+      <AnswerOptionList
+        options={question.options}
+        value={selected}
+        onChange={(index) => { if (!result) setSelected(index); }}
+        labelledBy={questionId}
+        disabled={!!result || checking}
+        grade={result ? { correct: result.correctAnswer, picked: result.selectedIndex } : null}
+      />
 
       {problem && (
         <div role="alert">
@@ -232,36 +233,19 @@ function DailyQuestion({ data, onReload, focusQuestion }: { data: QotdResponse; 
         </div>
       )}
 
-      {result ? (
-        <div className="ss-daily__result" ref={verdictRef} tabIndex={-1}>
-          <Banner
-            status={result.isCorrect ? 'success' : 'error'}
-            title={result.isCorrect ? t('daily.right') : t('daily.wrong')}
-            description={result.explanation || undefined}
-          />
+      {result && (
+        // Takes the focus: Check answer leaves with the check, so focus fell
+        // to the page, and a live region drawn with its content is not read.
+        <QuestionFeedback
+          status={result.isCorrect ? 'success' : 'error'}
+          title={result.isCorrect ? t('daily.right') : t('daily.wrong')}
+          description={result.explanation || undefined}
+        >
           {/* Shark Cards (owner decision 12): signed in, the question can be
               kept with the answer and explanation checked here. */}
           <SaveSharkCard question={question} correctIndex={result.correctAnswer} explanation={result.explanation ?? ''} />
-          <div className="ss-info-actions">
-            <Button variant="primary" as={Link} href={`/quiz?category=${encodeURIComponent(track)}`} label={t('daily.practice', { track: trackName })} />
-            <Button variant="secondary" label={t('daily.share')} onClick={() => void onShare()} />
-          </div>
-          <p className="ss-daily__status" role="status">
-            {share === 'shared' ? t('daily.shared') : share === 'copied' ? t('daily.copied') : share === 'failed' ? t('daily.copyFailed', { url }) : ''}
-          </p>
-          <p className="ss-daily__note">{t('daily.practiceNote')}</p>
-        </div>
-      ) : (
-        <div className="ss-info-actions">
-          <Button
-            variant="primary"
-            label={t('daily.check')}
-            onClick={() => void check()}
-            isDisabled={selected === null || checking}
-            isLoading={checking}
-          />
-        </div>
+        </QuestionFeedback>
       )}
-    </section>
+    </QuestionShell>
   );
 }

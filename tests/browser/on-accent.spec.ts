@@ -86,11 +86,13 @@ for (const theme of ['light', 'dark'] as const) {
   });
 
   for (const [topic, name] of [['HTML', /^Level 1: Structure/], ['CSS', /^Level 1: Cascade/], ['JavaScript', /^Level 1: Values/]] as const) {
-    test(`${theme}: a ${topic} level's start button reads on the topic colour`, async ({ page }) => {
+    // A level's Start is the screen's one SwimCta md on the brand accent (UX
+    // audit learn-04), no longer a block filled with the topic colour.
+    test(`${theme}: a ${topic} level's start button reads on the accent`, async ({ page }) => {
       await open(page, theme, '/learn');
       await page.getByRole('radio', { name: topic, exact: true }).click();
       await page.getByRole('button', { name }).click();
-      await expectReadable(page, '.rm-accent-btn');
+      await expectReadable(page, '.ss-question-actions .ss-swim-cta');
     });
   }
 

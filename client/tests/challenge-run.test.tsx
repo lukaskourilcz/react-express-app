@@ -42,6 +42,8 @@ const api = vi.hoisted(() => ({
   scores: [] as { name: string; runToken: string }[],
   /** The learner's Shark Cards (GET/POST /api/flashcards). */
   cards: [] as Record<string, unknown>[],
+  /** Question reports (POST /api/quiz/submit?resource=report). */
+  reports: [] as Record<string, unknown>[],
 }));
 
 vi.mock('../src/lib/api', async (importOriginal) => {
@@ -69,6 +71,10 @@ vi.mock('../src/lib/api', async (importOriginal) => {
       }));
       api.sessions.set(sessionId, new Set(questions.map((q) => q.id)));
       return { sessionId, runToken, questions };
+    }
+    if (parsed.pathname === '/api/quiz/submit' && parsed.searchParams.get('resource') === 'report') {
+      api.reports.push(JSON.parse(String(opts.body)) as Record<string, unknown>);
+      return { ok: true };
     }
     if (parsed.pathname === '/api/quiz/submit') {
       const body = JSON.parse(String(opts.body)) as Body;
@@ -135,14 +141,14 @@ const { default: Challenge } = await import('../src/components/Challenge');
 const PENDING = 'studyshark:pending-challenge-reward:v1';
 
 // The page holds its first draw for the board read, so it renders inside act.
-async function mount() {
+async function mount(onActiveChange?: (active: boolean) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   let view!: ReturnType<typeof render>;
   await act(async () => {
     view = render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[{ pathname: '/challenge', key: `v${Math.random()}` }]}>
-          <LanguageProvider><Challenge /></LanguageProvider>
+          <LanguageProvider><Challenge onActiveChange={onActiveChange} /></LanguageProvider>
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -191,6 +197,7 @@ beforeEach(() => {
   api.visible = false;
   api.scores.length = 0;
   api.cards.length = 0;
+  api.reports.length = 0;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -304,7 +311,9 @@ describe('the timeout strike', () => {
 });
 
 describe('focus at time up', () => {
-  it('goes to the verdict\'s button when the clock disabled the focused Submit', async () => {
+  // The verdict takes the focus the clock took away (UX audit U2,
+  // questions-01): Enter or the next Tab goes on from it to Next.
+  it('goes to the verdict when the clock disabled the focused Submit', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let timeouts = 0;
     api.grade = (body) => {
@@ -338,7 +347,12 @@ describe('focus at time up', () => {
     await screen.findByText('Time ran out. One strike.');
     await settle();
     fixup.disconnect();
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Next question|See result/ }));
+    expect(document.activeElement).toHaveClass('ss-question-feedback');
+    expect(document.activeElement).toHaveTextContent('Time ran out. One strike.');
+    // Enter on the verdict goes on to the next question.
+    fireEvent.keyDown(document.activeElement!, { key: 'Enter' });
+    await settle();
+    expect(shownQuestion()).toBe('Batch 1 question 2?');
   });
 });
 
@@ -646,12 +660,44 @@ describe('focus', () => {
 });
 
 describe('the verdict', () => {
-  it('is read from a live region that was on the page before the answer', async () => {
+  // UX audit U2, questions-01: the verdict sits in normal flow under the
+  // answers and takes the focus, so a screen reader reads it; it used to
+  // float over the answers it graded.
+  it('takes the focus under the answers, with its explanation', async () => {
     await mount();
     await start();
-    const regions = [...document.querySelectorAll('[aria-live]')];
     await answer('right');
-    expect(regions.some((region) => region.isConnected && region.textContent?.includes('Correct') && region.textContent.includes('Because.'))).toBe(true);
+    const verdict = document.activeElement as HTMLElement;
+    expect(verdict).toHaveClass('ss-question-feedback');
+    expect(verdict).toHaveTextContent('Correct');
+    expect(verdict).toHaveTextContent('Because.');
+    const list = screen.getByRole('radiogroup');
+    expect(list.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(verdict.closest('.ss-question__panel')).not.toBeNull();
+    expect(verdict.getAttribute('style') ?? '').not.toMatch(/absolute/);
+  });
+
+  it('marks the right answer and a wrong pick in words, not colour alone', async () => {
+    await mount();
+    await start();
+    await answer('wrong');
+    expect(screen.getByRole('radio', { name: 'right, Correct answer' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'wrong, Your pick' })).toBeDisabled();
+    expect(screen.getByText('Your pick')).toBeInTheDocument();
+  });
+
+  it('shows the one keyboard hint, naming what Enter does now', async () => {
+    await mount();
+    await start();
+    expect(screen.getByText('Press 1–2 to select')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'right' }));
+    expect(screen.getByText('Press 1–2 to select · Enter to submit')).toBeInTheDocument();
+    // Graded, no key picks an answer: the line keeps its place, hidden.
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await screen.findByRole('button', { name: /Next question|See result/ });
+    const hint = document.querySelector('.ss-question-hint')!;
+    expect(hint).toHaveAttribute('data-hidden', 'true');
+    expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
 });
 
@@ -786,5 +832,91 @@ describe('a run’s rank-up', () => {
     } finally {
       stop();
     }
+  });
+});
+
+// UX audit U2, questions-07: a live run hides the site chrome as the Quiz
+// does, so the run needs its own way out and its own report.
+describe('focus mode', () => {
+  const last = (list: boolean[]) => list[list.length - 1];
+  // jsdom has no modal dialogs; Astryx opens its dialogs with showModal().
+  const dialogProto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
+  dialogProto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
+  dialogProto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
+
+  it('is on while a run is live and off on the intro, the game over and when the page goes', async () => {
+    const active: boolean[] = [];
+    const view = await mount((on) => active.push(on));
+    expect(last(active)).toBe(false);
+    await start();
+    expect(last(active)).toBe(true);
+    await strikeOutNow();
+    expect(last(active)).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
+    await screen.findByText(/^Batch \d+ question \d+\?$/);
+    expect(last(active)).toBe(true);
+    view.unmount();
+    expect(last(active)).toBe(false);
+  });
+
+  it('offers Exit, which asks first and then leaves the run without saving it', async () => {
+    const active: boolean[] = [];
+    await mount((on) => active.push(on));
+    await start();
+    await answer('right');
+    await next();
+    fireEvent.click(screen.getByRole('button', { name: 'Exit run' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('The run ends here, and its score is not saved.')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep playing' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(shownQuestion()).toBe('Batch 1 question 2?');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Exit run' }));
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Leave run' }));
+    expect(await screen.findByRole('button', { name: 'Start' })).toBeInTheDocument();
+    // The intro's h1 takes the focus the Leave button had.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Biggest Shark Challenge' })));
+    expect(last(active)).toBe(false);
+    await settle();
+    expect(api.completions).toEqual([]);
+    expect(localStorage.getItem(PENDING)).toBeNull();
+  });
+
+  it('ends on the run’s action row, with Play again as the one SwimCta', async () => {
+    await mount();
+    await start();
+    await strikeOutNow();
+    const again = screen.getByRole('button', { name: 'Play again' });
+    expect(again).toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(again.closest('.ss-question-actions')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Back' }).closest('.ss-question-actions__secondary')).not.toBeNull();
+  });
+
+  it('rests the run keys while a dialog is open, so a digit or Enter in it acts on nothing behind it', async () => {
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('button', { name: 'Exit run' }));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.keyDown(dialog, { key: '1' });
+    fireEvent.keyDown(document.body, { key: '1' });
+    expect(screen.getByRole('radio', { name: 'right' })).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep playing' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    // Closed, the keys work again.
+    fireEvent.keyDown(document.body, { key: '1' });
+    expect(screen.getByRole('radio', { name: 'right' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('lets the learner report the question on screen', async () => {
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('button', { name: 'Report this question' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Send/ }));
+    await waitFor(() => expect(api.reports).toHaveLength(1));
+    expect(api.reports[0]).toMatchObject({ question_id: 'b1-q1', reason: 'incorrect-answer' });
+    expect(await screen.findByText('Thanks, report sent')).toBeInTheDocument();
   });
 });

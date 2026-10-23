@@ -13,7 +13,9 @@ import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { useT } from '../i18n/LanguageContext';
 
-type Reason = 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other';
+/** Why a learner reports a question; Quiz, Challenge and the Learn runner share it. */
+export type ReportReason = 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other';
+type Reason = ReportReason;
 
 const REASON_VALUES: Reason[] = ['incorrect-answer', 'unclear', 'typo', 'outdated', 'duplicate', 'other'];
 

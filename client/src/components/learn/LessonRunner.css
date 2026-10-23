@@ -1,0 +1,27 @@
+/* The Learn level runner's own pieces inside the shared question parts
+   (components/question/, UX audit U2). The column, panel, header, answers,
+   verdict and action row are the shared ones; these rules only set the
+   intro's text and the result screens' centred outcome. */
+
+/* "Before you start": the intro reads at body size in the question block. */
+.rm-intro__text { margin: 0; font-size: 1.02rem; font-weight: 400; line-height: 1.6; }
+.rm-intro__coding { margin: 12px 0 0; font-size: var(--ss-type-compact); font-weight: 400; color: var(--color-text-secondary); }
+
+/* A result: the outcome centred in the panel, the action row under it. The
+   body is the confetti's positioning box. */
+.rm-result__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  text-align: center;
+  font-weight: 400;
+}
+.rm-result__icon { margin-bottom: 8px; }
+.rm-result__score { font-size: 3rem; line-height: 1.1; font-weight: 800; color: var(--color-text-secondary); }
+.rm-result__score[data-passed] { color: var(--color-text-primary); }
+.rm-result__line { margin: 0; color: var(--color-text-secondary); }
+.rm-result__line[data-tone='success'] { color: var(--ss-success-strong, var(--ss-success)); font-weight: 600; }
+.rm-result__line[data-tone='warning'] { color: var(--ss-warning); font-weight: 600; }

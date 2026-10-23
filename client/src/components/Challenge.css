@@ -1,0 +1,60 @@
+/* The Biggest Shark Challenge run (UX audit U2). The run draws through the
+   shared question parts (components/question/); these rules are only its own
+   run status: the score, the clock and the fins on the header's first row. */
+
+.challenge-run__score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--color-text-secondary);
+}
+.challenge-run__score strong {
+  color: var(--brand-accent-on-soft, var(--brand-accent));
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+.challenge-run__clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: var(--radius-element);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-accent-on-soft, var(--brand-accent));
+  background: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+/* Under 15 seconds: the error colour. The digits say the time, and a polite
+   live region says the threshold once. */
+.challenge-run__clock[data-low] {
+  color: var(--ss-error);
+  background: color-mix(in srgb, var(--ss-error) 15%, transparent);
+}
+/* The h1, score, clock and fins share one row while they fit; on a narrow
+   phone the status takes a row of its own under the h1 instead of squeezing
+   the h1 into one word per line. */
+.challenge-run .ss-question-header__row:first-child { flex-wrap: wrap; row-gap: 8px; }
+
+/* The game over and error screens: the run's --ss-width-task column. */
+.challenge-end { width: 100%; max-width: var(--ss-width-task); margin: 0 auto; }
+
+/* The setup screen (UX audit U2, questions-10): the Quiz setup's layout, one
+   --ss-width-task column with the h1 and lead above one panel, then the top
+   scores as a short list under it. */
+.challenge-setup { width: 100%; max-width: var(--ss-width-task); margin: 0 auto; }
+.challenge-setup__panel { display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: var(--radius-container); }
+.challenge-setup__group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.challenge-setup__label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.challenge-setup__label-row .ss-text-links { margin: 0; }
+.challenge-setup__label { font-family: var(--font-family-heading); font-weight: 700; font-size: var(--ss-type-compact); }
+.challenge-setup__error { margin: 0; font-size: var(--ss-type-meta); font-weight: 600; color: var(--ss-error); }
+/* Empty, the reason takes no line but stays in the accessibility tree: a
+   live region that was display:none is not read when its words arrive. */
+.challenge-setup__error:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.challenge-setup__start { display: flex; align-items: center; }
+.challenge-setup__board { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; padding: 0 4px; }
+.challenge-setup__board-title { margin: 0; font-family: var(--font-family-heading); font-size: 1rem; font-weight: 700; }
+@media (max-width: 559px) {
+  .challenge-setup__panel { padding: 16px; }
+}

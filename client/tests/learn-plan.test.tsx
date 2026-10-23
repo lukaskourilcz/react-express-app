@@ -748,3 +748,147 @@ describe('the coding step and the account draft', () => {
     expect(seen.saves).toEqual([]);
   });
 });
+
+// UX audit U2 (learn-02, learn-03, learn-04, questions-01, questions-02): a
+// level draws through the shared question parts.
+describe('a level on the shared question parts', () => {
+  const swimCtas = () => document.querySelectorAll('.ss-swim-cta');
+
+  async function openLevel(playable: unknown = PLAYABLE, wrong = false) {
+    answer({
+      playable,
+      answer: wrong
+        ? () => HttpResponse.json({ selectedIndex: 1, correctAnswer: 0, isCorrect: false, explanation: 'The first option is first.' })
+        : undefined,
+    });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    return screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 });
+  }
+
+  it('keeps the intro and the questions in one 640px shell with the exit button in one place, and one primary', async () => {
+    const start = await openLevel();
+    const introShell = start.closest('.ss-question');
+    expect(introShell).not.toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Level 1 · Level 1 title' })).toBeInTheDocument();
+    expect(screen.getByText('Before you start')).toBeInTheDocument();
+    expect(swimCtas()).toHaveLength(1);
+    const exitOnIntro = screen.getByRole('button', { name: 'Exit lesson' });
+    expect(exitOnIntro.closest('.ss-question-header__tools')).not.toBeNull();
+    fireEvent.click(start);
+    const question = document.getElementById('lesson-question')!;
+    expect(question.closest('.ss-question')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Exit lesson' }).closest('.ss-question-header__tools')).not.toBeNull();
+    // Nothing to press before an answer: a press grades at once.
+    expect(swimCtas()).toHaveLength(0);
+  });
+
+  it('keeps the hint line and every option in place on grading, marks the pick and the key in words, and puts the verdict under them', async () => {
+    fireEvent.click(await openLevel(PLAYABLE, true));
+    const hint = screen.getByText('Press 1–2 to answer');
+    expect(hint).not.toHaveAttribute('data-hidden');
+    const list = screen.getByRole('radiogroup');
+    fireEvent.click(screen.getByRole('radio', { name: /Option B/ }));
+    const verdict = await screen.findByText('Incorrect');
+    // The hint keeps its line (hidden, not removed), so the answers above it
+    // and the verdict below it do not move.
+    expect(hint).toBeInTheDocument();
+    expect(hint).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getByRole('radio', { name: 'Option A, Correct answer' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Option B, Your pick' })).toBeInTheDocument();
+    // In normal flow after the list, inside the same panel; never over it.
+    const feedback = verdict.closest('.ss-question-feedback')!;
+    expect(feedback).not.toBeNull();
+    expect(list.compareDocumentPosition(feedback) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(feedback.closest('.ss-question__panel')).toBe(list.closest('.ss-question__panel'));
+    expect(screen.getByText('The first option is first.')).toBeInTheDocument();
+    // The one primary is the action row's SwimCta, and it takes focus.
+    const next = screen.getByRole('button', { name: 'Finish' });
+    expect(swimCtas()).toHaveLength(1);
+    expect(next.closest('.ss-question-actions')).not.toBeNull();
+    await waitFor(() => expect(next).toHaveFocus());
+  });
+
+  it('runs the skill check in the same shell: the round in the h1, the shared answer list and one primary', async () => {
+    const ask = (n: number) => ({ id: `p-${n}`, tags: [], introduction: '', question: `Placement question ${n}?`, options: ['Yes', 'No'], category: 'javascript', difficulty: 3 });
+    answer({ placement: { done: false, round: 1, totalRounds: 4, difficulty: 3, asked: 0, total: 20, idkCountsAsMiss: true, placementToken: 'token-1', questions: [ask(1), ask(2)] } });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    const start = screen.getByRole('button', { name: 'Start placement' });
+    expect(start.closest('.ss-question')).not.toBeNull();
+    expect(swimCtas()).toHaveLength(1);
+    fireEvent.click(start);
+    await screen.findByText('Placement question 1?', {}, { timeout: 3000 });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Find your level · Round 1 of 4');
+    expect(screen.getByRole('radiogroup').classList.contains('ss-answer-list')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Cancel' }).closest('.ss-question-header__tools')).not.toBeNull();
+    expect(swimCtas()).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'I don’t know yet' }));
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  });
+
+  it('reports only its live questions, so the app shell hides its header and footer then (questions-07)', async () => {
+    const seen: boolean[] = [];
+    const onActiveChange = (active: boolean) => { seen.push(active); };
+    answer({ playable: PLAYABLE });
+    await mountAt('/learn', <Roadmap onActiveChange={onActiveChange} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    const start = await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 });
+    // The intro keeps the chrome: nothing is live yet.
+    expect(seen[seen.length - 1] ?? false).toBe(false);
+    fireEvent.click(start);
+    await waitFor(() => expect(seen[seen.length - 1]).toBe(true));
+    fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    await screen.findByRole('heading', { name: 'Level complete' });
+    // The result brings the chrome back.
+    expect(seen[seen.length - 1]).toBe(false);
+  });
+
+  it('ends on a result with one primary in the shared action row', async () => {
+    fireEvent.click(await openLevel());
+    fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    const heading = await screen.findByRole('heading', { name: 'Level complete' });
+    expect(heading.closest('.ss-question')).not.toBeNull();
+    expect(swimCtas()).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Try again' }).closest('.ss-question-actions__secondary')).not.toBeNull();
+    // The score is text, so it keeps a text colour: the track colour
+    // (JavaScript's yellow) is under 3:1 on the panel.
+    const score = screen.getByText('100%');
+    expect(score).toHaveAttribute('data-passed', 'true');
+    expect(score.getAttribute('style')).toBeNull();
+  });
+
+  // UX audit learn-02: Continue sits under the verdict, so the page has
+  // scrolled down to reach it; the next question must open at its top, with
+  // its header and text in sight, and the intro takes focus on its h1.
+  it('opens the intro on its h1 and the next question at its top when the page has scrolled past it', async () => {
+    const scrolled: Element[] = [];
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value(this: HTMLElement) { scrolled.push(this); },
+    });
+    // The shell's top is above the screen, as after scrolling to Continue.
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { top: this.classList.contains('ss-question') ? -300 : 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} } as DOMRect;
+    });
+    try {
+      const second = { ...QUESTION, id: 'q-2', question: 'Which option is second?' };
+      const start = await openLevel({ ...PLAYABLE, questions: [QUESTION, second] });
+      // Focus moves in an effect after the intro paints; wait for it rather than
+      // read it in the same tick (it lagged on a loaded CI runner).
+      await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Level 1 · Level 1 title' })).toHaveFocus());
+      fireEvent.click(start);
+      fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Continue' }));
+      await waitFor(() => expect(document.getElementById('lesson-question')).toHaveFocus());
+      const shell = document.getElementById('lesson-question')!.closest('.ss-question');
+      expect(scrolled[scrolled.length - 1]).toBe(shell);
+    } finally {
+      rect.mockRestore();
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+});
