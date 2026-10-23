@@ -68,6 +68,22 @@ describe('BriefZone', () => {
     expect(css).toContain(".cd-brief__body[data-capped='true'] { max-height: var(--cd-brief-cap);");
     expect(css).toMatch(/\.cd-workbench--section \.cd-workbench__grid,\s*\.cd-workbench--lesson \.cd-workbench__grid,\s*\.cd-workbench--activity \.cd-workbench__grid \{ grid-template-rows: var\(--cd-frame-h\); \}/);
   });
+
+  it('puts the editor toolbar in the toggle row when the brief ends with its toggle, without covering it', () => {
+    const css = readFileSync(resolve(__dirname, '../src/coding/Coding.css'), 'utf8');
+    // 44px toggle + the brief's 4px margin + the pane's 12px gap.
+    expect(css).toContain('.cd-pane--editor > .cd-brief:has(> .cd-brief__toggle:last-child) + .cd-editor-slot > .cd-editor-bar { align-self: flex-end; align-items: center; min-height: 44px; margin-top: -60px; }');
+    expect(css).toMatch(/\.cd-brief \{[^}]*margin-bottom: 4px;/);
+    expect(css).toMatch(/\.cd-pane \{[^}]*gap: 12px;/);
+    // A capped brief ends with its toggle; a lock note under it comes last
+    // instead, and then the toolbar keeps its own row.
+    sizes(400, 120);
+    const { unmount } = render(<LanguageProvider><BriefZone label="Brief"><p>Prompt</p></BriefZone></LanguageProvider>);
+    expect(screen.getByRole('button', { name: 'Show full brief' }).nextElementSibling).toBeNull();
+    unmount();
+    render(<LanguageProvider><BriefZone label="Brief" after={<p>Lock note</p>}><p>Prompt</p></BriefZone></LanguageProvider>);
+    expect(screen.getByRole('button', { name: 'Show full brief' }).nextElementSibling).toBe(screen.getByText('Lock note'));
+  });
 });
 
 it('keeps a full brief that still runs past the frame scrollable from the keyboard', () => {

@@ -434,6 +434,14 @@
 /* The editor's own toolbar, above the code: Format and Reset as 36px icon
    buttons with a 44px hit area on a mouse (.ss-compact), 44px on touch. */
 .cd-editor-bar { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 6px; }
+/* A brief long enough to be capped ends with "Show full brief" at the start
+   of its own row, and the toolbar's two icons sit at the end of the next one.
+   They share one 44px row instead (UX audit coding-01): the toolbar is pulled
+   up past the toggle (44px), the brief's 4px margin and the pane's 12px gap,
+   so the editor starts 56px higher. The toolbar keeps its own width, so it
+   never covers the toggle, and the keyboard order stays toggle, Format,
+   Reset. */
+.cd-pane--editor > .cd-brief:has(> .cd-brief__toggle:last-child) + .cd-editor-slot > .cd-editor-bar { align-self: flex-end; align-items: center; min-height: 44px; margin-top: -60px; }
 .cd-actions--commands { gap: 8px 12px; }
 .cd-actions--commands button[aria-label] { min-width: 44px; min-height: 44px; }
 /* Save and report sit at the far end of the row, apart from the task's own actions. */
