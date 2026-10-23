@@ -406,6 +406,19 @@ describe('a topic Premium opens, on a free account (UX audit learn-22)', () => {
   });
 });
 
+describe('a topic whose first levels are free, on a free account (UX audit learn-22)', () => {
+  it('says the level Premium starts at, not that the whole topic is Premium', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    const passed = (count: number) => ({ levels: Object.fromEntries(levels(count).map(({ level: n }) => [String(n), { passed: true }])), checkpoints: {} });
+    answer({ javascript: passed(5), dsa: passed(5) });
+    await mountAt('/learn/software-engineer?topic=dsa');
+    const see = await screen.findByRole('button', { name: 'See Premium', description: 'From level 6, DSA Foundations is part of Premium' });
+    expect(screen.queryByText('DSA Foundations is part of Premium')).toBeNull();
+    fireEvent.click(see);
+    expect(sheets.calls).toEqual([{ kind: 'learn-level', ref: expect.anything() }]);
+  });
+});
+
 describe('one primary in a section the learner has not joined', () => {
   it('keeps the join as the one SwimCta, and the card of a shared open topic turns secondary', async () => {
     signIn({ devquiz_learning_preference_v1: FRONTEND });

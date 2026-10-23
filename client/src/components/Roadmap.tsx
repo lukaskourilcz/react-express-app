@@ -913,6 +913,9 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const headerJoins = section !== 'web-developer' && !authLoading && isAuthenticated && hasPlan && !isMember;
   const topicDone = passedLevelCount(progress, topic);
   const continueBarred = !!continueLevel && isBarred(lockOf({ kind: 'learn-level', topic, level: continueLevel.level }));
+  // React and DSA open their first levels to every account: there Premium
+  // starts at a level, not with the topic.
+  const premiumFrom = !!continueLevel && continueBarred && continueLevel.level > 1 && !isBarred(lockOf({ kind: 'learn-level', topic, level: 1 }));
   const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
   return (
@@ -1066,7 +1069,9 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
               <p id="rm-overview-step" className="rm-overview-step">
                 {continueLevel
                   ? continueBarred
-                    ? learnText('learn.overview.premium', { topic: t(categoryLabelKey(topic)) })
+                    ? premiumFrom
+                      ? learnText('learn.overview.premiumFrom', { n: continueLevel.level, topic: t(categoryLabelKey(topic)) })
+                      : learnText('learn.overview.premium', { topic: t(categoryLabelKey(topic)) })
                     : learnText('learn.overview.next', { n: continueLevel.level, total: levels.length, title: continueLevel.title })
                   : t('roadmap.progress', { done: topicDone, total: levels.length })}
               </p>

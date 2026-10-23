@@ -45,6 +45,7 @@ export const learnEn = {
   'learn.rail.notJoinedAria': '{topic}, not in your plan. Add {section} to open it.',
   'learn.overview.next': 'Level {n} of {total} · {title}',
   'learn.overview.premium': '{topic} is part of Premium',
+  'learn.overview.premiumFrom': 'From level {n}, {topic} is part of Premium',
   'learn.overview.seePremium': 'See Premium',
   'learn.empty.title': 'Nothing here is open yet',
   'learn.empty.body': 'Pass {count} levels of {prereq} to open {topic}.',
