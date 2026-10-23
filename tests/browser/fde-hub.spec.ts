@@ -64,6 +64,12 @@ for (const theme of ['light', 'dark'] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `reflow ${width}`).toBe(true);
     }
     await page.setViewportSize({ width: 360, height: 900 });
+    // On a phone every activity row has one shape: kind, minutes and state on
+    // the first line, the title under them (learn-12 review).
+    expect(await page.locator('.lp-activity--row').evaluateAll(rows => rows.filter(row => {
+      const box = (selector: string) => row.querySelector(selector)!.getBoundingClientRect();
+      return !(box('.lp-activity__title').top >= box('.lp-activity__kind').bottom - 1 && Math.abs(box('.lp-activity__minutes').top - box('.lp-activity__kind').top) < 4);
+    }).length)).toBe(0);
     // 200% text in a wide font (Verdana here, DejaVu Sans on the Linux runner):
     // no button label, status pill or long word may run past the column (B14, #510).
     const wide = await page.addStyleTag({ content: 'body, body * { font-family: Verdana, "DejaVu Sans", sans-serif !important; }' });

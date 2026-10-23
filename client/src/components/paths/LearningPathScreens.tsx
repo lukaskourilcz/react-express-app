@@ -150,7 +150,7 @@ function ActivityRow({
 }) {
   const t = useT();
   const kind = t(`paths.kind.${activity.kind}` as never);
-  const className = ['lp-activity', compact ? 'lp-activity--compact' : '', next ? 'lp-activity--next' : ''].filter(Boolean).join(' ');
+  const className = ['lp-activity', 'lp-activity--row', compact ? 'lp-activity--compact' : '', next ? 'lp-activity--next' : ''].filter(Boolean).join(' ');
   const body = (
     <>
       <span className="lp-activity__kind">{kind}</span>

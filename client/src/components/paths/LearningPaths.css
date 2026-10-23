@@ -204,8 +204,15 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 /* On the hub a row is one 48px line: kind · title · minutes. */
 .lp-activity--compact { flex-wrap: nowrap; min-height: 48px; padding-block: 8px; }
 .lp-activity--compact .lp-activity__title { flex: 1 1 auto; overflow-wrap: anywhere; }
+/* On a phone the title cannot share a line with the kind and the minutes,
+   and wrapping left each row a different shape (kind alone, minutes or the
+   glyph alone on a line). Every row takes the same two lines instead: kind,
+   minutes and state on the first, the title under them, the summary last. */
 @media (max-width: 30rem) {
-  .lp-activity--compact { flex-wrap: wrap; }
+  .lp-activity--row { flex-wrap: wrap; row-gap: 2px; }
+  .lp-activity--row > .lp-activity__kind { flex: 1 1 auto; min-width: 0; }
+  .lp-activity--row > .lp-activity__title { order: 1; flex: 1 1 100%; }
+  .lp-activity--row > .lp-activity__summary { order: 2; margin-top: 4px; }
 }
 
 /* The profile card can carry long goal names and every joined section's full
