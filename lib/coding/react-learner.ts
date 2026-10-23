@@ -4,11 +4,26 @@ import { types } from 'node:util';
 import type { Context } from 'node:vm';
 import { REACT_PROMISE_SOURCE } from './react-promise-source';
 import { UTC_TIME_SOURCE } from '../../shared/coding-utc-time';
+import { cutErrorText, dumpThrown } from './sandbox';
 
 // Only serialized values cross the WASM boundary. React, the DOM, the suite,
 // matchers and verdict never enter the learner engine as JavaScript objects.
 type Wire = null | string | number | boolean | { u: 1 } | { num: string } | { big: string } | { g: number; kind: string } | { h: number; kind: string } | { list: Wire[] };
 type HostCapability = { value: any; get: Set<string>; set: Set<string>; bound: boolean; invoke?: (...args: any[]) => any; record?: Set<string> };
+
+/** A value the engine threw, as the grader's sandbox reads one: a thrown
+ * string is its own text, an error is its message, and anything else (a
+ * promise, an error whose message getter throws) is `fallback`. Cut like a
+ * console line, so a five-megabyte message does not leave the engine whole. */
+function thrownText(detail: unknown, fallback: string): string {
+  const message = typeof detail === 'string' ? detail
+    : detail && typeof detail === 'object' && typeof (detail as { message?: unknown }).message === 'string' ? (detail as { message: string }).message : '';
+  return cutErrorText(message || fallback);
+}
+const thrownField = (detail: unknown, key: 'name' | 'stack'): string | undefined => {
+  const value = detail && typeof detail === 'object' ? (detail as Record<string, unknown>)[key] : undefined;
+  return typeof value === 'string' && value ? cutErrorText(value) : undefined;
+};
 
 const publicRecordKey = (key: string): boolean => !key.startsWith('_') && !['constructor', 'prototype'].includes(key);
 
@@ -196,7 +211,7 @@ export async function createReactLearner(input: {
   let next=1;
   const evaluate=(source:string): QuickJSHandle => {
     const result=vm.evalCode(source,'learner.js');
-    if(result.error) { const detail=vm.dump(result.error); result.error.dispose(); throw new Error(detail?.message||'Learner engine failed'); }
+    if(result.error) throw new Error(thrownText(dumpThrown(vm,result.error),'Learner engine failed'));
     return result.value;
   };
   const invoke=(message:Record<string,unknown>): any => {
@@ -204,7 +219,7 @@ export async function createReactLearner(input: {
     expires=Date.now()+2500;
     const argument=vm.newString(JSON.stringify(message));
     const result=vm.callFunction(command,vm.undefined,argument); argument.dispose();
-    if(result.error) { const detail=vm.dump(result.error); result.error.dispose(); const error=input.makeError(detail?.message||'Learner engine failed',detail?.name||'Error'); if(detail?.stack) error.stack=detail.stack; throw error; }
+    if(result.error) { const detail=dumpThrown(vm,result.error); const error=input.makeError(thrownText(detail,'Learner engine failed'),thrownField(detail,'name')||'Error'); const stack=thrownField(detail,'stack'); if(stack) error.stack=stack; throw error; }
     const value=JSON.parse(vm.getString(result.value)); result.value.dispose(); return value;
   };
   const capability=(value:any,get:string[]=[],set:string[]=[],call?: (...args:any[])=>any,kind?:string,bound=false,record?:string[]): Wire => {
@@ -412,7 +427,7 @@ export async function createReactLearner(input: {
   if(parsed.error) throw new Error('Invalid learner roots');
   const initialized=vm.callFunction(factory,vm.undefined,request,schedule,report,parsed.value);
   factory.dispose();request.dispose();schedule.dispose();report.dispose();parsed.value.dispose();
-  if(initialized.error) {const detail=vm.dump(initialized.error); initialized.error.dispose(); vm.dispose();runtime.dispose(); throw new Error(detail.message);}
+  if(initialized.error) {const message=thrownText(dumpThrown(vm,initialized.error),'Learner engine failed'); vm.dispose();runtime.dispose(); throw new Error(message);}
   command=initialized.value;
   const load=(name:string,source:string): any => {
     const loader=evaluate(`(require,module,exports)=>{${source}\n}`);
@@ -420,7 +435,7 @@ export async function createReactLearner(input: {
     // loader, command nor eval/Function is exposed to the learner module.
     const data=vm.newString(JSON.stringify({op:'module',name}));
     const loaded=vm.callFunction(command,vm.undefined,data,loader); data.dispose();loader.dispose();
-    if(loaded.error) {const detail=vm.dump(loaded.error); loaded.error.dispose(); throw new Error(detail.message);}
+    if(loaded.error) throw new Error(thrownText(dumpThrown(vm,loaded.error),'threw a value with no message'));
     const wire=JSON.parse(vm.getString(loaded.value)); loaded.value.dispose();return decode(wire);
   };
   try {
