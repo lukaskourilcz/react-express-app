@@ -335,6 +335,40 @@ describe('the sign-in dialog', () => {
     expect(within(dialog).getByRole('heading', { name: 'Sign in to devShark' })).toBeInTheDocument();
   });
 
+  it('sends one sign-in, one account and one reset link for a press that lands twice', async () => {
+    server.use(
+      http.post(`${AUTH}/token`, () => authError(400, 'invalid_credentials', 'Invalid login credentials')),
+      http.post(`${AUTH}/signup`, () => gotrueOk(emailUser({ confirmed: false }))),
+      http.post(`${AUTH}/recover`, () => gotrueOk({})),
+    );
+    const { dialog } = await openDialog();
+    type(field(dialog, 'Email'), 'ada@example.com');
+    type(field(dialog, 'Password'), 'correct horse battery');
+    // A double click, or Enter twice: both presses run before React draws the
+    // first one's busy state.
+    const twice = () => act(() => {
+      const form = dialog.querySelector('form')!;
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    twice();
+    await within(dialog).findByRole('alert');
+    expect(calls('/token')).toHaveLength(1);
+
+    signUpTab(dialog);
+    type(field(dialog, 'Password'), 'correct horse battery');
+    twice();
+    await within(dialog).findByRole('heading', { name: 'Check your inbox' });
+    expect(calls('/signup')).toHaveLength(1);
+
+    press(dialog, 'Use a different email');
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Sign in' }));
+    press(dialog, 'Forgot password?');
+    twice();
+    await within(dialog).findByRole('heading', { name: 'Check your inbox' });
+    expect(calls('/recover')).toHaveLength(1);
+  });
+
   it('closes on its close button and gives focus back to what opened it', async () => {
     const { dialog } = await openDialog();
     press(dialog, 'Close');
