@@ -144,6 +144,11 @@ async function qualityOp(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET, POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  // `?categories=a&categories=b` arrives as an array, which was read as no
+  // filter at all and scanned (or, on POST, stored) the whole bank.
+  if (req.query.categories !== undefined && typeof req.query.categories !== 'string') {
+    return jsonError(res, 400, 'bad_request', 'categories must be one comma-separated list');
+  }
   const rawCategories = typeof req.query.categories === 'string'
     ? req.query.categories.split(',').map((value) => value.trim()).filter(Boolean)
     : [];

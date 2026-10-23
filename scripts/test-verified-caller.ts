@@ -490,6 +490,14 @@ async function main() {
     }
     console.log('PASS verified caller: an admin write logs the admin account that made it');
 
+    // A quality scan names its categories once: a repeated parameter arrives
+    // as an array, which read as no filter and scanned the whole bank.
+    const repeated = await admin('quality', { query: { categories: ['react', 'css'] as unknown as string } });
+    assert.equal(repeated.statusCode, 400, 'a repeated categories parameter is refused');
+    const scoped = await admin('quality', { query: { categories: 'react,css' } });
+    assert.equal(scoped.statusCode, 200, `a quality scan of two categories answers (${errorCode(scoped)})`);
+    console.log('PASS verified caller: a quality scan refuses a repeated categories parameter');
+
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
       ['stats', await user('stats', { account: A })],
@@ -646,6 +654,29 @@ async function main() {
     assert.equal(timedOut.statusCode, 503, `a handler whose Supabase call timed out answers 503, not 500 (${JSON.stringify(timedOut.body)})`);
     assert.equal(errorCode(timedOut), 'upstream_timeout');
     console.log('PASS verified caller: a Supabase timeout answers 503 upstream_timeout');
+
+    // ── the distributed limiter down ─────────────────────────────────────
+    // Every Upstash command fails here. A request still passes on the
+    // in-memory bucket, and right after a failure the next one does not ask
+    // Upstash again: a hung Upstash held each bucket for the whole deadline.
+    {
+      const clock = Date.now;
+      const later = clock() + 3_600_000;
+      Date.now = () => later;
+      try {
+        const bucket = { key: `limiter-pause-${later}`, capacity: 5, refillPerSecond: 1 };
+        const req = { headers: { 'x-forwarded-for': nextAddress() }, socket: {} } as never;
+        upstashCommands.length = 0;
+        assert.equal(await rateLimit.enforceRateLimit(req, mockResponse() as never, bucket), true, 'a limiter outage lets the request through');
+        const asked = upstashCommands.length;
+        assert.ok(asked > 0, 'the first request asks Upstash');
+        assert.equal(await rateLimit.enforceRateLimit(req, mockResponse() as never, bucket), true);
+        assert.equal(upstashCommands.length, asked, 'the next one, just after the failure, keeps to the in-memory bucket');
+      } finally {
+        Date.now = clock;
+      }
+    }
+    console.log('PASS verified caller: a failing distributed limiter is not asked again straight away');
 
     // ── what an escaped error logs ───────────────────────────────────────
     const { AuthError } = await import('../lib/auth');
