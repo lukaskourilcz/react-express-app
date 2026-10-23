@@ -84,7 +84,11 @@ it('waits for the account before choosing, and offers the first challenge to a v
   view.rerender(tree());
   expect(within(card()).getByText('Digit sum')).toBeInTheDocument();
   expect(within(card()).getByRole('button', { name: 'Continue' })).toBeEnabled();
-  expect(screen.getByText(/Sign in to keep your progress/)).toBeInTheDocument();
+  // UX audit coding-10: once, as a line under the subtitle, not a tinted bar.
+  const hints = screen.getAllByText(/Sign in/);
+  expect(hints).toHaveLength(1);
+  expect(hints[0]).toHaveClass('cd-signin-line');
+  expect(hints[0].closest('header')).toContainElement(screen.getByRole('heading', { level: 1 }));
 });
 
 it('says when progress did not load and retries on request, instead of guessing', () => {

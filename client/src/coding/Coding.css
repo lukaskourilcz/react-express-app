@@ -34,6 +34,7 @@
 .cd-page h1 { margin: 0; font-family: var(--font-family-heading); letter-spacing: -0.015em; }
 .cd-page h2 { margin: 0; font-family: var(--font-family-heading); }
 .cd-lead { margin: 6px 0 0; color: var(--color-text-secondary); max-width: 62ch; }
+.cd-signin-line { margin: 6px 0 0; max-width: 68ch; font-size: 0.9rem; color: var(--color-text-secondary); }
 .cd-page a.cd-link { color: var(--color-text-accent); font-weight: 600; }
 
 /* ── section lists ─────────────────────────────────────────────────────── */

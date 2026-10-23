@@ -254,6 +254,14 @@ function PremiumRuleNote({ challenges }: { challenges: readonly { stages: readon
   return <p className="ss-premium-note cd-projects__rule"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
 }
 
+/** Signed out, what a pass needs: said once per screen, as one quiet line
+ * under the page lead (UX audit coding-10), not a tinted bar and not again in
+ * a list's intro. The header's Sign in button is the way to act on it. */
+function SignInLine() {
+  const { t } = useLanguage();
+  return <p className="cd-signin-line">{t('coding.signInHint')}</p>;
+}
+
 /* ── /coding ──────────────────────────────────────────────────────────── */
 /** The evolving projects of one category (the plain ones, the FullStack
  * builds or the debugging paths), or with `track`, the short paths of one
@@ -263,7 +271,6 @@ function PremiumRuleNote({ challenges }: { challenges: readonly { stages: readon
  * home holds the long projects only. `listedChallenges` decides. */
 function EvolvingGallery({ passed, premiumOf, category, track }: { passed: ReadonlySet<string>; premiumOf: (taskId: string) => LockState; category?: EvolvingCategory; track?: CodingTrack }) {
   const { t } = useLanguage();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
   const fullstack = category === 'fullstack';
@@ -293,7 +300,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
   return <section className="cd-projects" aria-labelledby={titleId}>
     <div className="cd-projects__intro">
     <Kicker as="h2" id={titleId}>{t(titleKey)}</Kicker>
-    <p className="cd-lead">{t(bodyKey)}{(bodyKey === 'coding.evolving.body' || bodyKey === 'coding.evolving.pathsBody') && !authLoading && !isAuthenticated && <> {t('coding.evolving.signIn')}</>}</p>
+    <p className="cd-lead">{t(bodyKey)}</p>
     {anyLocked && <PremiumRuleNote challenges={challenges} />}
     </div>
     <div className="cd-projects__body">
@@ -383,10 +390,10 @@ export function CodingHome() {
         <header>
           <Kicker as="h1" className="ss-section-title">{t('coding.title')}</Kicker>
           <p className="cd-lead">{t('coding.subtitle')}</p>
+          {!authLoading && !isAuthenticated && <SignInLine />}
         </header>
         <NextChallenge next={next} state={nextState} onRetry={() => void progress.refetch()} />
       </div>
-      {!authLoading && !isAuthenticated && <p className="cd-note">{t('coding.signInHint')}</p>}
       <section aria-label={t('coding.title')} className="cd-track-directory">
         {CODING_SECTION_TRACKS.map((track) => {
           const tasks = SECTION_INDEX.filter((task) => task.track === track);
@@ -472,7 +479,7 @@ export function CodingTrackScreen() {
   const { t } = useLanguage();
   const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { passed, statusOf, lockReason, premiumOf, planLoading, planFailed, retryPlan } = useStatuses(progress.data);
   const track = isCodingSectionTrack(trackParam) ? trackParam : null;
@@ -574,6 +581,7 @@ export function CodingTrackScreen() {
       <header>
         <Kicker as="h1" className="ss-section-title">{t(`coding.track.${track}` as never)}</Kicker>
         <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
+        {!authLoading && !isAuthenticated && <SignInLine />}
         <div style={{ marginTop: 12, maxWidth: 420 }}>
           <WaterlineProgress decorativeFins value={tasks.length ? (100 * done) / tasks.length : 0} label={t('coding.progress', { passed: done, total: tasks.length })} />
           <p className="cd-track__count" style={{ margin: '6px 0 0' }}>{t('coding.progress', { passed: done, total: tasks.length })}</p>

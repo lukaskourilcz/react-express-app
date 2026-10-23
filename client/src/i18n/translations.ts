@@ -28,7 +28,6 @@ export const en = {
   'coding.evolving.title': 'Evolving challenges',
   'coding.evolving.body': 'Projects of 10–12 stages, each building on your code.',
   // Said only to a visitor who is signed out (audit C5-7).
-  'coding.evolving.signIn': 'Sign in to save progress.',
   'coding.evolving.previous': 'Requirements from earlier stages',
   'coding.evolving.stageShort': 'Stage {n}',
   // Debugging paths (#225): three short paths replace the one long project.
