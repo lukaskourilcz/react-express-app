@@ -406,6 +406,8 @@ function Roadmap() {
   const [readingLessonId, setReadingLessonId] = useState<string | null>(null);
   const [lessonError, setLessonError] = useState<string | null>(null);
   const lessonAbortRef = useRef<AbortController | null>(null);
+  // Leaving Learn while a level loads drops its request too.
+  useEffect(() => () => lessonAbortRef.current?.abort(), []);
   const learningXpBeforeAttemptRef = useRef(0);
 
   // Skill check (assessment) state. `open` controls the modal; the runner

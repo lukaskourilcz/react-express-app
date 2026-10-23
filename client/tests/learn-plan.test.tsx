@@ -2,7 +2,7 @@
 // account's verified record and unlocks, and the life of a level's session.
 // Each screen is rendered with invented fixtures in the real response shapes.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -436,6 +436,21 @@ describe('a level whose session cannot be used', () => {
     expect(await screen.findByRole('heading', { name: 'Not passed' })).toBeInTheDocument();
     expect(screen.getByText('1 coding tasks still to pass')).toBeInTheDocument();
     expect(screen.queryByText(/Coding tasks are not checked while you’re signed out/)).toBeNull();
+  });
+
+  it('drops a level’s request when the learner leaves Learn while it loads', async () => {
+    answer();
+    let signal: AbortSignal | null = null;
+    server.use(http.get('*/api/quiz/roadmap', ({ request }) => {
+      if (!new URL(request.url).searchParams.get('level')) return undefined;
+      signal = request.signal;
+      return new Promise<Response>(() => {});
+    }));
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    await waitFor(() => expect(signal).not.toBeNull());
+    cleanup();
+    await waitFor(() => expect(signal!.aborted).toBe(true));
   });
 
   // Two answer keys pressed before the first one re-rendered each sent an
