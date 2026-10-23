@@ -176,7 +176,10 @@ export function PremiumCheckoutPage() {
               <p className="ss-text-links"><Link to="/terms">{t('legal.link.terms')}</Link><Link to="/privacy">{t('legal.link.privacy')}</Link></p>
               <CheckboxInput value={consent} onChange={setConsent} label={t('billing.checkout.consent')} isRequired isDisabled={busy || ready} />
               {!ready && <Button label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
-              {busy && <p role="status">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
+              {busy && <p aria-hidden="true">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
+              {/* A live region mounted with its words is not announced, so this
+                  one stays on the page and only its text changes. */}
+              <p className="ss-sr-only" role="status">{busy ? t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading') : ''}</p>
             </>}
       {error && <p role="alert">{error}</p>}
       <div id="checkout-form" className="ss-checkout-form" data-ready={ready} ref={formHost} tabIndex={-1} />

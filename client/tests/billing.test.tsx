@@ -130,6 +130,28 @@ describe('the embedded checkout', () => {
     expect(screen.queryByText('Everything is open now.')).not.toBeInTheDocument();
   });
 
+  it('announces loading and checking in a status line that is on the page before it speaks', async () => {
+    signIn(); serve({ billing: { enabled: true, cancellable: true, seller: 'trader' } }); const ui = stripeUi('form');
+    renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
+    await screen.findByRole('checkbox');
+    // Mounted empty: a region inserted with its words is not read out.
+    const statusLine = () => document.querySelector<HTMLElement>('.ss-checkout-card p[role="status"]');
+    const status = statusLine()!;
+    expect(status).not.toBeNull();
+    expect(status).toHaveTextContent('');
+    await acceptAndOpen();
+    expect(status).toHaveTextContent('Opening secure payment');
+    await waitFor(() => expect(ui.on).toHaveBeenCalled());
+    await waitFor(() => expect(status).toHaveTextContent(''));
+    let settle!: (value: { type: string }) => void;
+    ui.confirm.mockReturnValue(new Promise((done) => { settle = done; }));
+    act(() => { void ui.on.mock.calls[0][1]({ type: 'confirm' }); });
+    expect(statusLine()).toBe(status);
+    expect(status).toHaveTextContent('Checking with Stripe');
+    await act(async () => { settle({ type: 'success' }); });
+    expect(status).toHaveTextContent('');
+  });
+
   it('handles expiry with a new consent step and destroys the expired form', async () => {
     signIn(); serve(); const ui = stripeUi('embedded_page', Math.floor(Date.now() / 1000) - 1);
     renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
