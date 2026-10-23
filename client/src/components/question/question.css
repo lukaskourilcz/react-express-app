@@ -57,6 +57,9 @@
   line-height: 1.3;
   letter-spacing: -0.01em;
 }
+.ss-question-header__run { color: var(--color-text-secondary); font-weight: 600; }
+.ss-question-header__title:focus { outline: none; }
+.ss-question-header__title:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .ss-question-header__progress { flex: 1 1 auto; min-width: 48px; }
 .ss-question-header__status { flex: none; margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: var(--ss-type-compact); font-weight: 600; }
 .ss-question-header__meta { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }

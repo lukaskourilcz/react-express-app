@@ -338,3 +338,8 @@ their props), never drawn again by hand.
   secondaries on the left, the one primary (`SwimCta` md) on the right. On a
   phone the primary is the last row at full width and the secondaries share
   the row above, so the next step is in the same place on every runner.
+- **One header with the screen's h1.** `QuestionHeader` names the run in the
+  `h1` ("Quiz · Question 3 of 10") at one compact size, with progress and
+  status on the first row and tags plus 44px icon buttons (hint, report,
+  exit) on the second. The question text and code span the whole panel; no
+  icon sits beside them.

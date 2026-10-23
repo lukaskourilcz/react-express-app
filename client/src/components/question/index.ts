@@ -4,3 +4,12 @@
 export { QuestionShell, type QuestionShellProps } from './QuestionShell';
 export { AnswerOptionList, type AnswerOptionListProps, type AnswerGrade } from './AnswerOptionList';
 export { QuestionActions, type QuestionActionsProps, type QuestionPrimaryAction } from './QuestionActions';
+export {
+  QuestionHeader,
+  QuestionIconButton,
+  HintIcon,
+  ReportFlagIcon,
+  ExitIcon,
+  type QuestionHeaderProps,
+  type QuestionIconButtonProps,
+} from './QuestionHeader';

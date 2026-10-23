@@ -378,6 +378,7 @@ export const en = {
   // Question screens: the shared parts in components/question/ (UX audit U2)
   'question.correctAnswer': 'Correct answer',
   'question.yourPick': 'Your pick',
+  'question.difficultyLevel': 'Difficulty {level}',
 
   // Quiz, in progress
   'quiz.questionOf': 'Question {current} of {total}',
