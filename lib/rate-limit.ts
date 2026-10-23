@@ -408,6 +408,14 @@ async function withLimiterDeadline<T>(promise: Promise<T>, timeoutMs = 500): Pro
   }
 }
 
+// After Upstash fails, this instance keeps to its in-memory buckets for a
+// while instead of asking again. A hung Upstash otherwise held every request
+// for the whole deadline once per bucket it takes (two or three per request),
+// and a Redis that refuses every call cost each bucket a round trip for
+// nothing.
+const LIMITER_PAUSE_MS = 15_000;
+let limiterPausedUntil = 0;
+
 /**
  * Enforce a rate limit, preferring the distributed Upstash backend and falling
  * back to the in-memory token bucket. Returns true if the request may proceed,
@@ -422,6 +430,7 @@ export async function enforceRateLimit(
   /** Who the bucket belongs to, such as `user:<id>`; the client IP when omitted. */
   identity?: string,
 ): Promise<boolean> {
+  if (Date.now() < limiterPausedUntil) return checkRateLimit(req, res, config, identity);
   const limiter = await getUpstashLimiter(config);
   if (!limiter) return checkRateLimit(req, res, config, identity);
 
@@ -437,6 +446,7 @@ export async function enforceRateLimit(
   } catch {
     // Redis unreachable mid-request — never hard-fail on the limiter; fall back
     // to the in-memory bucket so the endpoint stays available.
+    limiterPausedUntil = Date.now() + LIMITER_PAUSE_MS;
     return checkRateLimit(req, res, config, identity);
   }
 }
