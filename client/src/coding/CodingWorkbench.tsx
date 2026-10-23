@@ -1403,6 +1403,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 tabIndex={tab === one.key ? 0 : -1}
                 ref={(node) => { tabRefs.current[one.key] = node; }}
                 className="cd-tab"
+                data-tab={one.key}
                 onClick={() => setTab(one.key)}
               >
                 {one.label}

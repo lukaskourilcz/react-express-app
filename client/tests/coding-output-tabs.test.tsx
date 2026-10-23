@@ -2,6 +2,7 @@
 // the shared tabs keep their place, and React opens on Results like the rest,
 // with an empty preview that takes no room until a run draws into it.
 import { beforeEach, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -69,4 +70,16 @@ it('opens React on Results, keeps the empty preview to one line, and shows the p
   // Later runs go back to the checks the learner has to pass.
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Run' })); });
   expect(screen.getByRole('tab', { name: /Results/ })).toHaveAttribute('aria-selected', 'true');
+});
+
+it('scrolls the tab strip instead of squeezing its tabs, and drops the Resources count on a phone (coding-12)', () => {
+  mount('javascript');
+  expect(screen.getByRole('tab', { name: /Resources/ })).toHaveAttribute('data-tab', 'resources');
+  const css = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+  const tab = css.slice(css.indexOf('.cd-tab {'), css.indexOf('}', css.indexOf('.cd-tab {')));
+  expect(tab).toContain('flex: none;');
+  expect(css).toMatch(/\.cd-tabs \{[^}]*overflow-x: auto;[^}]*mask-image: linear-gradient\(to right, #000 calc\(100% - 16px\), transparent\);/);
+  const phone = css.slice(css.indexOf('@media (max-width: 599px)'));
+  expect(phone).toMatch(/\.cd-tab \{ padding: 8px; font-size: 0\.9rem; \}/);
+  expect(phone).toMatch(/\.cd-tab\[data-tab='resources'\] \.cd-tab__badge \{ display: none; \}/);
 });

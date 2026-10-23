@@ -424,8 +424,21 @@
 .cd-note--error { background: var(--ss-error-soft); }
 
 /* tabs */
-.cd-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--ss-card-line); overflow-x: auto; }
+/* The strip scrolls rather than squeezing its tabs (UX audit coding-12): a
+   tab keeps its natural width, so no label is clipped. The far edge fades
+   over 16px, and the strip ends with 16px of room, so the last tab clears
+   the fade once scrolled to. */
+.cd-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--ss-card-line);
+  overflow-x: auto;
+  padding-inline-end: 16px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
 .cd-tab {
+  flex: none;
   min-height: 44px;
   padding: 8px 12px;
   border: 0;
@@ -445,6 +458,12 @@
 .cd-tab__badge { font-size: 0.78rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--color-background-muted); color: var(--color-text-primary); }
 .cd-tab__badge--good { background: var(--ss-success-soft); }
 .cd-tab__badge--bad { background: var(--ss-error-soft); }
+/* A phone: tighter tabs, and Resources drops its count (its label says
+   enough), so four plain tabs fit a 328px strip. */
+@media (max-width: 599px) {
+  .cd-tab { padding: 8px; font-size: 0.9rem; }
+  .cd-tab[data-tab='resources'] .cd-tab__badge { display: none; }
+}
 .cd-output-scroll { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cd-panel { display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
 .cd-panel[hidden] { display: none; }
@@ -748,7 +767,7 @@
 
 
 /* Compact samples keep every output tab readable instead of clipping labels. */
-.cd-workbench--landing .cd-tabs { flex-wrap: wrap; overflow-x: visible; }
+.cd-workbench--landing .cd-tabs { flex-wrap: wrap; overflow-x: visible; padding-inline-end: 0; -webkit-mask-image: none; mask-image: none; }
 .cd-workbench--landing .cd-tab { flex: 0 0 auto; min-height: 44px; padding: .5rem; font-size: .75rem; }
 
 .cd-complete { width: 100%; max-width: 640px; margin-inline: auto; }
