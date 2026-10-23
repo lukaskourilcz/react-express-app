@@ -166,6 +166,16 @@ async function merchPausedContracts() {
       assert.ok(body.items.some((item) => item.sku === 'mug'), 'with the switch on the catalogue comes back');
       assert.equal(merchRedemptionOpen(SHOP_ALL_ON, true), true);
     }
+    // With the switch on, an order that names the same item and size twice is
+    // refused before the database: merch_order_items keys on (order, sku,
+    // variant), so the second line failed the insert with 23505, a 500.
+    {
+      const { db, touched } = recordingDatabase();
+      const res = mockResponse();
+      await handleOrders(request('POST', { items: [{ sku: 'mug', quantity: 5 }, { sku: 'mug', quantity: 5 }], address: ADDRESS, paymentKind: 'tokens' }), res as never, db, true);
+      assert.equal(res.statusCode, 400, 'a repeated line is a bad request');
+      assert.deepEqual(touched, [], 'and reaches no table or routine');
+    }
     // Redemption is closed whatever the owner saved, and Spreadshop is not
     // asked for its promotion.
     assert.equal(merchRedemptionOpen(SHOP_ALL_ON), false, 'redemption stays closed while merchandise is paused');

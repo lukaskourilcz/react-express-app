@@ -291,6 +291,7 @@ interface RequestedLine {
 function parseLines(raw: unknown): RequestedLine[] | null {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 10) return null;
   const lines: RequestedLine[] = [];
+  const seen = new Set<string>();
   for (const entry of raw) {
     const row = (entry ?? {}) as Record<string, unknown>;
     if (!isMerchSku(row.sku)) return null;
@@ -300,6 +301,12 @@ function parseLines(raw: unknown): RequestedLine[] | null {
     if (item.variants.length > 0) {
       if (!item.variants.includes(variant)) return null;
     } else if (variant !== '') return null;
+    // One line per item and size: merch_order_items keys on (order, sku,
+    // variant), so a repeated line failed the insert with 23505 (a 500), and
+    // it would also step past the five-per-line cap.
+    const key = `${row.sku}|${variant}`;
+    if (seen.has(key)) return null;
+    seen.add(key);
     const quantity = Number(row.quantity);
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) return null;
     lines.push({ sku: row.sku, variant, quantity });
