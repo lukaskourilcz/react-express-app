@@ -157,7 +157,7 @@ The Coding home, the FullStack page and each track page (UX audit U3, #575). The
 
 ## Content rules
 
-- All reusable UI copy uses translation keys in `client/src/i18n/translations.ts`, or in the chunk files beside it (`translations.learn.ts`, `translations.paths.ts`, `translations.privacy.ts` and the rest) that only their routes load.
+- All reusable UI copy uses translation keys in `client/src/i18n/translations.ts`, or in the chunk files beside it (`translations.learn.ts`, `translations.paths.ts`, `translations.privacy.ts`, `translations.codingLists.ts` and the rest) that only their routes load.
 - devShark ships English only: write all copy in English and add no second language, translation overlay or language switch.
 - Public facts come from registries/content, not repeated literals.
 - Curated explanations are authoritative. devShark ships no AI feature.
