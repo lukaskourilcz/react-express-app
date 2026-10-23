@@ -687,6 +687,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     process.env.STRIPE_WEBHOOK_SECRET = old;
   });
 
+  await check('a hung Stripe call and its retry fit inside the function budget', async () => {
+    // Seven seconds and a retry was 14.5 s against a 10 s function: the
+    // platform cut the request off before the handler could answer.
+    const vercel = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as { functions: Record<string, { maxDuration?: number }> };
+    const budget = (vercel.functions['api/**/*.ts']?.maxDuration ?? 10) * 1000;
+    const worst = lib.STRIPE_TIMEOUT_MS * (lib.STRIPE_NETWORK_RETRIES + 1) + lib.STRIPE_RETRY_DELAY_MS * lib.STRIPE_NETWORK_RETRIES;
+    assert.ok(worst <= budget - 1000, `${worst} ms leaves the handler no time to answer within ${budget} ms`);
+  });
+
   await check('the raw body verifies however the runtime hands it over', async () => {
     for (const mode of ['stream', 'string', 'buffer', 'parsed'] as const) {
       const a = await account(`Raw${mode}`);

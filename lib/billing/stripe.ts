@@ -14,6 +14,16 @@ export type StripeApi = Pick<
   'customers' | 'checkout' | 'billingPortal' | 'subscriptions' | 'invoices' | 'invoicePayments' | 'charges' | 'refunds'
 >;
 
+/** One Stripe call's limits. A timed-out call is retried by stripe-node after
+ * half a second, so a hung call costs 2 × 4 s + 0.5 s = 8.5 s, inside the
+ * ten-second function budget (vercel.json), and the handler still answers
+ * instead of being cut off without a response. POSTs carry an idempotency key
+ * on the retry, so a retried create is never made twice. */
+export const STRIPE_TIMEOUT_MS = 4000;
+export const STRIPE_NETWORK_RETRIES = 1;
+/** stripe-node's wait before its first retry. */
+export const STRIPE_RETRY_DELAY_MS = 500;
+
 let testClient: StripeApi | null = null;
 let cached: { key: string; client: StripeApi } | null = null;
 
@@ -32,9 +42,8 @@ export function stripeFor(config: BillingConfig): StripeApi | null {
       client: new Stripe(config.secretKey, {
         // Current Checkout Studio header, verified in the account on 12 Oct 2026.
         apiVersion: '2026-09-30.endive; custom_checkout_payment_form_preview=v1' as Stripe.LatestApiVersion,
-        // The function budget is ten seconds; one quick retry fits in it.
-        maxNetworkRetries: 1,
-        timeout: 7000,
+        maxNetworkRetries: STRIPE_NETWORK_RETRIES,
+        timeout: STRIPE_TIMEOUT_MS,
         appInfo: { name: 'devShark', url: config.origin },
       }),
     };
