@@ -998,7 +998,9 @@ function Lobby({
 }) {
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
-  const [qrUrl, setQrUrl] = useState('');
+  // The QR's box is held while the code draws, so the share text beside it
+  // does not jump; a QR that cannot be drawn leaves the URL and the buttons.
+  const [qrUrl, setQrUrl] = useState<string | null>('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   useEffect(() => {
     let active = true;
@@ -1010,79 +1012,34 @@ function Lobby({
         errorCorrectionLevel: 'M',
       }))
       .then((url) => { if (active) setQrUrl(url); })
-      .catch(() => {});
+      .catch(() => { if (active) setQrUrl(null); });
     return () => { active = false; };
   }, [shareUrl]);
+  // One panel with rows inside it, never a card in a card (UX audit
+  // social-account-14). The header's badge carries the code, so the
+  // instruction does not repeat it.
   return (
-    <div className="ss-raised ss-pop play-invite" style={{ display: 'flex', width: '100%' }}>
-    <Card padding={4} width="100%">
-      <VStack gap={3}>
-        <VStack gap={1}>
-          <HStack gap={1.5} align="center">
-            <Heading level={2}>{t('play.lobby')}</Heading>
-            {participants.length > 0 && (
-              <div
-                style={{
-                  marginLeft: 'auto',
-                  borderRadius: 999,
-                  padding: '3px 11px',
-                  fontWeight: 700,
-                  fontSize: '0.78rem',
-                  color: 'var(--brand-accent)',
-                  background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
-                }}
-              >
-                {participants.length}
-              </div>
-            )}
-          </HStack>
-          <Text color="secondary">
-            {t('play.shareInstructions', {
-              code: match.code,
-              action: isHost ? t('play.actionHostStart') : t('play.actionGuestWait'),
-            })}
-          </Text>
-        </VStack>
+    <section className="ss-panel ss-pop play-invite play-lobby">
+      <div className="play-lobby__head">
+        <HStack gap={1.5} align="center">
+          <Heading level={2}>{t('play.lobby')}</Heading>
+          {participants.length > 0 && (
+            <span className="play-lobby__count">{participants.length}</span>
+          )}
+        </HStack>
+        <Text color="secondary">{isHost ? t('play.shareHost') : t('play.shareGuest')}</Text>
+      </div>
 
-        {qrUrl && (
-          <div className="play-invite__qr">
-            <img src={qrUrl} alt={t('play.qrAlt', { code: match.code })} width={164} height={164} />
-            <VStack gap={0.5}>
-              <Text weight="bold">{t('play.scanToJoin')}</Text>
-              <Text type="supporting" size="xsm" color="secondary">{shareUrl}</Text>
-            </VStack>
+      <div className="play-lobby__share">
+        {qrUrl !== null && (
+          <div className="play-lobby__qr">
+            {qrUrl && <img src={qrUrl} alt={t('play.qrAlt', { code: match.code })} width={164} height={164} />}
           </div>
         )}
-
-        <VStack gap={1}>
-          {participants.map((p, i) => (
-            <div
-              key={p.user_id}
-              className="ss-raised ss-pop"
-              style={{ display: 'flex', width: '100%', animationDelay: `${i * 55}ms` }}
-            >
-              <Card variant="muted" padding={1.5} width="100%">
-                <HStack gap={1.5} align="center">
-                  <Avatar name={p.display_name} size="small" />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text weight="medium">{p.display_name}</Text>
-                  </div>
-                  {p.user_id === match.host_id && <Badge variant="yellow" label={t('play.host')} />}
-                </HStack>
-              </Card>
-            </div>
-          ))}
-          {participants.length === 0 && (
-            <VStack gap={1} align="center" padding={3}>
-              <Text type="supporting" size="xsm" color="secondary" justify="center">
-                {t('play.noPlayers')}
-              </Text>
-            </VStack>
-          )}
-        </VStack>
-
-        <HStack gap={1.5} wrap="wrap" justify="between">
-          <HStack gap={1} wrap="wrap">
+        <div className="play-lobby__share-text">
+          {qrUrl !== null && <Text weight="bold">{t('play.scanToJoin')}</Text>}
+          <span className="play-lobby__url">{shareUrl}</span>
+          <div className="play-lobby__share-actions">
             <Button
               variant="secondary"
               label={copyStatus === 'copied' ? t('play.copied') : copyStatus === 'failed' ? t('play.copyFailed') : t('play.copyLink')}
@@ -1094,20 +1051,36 @@ function Lobby({
               }}
             />
             <Button variant="ghost" label={t('play.printInvite')} onClick={() => window.print()} />
-          </HStack>
-          {isHost && (
-            <Button
-              variant="primary"
-              size="lg"
-              label={t('play.startWithCount', { count: questionCountOf(match) })}
-              isDisabled={participants.length < 1 || startPending}
-              onClick={onStart}
-            />
-          )}
-        </HStack>
-      </VStack>
-    </Card>
-    </div>
+          </div>
+        </div>
+      </div>
+
+      {participants.length > 0 ? (
+        <ul className="play-lobby__players" aria-label={t('play.players')}>
+          {participants.map((p) => (
+            <li key={p.user_id} className="play-lobby__player">
+              <Avatar name={p.display_name} size="small" />
+              <span className="play-lobby__name">{p.display_name}</span>
+              {p.user_id === match.host_id && <Badge variant="yellow" label={t('play.host')} />}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="play-lobby__empty">{t('play.noPlayers')}</p>
+      )}
+
+      {isHost && (
+        <div className="play-lobby__start">
+          <Button
+            variant="primary"
+            size="lg"
+            label={t('play.startWithCount', { count: questionCountOf(match) })}
+            isDisabled={participants.length < 1 || startPending}
+            onClick={onStart}
+          />
+        </div>
+      )}
+    </section>
   );
 }
 

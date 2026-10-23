@@ -890,6 +890,47 @@ describe('the questions a player holds', () => {
   });
 });
 
+describe('the lobby (social-account-14, -15)', () => {
+  const people = [
+    { user_id: USER.id, display_name: 'Test Learner', joined_at: '2026-10-23T10:00:00Z' },
+    { user_id: 'p2', display_name: 'Harbour reader', joined_at: '2026-10-23T10:00:01Z' },
+  ];
+  const lobbyOf = (over: Partial<Match> = {}) => running({ status: 'lobby', started_at: null, host_id: USER.id, questions: [], question_count: 10, ...over });
+
+  it('is one panel with plain player rows, and says the code only in the header badge', async () => {
+    const lobby = lobbyOf();
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    const heading = await screen.findByRole('heading', { name: 'Lobby' });
+    const panel = heading.closest('section')!;
+    expect(panel).toHaveClass('ss-panel', 'play-invite');
+    // canvas -> one panel -> rows: no raised card or Astryx card inside it.
+    expect(panel.querySelector('.ss-raised, .ss-panel')).toBeNull();
+    const rows = within(screen.getByRole('list', { name: 'Players' })).getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent)).toEqual(['TLTest LearnerHost', 'HRHarbour reader']);
+    expect(screen.getByText('Share the code, then press Start when everyone has joined.')).toBeInTheDocument();
+    // The code is in the header's copy badge, not in the instruction.
+    expect(screen.getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
+    expect(panel.querySelector('.play-lobby__head')!.textContent).not.toContain('ABC123');
+    // Copy link and Print invite sit with the share text, so the footer holds only Start.
+    const share = panel.querySelector('.play-lobby__share')!;
+    expect(within(share as HTMLElement).getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+    expect(within(share as HTMLElement).getByRole('button', { name: 'Print invite' })).toBeInTheDocument();
+    const footer = panel.querySelector('.play-lobby__start')!;
+    expect(within(footer as HTMLElement).getAllByRole('button').map((b) => b.textContent)).toEqual(['Start (10 questions)']);
+  });
+
+  it('tells a guest to wait, with no Start', async () => {
+    const lobby = lobbyOf({ host_id: 'host-1' });
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    expect(await screen.findByText('Share the code, then wait for the host to start.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Start/ })).toBeNull();
+  });
+});
+
 describe('the Play switch', () => {
   it('shows live games as switched off on every Play page', async () => {
     await mount('/play/ABC123', false);
