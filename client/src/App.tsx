@@ -725,11 +725,14 @@ function App() {
           scrollbarGutter: 'stable',
           display: 'flex',
           justifyContent: 'center',
+          // Every route keeps the contract's 16px gutter on phones; the
+          // Quiz only trims its desktop top padding, where its focus mode
+          // hides the header (UX audit U2, questions-18).
           padding: isDev
             ? (mobile ? '0.5rem' : '0.5rem 1rem')
-            : isQuiz
-              ? (mobile ? '0.75rem' : '1rem 1.5rem')
-              : (mobile ? '1rem' : '1.5rem'),
+            : mobile
+              ? '1rem'
+              : (isQuiz ? '1rem 1.5rem' : '1.5rem'),
           boxSizing: 'border-box',
         }}
       >

@@ -262,6 +262,13 @@ describe('the results screen (UX audit U2)', () => {
 });
 
 describe('the question screen (UX audit U2)', () => {
+  it('keeps the 16px phone gutter on /quiz like every other route (questions-18)', () => {
+    const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+    const padding = app.match(/padding: isDev[\s\S]*?,\n\s*boxSizing/)?.[0] ?? '';
+    expect(padding).toMatch(/: mobile\s*\?\s*'1rem'/);
+    expect(padding).not.toMatch(/0\.75rem/);
+  });
+
   it('names the run in one h1 that is also the counter, and shows the difficulty', async () => {
     await startQuiz([Q('a', { difficulty: 3 }), Q('b')]);
     const headings = screen.getAllByRole('heading', { level: 1 });
