@@ -7,6 +7,8 @@ import { submitCoding } from '../src/coding/api';
 import { runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
 import { formatCode } from '../src/coding/runner/format';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { readFileSync } from 'node:fs';
+import { declared } from './css';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -167,13 +169,20 @@ it('does not tell a signed-in learner to sign in after an accepted order', async
   expect(screen.queryByText('Checked, not recorded: sign in to keep passes.')).toBeNull();
 });
 
-// A puzzle line is a flex item that would not shrink below its longest line,
-// so a 49-character line pushed the page sideways at 360 px and 200 % text.
+// A long puzzle line keeps its indentation and scrolls inside its own box at
+// 360 px and 200 % text. The line's code is a scroll container, so as a flex
+// item its automatic minimum width is already zero, and the pane around the
+// puzzle may shrink below its content: the stylesheet is what keeps the page
+// from widening, so the test reads it.
 it('lets a long puzzle line scroll inside its own box instead of widening the page', () => {
-  mountPuzzle();
-  for (const code of document.querySelectorAll<HTMLElement>('.cd-puzzle__line code')) {
-    expect(code).toHaveStyle({ minWidth: '0px' });
-  }
+  const style = document.createElement('style');
+  style.textContent = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+  document.head.append(style);
+  const rules = [...style.sheet!.cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+  expect(declared(rules, '.cd-puzzle__line code', 'white-space')).toBe('pre');
+  expect(declared(rules, '.cd-puzzle__line code', 'overflow-x')).toBe('auto');
+  expect(declared(rules, '.cd-pane', 'min-width')).toBe('0px');
+  style.remove();
 });
 
 // A line moved up keeps focus, so a screen reader heard nothing of where it
