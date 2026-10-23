@@ -260,6 +260,25 @@ describe('/dev → Merchandise', () => {
     expect(within(mugRow).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(expect.arrayContaining(['1', '4']));
   });
 
+  it('keeps unsaved quote edits when the settings are read again', async () => {
+    const stored = { merch: { enabled: false, cashCheckoutEnabled: false, testMode: true, pricing: {}, crownTokenPrice: 1200, streakProtectionTokenPrice: 250, policyUrl: '' } };
+    server.use(
+      http.get('*/api/admin/settings', () => HttpResponse.json({ settings: stored })),
+      http.get('*/api/user/*', () => HttpResponse.json({ orders: [], items: [], stock: [] })),
+    );
+    const { default: DevMerch } = await import('../src/components/dev/DevMerch');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><DevMerch /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+    const policy = await screen.findByRole('textbox', { name: /Delivery and returns page/ });
+    fireEvent.change(policy, { target: { value: 'https://devshark.example/delivery' } });
+    // App settings saves, or a reconnect reads the settings again.
+    await act(async () => {
+      client.setQueryData(['admin', 'settings'], { settings: { ...stored, ownerEmail: 'new@example.invalid' } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.getByRole('textbox', { name: /Delivery and returns page/ })).toHaveValue('https://devshark.example/delivery');
+  });
+
   it('cancels a coin order once when the confirmation is pressed twice', async () => {
     const posted: unknown[] = [];
     const order = {
