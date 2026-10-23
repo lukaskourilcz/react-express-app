@@ -291,13 +291,18 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
   useEffect(() => () => active.current?.abort(), []);
 
   const run = useCallback(async () => {
+    // Two presses in one task both pass the disabled button (the state has
+    // not reached the DOM yet): the newer run stops the older one, and only
+    // the run held in the ref may paint, so an older result never covers a
+    // newer one.
+    active.current?.abort();
     const controller = new AbortController();
     active.current = controller;
     setRunning(true);
     setError(null);
     try {
       const outcome = await runCodeTests({ track: 'javascript', code, tests: [], grade: false, signal: controller.signal });
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || active.current !== controller) return;
       setOutput(outcome.logs);
       // A runner that never loaded is not the snippet's error.
       setError(outcome.runnerUnavailable ? t('coding.results.runnerUnavailable') : outcome.codeError);
