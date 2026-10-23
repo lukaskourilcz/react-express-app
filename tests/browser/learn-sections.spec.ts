@@ -296,7 +296,12 @@ test.describe('Learn section states', () => {
     await stand(page, 'se-member', { progress: {} });
     await page.goto('/learn/software-engineer');
     await expect(page.getByText(/^Pass 5 levels of JavaScript to open /)).toBeVisible();
-    await expect(page.locator('.rm-skillcheck-row')).toBeVisible();
+    // The skill check sits in the empty state's one row of next steps (UX
+    // audit learn-09), beside 'Go to', and the separate row is not drawn.
+    const steps = page.locator('.rm-section-empty__actions');
+    await expect(steps.getByRole('button', { name: 'Take the skill check' })).toBeVisible();
+    await expect(steps.getByRole('button', { name: 'Go to JavaScript' })).toBeVisible();
+    await expect(page.locator('.rm-skillcheck-row')).toHaveCount(0);
     await page.getByRole('button', { name: 'Go to JavaScript' }).focus();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/learn\/web-developer\?topic=javascript$/);
@@ -370,31 +375,43 @@ test.describe('Learn sections across widths and themes', () => {
 });
 
 test.describe('The switcher on a narrow screen', () => {
-  test('keeps the focused item, ring included, inside the scroller at 360px', async ({ page }) => {
-    await page.setViewportSize({ width: 360, height: 800 });
-    await prepare(page);
-    await stand(page, 'guest');
-    await page.goto('/learn/web-developer');
-    await expect(topicCard(page, 'HTML')).toBeVisible();
-    const focusedInView = () => page.evaluate(() => {
-      const scroller = document.querySelector('.rm-section-switcher__scroll')!.getBoundingClientRect();
-      const item = (document.activeElement as HTMLElement).getBoundingClientRect();
-      return item.left - 4 >= scroller.left - 1 && item.right + 4 <= scroller.right + 1;
+  // Under 640px the three sections are a vertical list (UX audit learn-20):
+  // all three show without scrolling, and Up and Down browse as Left and
+  // Right do, moving focus only.
+  for (const width of [360, 390]) {
+    test(`lists all three sections as full-width 44px rows at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await prepare(page);
+      await stand(page, 'guest');
+      await page.goto('/learn/web-developer');
+      await expect(topicCard(page, 'HTML')).toBeVisible();
+      const scroller = page.locator('.rm-section-switcher__scroll');
+      expect(await scroller.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      const box = (await scroller.boundingBox())!;
+      const rows = await page.locator('.rm-section-switcher [role="radio"]').evaluateAll((els) => els.map((el) => el.getBoundingClientRect()).map(({ left, right, top, height }) => ({ left, right, top, height })));
+      expect(rows).toHaveLength(3);
+      for (const [index, row] of rows.entries()) {
+        expect(row.height, `row ${index} height`).toBeGreaterThanOrEqual(44);
+        expect(row.left, `row ${index} left`).toBeGreaterThanOrEqual(box.x - 1);
+        expect(row.right, `row ${index} right`).toBeLessThanOrEqual(box.x + box.width + 1);
+        if (index > 0) expect(row.top, `row ${index} below row ${index - 1}`).toBeGreaterThan(rows[index - 1].top);
+      }
+      await expect(switcherItem(page, 'Forward Deployed Engineer')).toBeInViewport();
+
+      await switcherItem(page, 'Web Developer').focus();
+      await page.keyboard.press('ArrowDown');
+      await expect(switcherItem(page, 'Software Engineer')).toBeFocused();
+      await expect(switcherItem(page, 'Web Developer')).toHaveAttribute('aria-checked', 'true');
+      await expect(page).toHaveURL(/\/learn\/web-developer$/);
+      await page.keyboard.press('ArrowDown');
+      await expect(switcherItem(page, 'Forward Deployed Engineer')).toBeFocused();
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('Enter');
+      await expect(page).toHaveURL(/\/learn\/software-engineer$/);
+      await page.keyboard.press('ArrowUp');
+      await expect(switcherItem(page, 'Web Developer')).toBeFocused();
     });
-    // The three names do not fit at 360px, so the switcher scrolls.
-    expect(await page.locator('.rm-section-switcher__scroll').evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
-    await switcherItem(page, 'Web Developer').focus();
-    for (const key of ['ArrowRight', 'ArrowRight', 'ArrowLeft', 'ArrowLeft']) {
-      await page.keyboard.press(key);
-      expect(await focusedInView(), `after ${key}`).toBe(true);
-    }
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/learn\/software-engineer$/);
-    await page.keyboard.press('ArrowLeft');
-    await expect(switcherItem(page, 'Web Developer')).toBeFocused();
-    expect(await focusedInView(), 'Web Developer after opening Software Engineer').toBe(true);
-  });
+  }
 });
 
 test.describe('Learn section targets on a touch screen', () => {
@@ -414,7 +431,7 @@ test.describe('Learn section targets on a touch screen', () => {
     await page.goto('/learn/software-engineer');
     await expect(page.getByRole('button', { name: 'Add it to your plan' })).toBeVisible();
     await measure('.rm-section-switcher .astryx-segmented-control-item');
-    await measure('.rm-section-action .astryx-button');
+    await measure('.rm-section-action button');
     await measure('.rm-topic-pill');
 
     await page.context().clearCookies();
