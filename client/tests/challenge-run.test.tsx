@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { onXpToast, primeRankMarker, type XpToast } from '../src/lib/xp';
+import { clearAccountData } from '../src/lib/accountData';
 
 // The Biggest Shark Challenge against a small stand-in for the three endpoints
 // it calls: the batch (GET /api/quiz/challenge), grading (POST
@@ -24,6 +25,8 @@ const api = vi.hoisted(() => ({
   grade: null as Grade | null,
   completions: [] as { runToken: string; proofs: string[]; status: number }[],
   completeStatus: (_runToken: string): { status: number; code?: string } => ({ status: 200 }),
+  /** Run completions wait for this when it is set. */
+  holdComplete: null as null | Promise<void>,
   auth: { user: null as null | { id: string; email?: string; user_metadata?: Record<string, unknown> }, isAuthenticated: false, isLoading: false },
   /** Refuses the nth batch request (1-based) when it returns a status. */
   batchRefusal: null as null | ((n: number) => { status: number; code: string } | null),
@@ -91,6 +94,7 @@ vi.mock('../src/lib/api', async (importOriginal) => {
     }
     if (parsed.pathname === '/api/quiz/challenge' && parsed.searchParams.get('resource') === 'complete') {
       const body = JSON.parse(String(opts.body)) as { runToken: string; proofs: string[] };
+      if (api.holdComplete) await api.holdComplete;
       const outcome = api.completeStatus(body.runToken);
       api.completions.push({ runToken: body.runToken, proofs: body.proofs, status: outcome.status });
       if (outcome.status !== 200) return fail(outcome.status, outcome.code ?? 'error');
@@ -177,6 +181,7 @@ beforeEach(() => {
   api.grade = null;
   api.completions.length = 0;
   api.completeStatus = () => ({ status: 200 });
+  api.holdComplete = null;
   api.auth = { user: null, isAuthenticated: false, isLoading: false };
   api.batchRefusal = null;
   api.holdBatch = 0;
@@ -362,6 +367,26 @@ describe('the run reward', () => {
       await strikeOut(2);
       expect(gains).toEqual([10, 10]);
       expect(api.completions).toHaveLength(2);
+    } finally {
+      stop();
+    }
+  });
+
+  it('announces nothing when the account signs out while the run’s reward is on its way', async () => {
+    const gains: number[] = [];
+    const stop = onXpToast((toast: XpToast) => { if (toast.kind === 'gain') gains.push(toast.amount); });
+    let release!: () => void;
+    api.holdComplete = new Promise<void>((resolve) => { release = resolve; });
+    try {
+      api.auth = { user: { id: 'learner-1' }, isAuthenticated: true, isLoading: false };
+      await mount();
+      await start();
+      await strikeOut(2);
+      clearAccountData();
+      await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+      await settle();
+      expect(api.completions).toHaveLength(1);
+      expect(gains).toEqual([]);
     } finally {
       stop();
     }

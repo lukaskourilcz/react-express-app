@@ -35,6 +35,7 @@ import { challengeRunXp } from '../../../shared/progression';
 import type { QuestionXpHeld } from '../../../shared/repeat-xp';
 import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
+import { accountEpoch } from '../lib/accountData';
 import './DeepEndScreens.css';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import { categoryLabelKey } from '../lib/categories';
@@ -98,12 +99,15 @@ const dropPendingReward = (runToken: string) =>
  * lands, or that can never land, leaves the list; one the network or the rate
  * limit turned away stays for the next try. `held` counts the right answers
  * whose question paid XP less than an hour ago (migration 060), with the time
- * the last of them pays again. */
+ * the last of them pays again. The sending stops when the account signs
+ * out: the rest are no longer this browser's to send. */
 async function sendPendingRewards(userId: string | null): Promise<{ kept: number; xp: number; held: QuestionXpHeld | null }> {
+  const epoch = accountEpoch();
   let kept = 0;
   let xp = 0;
   let held = null as QuestionXpHeld | null;
   for (const run of readPendingRewards().filter((one) => one.userId === userId)) {
+    if (accountEpoch() !== epoch) break;
     try {
       const res = await completeChallengeRun({ runToken: run.runToken, proofs: run.proofs });
       if (userId && res.awarded) xp += res.xp ?? 0;
@@ -282,7 +286,11 @@ export default function Challenge() {
   const rewardSync = useRef<Promise<void>>(Promise.resolve());
   const syncRewards = useCallback((userId: string | null) => {
     rewardSync.current = rewardSync.current.then(async () => {
+      const epoch = accountEpoch();
       const { kept, xp, held } = await sendPendingRewards(userId);
+      // Signed out while the runs were on their way: what they earned is not
+      // news for whoever is here now, and its rank marker is not theirs.
+      if (accountEpoch() !== epoch) return;
       if (xp > 0) announceVerifiedQuestXp(xp);
       if (held) announceXpHeld({ on: 'questions', count: held.questions, availableAt: held.availableAt });
       if (xp > 0) {
