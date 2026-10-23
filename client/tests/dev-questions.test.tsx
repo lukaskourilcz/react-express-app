@@ -1,7 +1,7 @@
 // /dev → Question bank: the question editor saves a new question once however
 // fast Save is pressed, and keeps what the admin typed while the bank reloads.
 import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -199,4 +199,24 @@ describe('/dev → Question bank', () => {
     expect(await screen.findByRole('button', { name: 'Delete 1 filler' })).toBeInTheDocument();
   });
 
+  it('drops a question deleted from its row out of the selection', async () => {
+    let bank = ['b1', 'b2'];
+    server.use(
+      http.get('*/api/admin/questions', () => HttpResponse.json({ questions: bank.map(question), categories: ['react'], reportCounts: {} })),
+      http.post('*/api/admin/delete', async ({ request }) => {
+        const { id } = (await request.json()) as { id: string };
+        bank = bank.filter((one) => one !== id);
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    renderTab('questions');
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select question b1' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select question b2' }));
+    expect(screen.getByRole('button', { name: 'Delete selected (2)' })).toBeInTheDocument();
+    const row = screen.getByText('Question b1?').closest('tr') as HTMLElement;
+    fireEvent.click(within(row).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete permanently' }));
+    await waitFor(() => expect(screen.queryByText('Question b1?')).toBeNull());
+    expect(await screen.findByRole('button', { name: 'Delete selected (1)' })).toBeInTheDocument();
+  });
 });

@@ -261,6 +261,18 @@ export default function DevQuestions() {
     setPage(0);
   }, [activeSubject.id]);
 
+  // A question deleted any way (its row, the filler delete, Quality triage)
+  // leaves the selection when the bank is read again, so 'Delete selected (n)'
+  // never counts or resends one that is already gone.
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const live = new Set(questions.filter((q) => !q.deleted).map((q) => q.id));
+      const kept = [...prev].filter((id) => live.has(id));
+      return kept.length === prev.size ? prev : new Set(kept);
+    });
+  }, [questions]);
+
   const stats = useMemo(() => {
     let edited = 0;
     let custom = 0;
