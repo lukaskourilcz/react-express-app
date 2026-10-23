@@ -412,6 +412,8 @@ describe('the Terms and the privacy policy', () => {
     serve();
     renderAt('/terms', <TermsPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Terms of use' })).toBeInTheDocument();
+    // UX audit money-08: the legal pages name their group above the h1.
+    expect(document.querySelector('.ss-info-page__kicker')).toHaveTextContent('Legal');
     expect(screen.getAllByText('Lukáš Kouřil').length).toBeGreaterThan(0);
     expect(screen.getByText('04713397')).toBeInTheDocument();
     expect(screen.getAllByText('Družstevní čtvrť 3145/19, 695 01 Hodonín, Czech Republic').length).toBeGreaterThan(0);
@@ -447,6 +449,7 @@ describe('the Terms and the privacy policy', () => {
     serve();
     renderAt('/privacy', <PrivacyPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy policy' })).toBeInTheDocument();
+    expect(document.querySelector('.ss-info-page__kicker')).toHaveTextContent('Legal');
     expect(screen.queryByText(/sprd\.net AG/)).toBeNull();
     expect(screen.getByText(/does not offer merchandise yet\. It collects no order and no postal address/)).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Link privacy policy' })).toHaveAttribute('href', 'https://link.com/privacy');

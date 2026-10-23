@@ -421,7 +421,9 @@ function LegalDocument({ title, lead, sections }: { title: CopyKey; lead: CopyKe
   };
 
   return (
-    <Page title={t(title)} lead={t(lead)}>
+    // The 'Legal' kicker, as the purchase steps carry 'devShark Premium'
+    // (UX audit money-08): every Page names its group above the h1.
+    <Page kicker={t('page.legalKicker')} title={t(title)} lead={t(lead)}>
       <p className="ss-legal-updated">{t('legal.updated', { date: updated })}</p>
       <LegalIndex sections={sections} />
       <div className="ss-legal">

@@ -64,6 +64,7 @@ export const en = {
   'nav.menu': 'Open navigation menu',
   'nav.menuTitle': 'Navigation',
   'page.onThisPage': 'On this page',
+  'page.legalKicker': 'Legal',
   'nav.groupPractice': 'Practice',
   'nav.groupYou': 'You',
   'footer.ariaUtility': 'Legal information and site settings',
