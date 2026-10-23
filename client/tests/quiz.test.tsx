@@ -177,6 +177,19 @@ describe('starting', () => {
   });
 });
 
+describe('focus', () => {
+  it('moves to the question when Previous reaches the first one and disables itself', async () => {
+    await startQuiz();
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    const previous = screen.getByRole('button', { name: /^previous$/i });
+    previous.focus();
+    fireEvent.click(previous);
+    expect(counter()).toBe('Question 1 of 2');
+    expect(previous).toBeDisabled();
+    expect(document.activeElement?.id).toBe('question-text-a');
+  });
+});
+
 describe('a question retired while the quiz was open', () => {
   // The bookmark icon became Save as Shark Card (owner decision 12), which
   // needs an account, so the learner signs in here.

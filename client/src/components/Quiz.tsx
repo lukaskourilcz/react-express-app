@@ -784,6 +784,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     if (state === 'in-progress') questionTextRef.current?.focus({ preventScroll: true });
   }, [state]);
 
+  // Previous on the second question disables itself, and a disabled button
+  // drops the focus to the page: the question that came up takes it instead.
+  useEffect(() => {
+    const active = document.activeElement;
+    if (state !== 'in-progress' || !active) return;
+    if (active === document.body || (active instanceof HTMLButtonElement && active.disabled)) {
+      questionTextRef.current?.focus({ preventScroll: true });
+    }
+  }, [state, currentIndex]);
+
   // Keyboard shortcuts during in-progress quiz
   useEffect(() => {
     if (state !== 'in-progress' || !currentQuestion) return;
