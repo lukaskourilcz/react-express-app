@@ -8,6 +8,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import type { HarnessRun } from '../src/coding/useReactHarness';
+import { runCodeTests } from '../src/coding/runner/run-tests';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
 vi.mock('../src/coding/Editor', () => ({ Editor: () => <textarea aria-label="Test editor" /> }));
@@ -82,4 +83,24 @@ it('scrolls the tab strip instead of squeezing its tabs, and drops the Resources
   const phone = css.slice(css.indexOf('@media (max-width: 599px)'));
   expect(phone).toMatch(/\.cd-tab \{ padding: 8px; font-size: 0\.9rem; \}/);
   expect(phone).toMatch(/\.cd-tab\[data-tab='resources'\] \.cd-tab__badge \{ display: none; \}/);
+});
+
+it('lists checks as one divided list: the call, the expected value after an arrow, then what came back (coding-15)', async () => {
+  const task = { ...tasks.javascript, tests: [{ call: 'digitSum(0)', expected: 0, edge: true, label: 'zero has a digit sum of zero' }, { call: 'digitSum(493)', expected: 16 }] } as PlayableCodingTask;
+  render(<MemoryRouter><LanguageProvider><CodingWorkbench task={task} initialCode={null} session="s" locked={null} signedIn mode="section" /></LanguageProvider></MemoryRouter>);
+  const panel = screen.getByRole('tabpanel', { name: 'Results' });
+  const [zero, other] = within(panel).getAllByRole('listitem');
+  expect(zero).toHaveTextContent('digitSum(0) → expected 0edge');
+  expect(zero.querySelector('.cd-tag.cd-result__edge')).toHaveTextContent('edge');
+  expect(zero.querySelector('.cd-result__label')).toHaveTextContent('zero has a digit sum of zero');
+  // "Expected" is never printed: it is read in place of the arrow.
+  expect(within(panel).queryByText(/Expected:/)).toBeNull();
+  expect(within(panel).getAllByText('expected')[0]).toHaveClass('cd-visually-hidden');
+  vi.mocked(runCodeTests).mockResolvedValueOnce({ results: [{ pass: true, actual: '0', error: null }, { pass: false, actual: 'undefined', error: null }], logs: [] } as never);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Run' })); });
+  const [, failed] = within(screen.getByRole('tabpanel', { name: /Results/ })).getAllByRole('listitem');
+  expect(failed).toHaveClass('cd-result--fail');
+  expect(failed.querySelector('.cd-result__status')).toHaveTextContent('Fail');
+  expect(failed).toHaveTextContent('digitSum(493) → expected 16 · got undefined');
+  expect(other).toBeDefined();
 });

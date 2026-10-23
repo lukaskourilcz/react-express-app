@@ -474,28 +474,30 @@
 .cd-panel--parked { position: fixed; top: 0; left: -10000px; width: 640px; height: 480px; overflow: hidden; pointer-events: none; }
 
 /* results */
-.cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-/* Eight rows show; the rest scroll inside this box, never the page. The cap is
-   measured from the rendered rows (see ResultList). */
+/* One divided list, not a card per check (UX audit coding-15): rows split by
+   hairlines, a fixed status column that says Pass or Fail in words as well
+   as colour, the call in mono with the expected value after it, and the
+   description, when there is one, as a quiet second line. */
+.cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--ss-card-line); }
 .cd-result {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: baseline;
   gap: 2px 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-inner);
-  border: 1px solid var(--ss-card-line);
+  min-height: 48px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--ss-card-line);
   font-size: 0.88rem;
 }
-.cd-result--pass { border-left: 3px solid var(--ss-success); }
-.cd-result--fail { border-left: 3px solid var(--ss-error); }
-.cd-result--idle { border-left: 3px solid var(--color-border-strong); }
 .cd-result--idle .cd-result__status { color: var(--color-text-secondary); }
-.cd-result__status { grid-row: 1 / span 3; font-weight: 700; padding-top: 2px; white-space: nowrap; }
+.cd-result__status { grid-row: 1 / span 3; font-weight: 700; white-space: nowrap; }
 .cd-result--pass .cd-result__status { color: var(--ss-success-strong, var(--ss-success)); }
 .cd-result--fail .cd-result__status { color: var(--ss-error); }
 .cd-result__call { font-family: var(--cd-mono); overflow-wrap: anywhere; }
-.cd-result__label { color: var(--color-text-secondary); }
-.cd-result__detail { font-family: var(--cd-mono); font-size: 0.82rem; overflow-wrap: anywhere; color: var(--color-text-secondary); }
+.cd-result__expect { color: var(--color-text-secondary); }
+.cd-result__edge { margin-inline-start: 8px; font-size: 0.72rem; vertical-align: 1px; }
+.cd-result__label { grid-column: 2; color: var(--color-text-secondary); font-size: 0.82rem; }
+.cd-result__detail { grid-column: 2; font-family: var(--cd-mono); font-size: 0.82rem; overflow-wrap: anywhere; color: var(--color-text-secondary); }
 .cd-result__detail b { color: var(--color-text-primary); font-weight: 600; }
 .cd-summary { margin: 0; font-weight: 650; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
 .cd-summary small { font-weight: 500; color: var(--color-text-secondary); }

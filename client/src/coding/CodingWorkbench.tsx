@@ -816,19 +816,28 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   );
 
   /** One row of the Results list. Before a run the row still says what goes
-   * in and what should come out; only the verdict column waits. */
+   * in and what should come out; only the status column waits. A row is a
+   * line of a divided list, not a card of its own (UX audit coding-15): the
+   * call, then the expected value after an arrow, and after a run what came
+   * back. "Expected" is never printed; a screen reader hears it in place of
+   * the arrow. */
   const codeRow = (test: NonNullable<PlayableCodingTask['tests']>[number], result: RunOutcome['results'][number] | undefined, index: number): ReactNode => {
     const status = result?.pass === true ? 'pass' : result?.pass === false ? 'fail' : 'idle';
     return (
       <li key={index} className={`cd-result cd-result--${status}`}>
         <span className="cd-result__status">{status === 'pass' ? t('coding.results.pass') : status === 'fail' ? t('coding.results.fail') : <><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></>}</span>
-        <span className="cd-result__call">{test.shown ?? test.call}{test.edge && <span className="cd-result__label"> · {t('coding.results.edge')}</span>}</span>
-        {test.label && <span className="cd-result__label">{test.label}</span>}
-        <span className="cd-result__detail">
-          {result?.error
-            ? <><b>{t('coding.results.error')}:</b> {result.error}</>
-            : <><b>{t('coding.results.expected')}:</b> {JSON.stringify(test.expected)}{result && <> · <b>{t('coding.results.actual')}:</b> {result.actual}</>}</>}
+        <span className="cd-result__call">
+          {test.shown ?? test.call}
+          {!result?.error && (
+            <span className="cd-result__expect">
+              <span aria-hidden="true"> → </span><span className="cd-visually-hidden"> {t('coding.results.expected')} </span>{JSON.stringify(test.expected)}
+              {result && <> · {t('coding.results.got', { value: result.actual ?? '' })}</>}
+            </span>
+          )}
+          {test.edge && <span className="cd-tag cd-result__edge">{t('coding.results.edge')}</span>}
         </span>
+        {test.label && <span className="cd-result__label">{test.label}</span>}
+        {result?.error && <span className="cd-result__detail"><b>{t('coding.results.error')}:</b> {result.error}</span>}
       </li>
     );
   };
