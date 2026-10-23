@@ -211,6 +211,20 @@ function TopicCard({
   );
 }
 
+// A part cell stays a 31px cell to look at and takes a press across 44px
+// (UX audit learn-18): this transparent layer reaches past the cell's top and
+// bottom by half the difference, as the compact controls' ::before does in
+// app-shell.css. Inside the link, so a press on it is a press on the cell; at
+// 44px or taller (a touch screen) it adds nothing.
+const PART_HIT_AREA: CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  top: 'calc((100% - var(--ss-control-height)) / 2)',
+  bottom: 'calc((100% - var(--ss-control-height)) / 2)',
+};
+const hitArea = <span className="rm-part-pill__hit" aria-hidden="true" style={PART_HIT_AREA} />;
+
 function PartPill({
   family, part, status, color, t,
 }: {
@@ -238,6 +252,8 @@ function PartPill({
     // Flex, so the number stays centred when a touch screen raises the pill
     // to 44px (app-shell.css).
     display: 'flex',
+    // Holds the hit area below.
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   };
@@ -248,14 +264,14 @@ function PartPill({
     // hear why it's inert.
     return (
       <Tooltip content={title} placement="above">
-        <div role="button" aria-disabled="true" tabIndex={0} className="rm-part-pill" style={style} aria-label={title}>{part}</div>
+        <div role="button" aria-disabled="true" tabIndex={0} className="rm-part-pill" style={style} aria-label={title}>{part}{hitArea}</div>
       </Tooltip>
     );
   }
   return (
     <Tooltip content={title} placement="above">
       <Link to={`/learn?topic=${family}&part=${part}`} className="rm-part-pill" style={style} aria-label={title}>
-        {part}
+        {part}{hitArea}
       </Link>
     </Tooltip>
   );

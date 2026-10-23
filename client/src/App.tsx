@@ -29,7 +29,7 @@ import { m, AnimatePresence, useReducedMotion } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
 import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
-import { CloseIcon, CoinIcon, TrophyIcon } from './components/ui/icons';
+import { CloseIcon, CoinsIcon, TrophyIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import SignInDialogHost from './components/auth/SignInDialogHost';
@@ -37,6 +37,7 @@ import { useAuthLanding } from './lib/authLanding';
 import { installIntentPreloading, routeBoxKey, routeChunk } from './lib/routePreload';
 import { lazyPage, lazyShellPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
+import { pageMaxWidth } from './components/ui/pageWidth';
 import { ShellPartBoundary } from './components/ShellPartBoundary';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
@@ -164,7 +165,8 @@ const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 // stayed viewport-sized, tall cards overflowed straight through every padding,
 // and page ends slid under the waterline overlay. The first-load fallback gets
 // the same box, so the loader has the page's room.
-const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' } as const;
+// The route box's width is the route's page width (.ss-route in app-shell.css).
+const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, display: 'flex', flexDirection: 'column' } as const;
 
 // The head a coding task or a dated question of the day arrived with
 // (vite.config.ts), read before any route writes its own (lib/routeHead.ts).
@@ -181,7 +183,7 @@ const MenuIcon = () => (
 // Premium: a cut gem, the one plan mark in the header. Decorative; the
 // button carries the word "Premium" as its accessible name and tooltip.
 const PremiumNavIcon = ({ member }: { member: boolean }) => (
-  <svg className={member ? 'ss-premium-nav-icon--member' : undefined} aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={member ? 'ss-premium-nav-icon--member' : undefined} aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 3h12l4 6-10 12L2 9z" />
     <path d="M2 9h20M12 21 8 9l2-6M12 21l4-12-2-6" />
   </svg>
@@ -480,30 +482,17 @@ function App() {
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
   const isDev = location.pathname.startsWith('/dev');
-  // The landing page gets a little more width for its hero + cards.
-  const isHome = location.pathname === '/';
   // The quiz setup screen gets tighter padding and vertical centering so it fits
   // one viewport.
   const isQuiz = location.pathname === '/quiz';
 
-  // Content-light pages read better wide on desktop (cards laid out side by side)
-  // than in a narrow 800px column, and it keeps them closer to one viewport tall.
-  // The Roadmap surfaces (/learn, /roadmap) manage their own width and are left
-  // out on purpose.
-  // Focused single-task screens (quiz, challenge, flashcards) stay in the narrow
-  // 800px column on purpose; only content-light overview pages go wide.
-  const isWide =
-    location.pathname === '/profile' ||
-    location.pathname === '/collection' ||
-    location.pathname === '/leaderboard' ||
-    location.pathname === '/shop' ||
-    location.pathname === '/premium' ||
-    location.pathname === '/privacy' ||
-    location.pathname === '/terms' ||
-    location.pathname === '/classroom' ||
-    location.pathname.startsWith('/coding') ||
-    location.pathname.startsWith('/play');
-  const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
+  // One page width per route (UX audit U1, #573), from the one map in
+  // components/ui/pageWidth.ts: home, /profile and /play 1000px, /coding/*
+  // 1200px, /dev uncapped and every other route 800px. Pages never set their
+  // own page max-width. A part that needs the wide page while it is mounted (a
+  // Learn or FDE coding phase, coding-03) carries the class ss-wide-page, and
+  // the route box widens through CSS (.ss-route:has(.ss-wide-page)).
+  const pageWidth = pageMaxWidth(location.pathname);
 
   // 1–5 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load, each independently facing left or right so the school
@@ -590,23 +579,26 @@ function App() {
                 nav drawer (not here), so they never crowd the account avatar. */}
             <div className="ss-slot ss-slot-end">
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
-                  the drawer covers them there. */}
+                  the drawer covers them there. 44×44 like every other page
+                  control, with 20px glyphs and 4px apart (UX audit
+                  shell-public-10): they were 28px ghost buttons 2px apart
+                  beside a 56px account widget. */}
               {signedIn && (
-                <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 2 }}>
+                <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 4 }}>
                   {showLeaderboardIcon && (
                     <AxIconButton
                       variant="ghost"
-                      size="sm"
+                      size="lg"
                       label={t('nav.leaderboard')}
                       tooltip={t('nav.leaderboard')}
                       onClick={() => navigate('/leaderboard')}
                       data-route="/leaderboard"
-                      icon={<TrophyIcon size={16} />}
+                      icon={<TrophyIcon size={20} />}
                     />
                   )}
                   <AxIconButton
                     variant="ghost"
-                    size="sm"
+                    size="lg"
                     label={t(membership.tier === 'premium' ? 'nav.premiumMember' : 'nav.premium')}
                     tooltip={t('nav.premium')}
                     onClick={() => navigate('/premium')}
@@ -615,12 +607,12 @@ function App() {
                   />
                   <AxIconButton
                     variant="ghost"
-                    size="sm"
+                    size="lg"
                     label={t('nav.shop')}
                     tooltip={t('nav.shop')}
                     onClick={() => navigate('/shop')}
                     data-route="/shop"
-                    icon={<CoinIcon size={16} />}
+                    icon={<CoinsIcon />}
                   />
                 </span>
               )}
@@ -753,8 +745,12 @@ function App() {
             its content, so the reserve always sits below the last card. */}
         <div
           style={{
+            // Full width: the route box and the footer below it each set
+            // their own box (the route's page width, read by .ss-route, and
+            // the header's 1168px), so the footer no longer moves with the
+            // route width.
+            ['--ss-page-width' as string]: pageWidth,
             width: '100%',
-            maxWidth: contentMaxWidth,
             minWidth: 0,
             minHeight: '100%',
             // flex-start, not the default stretch: stretch pins the wrapper to
@@ -790,7 +786,10 @@ function App() {
               this wrapper's first child; the header, the nav and the footer
               stay outside it.
               The footer sits inside this Suspense too, after the keyed box, so
-              it arrives with the first page. Under the fallback it sat at the
+              it arrives with the first page. It keeps its own box, the
+              header's (--ss-width-chrome), so it stands still from route to
+              route whatever the page width (shell-public-01). Under the
+              fallback it sat at the
               bottom of the empty box, and the landing page threw it below the
               fold: a move longer than the viewport, which scored 0.05 of CLS on
               a desktop and 0.15 on a phone, and 0.98 when the header settled in

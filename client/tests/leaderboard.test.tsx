@@ -65,6 +65,17 @@ it('opens on the 30-day board and says what it counts', async () => {
   expect(screen.queryByRole('switch')).toBeNull();
 });
 
+it('says what the board ranks under the h1 and puts the controls right on the table (social-account-09)', async () => {
+  recordRequests(); await mount();
+  await screen.findByText('Workshop learner');
+  const head = screen.getByRole('heading', { level: 1, name: 'Leaderboard' }).closest('header')!;
+  expect(within(head).getByText(/Five answers put you on the board./)).toBeVisible();
+  // One control row: the period control and nothing in between it and the board.
+  const controls = document.querySelector('.lb-controls')!;
+  expect(controls.querySelector('.lb-scope')).toBeNull();
+  expect(controls.nextElementSibling).toHaveClass('lb-board');
+});
+
 it('draws the default board in its first frame instead of a skeleton the board replaces', async () => {
   const restore = stretchFirstDataWait();
   const seen = recordRequests();

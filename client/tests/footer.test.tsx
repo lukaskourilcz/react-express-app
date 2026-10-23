@@ -56,3 +56,22 @@ describe('the footer', () => {
     expect(within(nav).queryByRole('link', { name: /Threads/ })).toBeNull();
   });
 });
+
+// UX audit shell-public-03: short visible labels so the row fits one line,
+// with the full action kept as the accessible name.
+describe('the footer toggles', () => {
+  it('show short labels and keep the full action as the name', () => {
+    server.use(http.get('*/api/settings', () => HttpResponse.json({})));
+    render(<BrandFooter />, { wrapper });
+    const group = screen.getByRole('group', { name: 'Preferences' });
+    const [theme, sound] = within(group).getAllByRole('button');
+    expect(theme).toHaveAccessibleName(/^Switch to (dark|light) mode$/);
+    expect(theme.textContent).toMatch(/^(Dark|Light) mode$/);
+    expect(sound).toHaveAccessibleName(/^Turn sound (on|off)$/);
+    expect(sound.textContent).toMatch(/^Sound (on|off)$/);
+    // Label in name (WCAG 2.5.3): the visible words are part of the name.
+    for (const button of [theme, sound]) {
+      expect(button.getAttribute('aria-label')!.toLowerCase()).toContain(button.textContent!.toLowerCase());
+    }
+  });
+});

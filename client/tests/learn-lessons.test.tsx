@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -36,6 +37,26 @@ describe('Learn lesson reading', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start the questions' }));
     await screen.findByText('Which count grows with the input?');
     expect(reads).toEqual(['reading', 'attempt']);
+  });
+  it('names where Back goes and ends on one row with the only primary (learn-05)', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: '1. Complexity Basics' }));
+    await screen.findByRole('heading', { name: 'Complexity Basics', level: 1 });
+    const start = screen.getByRole('button', { name: 'Start the questions' });
+    expect(start).toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    const row = start.closest('.lp-lesson-start');
+    expect(row).not.toBeNull();
+    expect(row).toContainElement(screen.getByText('Reading is optional. It records no progress and earns no XP.'));
+    const back = screen.getByRole('button', { name: 'Big O introduction' });
+    expect(back).toHaveClass('lp-lesson-back');
+    fireEvent.click(back);
+    await screen.findByRole('button', { name: '1. Complexity Basics' });
+    expect(screen.queryByRole('button', { name: 'Start the questions' })).toBeNull();
+  });
+  it('lines Back\u2019s arrow up with the h1 by pulling back the ghost button\u2019s padding (learn-05)', () => {
+    const css = readFileSync(new URL('../src/components/paths/LearningPaths.css', import.meta.url), 'utf8');
+    expect(css).toContain('.lp-page > .lp-lesson-back { align-self: flex-start; margin-inline-start: -12px; }');
   });
   it('keeps questions available when public reading fails', async () => {
     const reads = mount(true);

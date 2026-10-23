@@ -301,11 +301,19 @@ function Leaderboard() {
   }
 
   return (
-    <div className="de-page lb">
+    <div className="lb">
       <header className="lb-head">
         <Heading level={1} type="display-3">
           {t('leaderboard.title')}
         </Heading>
+        {/* What the board ranks is the page lead, so the controls sit right
+            on the table they filter (UX audit social-account-09). */}
+        <p className="lb-scope">{scope}</p>
+        {windowUnavailable && tab === 'all' && (
+          <p className="lb-scope" role="status">
+            {t('leaderboard.windowUnavailable')}
+          </p>
+        )}
       </header>
 
       <div className="lb-controls">
@@ -335,12 +343,6 @@ function Leaderboard() {
               ))}
             </select>
           </div>
-        )}
-        <p className="lb-scope">{scope}</p>
-        {windowUnavailable && tab === 'all' && (
-          <p className="lb-scope" role="status">
-            {t('leaderboard.windowUnavailable')}
-          </p>
         )}
       </div>
 

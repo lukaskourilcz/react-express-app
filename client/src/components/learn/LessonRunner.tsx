@@ -478,7 +478,7 @@ export function LessonRunner({
     return (
       <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
+          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="md" label={t('roadmap.exit')} onClick={onExit} />
           <div style={{ flex: 1 }} />
         </div>
         <div
@@ -535,7 +535,7 @@ export function LessonRunner({
     return (
       <div className="cd-page" style={{ flex: 1, minHeight: 0, overflowY: 'auto', gap: 12, paddingBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
+          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="md" label={t('roadmap.exit')} onClick={onExit} />
           <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
             {`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
           </span>
@@ -706,7 +706,7 @@ export function LessonRunner({
     <div style={{ flex: '1 1 auto', minHeight: 0, maxHeight: isMobile ? undefined : '80%', display: 'flex', flexDirection: 'column' }}>
       {/* Header: exit + (hearts for a level, progress bar for a checkpoint) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexShrink: 0 }}>
-        <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
+        <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="md" label={t('roadmap.exit')} onClick={onExit} />
         {isCheckpoint ? (
           <>
             <div
@@ -733,7 +733,7 @@ export function LessonRunner({
           label={t('flag.ariaLabel')}
           icon={<FlagIcon size={16} />}
           variant="ghost"
-          size="sm"
+          size="md"
           tooltip={t('flag.ariaLabel')}
           onClick={() => setFlagOpen(true)}
         />

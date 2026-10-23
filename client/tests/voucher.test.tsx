@@ -1,6 +1,7 @@
 // Premium vouchers (migration 045): "Have a voucher?" on /premium, the upgrade
 // sheet while checkout is off, the plan line of a promo grant, and what the
 // Terms and the privacy policy say about them.
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -16,6 +17,7 @@ import { clearAccountData } from '../src/lib/accountData';
 import UpgradeSheet from '../src/components/UpgradeSheet';
 import { closeUpgradeSheet } from '../src/lib/upgradeSheet';
 import { server } from './mocks/server';
+import { Button } from '@astryxdesign/core/Button';
 
 const auth = vi.hoisted(() => ({
   value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false },
@@ -123,6 +125,9 @@ describe('/premium while checkout is off', () => {
     renderAt('/premium', <PremiumPage />);
     const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(headings.slice(0, 2)).toEqual(['Have a voucher?', 'Choose a plan']);
+    // While it leads, the voucher keeps its card (money-09).
+    expect(voucherSection()).toHaveClass('ss-info-card');
+    expect(voucherSection()).not.toHaveClass('ss-premium-voucher--inline');
     expect(await within(voucherSection()).findByText(/Premium is not on sale yet\. If someone gave you a voucher/)).toBeInTheDocument();
     expect(within(voucherSection()).getByText('Sign in first. The voucher opens Premium on the account you sign in with.')).toBeInTheDocument();
     expect(within(voucherSection()).queryByRole('textbox')).toBeNull();
@@ -297,6 +302,36 @@ describe('/premium with checkout on', () => {
     });
     // With checkout open the title and the field label carry it; no lead sentence.
     expect(within(voucherSection()).queryByText(/Enter the code you were given/)).toBeNull();
+  });
+
+  it('folds the voucher into one row without a card after the plans (money-09)', async () => {
+    serve({ billing: ON });
+    renderAt('/premium', <PremiumPage />);
+    await waitFor(() => expect(voucherSection()).toHaveClass('ss-premium-voucher--inline'));
+    expect(voucherSection()).not.toHaveClass('ss-info-card');
+  });
+
+  it('centres the folded voucher\u2019s title on the 44px field row on a wide screen, and lets it stack below 600px (money-09)', () => {
+    const css = readFileSync(new URL('../src/components/PremiumPage.css', import.meta.url), 'utf8');
+    expect(css).toContain('.ss-premium-voucher--inline > .ss-premium-section-title { grid-column: 1; margin: 0; min-height: var(--ss-control-height); display: flex; align-items: center; }');
+    expect(css).toMatch(/@media \(max-width: 599px\) \{[^@]*\.ss-premium-voucher--inline > \.ss-premium-section-title \{ min-height: 0; \}/);
+  });
+
+  it('gives the folded voucher a secondary button, as the plans hold the primaries (money-09)', async () => {
+    // The Astryx variant shows only in its generated classes, so compare with
+    // a reference secondary and primary drawn the same way.
+    const reference = render(<><Button variant="secondary" label="ref-secondary" /><Button variant="primary" label="ref-primary" /></>);
+    const [secondary, primary] = [...reference.container.querySelectorAll('button')].map((button) => button.className);
+    reference.unmount();
+    expect(secondary).not.toBe(primary);
+    serve({ billing: ON });
+    const page = renderAt('/premium', <PremiumPage />);
+    await waitFor(() => expect(voucherSection()).toHaveClass('ss-premium-voucher--inline'));
+    expect(within(voucherSection()).getByRole('button', { name: 'Sign in to redeem' }).className).toBe(secondary);
+    page.unmount();
+    signIn();
+    renderAt('/premium', <PremiumVoucher billingClosed={false} inline />);
+    expect((await screen.findByRole('button', { name: 'Redeem voucher' })).className).toBe(secondary);
   });
 });
 

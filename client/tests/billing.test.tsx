@@ -117,6 +117,22 @@ describe('the embedded checkout', () => {
     view.unmount(); expect(ui.destroy).toHaveBeenCalledOnce();
   });
 
+  // UX audit shell-public-13 and -02: every billing step names itself the same way,
+  // so the h1 stands at one height from checkout to success and cancel.
+  it('carries the billing kicker like its sibling pages, and draws its own action as a page action', async () => {
+    signIn(); serve(); stripeUi();
+    renderAt('/premium/checkout?plan=annual', <PremiumCheckoutPage />);
+    await screen.findByRole('checkbox');
+    const kicker = document.querySelector('.ss-info-page__kicker');
+    expect(kicker).toHaveTextContent('devShark Premium');
+    expect(kicker).not.toHaveAttribute('aria-hidden');
+    // The card's own action is a page action that sits in the card itself,
+    // where .ss-checkout-card > .ss-action keeps it at its own width.
+    const open = screen.getByRole('button', { name: 'Continue to secure payment' });
+    expect(open).toHaveClass('astryx-button', 'ss-action');
+    expect(open.parentElement).toHaveClass('ss-checkout-card');
+  });
+
   it('wires the form preview confirmation and shows a failed confirmation without granting a plan', async () => {
     signIn(); serve({ billing: { enabled: true, cancellable: true, seller: 'trader' } }); const ui = stripeUi('form');
     renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);

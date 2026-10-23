@@ -78,6 +78,9 @@
 .ss-auth-field__toggle:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: -4px; }
 .ss-auth-field__toggle:disabled { cursor: not-allowed; opacity: 0.6; }
 
-/* The email-link pages: one card under the page header. */
-.ss-auth-page { max-width: 560px; }
+/* The email-link pages: one task card under the page header, at the task
+   width the billing and checkout cards share (UX audit shell-public-13). */
+.ss-auth-page { max-width: var(--ss-width-task); }
+/* The lead above it wraps at the same width, as on the billing pages. */
+.ss-info-page:has(> .ss-auth-page) .ss-info-page__header p { max-width: var(--ss-width-task); text-wrap: pretty; }
 .ss-auth-page .ss-auth { gap: 14px; }

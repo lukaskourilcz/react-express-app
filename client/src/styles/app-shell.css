@@ -4,22 +4,18 @@
  * mobile drawer live here.
  */
 
-/* Header (glassy, blurred). */
-.ss-header {
-  background: var(--ss-header-bg);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--ss-header-border);
-}
+/* The header's surface, edge and blur come from the Apple layer below
+   (:root[data-design='apple'] .ss-header), which main.tsx always sets; base
+   declarations it overrides are left out (they never applied). The same goes
+   for the toolbar's height, the nav link's weight and corner, and the
+   drawer panel's width, surface and edge. */
+/* The toolbar fills the header, whose own box (--ss-width-chrome) caps it. */
 .ss-toolbar {
-  max-width: 1200px;
   width: 100%;
-  margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  min-height: 56px;
 }
 @media (min-width: 600px) {
   .ss-toolbar { padding: 8px 24px; }
@@ -83,13 +79,11 @@
 /* Nav links. */
 .ss-navlink {
   font-family: var(--font-family-body);
-  font-weight: 500;
   font-size: var(--ss-type-compact);
   white-space: nowrap;
   text-decoration: none;
   color: var(--color-text-secondary);
   padding: 8px 12px;
-  border-radius: var(--radius-element);
   transition: color 0.15s ease, background 0.15s ease;
 }
 .ss-navlink:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
@@ -116,10 +110,7 @@
   left: 0;
   bottom: 0;
   z-index: 1201;
-  width: 264px;
   max-width: 82vw;
-  background: var(--color-background-surface);
-  border-right: 1px solid var(--color-border);
   box-shadow: var(--shadow-high);
   display: flex;
   flex-direction: column;
@@ -322,9 +313,23 @@
 /* Compact footer: the legal links, devShark's own social profiles and the
    appearance and sound controls. It
    stays deliberately quiet so it never interrupts a learning flow. */
+/* The route box (App.tsx): its max-width is the route's one page width
+   (components/ui/pageWidth.ts), which the shell writes to --ss-page-width. A
+   part that needs the wide page while it is mounted (a Learn or FDE coding
+   phase) carries .ss-wide-page on its root, and the box widens for as long
+   as it is there. The footer is not in the box: it keeps the header's own
+   box, so it never moves with the route width (UX audit shell-public-01). */
+.ss-route { width: 100%; max-width: var(--ss-page-width); margin-inline: auto; }
+.ss-route:has(.ss-wide-page) { max-width: var(--ss-width-wide); }
 .ss-brand-footer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--ss-width-chrome);
+  margin-inline: auto;
   margin-top: 3.5rem;
-  padding: 1.25rem 0 1rem;
+  /* 5rem below: room above the ocean overlay (was an Apple-layer override of
+     a 1rem base value that never applied). */
+  padding: 1.25rem 0 5rem;
   border-top: 1px solid var(--ss-header-border);
   color: var(--color-text-secondary);
   font-size: var(--ss-type-meta);
@@ -345,36 +350,53 @@
 .ss-brand-footer .ss-footer-link:hover { color: var(--brand-accent); }
 .ss-brand-footer .ss-footer-link:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 3px; }
 .ss-brand-footer__social a { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
-.ss-footer-settings { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+/* 8px apart, so the toggles' 44px hit areas (4px past each edge on a mouse)
+   meet without overlapping. */
+.ss-footer-settings { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+/* The footer's appearance and sound toggles are compact utility controls
+   (UX audit shell-public-03): pills like every other button, 36px with a
+   44px hit area on a mouse (the .ss-compact hit-area rule), 44px on a coarse
+   pointer (the touch block). */
 .ss-footer-settings button {
-  min-height: 32px;
-  padding: 0 0.55rem;
+  position: relative;
+  min-height: var(--ss-control-height-compact);
+  padding: 0 0.85rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-inner);
+  border-radius: 999px;
   background: transparent;
   color: inherit;
-  font: 600 var(--ss-type-label) var(--font-family-body);
+  font: 600 var(--ss-type-meta) var(--font-family-body);
   cursor: pointer;
 }
 .ss-footer-settings button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
 .ss-footer-settings button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
 .ss-brand-footer__meta { justify-content: space-between; }
+/* On a desktop the footer's text lines up with the header's (its toolbar
+   padding); on a phone the page gutter is enough. */
+@media (min-width: 760px) {
+  .ss-brand-footer { padding-inline: 1.25rem; }
+}
 @media (max-width: 599px) {
   .ss-brand-footer { margin-top: 2.5rem; }
   .ss-brand-footer__meta { align-items: flex-start; flex-direction: column; }
 }
 
-.ss-info-page { width: 100%; max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
+/* The shared Page layout. It fills the route's page column (800px on every
+   Page route) and sets no max-width of its own, so every Page h1 starts at
+   the same x (UX audit shell-public-01); a task card inside it is
+   var(--ss-width-task). */
+.ss-info-page { width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
 .ss-info-page__header { display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; padding: 1rem 0; }
 .ss-info-page__header h1 { margin: 0; font: 800 var(--ss-type-title)/1.08 var(--font-family-heading); letter-spacing: -0.03em; }
 .ss-info-page__header p { max-width: 68ch; margin: 0; color: var(--color-text-secondary); font-size: 1.05rem; }
-.ss-info-page__kicker { color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); letter-spacing: 0.08em; text-transform: uppercase; }
+/* The kicker line is always there, empty when a Page passes none, so the h1
+   sits at one y on every Page (UX audit shell-public-13). */
+.ss-info-page__kicker { min-height: 1lh; color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); letter-spacing: 0.08em; text-transform: uppercase; }
 
 .topic-practice { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); padding: 14px 16px; }
 .topic-practice summary { cursor: pointer; font-weight: 700; }
 .topic-practice p { margin: 12px 0 0; color: var(--color-text-secondary); }
-.ss-info-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .ss-info-card { padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid var(--ss-card-line); border-bottom: 2px solid var(--ss-card-edge); border-radius: var(--radius-container); background: var(--ss-card-bg); }
 .ss-info-card h2 { margin: 0 0 0.65rem; font: 700 1.05rem var(--font-family-heading); }
 .ss-info-card p { margin: 0.5rem 0; color: var(--color-text-secondary); line-height: 1.65; }
@@ -393,8 +415,6 @@
 .ss-text-links button:disabled { cursor: progress; opacity: 0.7; }
 .ss-text-links a:focus-visible,
 .ss-text-links button:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
-.ss-link-button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 1rem; border-radius: var(--radius-element); background: var(--brand-accent); color: var(--brand-on-accent); font-weight: 700; text-decoration: none; }
-@media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } }
 
 /* The crown, worn. It sits on the avatar rather than beside it, tilted very
    slightly so it reads as placed rather than pasted. Decorative: the avatar
@@ -595,44 +615,90 @@
 .ss-figure__frames { margin-top: 10px; display: grid; gap: 4px; font-size: var(--ss-type-meta); color: var(--color-text-secondary); counter-reset: figframe; }
 .ss-figure__frames li::before { counter-increment: figframe; content: counter(figframe) ". "; font-weight: 700; }
 
+/* ── Control heights ────────────────────────────────────────────────────────
+ *
+ * One button scale on every pointer (UX audit U1, #573). Every page action and
+ * form control is var(--ss-control-height) (44px) tall, with a mouse as with a
+ * finger: on a desktop the primary used to be the smallest control in its row
+ * (Astryx md 32px, lg 36px, sm 28px, segmented items 28px). Only controls
+ * inside an element with class "ss-compact", a component's own toolbar, drop
+ * to var(--ss-control-height-compact) (36px) on a fine pointer, and keep a
+ * 44px hit area through ::before; on a coarse pointer they stay at 44px.
+ *
+ * Applied as a floor rather than a fixed size so a control that is already
+ * larger is untouched, and to min-height/min-width rather than padding so a
+ * label never reflows. The floor sits here, once, and not page by page.
+ *
+ * !important, deliberately and only on these floors. Astryx ships StyleX
+ * atomic rules guarded by repeated id-level negations, which is a specificity
+ * no class selector can reach. The alternative is forking the design system,
+ * which the implementation rules rule out; this stays a floor on two
+ * properties.
+ */
+.astryx-button,
+.astryx-segmented-control-item {
+  min-height: var(--ss-control-height) !important;
+  min-width: var(--ss-control-height) !important;
+}
+/* The Astryx text field is 32px at its default size and 36px at its largest.
+   The box grows to the control height and the input stretches to fill it, so
+   a click or tap anywhere in the box lands in the field (the email on
+   /premium/cancel measured 23px on a phone, #222). The input itself gets the
+   floor as well: Astryx sizes it to the box's own height, which stays 36px
+   under the floor above (it measured 34px on /premium/cancel). */
+.astryx-text-input {
+  min-height: var(--ss-control-height) !important;
+}
+.astryx-text-input > input {
+  align-self: stretch;
+  min-height: var(--ss-control-height) !important;
+}
+
+/* A page action (UX audit shell-public-02): the 44px floor above plus one
+   type: 20px inline padding and 16px/600 text, on the pill the Apple layer
+   gives every button. Set through Astryx's own custom properties (its button
+   reads --spacing-3, --text-label-size and --font-weight-medium), so no
+   !important. Every button in the shared action rows (.ss-info-actions on
+   the Page screens, .ss-auth__actions in the sign-in dialog) gets it; a
+   page action elsewhere takes className="ss-action". A small in-row utility
+   (a Retry inside a note) does not. */
+.astryx-button.ss-action,
+.ss-info-actions .astryx-button,
+.ss-auth__actions .astryx-button {
+  --spacing-3: 20px;
+  --text-label-size: 1rem;
+  --font-weight-medium: 600;
+}
+
+/* A component's own toolbar (the coding action bar):
+   36px buttons and segmented items on a mouse, each with a 44px hit area
+   drawn by ::before (both are already position: relative in Astryx); the
+   footer's compact toggles share the hit area. Text fields stay 44px
+   everywhere. On a coarse pointer the 44px floor holds. */
+@media (pointer: fine) {
+  .ss-compact .astryx-button,
+  .ss-compact .astryx-segmented-control-item {
+    min-height: var(--ss-control-height-compact) !important;
+    min-width: var(--ss-control-height-compact) !important;
+  }
+  .ss-compact .astryx-button::before,
+  .ss-compact .astryx-segmented-control-item::before,
+  .ss-footer-settings button::before {
+    content: '';
+    position: absolute;
+    inset: calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2);
+  }
+}
+
 /* ── Touch targets ──────────────────────────────────────────────────────────
  *
- * The design contract asks for 44px targets. The app's own controls meet it;
- * the ones that did not were the shared Astryx controls and the footer links,
- * measured in a headless browser at 390px across nineteen routes: the mobile
- * navigation toggle at 36×36, primary and secondary buttons at 32px tall,
- * segmented-control items at 28px, and the footer links at 14px — text
- * height, no padding at all. The navigation toggle is the most-tapped control
- * on a phone and was the smallest thing on the page.
- *
- * Scoped to coarse pointers on purpose. A mouse is precise and the desktop
- * density is deliberate; a finger is not, and this is the case the 44px rule
- * is actually about. Applied as a floor rather than a fixed size so a control
- * that is already larger is untouched, and to min-height/min-width rather than
- * padding so nothing reflows into a neighbour.
+ * The app's own controls beyond the shared Astryx ones, measured in a
+ * headless browser at 390px across nineteen routes: the mobile navigation
+ * toggle at 36×36 and the footer links at 14px (text height, no padding at
+ * all). Scoped to coarse pointers: these are text links and small inline
+ * controls whose desktop density is deliberate.
  */
 @media (pointer: coarse) {
-  /* !important, deliberately and only here. Astryx ships StyleX atomic rules
-     guarded by repeated id-level negations, which is a specificity no class
-     selector can reach. The alternative is forking the design system, which
-     the implementation rules rule out; this stays a floor on two properties,
-     inside one media query. */
-  .astryx-button,
-  .astryx-segmented-control-item {
-    min-height: 44px !important;
-    min-width: 44px !important;
-  }
-  /* The Astryx text field is 32px at its default size and 36px at its
-     largest. On a phone the box grows to 44px and the input stretches to
-     fill it, so a tap anywhere in the box lands in the field (the email on
-     /premium/cancel measured 23px, #222). */
-  .astryx-text-input {
-    min-height: 44px !important;
-  }
-  .astryx-text-input > input {
-    align-self: stretch;
-  }
-
   .ss-footer-settings button,
   .ss-brand-footer__social a,
   .ss-drawer-brand,
@@ -641,23 +707,15 @@
     min-height: 44px;
     min-width: 44px;
   }
-  /* The Learn map's Skill check (36px), the career roadmap's part pills (31px)
-     and path links (28px), and Play's category chips (34px). */
-  .rm-skillcheck-cta,
-  .rm-part-pill,
-  .play-category-chip {
+  /* The career roadmap's part pills (31px) and path links (28px). The Learn
+     map's Skill check is 44px on every pointer in Roadmap.css. */
+  .rm-part-pill {
     min-height: 44px;
   }
   .lp-module__title a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-  }
-  /* The input itself, not only its box: Astryx sizes it to the box's own
-     height, which stays 36px under the 44px floor above, so the input
-     measured 34px (/premium/cancel, the voucher field). */
-  .astryx-text-input > input {
-    min-height: 44px !important;
   }
 
   /* The footer links are bare text in a wrapped row. Height is what gives
@@ -730,12 +788,6 @@
 .ss-topic-article summary:focus-visible, .ss-topic-article a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; }
 .ss-topic-article .topic-practice p { margin-top: 1rem; }
 .ss-topic-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.75rem 1rem; background: var(--brand-accent); color: var(--brand-on-accent); border-radius: var(--radius-element); font-weight: 700; text-decoration: none; }
-/* A horizontal scroller a keyboard can reach. Same contract as
-   .ss-compare-scroll: the element is focusable and carries role="region" plus
-   a name, so arrow keys scroll it. The ring sits inside the box because the
-   strip sits flush inside a panel. */
-.ss-scroll-strip { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.ss-scroll-strip:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: -3px; border-radius: var(--radius-inner); }
 
 /* Keep scrollbar geometry stable; only the thumb's paint follows activity. */
 * { --ss-scrollbar-thumb: transparent; scrollbar-width: thin; scrollbar-color: var(--ss-scrollbar-thumb) transparent; }
@@ -854,7 +906,7 @@
   z-index: 100;
   inset: .875rem 1rem auto;
   width: calc(100% - 2rem);
-  max-width: 1168px;
+  max-width: var(--ss-width-chrome);
   margin-inline: auto;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -864,8 +916,6 @@
   backdrop-filter: blur(24px) saturate(160%);
   box-shadow: var(--shadow-low);
 }
-/* Keep the edge within the rounded material; an external gradient cut off the border. */
-:root[data-design='apple'] .ss-header::after { content: none; }
 :root[data-design='apple'] .ss-toolbar { min-height: 64px; padding-inline: 1.25rem; }
 :root[data-design='apple'] .ss-app-root[data-chrome='true'] #main-content { padding-top: 7rem !important; }
 :root[data-design='apple'] .ss-navlink { border-radius: 999px; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
@@ -943,9 +993,9 @@
 :root[data-design='apple'] .ss-radio-card { min-height: 3rem; border-radius: .85rem; background: var(--color-background-muted); border-color: transparent; }
 :root[data-design='apple'] .ss-radio-card[data-tone='success'] { background: var(--ss-success-soft); border-color: var(--ss-success); }
 :root[data-design='apple'] .ss-text-links :is(a, button) { text-decoration-thickness: 1px; text-underline-offset: .2em; }
-:root[data-design='apple'] :is(.ss-fin-button, .astryx-button, .ss-link-button) { border-radius: 999px !important; }
+:root[data-design='apple'] :is(.ss-fin-button, .astryx-button) { border-radius: 999px !important; }
 /* Instant response to a press; the selection is still confirmed only by the native click. */
-:root[data-design='apple'] :is(button, .ss-navlink, .ss-link-button) { touch-action: manipulation; }
+:root[data-design='apple'] :is(button, .ss-navlink) { touch-action: manipulation; }
 :root[data-design='apple'] :is(.astryx-button, .ss-fin-button, .ss-radio-card, .ss-navlink, .ss-strip-tile):active:not(:disabled):not([aria-disabled='true']) {
   transform: scale(.97);
   transition: transform 80ms ease-out;
@@ -962,8 +1012,6 @@
   box-shadow: var(--shadow-high) !important;
 }
 :root[data-design='apple'] dialog.astryx-dialog::backdrop { background: rgba(0, 0, 0, .36) !important; }
-:root[data-design='apple'] .ss-design-preview { border-radius: 1.25rem; }
-:root[data-design='apple'] .ss-brand-footer { padding-bottom: 5rem; }
 
 @media (max-width: 760px) {
   :root[data-design='apple'] .ss-hero-grid { grid-template-columns: 1fr; gap: 2rem; padding-top: 0; }

@@ -11,10 +11,6 @@ export const en = {
   'publicSection.webDeveloper': 'Explore web development topics, guided Learn levels and coding practice across the frontend and backend.',
   'publicSection.softwareEngineer': 'Explore algorithms, data structures, databases, testing, security and delivery topics in the Software Engineer section.',
   'publicSection.fde': 'Explore the Forward Deployed Engineer path: customer discovery, integration, evaluation, security, deployment and handoff.',
-  'designPreview.label': 'Compare interface designs',
-  'designPreview.local': 'Local preview',
-  'designPreview.original': 'Original',
-  'designPreview.apple': 'Apple',
   // App shell / navigation
   'nav.quiz': 'Quiz',
   'nav.learn': 'Learn',
@@ -331,6 +327,12 @@ export const en = {
   'common.lightMode': 'Switch to light mode',
   'common.soundOn': 'Turn sound on',
   'common.soundOff': 'Turn sound off',
+  // The footer's visible toggle labels; the common.* lines above stay their
+  // accessible names (UX audit shell-public-03).
+  'footer.darkMode': 'Dark mode',
+  'footer.lightMode': 'Light mode',
+  'footer.soundOn': 'Sound on',
+  'footer.soundOff': 'Sound off',
 
   // Auth
   'auth.logIn': 'Log in',
@@ -651,7 +653,7 @@ export const en = {
   'play.multiplayerFfa': 'Multiplayer (free-for-all)',
   'play.classroom': 'Classroom',
   'play.multiplayer': 'Multiplayer',
-  'play.questions': 'questions',
+  'play.questions': 'Questions',
   'play.creating': 'Creating…',
   'play.createMultiplayer': 'Create multiplayer match',
   'play.createClassroom': 'Create classroom match',
@@ -1066,10 +1068,10 @@ export const en = {
   'topicLanding.goHome': 'Go home',
   // The classroom invitation and the not-found page (PublicInfoPages.tsx).
   'classroomPage.title': 'Run a focused classroom challenge.',
-  'classroomPage.lead': 'Create a host-led room, share one link or QR code, and let signed-in learners join the same subject session.',
+  'classroomPage.lead': 'Create a host-led room and share one link or QR code. Learners sign in, open the link and join the same subject session, and the host controls question progress.',
   'classroomPage.create': 'Create a classroom',
   'classroomPage.join': 'Join with a room code',
-  'classroomPage.note': 'Participants sign in, open the room link, and the host controls question progress.',
+  'notFoundPage.kicker': 'Page not found',
   'notFoundPage.title': 'That page is out of the water.',
   'notFoundPage.lead': 'The address may be old or incomplete. Your learning progress is safe.',
   'notFoundPage.home': 'Go home',
@@ -1591,7 +1593,6 @@ export const en = {
   'coding.group.hooks': 'Hooks',
   'coding.group.rendering': 'Rendering',
   'coding.group.design': 'System design',
-  'coding.review.title': 'Due for review',
   'coding.progress': '{passed} of {total} passed',
   'coding.minutes': '{n} min',
   'coding.level': 'Level {n}',
@@ -2058,7 +2059,6 @@ export const en = {
   'today.pathSection': 'Learning paths',
   'today.pathResume': 'Continue {path}',
   'today.pathReason': 'Your next step on this path',
-  'dev.paths.title': 'Learning path readiness',
   // /dev → Vouchers (migration 045).
   'dev.vouchers.nav': 'Vouchers',
   'dev.vouchers.navDescription': 'Codes that open Premium',

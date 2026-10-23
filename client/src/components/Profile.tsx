@@ -167,7 +167,7 @@ function Profile() {
 
   if (error && !stats) {
     return (
-      <div className="de-page" style={{ maxWidth: 1000 }}>
+      <div className="de-page">
         <VStack gap={2}>
           <Heading level={1}>{t('nav.profile')}</Heading>
           <StreakCard stats={null} unavailable />
@@ -233,7 +233,7 @@ function ProfileBody({
   const [focusSharkname, setFocusSharkname] = useState(false);
 
   return (
-    <div className="de-page" style={{ maxWidth: 1000 }}>
+    <div className="de-page">
       <VStack gap={2}>
         {/* Identity header — subject-accented top edge, avatar and name on the
             left, the three account switches on the right. */}
@@ -840,7 +840,6 @@ export function AccountDeletionCard() {
             <HStack justify="end">
               <Button
                 variant="secondary"
-                size="sm"
                 label={t('profile.signOutEverywhere')}
                 isDisabled={!isAuthenticated || signingOut}
                 onClick={signOutEverywhere}
@@ -855,7 +854,7 @@ export function AccountDeletionCard() {
               </Text>
             )}
             <HStack justify="end">
-              <Button variant="destructive" size="sm" label={t('profile.deleteAction')} onClick={requestDeletion} />
+              <Button variant="destructive" label={t('profile.deleteAction')} onClick={requestDeletion} />
             </HStack>
           </VStack>
         </div>

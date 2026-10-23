@@ -269,7 +269,6 @@ function SharknameEditor({
           <p className="fr-note fr-note--error">{t('sharkname.taken', { name: taken.name })}</p>
           <Button
             variant="secondary"
-            size="sm"
             onClick={() => { setDraft(taken.suggestion); setTaken(null); setRolls((n) => n + 1); input.current?.focus(); }}
             label={t('sharkname.trySuggestion', { name: taken.suggestion })}
           />

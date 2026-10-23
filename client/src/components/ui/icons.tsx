@@ -186,8 +186,18 @@ export const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+/** Two coins in the stroke language: the header's Coins button, beside the
+ * trophy and the diamond. A filled 20px disc read as a status light there
+ * (UX audit shell-public-10). */
+export const CoinsIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}>
+    <circle cx="9" cy="9" r="6" />
+    <path d="M18.1 10.4a6 6 0 1 1-7.7 7.7M9 7v4" />
+  </svg>
+);
+
 /** A coin: the accent disc with an inner rim. Decorative; the number or the
- * word beside it carries the meaning. The Coins page and its header button. */
+ * word beside it carries the meaning. The Coins page's balance. */
 export const CoinIcon = ({ size = 24 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="10" fill="var(--brand-accent)" />

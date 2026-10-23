@@ -165,15 +165,15 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
       {showCta && (
         <div className="ss-compare-cta">
           {entitlement.loading ? (
-            <Button variant="primary" size="lg" label={t('landing.compare.cta')} isDisabled isLoading />
+            <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled isLoading />
           ) : entitlement.failed ? (
-            <Button variant="primary" size="lg" label={t('landing.compare.cta')} isDisabled tooltip={t('profile.plan.failed')} />
+            <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled tooltip={t('profile.plan.failed')} />
           ) : entitlement.tier === 'premium' ? (
-            <Button variant="primary" size="lg" label={t('landing.compare.cta')} isDisabled tooltip={t('premium.memberThanks')} />
+            <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled tooltip={t('premium.memberThanks')} />
           ) : onStart ? (
             <SwimCta label={t('landing.compare.cta')} onClick={onStart} dir={1} />
           ) : (
-            <Button variant="primary" size="lg" as={Link} href={startHref} label={t('landing.compare.cta')} />
+            <Button variant="primary" size="lg" className="ss-action" as={Link} href={startHref} label={t('landing.compare.cta')} />
           )}
         </div>
       )}

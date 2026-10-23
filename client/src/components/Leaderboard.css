@@ -7,14 +7,19 @@
  * filled, and no rank is told apart by hue. Nothing here animates.
  */
 
-.lb { display: flex; flex-direction: column; gap: 16px; }
+.lb { display: flex; flex-direction: column; gap: 16px; width: 100%; padding: 0.5rem 0 2rem; }
+/* The board fills the route's narrow 800px column (components/ui/pageWidth.ts)
+   and sets no width of its own, with or without DeepEndScreens.css loaded, so
+   header, controls and table share one centred left edge (UX audit
+   social-account-02). */
 
 .lb-head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; margin-bottom: 8px; }
 
-/* The period control and the topic filter share one row that wraps; the
-   scope line takes the full width under them. On a phone they stack. */
+/* One control row right above the table: the period control on the left,
+   the topic filter on the right, both 44px (the shared control floor for the
+   segmented items, the shared .ss-select for the topic). On a phone they
+   stack. */
 .lb-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
-.lb-controls .lb-scope { flex: 1 1 100%; }
 @media (max-width: 599px) {
   .lb-controls { flex-direction: column; align-items: stretch; }
 }
@@ -104,7 +109,7 @@
 .lb-table tfoot td { border-top: 1px dashed var(--color-border-strong); }
 .lb-table .lb-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .lb-col-rank { width: 72px; }
-.lb-col-num { width: 120px; }
+.lb-col-num { width: 96px; }
 .lb-table tr.is-viewer { background: var(--ss-selected); }
 .lb-table tr.is-viewer td:first-child { box-shadow: inset 3px 0 0 var(--brand-accent); }
 /* Rows sit on the same 24px gutter as the other panels; 16px on a phone. */

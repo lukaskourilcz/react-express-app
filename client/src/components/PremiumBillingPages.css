@@ -1,7 +1,12 @@
 /* The billing pages (#221): /premium/success and /premium/cancel. They sit on
  * the public info-page layout (.ss-info-page, .ss-info-card, .ss-info-actions)
  * and add only a status line, the form rhythm and the receipt list. */
-.ss-billing-card { display: flex; flex-direction: column; gap: 0.9rem; max-width: 640px; }
+/* Every purchase step sits in the 800px page column and its card is the task
+   width, the same as the auth cards (UX audit money-10, shell-public-13). */
+.ss-billing-card { display: flex; flex-direction: column; gap: 0.9rem; max-width: var(--ss-width-task); }
+/* The lead above the card wraps at the card's width, so the header and the
+   card share both edges (a 719px lead sat over the 640px card, money-10). */
+.ss-info-page:has(> .ss-billing-card) .ss-info-page__header p { max-width: var(--ss-width-task); text-wrap: pretty; }
 .ss-info-card .ss-billing-card__label {
   margin: 0;
   font: 750 0.72rem/1.4 var(--font-family-body);
@@ -21,7 +26,15 @@
 }
 .ss-billing-form { display: flex; flex-direction: column; gap: 1.1rem; }
 .ss-checkout-form { width: 100%; min-width: 0; }
-.ss-checkout-card { max-width: 960px; }
+/* The checkout card keeps the billing card's task width (its 960px cap fought
+   the 640px one and won). The Stripe form fits in 640px. With only a banner
+   to show (no plan chosen, billing unreachable) it is an inline note and its
+   button, not a card around them (canvas, then one panel). */
+.ss-checkout-card:has(.astryx-banner) { padding: 0; border: 0; background: none; box-shadow: none; }
+/* The card's own actions (Try again, Sign in to continue, Continue to secure
+   payment) are page actions: the .ss-action type, at their own width like
+   'Back to plans' below them, not stretched across the card (shell-public-02). */
+.ss-checkout-card > .ss-action { align-self: flex-start; }
 .ss-checkout-price { margin: 0; font-size: 1.35rem; }
 .ss-checkout-form[data-ready="true"] { min-height: 320px; }
 /* Focus lands on the form's box when it opens, so Tab goes on into Stripe's

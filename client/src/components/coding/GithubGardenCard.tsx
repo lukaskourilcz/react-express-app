@@ -186,7 +186,6 @@ export function GithubGardenCard() {
         <HStack justify="end">
           <Button
             variant="primary"
-            size="sm"
             label={busy === 'connect' ? t('github.connecting') : t('github.connect')}
             isDisabled={busy !== null}
             onClick={() => void connect()}
@@ -203,8 +202,8 @@ export function GithubGardenCard() {
           <>
             <Text type="supporting" size="sm" color="secondary">{t('github.noRepos')}</Text>
             <HStack justify="between" wrap="wrap" gap={1}>
-              <Button variant="secondary" size="sm" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer" label={t('github.manageOnGithub')} />
-              <Button variant="ghost" size="sm" label={t('github.refresh')} isDisabled={query.isFetching} onClick={() => void query.refetch()} />
+              <Button variant="secondary" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer" label={t('github.manageOnGithub')} />
+              <Button variant="ghost" label={t('github.refresh')} isDisabled={query.isFetching} onClick={() => void query.refetch()} />
             </HStack>
           </>
         ) : (
@@ -223,8 +222,8 @@ export function GithubGardenCard() {
               ))}
             </RadioCardGroup>
             <HStack justify="between" wrap="wrap" gap={1}>
-              <Button variant="ghost" size="sm" label={t('github.disconnect')} isDisabled={busy !== null} onClick={requestDisconnect} />
-              <Button variant="primary" size="sm" label={t('github.useRepo')} isDisabled={!repoPick || busy !== null} onClick={() => void chooseRepo()} />
+              <Button variant="ghost" label={t('github.disconnect')} isDisabled={busy !== null} onClick={requestDisconnect} />
+              <Button variant="primary" label={t('github.useRepo')} isDisabled={!repoPick || busy !== null} onClick={() => void chooseRepo()} />
             </HStack>
           </>
         )}
@@ -258,11 +257,11 @@ export function GithubGardenCard() {
         <Text type="supporting" size="xsm" color="secondary">{t('github.layoutNote')}</Text>
         <HStack justify="between" wrap="wrap" gap={1}>
           <HStack gap={1} wrap="wrap">
-            <Button variant="ghost" size="sm" label={busy === 'disconnect' ? t('github.disconnecting') : t('github.disconnect')} isDisabled={busy !== null} onClick={requestDisconnect} />
-            <Button variant="secondary" size="sm" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer" label={t('github.manageOnGithub')} />
+            <Button variant="ghost" label={busy === 'disconnect' ? t('github.disconnecting') : t('github.disconnect')} isDisabled={busy !== null} onClick={requestDisconnect} />
+            <Button variant="secondary" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer" label={t('github.manageOnGithub')} />
           </HStack>
           {(data.queued > 0 || data.status === 'broken') && (
-            <Button variant="secondary" size="sm" label={busy === 'sync' ? t('github.syncing') : t('github.syncNow')} isDisabled={busy !== null} onClick={() => void sync()} />
+            <Button variant="secondary" label={busy === 'sync' ? t('github.syncing') : t('github.syncNow')} isDisabled={busy !== null} onClick={() => void sync()} />
           )}
         </HStack>
       </>

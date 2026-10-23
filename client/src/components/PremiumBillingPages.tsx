@@ -162,12 +162,12 @@ export function PremiumCheckoutPage() {
     }
   };
 
-  return <Page title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
+  return <Page kicker={t('billing.kicker')} title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
     <section className="ss-info-card ss-billing-card ss-checkout-card" ref={card}>
-      {billing.failed ? <><Banner status="error" title={t('premium.page.unreachable')} /><Button label={t('profile.plan.retry')} onClick={billing.retry} /></>
+      {billing.failed ? <><Banner status="error" title={t('premium.page.unreachable')} /><Button className="ss-action" label={t('profile.plan.retry')} onClick={billing.retry} /></>
         : loading ? <p role="status">{t('billing.checkout.loading')}</p> : !validPlan ? <Banner status="error" title={t('billing.checkout.choosePlan')} />
         : !billing.enabled ? <p>{t('billing.checkout.soon')}</p>
-          : !isAuthenticated ? <Button label={t('billing.checkout.signIn')} onClick={() => openSignIn({ returnTo: `/premium/checkout?plan=${plan}` })} />
+          : !isAuthenticated ? <Button className="ss-action" label={t('billing.checkout.signIn')} onClick={() => openSignIn({ returnTo: `/premium/checkout?plan=${plan}` })} />
             : paying ? <PremiumCheckoutButton plan={plan} /> : <>
               <h2>{t(plan === 'annual' ? 'premium.page.annualName' : 'premium.page.monthlyName')}</h2>
               <p className="ss-checkout-price">{offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{PREMIUM_PRICE.symbol}{PREMIUM_PRICE[plan]}</strong>}</p>
@@ -175,7 +175,7 @@ export function PremiumCheckoutPage() {
               <p>{t(plan === 'annual' ? 'premium.page.annualRenews' : 'premium.page.monthlyRenews')}</p>
               <p className="ss-text-links"><Link to="/terms">{t('legal.link.terms')}</Link><Link to="/privacy">{t('legal.link.privacy')}</Link></p>
               <CheckboxInput value={consent} onChange={setConsent} label={t('billing.checkout.consent')} isRequired isDisabled={busy || ready} />
-              {!ready && <Button label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
+              {!ready && <Button className="ss-action" label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
               {busy && <p aria-hidden="true">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
               {/* A live region mounted with its words is not announced, so this
                   one stays on the page and only its text changes. */}

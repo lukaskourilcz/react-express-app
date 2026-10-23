@@ -273,6 +273,7 @@ export default function CareerRoadmap() {
               value={track}
               onChange={(v) => void chooseTrack(v as Track)}
               label={t('careerRoadmap.chooseTrack')}
+              size="lg"
               isDisabled={savingTrack}
               disabledMessage={t('paths.picker.saving')}
             >

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Kicker } from './landing/LandingKit';
+import { Kicker, SwimCta } from './landing/LandingKit';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -93,6 +93,9 @@ const sameRoom = (a: RoomState | null | undefined, b: RoomState | null | undefin
   !!a && !!b && a.status === b.status &&
   (a.status !== 'running' || (a.current_index === b.current_index && closedNow(a) === closedNow(b)));
 
+/** A match code's length (lib/play-helpers.ts generateMatchCode). */
+const MATCH_CODE_LENGTH = 6;
+
 /** The Play switch in /dev → Settings is off, and the server says so. */
 const isPlayOff = (err: unknown) => err instanceof ApiError && err.code === 'feature_disabled';
 
@@ -101,7 +104,7 @@ function PlayUnavailable() {
   const navigate = useNavigate();
   const t = useT();
   return (
-    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
       <Card padding={6} width="100%">
         <VStack gap={2} align="center">
           <Heading level={1} justify="center">{t('play.unavailableTitle')}</Heading>
@@ -176,7 +179,7 @@ export function PlayLanding() {
 
   if (!isAuthenticated) {
     return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
             <Heading level={1} justify="center">
@@ -335,12 +338,17 @@ export function PlayLanding() {
                 </Text>
               </VStack>
 
-              <VStack gap={1}>
-                <HStack gap={1} align="center" wrap="wrap">
+              {/* Question count and time limit: each with its label above, at
+                  the shared 44px control height, side by side from 900px
+                  (UX audit social-account-12). */}
+              <div style={{ display: 'flex', flexDirection: isDesktop ? 'row' : 'column', flexWrap: 'wrap', gap: '16px 32px' }}>
+                <VStack gap={1}>
+                  <Text type="label" weight="bold" color="secondary">
+                    {t('play.questions')}
+                  </Text>
                   <ToggleButtonGroup
                     label={t('play.questions')}
                     type="single"
-                    size="sm"
                     value={String(count)}
                     onChange={(v) => v && setCount(Number(v))}
                   >
@@ -348,36 +356,31 @@ export function PlayLanding() {
                       <ToggleButton key={n} value={String(n)} label={String(n)} />
                     ))}
                   </ToggleButtonGroup>
-                  <Text type="supporting" size="xsm" color="secondary">
-                    {t('play.questions')}
-                  </Text>
-                </HStack>
-              </VStack>
+                </VStack>
 
-              <VStack gap={1}>
-                <Text type="label" weight="bold" color="secondary">
-                  {t('play.timeLimit')}
-                </Text>
-                <div className="play-time-limit" style={{ display: 'flex', flexWrap: 'wrap' }}>
-                  <ToggleButtonGroup
-                    label={t('play.timeLimit')}
-                    type="single"
-                    size="sm"
-                    value={String(durationS)}
-                    onChange={(v) => v && setDurationS(Number(v))}
-                  >
-                    {config.play.durationOptionsS.map((n) => (
-                      <ToggleButton key={n} value={String(n)} label={formatDuration(n, t)} />
-                    ))}
-                  </ToggleButtonGroup>
-                </div>
-              </VStack>
+                <VStack gap={1}>
+                  <Text type="label" weight="bold" color="secondary">
+                    {t('play.timeLimit')}
+                  </Text>
+                  <div className="play-time-limit" style={{ display: 'flex', flexWrap: 'wrap' }}>
+                    <ToggleButtonGroup
+                      label={t('play.timeLimit')}
+                      type="single"
+                      value={String(durationS)}
+                      onChange={(v) => v && setDurationS(Number(v))}
+                    >
+                      {config.play.durationOptionsS.map((n) => (
+                        <ToggleButton key={n} value={String(n)} label={formatDuration(n, t)} />
+                      ))}
+                    </ToggleButtonGroup>
+                  </div>
+                </VStack>
+              </div>
 
               <VStack gap={1} align="stretch">
+                {/* The page's one filled primary (SwimCta md, 44px). */}
                 <div style={{ display: 'grid' }}>
-                  <Button
-                    variant="primary"
-                    size="lg"
+                  <SwimCta
                     label={
                       loading === 'create'
                         ? t('play.creating')
@@ -385,9 +388,8 @@ export function PlayLanding() {
                           ? t('play.createMultiplayer')
                           : t('play.createClassroom')
                     }
-                    isLoading={loading === 'create'}
-                    isDisabled={loading !== null}
-                    onClick={handleCreate}
+                    disabled={loading !== null}
+                    onClick={() => void handleCreate()}
                   />
                 </div>
                 <Text type="supporting" size="xsm" color="secondary">
@@ -430,10 +432,11 @@ export function PlayLanding() {
                     />
                   </div>
                 </div>
+                {/* Join stays secondary beside the page's one primary (Create)
+                    until the field holds a whole six-character code. */}
                 <div style={{ display: 'grid' }}>
                   <Button
-                    variant="primary"
-                    size="lg"
+                    variant={joinCode.trim().length >= MATCH_CODE_LENGTH ? 'primary' : 'secondary'}
                     label={loading === 'join' ? '…' : `${t('play.join')} →`}
                     isLoading={loading === 'join'}
                     isDisabled={loading !== null}
@@ -844,7 +847,7 @@ function PlayRoom() {
 
   if (!isAuthenticated) {
     return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
             <Heading level={1} justify="center">{t('play.signInTitle')}</Heading>
@@ -870,7 +873,7 @@ function PlayRoom() {
 
   if (error && !match) {
     return (
-      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
         <VStack gap={2}>
           {/* The page's heading, so a match that cannot open still has one. */}
           <Heading level={1} type="display-3">{t('play.title')}</Heading>
@@ -897,8 +900,9 @@ function PlayRoom() {
   const currentQuestion = match.questions[match.current_index];
 
   return (
-    // Same question-column width as Quiz / Learn / Challenge.
-    <div style={{ maxWidth: 620, margin: '0 auto', width: '100%' }}>
+    // The shared task column (--ss-width-task, 640px) inside the route's page,
+    // as on Quiz, Learn and Challenge (UX audit social-account-01).
+    <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
       <VStack gap={2}>
         <HStack justify="between" align="center" gap={2}>
           <VStack gap={0}>

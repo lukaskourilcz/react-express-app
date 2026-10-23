@@ -744,6 +744,9 @@ function Roadmap() {
     const SLOPE = 0;
     const BASE = 34;
     const LABEL_H = 42;
+    // Node sizes (half is half of each): a level is 44px (50px when current),
+    // a part test 52px, so every node is a 44px target on a mouse as well as
+    // on a touch screen (UX audit learn-18).
     const placed: PlacedNode[] = nodes.map((node, i): PlacedNode => {
       const row = Math.floor(i / cols);
       const p = i % cols;
@@ -757,7 +760,7 @@ function Roadmap() {
         const unlocked = !unavailable && !outOfPlan && isPartTestUnlocked(progress, topic, node.range, availability);
         const premium = !passed && !unavailable && !outOfPlan && isBarred(lockOf({ kind: 'learn-part-test', topic, part: node.part }));
         return {
-          i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 25,
+          i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 26,
           accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
           unlocked, passed, isCurrent: unlocked && !passed && !premium, unavailable, premium, outOfPlan,
           best: partTestBestPct(progress, topic, node.part),
@@ -776,7 +779,7 @@ function Roadmap() {
       // additive; older/guest rows without passDays resolve to "cleared").
       const entry = progress[topic]?.levels?.[String(meta.level)] as LevelMasteryEntry | undefined;
       return {
-        i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 23 : 20,
+        i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 25 : 22,
         accent: band.solid, grad: band.grad, level: meta,
         displayNum: meta.level,
         unlocked, passed, isCurrent, unavailable, premium, outOfPlan,
@@ -787,7 +790,7 @@ function Roadmap() {
       };
     });
     const rows = Math.ceil(nodes.length / cols);
-    const height = BASE + (rows - 1) * ROW_H + (cols - 1) * SLOPE + 40 + LABEL_H;
+    const height = BASE + (rows - 1) * ROW_H + (cols - 1) * SLOPE + 42 + LABEL_H;
     const segments = placed.slice(0, -1).map((a, i) => {
       const b = placed[i + 1];
       const done = a.passed && b.passed;
@@ -825,7 +828,7 @@ function Roadmap() {
   // the moment the invite link is offered (#239).
   const noLevelPassedYet = (TOPICS as RoadmapTopic[]).every((one) => passedLevelCount(progress, one) === 0);
   if (active !== null) {
-    if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} onStart={() => open(active, true)} onBack={exitLesson} />;
+    if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} backLabel={t(categoryLabelKey(topic))} onStart={() => open(active, true)} onBack={exitLesson} />;
     if (loadingLesson) {
       return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     }
@@ -1252,7 +1255,7 @@ function LevelNode({
             disabled={!unlocked}
             aria-label={label}
             style={{
-              position: 'relative', width: isCurrent ? 46 : 40, height: isCurrent ? 46 : 40, borderRadius: '50%',
+              position: 'relative', width: isCurrent ? 50 : 44, height: isCurrent ? 50 : 44, borderRadius: '50%',
               border: `2px solid ${passed ? passedLine : isCurrent ? accent : 'transparent'}`,
               background: passed ? passedFill : isCurrent ? 'var(--brand-accent-soft)' : 'var(--color-background-muted)',
               color: passed ? passedLine : unlocked ? accent : 'var(--color-text-disabled)',
@@ -1326,7 +1329,7 @@ function PartTestNode({
             disabled={!unlocked}
             aria-label={label}
             style={{
-              position: 'relative', width: 50, height: 50, borderRadius: '14px',
+              position: 'relative', width: 52, height: 52, borderRadius: '14px',
               border: `2px solid ${passed || isCurrent ? accent : `${accent}70`}`,
               background: passed
                 ? `linear-gradient(150deg, ${grad[0]}, ${grad[1]})`
@@ -1374,7 +1377,7 @@ function PartTestNode({
 function PremiumNode({ shape, label, title, cellW, onClick, t }: {
   shape: 'level' | 'test'; label: string; title: string; cellW: number; onClick: () => void; t: TFn;
 }) {
-  const size = shape === 'test' ? 50 : 40;
+  const size = shape === 'test' ? 52 : 44;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <Tooltip content={t('premium.lockHint')} placement="above">
@@ -1886,7 +1889,7 @@ export function BigOIntroduction() {
     setLevel(next);
   };
   if (level !== null) {
-    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
+    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
     if (lesson.isPending) return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
     return <LessonStage onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro

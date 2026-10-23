@@ -39,10 +39,49 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 | Numeric score | Tabular or stable-width numerals where possible. |
 | Code | Monospace, labelled language, horizontal scroll. |
 
+## Page widths
+
+Five tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573): four page widths and the chrome box. The route shell in `client/src/App.tsx` picks one route width per route from the one map in `client/src/components/ui/pageWidth.ts` (`pageMaxWidth`), writes it to `--ss-page-width`, and the keyed route box (`.ss-route`) takes it as its `max-width`. A page never sets its own page `max-width`: it fills the column and sizes only what sits inside it.
+
+| Token | Width | Used by |
+|---|---|---|
+| `--ss-width-task` | 640px | The task column inside a page: question screens, and the auth (`.ss-auth-page`), billing (`.ss-billing-card`) and checkout (`.ss-checkout-card`) cards; the `Page` lead above one of these cards wraps at the same width (`text-wrap: pretty`), so header and card share both edges. Never a route width. |
+| `--ss-width-narrow` | 800px | The route default: every route not listed below, including all `Page` screens (404, auth, `/premium` and its steps, `/privacy`, `/terms`, `/classroom`), `/shop`, `/collection`, `/leaderboard`, Learn and the question screens. |
+| `--ss-width-standard` | 1000px | Two-column pages: home (`/`), `/profile`, `/play` and `/play/:code`. |
+| `--ss-width-wide` | 1200px | Operational screens: `/coding` and `/coding/*`, and a Learn or FDE coding phase while its editor is mounted. |
+| `--ss-width-chrome` | 1168px | The floating header and the footer. Both keep this box on every route, so neither moves when the route width changes. |
+
+`/dev` is uncapped. A part that needs the wide page while it is mounted (a Learn or FDE coding phase) puts the class `ss-wide-page` on its root: `.ss-route:has(.ss-wide-page)` widens the route box to `--ss-width-wide` for as long as the part is there, with no state and no extra render. To give a new route a width, add it to the map and its test (`client/tests/page-width.test.tsx`); do not write a `max-width` on the page.
+
+What used to set its own width and now fills the column: `/shop` (was 1080px), the Leaderboard `.lb` (was 1200px, or 1000px only once another page had loaded `DeepEndScreens.css`), `.cd-page` (was 1200px; it is the coding pages and `/collection`), the shared `.de-page` (was 1000px), `/profile` (an inline 1000px) and the Shark Card deck `.sc-deck` (was 720px, and 800px on `/cards` only), so a page's header, controls and content share one left edge. Inside a page, the Play lobby (`/play/:code`), Play's sign-in and error gates and the Shark Card states without cards (sign in, empty, error; `.sc-state`) are the `--ss-width-task` column. `client/tests/page-own-width.test.ts` pins these. A component may cap its own text measure (`max-width: 68ch` on a paragraph), never the page.
+
+The shared `Page` layout (`PublicInfoPages.tsx`, `.ss-info-page`) fills the column, so every `Page` h1 starts at the same x. Its kicker line is always drawn (empty and `aria-hidden` when a page passes no kicker), so the h1 also sits at one y.
+
+## Control heights
+
+Two tokens, and one floor in `client/src/styles/app-shell.css`:
+
+| Size | Token | Height | Used for |
+|---|---|---|---|
+| Default | `--ss-control-height` | 44px | Every page action and form control, on every pointer: `.astryx-button`, `.astryx-segmented-control-item`, `.astryx-text-input` and its input. |
+| Compact | `--ss-control-height-compact` | 36px | Only controls inside an element with class `ss-compact` (a component's own toolbar, such as the coding action bar), on a fine pointer, each with a 44px hit area drawn by `::before`. On a coarse pointer they stay 44px. |
+
+The floor is a `min-height`/`min-width` with `!important`, because Astryx's StyleX rules cannot be reached by a class selector otherwise; it is the only place that does this. Do not size buttons page by page, and do not pass `size="sm"` to make a page action smaller: the floor lifts it anyway. The footer's appearance and sound toggles are the compact size, as pills, with the same hit area.
+
+**Hit areas for app-drawn controls.** A control that is not an Astryx one and keeps a smaller look takes a 44px press all the same: a transparent, `aria-hidden` layer inside the control, positioned absolutely and reaching past its edges by half the difference (`calc((100% - var(--ss-control-height)) / 2)`), so a press on it is a press on the control. The career roadmap's 31px part cells do this (`.rm-part-pill__hit` in `RoadmapTree.tsx`). Do not grow the visual for this, and do not leave the target at the visual's size on a mouse. A control whose size is its look is drawn at 44px or more: the Learn map's levels are 44px (50px when current) and its part tests 52px. The lesson runner's close and flag buttons are full 44px icon buttons, not compact ones: close is the only way out of a level.
+
+**Page actions.** A page action is 44px with 20px inline padding and 16px/600 text on a pill. `.ss-action` applies that type through Astryx's own variables (`--spacing-3`, `--text-label-size`, `--font-weight-medium`). Every button in `.ss-info-actions` and `.ss-auth__actions` gets it without a class; elsewhere pass `className="ss-action"`. A small in-row utility, such as a Retry inside a note, does not take it.
+
+**One primary per screen.** `SwimCta` (md, 44px) is the single filled primary on a screen; every other action is an Astryx secondary or ghost at 44px. A second task's button may turn primary only once its own input is complete, so it never competes with the page's primary while it cannot act: on `/play`, Create is the `SwimCta` and Join stays secondary until the code field holds a whole six-character code.
+
+**Card actions.** Every action in a card is the default size (no `size="sm"`), so a card's primary is never smaller than its secondaries: the Profile's GitHub, sharkname, path and account cards all stand at 44px. Only an in-row utility (a Retry inside a banner, a Remove on a list row) stays small.
+
+**Form controls with a label.** A control group (`ToggleButtonGroup`, `SegmentedControl`, a `select`) takes its label above it, never as a suffix after it, and the default size, so one form has one control height. Two short groups may sit side by side from 900px (the question count and time limit on `/play`). Icon-only buttons are 44×44 with a 20px glyph (the header's Leaderboard, Premium and Coins; a dialog's close keeps its 16px glyph in a 44px button). Icons that sit side by side share one drawing language: the header's three are stroke icons in the text colour (`TrophyIcon`, the Premium diamond, `CoinsIcon` from `components/ui/icons.tsx`); the filled accent `CoinIcon` stays for the Coins page's balance, where it is large enough to read as a coin.
+
 ## Layout and density
 
 - Mobile gutter: 16px; tablet: 24px; desktop: 24–32px.
-- Narrow task width: ~560–800px; standard content: 1000px; wide/operational: 1200px.
+- Page widths: the four tokens above, one per route, chosen by the shell.
 - Page sections: 32–64px according to public vs operational context.
 - Preserve fixed header, internal main scroll, persistent waterline, and at least 44px bottom-ocean clearance.
 - Quiz answers remain in a stable region; long question/answer content scrolls without moving actions unpredictably.
@@ -53,13 +92,14 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 - Panels/cards: `--radius-container`.
 - Controls: `--radius-element`.
 - Inner tiles: `--radius-inner`.
-- Pill shape (`border-radius: 999px`) only for buttons (`.astryx-button`, `.ss-fin-button`, `.ss-link-button`), the header nav links (`.ss-navlink`), tags (`.ss-tag`), compact filters such as the topic pills (`.ss-topic-pill`), small inline toggles (glossary terms, figure buttons) and compact segmented controls. Cards, panels, inputs, selects, radio cards, drawer links and dialogs use the radius tokens above.
+- Pill shape (`border-radius: 999px`) only for buttons (`.astryx-button`, `.ss-fin-button`), the header nav links (`.ss-navlink`), tags (`.ss-tag`), compact filters such as the topic pills (`.ss-topic-pill`), small inline toggles (glossary terms, figure buttons) and compact segmented controls. Cards, panels, inputs, selects, radio cards, drawer links and dialogs use the radius tokens above.
 - Default content hierarchy is canvas → one panel → rows. Avoid panel-inside-card-inside-card.
 
 ## Shared component patterns
 
 - Editorial header: kicker, `h1`, concise supporting text, optional single action.
-- Operational header: `h1`, scope/status, compact actions.
+- Operational header: `h1`, scope/status, compact actions. The scope sentence is the lead under the `h1`, and the one control row sits right on the table or list it filters (the Leaderboard: period control left, topic filter right, both 44px, then the board).
+- Secondary path: a short form that is not the page's task (the voucher on `/premium` while checkout is on) is one row without a card: its `h2` on the left, the field (at most 320px) and a secondary button beside it, stacking below 600px. It keeps its card only while it is the page's way in.
 - Panel: `.ss-panel`; clickable lift only with `.ss-lift`; read-only raised card with `.ss-raised`.
 - Choice: `RadioCardGroup`/`RadioCard` or `CheckCard`, not checkbox-emitting cards for radio jobs.
 - Feedback: shared semantic tokens plus text/icon, never color alone.

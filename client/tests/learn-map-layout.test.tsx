@@ -72,6 +72,22 @@ describe('the Learn map at phone width', () => {
     expect(screen.getByText('Level 2').style.color).toBe('var(--color-text-secondary)');
     expect(screen.getByText('Level 1').style.color).toBe('var(--color-text-primary)');
   });
+
+  // UX audit learn-18: a level was 40px on a mouse, under the 44px target.
+  it('draws every level node at least 44px and every part test at 52px, on every pointer', async () => {
+    await renderMap(800);
+    const sizes = [...document.querySelectorAll<HTMLElement>('.rm-node button')]
+      .map((button) => ({ test: button.style.borderRadius === '14px', width: parseFloat(button.style.width), height: parseFloat(button.style.height) }));
+    // A part test is the rounded square; a level is the circle.
+    const tests = sizes.filter(({ test }) => test);
+    expect(tests.length).toBeGreaterThan(0);
+    expect(sizes.length).toBeGreaterThan(tests.length);
+    for (const { width, height } of sizes) {
+      expect(width).toBeGreaterThanOrEqual(44);
+      expect(height).toBe(width);
+    }
+    for (const { width } of tests) expect(width).toBe(52);
+  });
 });
 
 // Closing a level removed the control that closed it, and focus fell to the
