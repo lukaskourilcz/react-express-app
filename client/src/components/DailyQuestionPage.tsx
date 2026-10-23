@@ -15,7 +15,7 @@
 //   ready              the question, its options and Check answer
 //   checked            correct or not in words and colour, the right option
 //                      marked, the explanation, practice more and share
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -144,6 +144,12 @@ function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () =>
   const { question, track, date } = data;
   const trackName = t(categoryLabelKey(track));
   const url = useMemo(() => `${window.location.origin}${qotdPath(date)}`, [date]);
+  // The verdict takes the focus. Check answer leaves with the check, so focus
+  // fell to the page, and a live region drawn with its content is not read.
+  const verdictRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (result) verdictRef.current?.focus();
+  }, [result]);
 
   const check = async () => {
     if (selected === null || checking || result) return;
@@ -215,7 +221,7 @@ function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () =>
       )}
 
       {result ? (
-        <div className="ss-daily__result" aria-live="polite">
+        <div className="ss-daily__result" ref={verdictRef} tabIndex={-1}>
           <Banner
             status={result.isCorrect ? 'success' : 'error'}
             title={result.isCorrect ? t('daily.right') : t('daily.wrong')}
