@@ -8,6 +8,7 @@
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { BriefZone } from '../../coding/BriefZone';
+import { workbenchCopy } from '../../i18n/translations.workbench';
 import { useT } from '../../i18n/LanguageContext';
 import { beforeAccountChange } from '../../lib/accountData';
 import { lazyShellPart } from '../../lib/routeRecovery';
@@ -406,7 +407,7 @@ export function CodeActivity({
           {/* The fixture note says what "done" means, so it sits under the
               capped prompt and is never cut off by the cap. */}
           <BriefZone
-            label={t('coding.brief.label')}
+            label={workbenchCopy('coding.brief.label')}
             after={fixtureNote !== undefined && (
               <div className="lp-notice lp-notice--info">
                 <span className="lp-notice__glyph" aria-hidden="true">

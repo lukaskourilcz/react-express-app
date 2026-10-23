@@ -1583,8 +1583,6 @@ export const en = {
   'coding.groupBlurb.rendering': 'Turning state into markup a keyboard can reach.',
   'coding.groupBlurb.design': 'Sizing a system before building it, and naming what will break.',
   'coding.reportTask': 'Report a problem with this task',
-  // Below 1024px Hint, Solution, Skip and Report share one menu (UX audit coding-13).
-  'coding.moreActions': 'More actions',
   'coding.group.loops': 'Loops',
   'coding.group.array-methods': 'Array methods',
   'coding.group.strings': 'Strings',
@@ -1617,10 +1615,9 @@ export const en = {
   'coding.offline': 'You are offline. Run still works; Submit needs a connection.',
   'coding.lockedTask': 'This tier is locked for now.',
   'coding.editorLabel': 'Your code',
-  // The capped brief at the top of the coding frame (UX audit coding-01).
-  'coding.brief.showFull': 'Show full brief',
-  'coding.brief.showLess': 'Show less',
-  'coding.brief.label': 'Task brief',
+  // The coding frame's own copy (brief toggle, More actions, empty preview,
+  // run summaries) lives in translations.workbench.ts, which only the coding
+  // and path chunks load.
   'coding.run': 'Run',
   'coding.submit': 'Submit',
   'coding.submitting': 'Checking…',
@@ -1778,7 +1775,6 @@ export const en = {
   'coding.results.pass': 'Pass',
   'coding.results.fail': 'Fail',
   'coding.results.expected': 'expected',
-  'coding.results.got': 'got {value}',
   'coding.results.error': 'Error',
   'coding.results.edge': 'edge',
   'coding.results.timeout': 'Timed out. Check for an infinite loop.',
@@ -1788,17 +1784,11 @@ export const en = {
   'coding.results.codeError': 'Your code could not run.',
   'coding.results.serverNote': 'Checked on the server.',
   'coding.types.clean': 'Types check out.',
-  // Each kind of type error counted on its own (UX audit coding-19).
-  'coding.types.compilerError': '{n} compiler error',
-  'coding.types.compilerErrors': '{n} compiler errors',
-  'coding.types.checkFails': '{failing} of {total} type check fails',
-  'coding.types.checksFail': '{failing} of {total} type checks fail',
   'coding.types.line': 'Line {n}',
   'coding.types.rejects': 'must be rejected',
   'coding.types.tests': 'Type checks',
   'coding.console.empty': 'Nothing logged.',
   'coding.preview.starting': 'Starting the sandbox…',
-  'coding.preview.idle': 'Run to see the component.',
   'coding.preview.error': 'The preview could not render: {message}',
   'coding.preview.reload': 'Restart sandbox',
   'coding.preview.timeout': 'The sandbox did not answer in time.',

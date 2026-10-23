@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuItem } from '@astryxdesign/core/DropdownMenu'
 import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
+import { workbenchCopy } from '../i18n/translations.workbench';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
@@ -678,8 +679,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const typesSummary = (check: NonNullable<RunOutcome['check']>): string => {
     const failing = check.typeTests.filter((one) => !one.pass).length;
     const parts: string[] = [];
-    if (check.codeErrors.length > 0) parts.push(t(check.codeErrors.length === 1 ? 'coding.types.compilerError' : 'coding.types.compilerErrors', { n: check.codeErrors.length }));
-    if (failing > 0) parts.push(t(check.typeTests.length === 1 ? 'coding.types.checkFails' : 'coding.types.checksFail', { failing, total: check.typeTests.length }));
+    if (check.codeErrors.length > 0) parts.push(workbenchCopy(check.codeErrors.length === 1 ? 'coding.types.compilerError' : 'coding.types.compilerErrors', { n: check.codeErrors.length }));
+    if (failing > 0) parts.push(workbenchCopy(check.typeTests.length === 1 ? 'coding.types.checkFails' : 'coding.types.checksFail', { failing, total: check.typeTests.length }));
     return parts.length > 0 ? parts.join(' · ') : t('coding.types.clean');
   };
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
@@ -846,7 +847,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {!result?.error && (
             <span className="cd-result__expect">
               <span aria-hidden="true"> → </span><span className="cd-visually-hidden"> {t('coding.results.expected')} </span>{JSON.stringify(test.expected)}
-              {result && <> · {t('coding.results.got', { value: result.actual ?? '' })}</>}
+              {result && <> · {workbenchCopy('coding.results.got', { value: result.actual ?? '' })}</>}
             </span>
           )}
           {test.edge && <span className="cd-tag cd-result__edge">{t('coding.results.edge')}</span>}
@@ -1013,7 +1014,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     <>
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
       {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <Button variant="ghost" size="sm" onClick={harness.reload} label={t('coding.preview.reload')} /></p>}
-      {previewIdle ? <p className="cd-console__empty">{t('coding.preview.idle')}</p>
+      {previewIdle ? <p className="cd-console__empty">{workbenchCopy('coding.preview.idle')}</p>
         : !harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
       <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className={previewIdle ? 'cd-frame cd-frame--idle' : 'cd-frame'} aria-hidden={previewIdle || undefined} tabIndex={tab === 'preview' && !previewIdle ? undefined : -1} />
     </>
@@ -1195,7 +1196,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             // The menu items keep the reason an action is unavailable, as
             // their description rather than a tooltip.
             <DropdownMenu
-              button={{ label: t('coding.moreActions'), icon: <Icon icon="moreHorizontal" />, isIconOnly: true, variant: 'ghost', tooltip: t('coding.moreActions'), ref: moreRef }}
+              button={{ label: workbenchCopy('coding.moreActions'), icon: <Icon icon="moreHorizontal" />, isIconOnly: true, variant: 'ghost', tooltip: workbenchCopy('coding.moreActions'), ref: moreRef }}
               hasChevron={false}
               placement="above"
             >

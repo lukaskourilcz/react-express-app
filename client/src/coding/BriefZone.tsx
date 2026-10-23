@@ -7,7 +7,7 @@
 // task looks the same wherever it opens.
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@astryxdesign/core/Button';
-import { useT } from '../i18n/LanguageContext';
+import { workbenchCopy } from '../i18n/translations.workbench';
 import './Coding.css';
 
 export interface BriefZoneProps {
@@ -24,7 +24,6 @@ export interface BriefZoneProps {
 }
 
 export function BriefZone({ labelledBy, label, head, children, after }: BriefZoneProps) {
-  const t = useT();
   const bodyId = useId();
   const body = useRef<HTMLDivElement | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -83,7 +82,7 @@ export function BriefZone({ labelledBy, label, head, children, after }: BriefZon
           aria-expanded={expanded}
           aria-controls={bodyId}
           onClick={toggle}
-          label={expanded ? t('coding.brief.showLess') : t('coding.brief.showFull')}
+          label={workbenchCopy(expanded ? 'coding.brief.showLess' : 'coding.brief.showFull')}
         />
       )}
       {after}
