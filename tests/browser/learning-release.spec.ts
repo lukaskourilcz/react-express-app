@@ -161,7 +161,7 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const brand = await page.getByRole('link', { name: 'devShark home', exact: true }).boundingBox();
-    const login = await page.getByRole('button', { name: 'Log in', exact: true }).boundingBox();
+    const login = await page.getByRole('button', { name: 'Sign in', exact: true }).boundingBox();
     expect(brand!.x + brand!.width).toBeLessThanOrEqual(login!.x);
     const examples = page.getByRole('region', { name: 'Common patterns', exact: true });
     await examples.focus();

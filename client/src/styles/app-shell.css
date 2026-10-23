@@ -144,11 +144,24 @@
   font-size: var(--ss-type-compact);
   color: var(--color-text-primary);
   text-decoration: none;
+  min-height: var(--ss-control-height);
   padding: 11px 16px;
   border-radius: var(--radius-element);
 }
 .ss-drawer-link:hover { background: var(--color-background-muted); }
 .ss-drawer-link[data-active='true'] { color: var(--brand-accent); background: var(--color-background-muted); }
+/* Two groups, as the desktop header splits them (UX audit shell-public-15),
+   each under a small label with a hairline between them, and the appearance
+   and sound toggles as two rows at the bottom; below the nav breakpoint the
+   footer's pair hides. */
+.ss-drawer-group, .ss-drawer-settings { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
+.ss-drawer-group + .ss-drawer-group, .ss-drawer-settings { border-top: 1px solid var(--color-border); }
+.ss-drawer-settings { margin-top: auto; }
+.ss-drawer-group__label { margin: 4px 16px 2px; font: 700 var(--ss-type-label) var(--font-family-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-secondary); }
+.ss-drawer-link:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: -2px; }
+@media (max-width: 1023px) {
+  .ss-brand-footer .ss-footer-settings { display: none; }
+}
 
 /* Fixed-height app root (dvh tracks the collapsing mobile URL bar). */
 .ss-app-root {
@@ -395,8 +408,13 @@
 .ss-info-page__kicker { min-height: 1lh; color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); letter-spacing: 0.08em; text-transform: uppercase; }
 
 .topic-practice { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); padding: 14px 16px; }
-.topic-practice summary { cursor: pointer; font-weight: 700; }
-.topic-practice p { margin: 12px 0 0; color: var(--color-text-secondary); }
+/* The practice questions open with a '+' like the /premium FAQ, not the
+   browser's triangle (UX audit shell-public-12). */
+.topic-practice summary { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; list-style: none; cursor: pointer; font-weight: 700; }
+.topic-practice summary::-webkit-details-marker { display: none; }
+.topic-practice summary::after { content: '+'; font: 700 1.1rem/1 var(--font-family-heading); color: var(--color-text-secondary); }
+.topic-practice[open] summary::after { content: '−'; }
+.topic-practice p { color: var(--color-text-secondary); }
 .ss-info-card { padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid var(--ss-card-line); border-bottom: 2px solid var(--ss-card-edge); border-radius: var(--radius-container); background: var(--ss-card-bg); }
 .ss-info-card h2 { margin: 0 0 0.65rem; font: 700 1.05rem var(--font-family-heading); }
 .ss-info-card p { margin: 0.5rem 0; color: var(--color-text-secondary); line-height: 1.65; }
@@ -781,13 +799,20 @@
 .ss-topic-article h2 { margin: 0; font-family: var(--font-family-heading); }
 .ss-topic-article p { max-width: 68ch; margin: 0; }
 .ss-topic-article pre { max-width: 100%; overflow-x: auto; padding: 1rem; border-radius: var(--radius-inner); background: var(--color-background-muted); font-size: var(--ss-type-compact); }
-.ss-topic-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+/* The guide's links take the app's accent link style, not the browser's blue,
+   and its one action is the pill page action (UX audit shell-public-12). */
+/* All guides sits 1rem above the kicker it belongs to, not a full section
+   gap (64px at 1280, ~100px to the kicker's text) as if it were a section. */
+.ss-topic-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: calc(1rem - var(--ss-space-section)); }
 .ss-topic-nav a, .ss-topic-links a, .ss-topic-article summary { min-height: 44px; align-content: center; }
 .ss-topic-links { display: grid; gap: 0.5rem; padding-left: 1.5rem; }
 .ss-topic-links a { display: inline-block; }
+.ss-topic-article a:not(.ss-topic-cta) { color: var(--brand-accent); font-weight: 600; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .ss-topic-article summary:focus-visible, .ss-topic-article a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; }
 .ss-topic-article .topic-practice p { margin-top: 1rem; }
-.ss-topic-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.75rem 1rem; background: var(--brand-accent); color: var(--brand-on-accent); border-radius: var(--radius-element); font-weight: 700; text-decoration: none; }
+.ss-topic-cta { display: inline-flex; align-items: center; min-height: var(--ss-control-height); padding: 0 20px; border-radius: 999px; background: var(--brand-accent); color: var(--brand-on-accent); font-size: 1rem; font-weight: 600; text-decoration: none; }
+.ss-topic-cta:hover { background: var(--brand-accent-hover); }
+.ss-topic-cta:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 3px; }
 
 /* Keep scrollbar geometry stable; only the thumb's paint follows activity. */
 * { --ss-scrollbar-thumb: transparent; scrollbar-width: thin; scrollbar-color: var(--ss-scrollbar-thumb) transparent; }
@@ -930,66 +955,12 @@
   backdrop-filter: blur(32px) saturate(140%);
 }
 :root[data-design='apple'] .ss-drawer-link { min-height: 44px; }
-:root[data-design='apple'] .ss-home { gap: clamp(3rem, 6vw, 5rem) !important; }
-:root[data-design='apple'] .ss-hero-grid { gap: clamp(2rem, 4vw, 4rem); padding-block: 1rem 1.5rem; }
-@media (min-width: 1024px) {
-  :root[data-design='apple'] .ss-home .ss-hero-grid {
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
-    align-items: center;
-    /* Main starts at 7rem below the floating header. Reserve the same space
-       below the hero so its content is centred on the whole viewport. Tall
-       content can grow naturally on short screens and at increased zoom. */
-    min-height: calc(100dvh - 14rem);
-    padding-block: 0;
-  }
-}
-.ss-home-sample { width: 100%; min-width: 0; max-width: 480px; justify-self: end; }
-@media (max-width: 1023px) {
-  .ss-home-sample { justify-self: center; }
-}
-@media (min-width: 600px) and (max-width: 1023px) {
-  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, 1fr); }
-}
-.ss-home-path { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem 0; padding-block: 6px; width: 100%; }
-.ss-home-path__step { position: relative; display: flex; min-width: 0; }
-.ss-home-path__node { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; min-width: 0; padding-inline: .5rem; }
-.ss-home-path__node > span:first-child { flex-shrink: 0; }
-.ss-home-path__connector { position: absolute; top: 16px; left: calc(50% + 28px); width: calc(100% - 56px); height: 8px; opacity: .3; }
-.ss-home-path__actions { display: flex; justify-content: flex-end; margin-top: auto; position: relative; }
-@media (max-width: 767px) {
-  .ss-home-path { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .ss-home-path__step:nth-child(3n) .ss-home-path__connector { display: none; }
-  .ss-home-roadmap { padding: 20px !important; }
-}
-:root[data-design='apple'] .ss-hero-grid h1 { font-weight: 650 !important; letter-spacing: -.045em !important; line-height: 1.035 !important; text-wrap: balance; }
-:root[data-design='apple'] .ss-hero-grid > div:first-child { gap: 1.5rem !important; }
-:root[data-design='apple'] .ss-hero-grid > div:first-child > p { font-size: 1.2rem !important; line-height: 1.55; }
-:root[data-design='apple'] .ss-home h2 { font-weight: 650 !important; letter-spacing: -.025em !important; }
-:root[data-design='apple'] .ss-hero-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: 100%;
-  max-width: 32rem;
-  gap: 1.25rem 2.25rem;
-  margin-top: .5rem;
-}
-:root[data-design='apple'] .ss-hero-stats > div { min-width: 0; }
-:root[data-design='apple'] .ss-hero-stats > div > span:first-child { font-size: 1.75rem !important; font-weight: 600 !important; }
-:root[data-design='apple'] .ss-hero-stats > div > span:last-child { letter-spacing: .045em !important; font-size: .7rem !important; }
 :root[data-design='apple'] :is(.ss-panel, .ss-raised, .ss-lift) {
   background-image: none;
   border: 1px solid var(--ss-card-line);
   border-bottom-width: 1px;
   box-shadow: var(--shadow-low);
 }
-:root[data-design='apple'] .ss-topic-card {
-  min-height: 5rem;
-  border-bottom-width: 1px !important;
-  box-shadow: none !important;
-  padding: 1.25rem !important;
-}
-:root[data-design='apple'] .ss-topic-card[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--brand-accent) !important; }
-:root[data-design='apple'] .ss-topic-card:hover { border-color: var(--brand-accent) !important; }
 :root[data-design='apple'] .ss-radio-card { min-height: 3rem; border-radius: .85rem; background: var(--color-background-muted); border-color: transparent; }
 :root[data-design='apple'] .ss-radio-card[data-tone='success'] { background: var(--ss-success-soft); border-color: var(--ss-success); }
 :root[data-design='apple'] .ss-text-links :is(a, button) { text-decoration-thickness: 1px; text-underline-offset: .2em; }
@@ -1000,8 +971,6 @@
   transform: scale(.97);
   transition: transform 80ms ease-out;
 }
-/* Topic cards do not move: colour, the wave and the fins carry their response. */
-:root[data-design='apple'] .ss-topic-card:active { filter: brightness(.96); }
 :root[data-design='apple'] :is(.ss-input, .ss-select, .astryx-input) { border-radius: .85rem; }
 :root[data-design='apple'] dialog.astryx-dialog {
   border: 1px solid var(--color-border) !important;
@@ -1013,10 +982,6 @@
 }
 :root[data-design='apple'] dialog.astryx-dialog::backdrop { background: rgba(0, 0, 0, .36) !important; }
 
-@media (max-width: 760px) {
-  :root[data-design='apple'] .ss-hero-grid { grid-template-columns: 1fr; gap: 2rem; padding-top: 0; }
-  :root[data-design='apple'] .ss-hero-grid h1 { font-size: clamp(2.6rem, 7vw, 3.8rem) !important; }
-}
 @media (max-width: 599px) {
   :root[data-design='apple'] .ss-header { inset: .5rem .5rem auto; width: calc(100% - 1rem); border-radius: 1rem; }
   :root[data-design='apple'] .ss-toolbar { padding-inline: .5rem; min-height: 60px; }

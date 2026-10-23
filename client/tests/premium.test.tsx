@@ -147,6 +147,21 @@ describe('the upgrade sheet', () => {
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Not now' })); });
     expect(sheet.result.current).toBeNull();
   });
+  // UX audit money-11: the title alone in the header, the framing sentence as
+  // body text above the list, and the list's kicker drawn by <Kicker>.
+  it('reads title, what the free plan keeps, then what Premium adds', () => {
+    server.use(settingsHandler);
+    render(<UpgradeSheet request={{ id: 3, kind: 'learn-level', ref: 'react:13' }} />, { wrapper });
+    const title = screen.getByRole('heading', { level: 2, name: 'Premium opens this' });
+    const keeps = screen.getByText('Your free plan keeps HTML, CSS, JavaScript and React levels 1 to 12.');
+    expect(title.closest('.astryx-layout-header')).not.toContainElement(keeps);
+    const kicker = screen.getByRole('heading', { level: 3, name: 'Premium includes' });
+    expect(kicker).toHaveClass('ss-kicker');
+    expect([...kicker.classList].some((name) => /^ss-wave-v[1-8]$/.test(name))).toBe(true);
+    // Document order: what you keep comes before what Premium adds.
+    expect(keeps.compareDocumentPosition(kicker) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.querySelector('p.ss-kicker')).toBeNull();
+  });
   // The sheet unmounts when it closes, which used to leave focus on <body>.
   it.each(['Escape', 'Not now'])('gives focus back to the lock that opened it after %s', async (how) => {
     server.use(settingsHandler);

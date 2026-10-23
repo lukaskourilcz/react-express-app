@@ -301,9 +301,9 @@ test('a supabase-js download that fails on a sign-in click neither reloads nor r
   // Anything that would leave for the sign-in provider stays local.
   await page.route('**/auth/v1/**', (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Authorize</title>' }));
 
-  const logIn = page.getByRole('button', { name: 'Log in', exact: true }).first();
+  const logIn = page.getByRole('button', { name: 'Sign in', exact: true }).first();
   await logIn.click();
-  // "Log in" opens the sign-in dialog; its Google press downloads supabase-js.
+  // "Sign in" opens the sign-in dialog; its Google press downloads supabase-js.
   // The press reports the failure itself, and nothing else happens. A second
   // press is lazy-auth.spec.ts's: it reloads where the browser remembers the
   // failed download.

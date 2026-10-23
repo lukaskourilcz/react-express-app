@@ -8,10 +8,6 @@
 
 /* ── Plan table (Free and Premium) ─────────────────────────────────────── */
 
-.ss-compare-cta [role='tooltip'] {
-  white-space: pre-line;
-}
-
 /* The table lives in its OWN horizontal scroll container so a narrow viewport
    scrolls the table sideways instead of the page body. Focusable so keyboard
    users can scroll it too. */
@@ -105,21 +101,77 @@
   color: var(--color-text-secondary);
 }
 
-/* A phone shows all three columns: the Premium column is the one a reader
-   came for, so it must not hide behind a sideways scroll. The cells wrap
-   instead, and the scroll container stays as a fallback for zoomed text. */
+/* A phone keeps both plans in view: the Premium column is the one a reader
+   came for, so it must not hide behind a sideways scroll. Three columns
+   squeezed the plan cells to 77px and up to seven lines (UX audit
+   shell-public-07, money-16), so under 600px each row is a small block: the
+   feature on its own line, then Free and Premium side by side at half the
+   width each. The column headers stay once at the top; the feature column's
+   header stays for screen readers only. The table keeps its roles (set in
+   ComparisonTable.tsx), so it is still read as a table. */
 @media (max-width: 599px) {
-  .ss-compare { min-width: 0; table-layout: fixed; }
+  .ss-compare { position: relative; min-width: 0; }
+  .ss-compare,
+  .ss-compare thead,
+  .ss-compare tbody { display: block; }
+  .ss-compare tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid var(--ss-card-line);
+  }
+  .ss-compare thead tr { border-bottom: 2px solid var(--ss-card-edge); }
+  .ss-compare tbody tr:last-child { border-bottom: none; }
   .ss-compare th,
-  .ss-compare td { padding: 10px 8px; overflow-wrap: break-word; hyphens: auto; }
-  .ss-compare th:first-child,
-  .ss-compare td:first-child { padding-left: 12px; }
-  .ss-compare thead th { white-space: normal; font-size: var(--ss-type-compact); }
-  .ss-compare thead th:first-child { width: 36%; }
-  .ss-compare tbody th[scope='row'] { min-width: 0; font-size: var(--ss-type-compact); }
-  .ss-compare-mark { gap: 5px; font-size: var(--ss-type-meta); max-width: none; }
+  .ss-compare td { padding: 10px 12px; border-bottom: none; overflow-wrap: break-word; }
+  .ss-compare thead th { white-space: normal; }
+  .ss-compare thead .ss-compare__featurecol {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .ss-compare tbody th[scope='row'] { grid-column: 1 / -1; min-width: 0; padding-bottom: 0; }
+  .ss-compare tbody td { padding-top: 6px; }
+  .ss-compare-mark { gap: 4px; font-size: var(--ss-type-meta); max-width: none; }
   .ss-compare-mark svg { width: 12px; height: 12px; margin-top: 2px; }
   .ss-compare-caption { font-size: var(--ss-type-label); }
+}
+
+/* One section-title size for the public pages (UX audit shell-public-16):
+   home's h2s were 24, 28 and 36px, each set inline or in another stylesheet.
+   Every home h2 (the topic picker, the roadmap panel, the FDE section and the
+   plan table, also on /premium) takes this class. It lives here, with the
+   landing kit both pages load, so the first download does not carry it. */
+.ss-section-title {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+}
+@media (max-width: 599px) {
+  .ss-section-title { font-size: 1.5rem; }
+}
+
+/* ── Topic picker ──────────────────────────────────────────────────────────
+   Four across at 1280. Under 600px two tiles a row instead of one: seven
+   one-word cards and "And 10 more" stacked into 820px, a phone screen of
+   buttons before the preview they control (UX audit shell-public-09). The
+   tiles stay 56px tall, above the 44px target. The selected tile shows by its
+   accent border and tint (and aria-pressed); the tick hides so "TypeScript"
+   fits a 172px tile. !important because the card's padding is inline and the
+   Apple layer's is !important too. */
+.ss-topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+@media (max-width: 599px) {
+  .ss-topic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ss-topic-grid > button,
+  :root[data-design='apple'] .ss-topic-grid .ss-topic-card { min-height: 56px !important; padding: 12px !important; gap: 10px !important; }
+  .ss-topic-grid .ss-topic-card__tick { display: none; }
 }
 
 /* ── "Also in devShark" strip ─────────────────────────────────────────────
@@ -131,8 +183,80 @@
   border-radius: var(--radius-inner);
 }
 
-/* FDE outline uses the landing typography and waterline kicker. */
-.ss-fde-feature { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.ss-fde-feature h2 { margin: 0; font-family: var(--font-family-heading); font-size: clamp(1.5rem, 4vw, 2.25rem); line-height: 1.2; letter-spacing: -0.02em; }
+/* The FDE section (UX audit shell-public-08): the pitch and its action on the
+   left, the path's size as four stats in a 2×2 grid on the right from 1024px,
+   stacked below that. No card: the section sits on the page like its
+   neighbours. */
+.ss-fde-feature { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; min-width: 0; }
+.ss-fde-feature__copy { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .ss-fde-feature p { margin: 0; max-width: 68ch; color: var(--color-text-secondary); line-height: 1.6; overflow-wrap: anywhere; }
-.ss-fde-feature .ss-fde-feature__inventory { color: var(--color-text-primary); font-size: var(--ss-type-compact); }
+.ss-fde-feature__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 32px; }
+@media (min-width: 1024px) {
+  .ss-fde-feature { grid-template-columns: minmax(0, 1fr) 320px; gap: 48px; align-items: center; }
+}
+
+/* ── The home page's own layout ─────────────────────────────────────────────
+   The hero, the topic cards and the roadmap preview, with their Apple-layer
+   treatment. Only Home draws these, so they live with the landing kit Home
+   loads rather than in app-shell.css, which every first visit downloads.
+   Moved as written, in the same order. */
+:root[data-design='apple'] .ss-home { gap: clamp(3rem, 6vw, 5rem) !important; }
+:root[data-design='apple'] .ss-hero-grid { gap: clamp(2rem, 4vw, 4rem); padding-block: 1rem 1.5rem; }
+@media (min-width: 1024px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+    align-items: center;
+    /* Main starts at 7rem below the floating header. Reserve the same space
+       below the hero so its content is centred on the whole viewport. Tall
+       content can grow naturally on short screens and at increased zoom. */
+    min-height: calc(100dvh - 14rem);
+    padding-block: 0;
+  }
+}
+.ss-home-sample { width: 100%; min-width: 0; max-width: 480px; justify-self: end; }
+@media (max-width: 1023px) {
+  .ss-home-sample { justify-self: center; }
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.ss-home-path { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem 0; padding-block: 6px; width: 100%; }
+.ss-home-path__step { position: relative; display: flex; min-width: 0; }
+.ss-home-path__node { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; min-width: 0; padding-inline: .5rem; }
+.ss-home-path__node > span:first-child { flex-shrink: 0; }
+.ss-home-path__connector { position: absolute; top: 16px; left: calc(50% + 28px); width: calc(100% - 56px); height: 8px; opacity: .3; }
+.ss-home-path__actions { display: flex; justify-content: flex-end; margin-top: auto; position: relative; }
+@media (max-width: 767px) {
+  .ss-home-path { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ss-home-path__step:nth-child(3n) .ss-home-path__connector { display: none; }
+  .ss-home-roadmap { padding: 20px !important; }
+}
+:root[data-design='apple'] .ss-hero-grid h1 { font-weight: 650 !important; letter-spacing: -.045em !important; line-height: 1.035 !important; text-wrap: balance; }
+:root[data-design='apple'] .ss-hero-grid > div:first-child { gap: 1.5rem !important; }
+:root[data-design='apple'] .ss-hero-grid > div:first-child > p { font-size: 1.2rem !important; line-height: 1.55; }
+:root[data-design='apple'] .ss-home h2 { font-weight: 650 !important; letter-spacing: -.025em !important; }
+:root[data-design='apple'] .ss-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-width: 32rem;
+  gap: 1.25rem 2.25rem;
+  margin-top: .5rem;
+}
+:root[data-design='apple'] .ss-hero-stats > div { min-width: 0; }
+:root[data-design='apple'] .ss-hero-stats > div > span:first-child { font-size: 1.75rem !important; font-weight: 600 !important; }
+:root[data-design='apple'] .ss-hero-stats > div > span:last-child { letter-spacing: .045em !important; font-size: .7rem !important; }
+:root[data-design='apple'] .ss-topic-card {
+  min-height: 5rem;
+  border-bottom-width: 1px !important;
+  box-shadow: none !important;
+  padding: 1.25rem !important;
+}
+:root[data-design='apple'] .ss-topic-card[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--brand-accent) !important; }
+:root[data-design='apple'] .ss-topic-card:hover { border-color: var(--brand-accent) !important; }
+/* Topic cards do not move: colour, the wave and the fins carry their response. */
+:root[data-design='apple'] .ss-topic-card:active { filter: brightness(.96); }
+@media (max-width: 760px) {
+  :root[data-design='apple'] .ss-hero-grid { grid-template-columns: 1fr; gap: 2rem; padding-top: 0; }
+  :root[data-design='apple'] .ss-hero-grid h1 { font-size: clamp(2.6rem, 7vw, 3.8rem) !important; }
+}

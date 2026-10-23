@@ -321,6 +321,9 @@ coming back. The tokens and the map are in
   filled `CoinIcon`, which reads as a status light at 20px).
 - **Every `Page` h1 sits at one x and one y.** The `Page` layout fills the
   column and always draws its kicker line.
+- **One section-title size.** A public page's section `h2` takes
+  `.ss-section-title` (1.75rem, 1.5rem under 600px); a section never sets its
+  own heading size inline or in its own stylesheet.
 - **One state panel.** A sign-in gate, an empty shelf or a callback state is
   the shared `StatePanel` (`components/ui/StatePanel.tsx`): centred in the
   640px task column, one heading, one body line, the one primary first at
@@ -402,3 +405,7 @@ their props), never drawn again by hand.
   when Start is pressed. Each has one primary in `QuestionActions`; a track
   or checkpoint colour may tint the confetti and the result's icon tile,
   never text or a button (JavaScript's yellow is under 3:1 on the panel).
+- **One signed-out state.** A money screen asks a visitor to sign in with
+  `SignedOutBlock`: one sentence and one "Sign in" button, in place of the
+  content, never a placeholder number or a silently disabled button. A
+  button the visitor cannot use yet reads "Sign in to …" and opens sign-in.

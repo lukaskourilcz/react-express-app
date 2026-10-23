@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { delay, http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -126,11 +126,33 @@ describe('the embedded checkout', () => {
     const kicker = document.querySelector('.ss-info-page__kicker');
     expect(kicker).toHaveTextContent('devShark Premium');
     expect(kicker).not.toHaveAttribute('aria-hidden');
-    // The card's own action is a page action that sits in the card itself,
-    // where .ss-checkout-card > .ss-action keeps it at its own width.
+    // The step's action is a page action in the card's footer row.
     const open = screen.getByRole('button', { name: 'Continue to secure payment' });
     expect(open).toHaveClass('astryx-button', 'ss-action');
-    expect(open.parentElement).toHaveClass('ss-checkout-card');
+    expect(open.parentElement).toHaveClass('ss-checkout-actions');
+  });
+
+  // UX audit money-04: the last step before paying has one primary, the plan
+  // drawn as /premium draws it, and no 'Required' marker on its one box.
+  it('shows the plan as /premium does, with Continue as the one primary beside a ghost Back', async () => {
+    signIn(); serve(); stripeUi();
+    renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
+    const checkbox = await screen.findByRole('checkbox');
+    const plan = document.querySelector<HTMLElement>('.ss-checkout-card .ss-premium-plan')!;
+    expect(within(plan).getByRole('heading', { level: 2, name: 'Monthly' })).toBeInTheDocument();
+    expect(plan.querySelector('.ss-premium-plan__price strong')).toHaveTextContent('€4.99');
+    expect(within(plan).getByText('a month')).toBeInTheDocument();
+    expect(within(plan).getByText('before VAT. Renews every month until you cancel.')).toHaveClass('ss-premium-plan__terms');
+    expect(checkbox).not.toBeRequired();
+    expect(screen.queryByText('Required')).toBeNull();
+    const row = document.querySelector<HTMLElement>('.ss-checkout-actions')!;
+    const [back, open] = within(row).getAllByRole('button');
+    expect(back).toHaveAccessibleName('Back to plans');
+    expect(open).toHaveAccessibleName('Continue to secure payment');
+    // Astryx names the variant in a class of its own.
+    expect(open).toHaveClass('primary');
+    expect(back).toHaveClass('ghost');
+    expect(document.querySelectorAll('.ss-checkout-card .astryx-button.primary')).toHaveLength(1);
   });
 
   it('wires the form preview confirmation and shows a failed confirmation without granting a plan', async () => {
@@ -192,7 +214,14 @@ describe('the embedded checkout', () => {
   it('asks a signed-out learner to sign in before creating an order', async () => {
     serve(); const ui = stripeUi();
     renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Sign in to continue' }));
+    // The plan is there to review signed out too, with the money screens'
+    // one signed-out block under it (money-04, money-05).
+    expect(await screen.findByRole('heading', { level: 2, name: 'Monthly' })).toBeInTheDocument();
+    expect(screen.getByText('You pay on the account you sign in with, and you come back to this plan.')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    const signInButton = screen.getByRole('button', { name: 'Sign in to continue' });
+    expect(signInButton).toHaveAttribute('aria-haspopup', 'dialog');
+    fireEvent.click(signInButton);
     expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium/checkout?plan=monthly' });
     expect(ui.create).not.toHaveBeenCalled(); expect(ui.createEmbeddedCheckoutPage).not.toHaveBeenCalled();
   });
@@ -328,7 +357,7 @@ describe('/premium/success', () => {
     serve();
     renderAt(`/premium/success?session_id=${SESSION}`, <PremiumSuccessPage />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Sign in to finish' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 });
 
@@ -410,7 +439,7 @@ describe('/premium/cancel', () => {
     expect(await screen.findByText(/This site cannot send the confirmation email yet\. To act on this address, sign in/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel my subscription now' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Sign in to finish' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('shows a signed-in owner exactly what happened, withdrawal included', async () => {
@@ -591,20 +620,22 @@ describe('the checkout button', () => {
   it('asks a visitor to sign in and a subscriber to manage billing', async () => {
     serve();
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
-    expect(await screen.findByRole('button', { name: 'Sign in to continue' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Continue with monthly' })).toHaveAttribute('aria-haspopup', 'dialog');
     signIn();
     serve({ plan: PREMIUM });
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
     expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
   });
 
-  it('opens the sign-in dialog for a visitor, which comes back to this page, and stays pressable', async () => {
+  // UX audit money-15: the plan label stays, and signing in goes on to this
+  // plan's checkout rather than back to the page the button sits on.
+  it('opens the sign-in dialog for a visitor, which goes on to this plan\'s checkout, and stays pressable', async () => {
     serve();
     renderAt('/premium?plan=annual', <PremiumCheckoutButton plan="monthly" />);
-    const button = await screen.findByRole('button', { name: 'Sign in to continue' });
+    const button = await screen.findByRole('button', { name: 'Continue with monthly' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
-    expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium?plan=annual' });
+    expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium/checkout?plan=monthly' });
     // Nothing left the page, so nothing waits for it to.
     expect(button).toBeEnabled();
   });

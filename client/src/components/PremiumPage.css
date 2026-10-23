@@ -3,14 +3,19 @@
  * included list and the questions. Tokens only; the accent marks the price and
  * nothing else. */
 .ss-premium-page { display: flex; flex-direction: column; gap: clamp(1.75rem, 4vw, 2.5rem); }
-.ss-premium-section-title {
-  margin: 0 0 0.85rem;
-  font: 800 1.35rem/1.2 var(--font-family-heading);
-  letter-spacing: -0.015em;
-}
+/* The price title balances its lines: in the 800px column 'Everything in
+   devShark for €4.99 a month' left 'month' alone on a second line. */
+.ss-info-page:has(> .ss-premium-page) .ss-info-page__header h1 { text-wrap: balance; }
+/* Every section h2 on /premium (Choose a plan, the plan table, Have a
+   voucher? after the plans, Questions) is the shared .ss-section-title, the
+   one public section-title size (UX audit money-08, shell-public-16): there
+   were 16.8, 21.6 and 28px h2s on this page. This class only spaces them. */
+.ss-premium-section-title,
+.ss-section-title.ss-premium-section-title { margin: 0 0 0.85rem; }
 
-/* Your plan: the Profile's plan line, without its separator rule. */
-.ss-premium-current .ss-premium-section-title { font-size: 1.05rem; margin-bottom: 0.25rem; }
+/* Your plan: a card title (.ss-info-card h2), over the Profile's plan line
+   without its separator rule. */
+.ss-premium-current .ss-premium-section-title { margin-bottom: 0.25rem; }
 .ss-premium-current .de-plan-line { margin-top: 0; padding-top: 0; border-top: none; }
 
 /* The two plans side by side, stacked below 640px. */
@@ -28,8 +33,7 @@
 .ss-premium-plan__action { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: auto; padding-top: 0.75rem; }
 .ss-premium-plan__action > * { max-width: 100%; }
 .ss-premium-unreachable { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
-.ss-premium-plans > .ss-info-note,
-.ss-premium-plans > .ss-premium-note { margin-top: 0.85rem; }
+.ss-premium-plans > .ss-info-note { margin-top: 0.85rem; }
 
 /* The small print before paying: plain text, never hidden behind a toggle. */
 .ss-premium-smallprint {
