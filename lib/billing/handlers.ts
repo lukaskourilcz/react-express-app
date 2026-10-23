@@ -317,6 +317,19 @@ export async function handleBillingPortal(req: VercelRequest, res: VercelRespons
 
 /* ── Webhook ────────────────────────────────────────────────────────────── */
 
+/** Whether a recorded event is still open: taken by a delivery that has not
+ * finished it. False when it was processed, or when the row cannot be read. */
+async function eventInFlight(supabase: SupabaseClient, eventId: string): Promise<boolean> {
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from('billing_events').select('processed_at').eq('id', eventId).maybeSingle(),
+    );
+    return !error && data !== null && typeof data === 'object' && (data as { processed_at?: unknown }).processed_at === null;
+  } catch {
+    return false;
+  }
+}
+
 export async function handleBillingWebhook(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
   if (req.method !== 'POST') return allow(res, 'POST');
   const config = billingConfig();
@@ -344,6 +357,15 @@ export async function handleBillingWebhook(req: VercelRequest, res: VercelRespon
     return jsonError(res, 500, 'db_error', 'Could not record the event');
   }
   if (recorded.data !== true) {
+    // Processed already: done. Still being processed by a delivery that holds
+    // the lease: a 200 here would tell Stripe the event arrived, and if that
+    // other delivery then fails, nothing ever delivers it again. Answer 409 so
+    // Stripe retries after the lease. A failed read keeps the 200.
+    if (await eventInFlight(supabase, event.id)) {
+      log({ status: 409, kind: 'webhook', type: event.type, reason: 'in_progress' });
+      res.setHeader('Retry-After', '60');
+      return jsonError(res, 409, 'event_in_progress', 'Another delivery of this event is being processed');
+    }
     log({ status: 200, kind: 'webhook', type: event.type, duplicate: true });
     return res.json({ received: true, duplicate: true });
   }

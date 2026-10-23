@@ -275,6 +275,18 @@ export function memoryBackend(): Backend {
     rpc: async (name: string, args: Record<string, unknown>) =>
       // A routine that is not installed answers the way PostgREST 12 does.
       routines[name] ? routines[name](args) : missing(name),
+    // The one table read the billing code makes: an event row's state.
+    from: (table: string) => ({
+      select: () => ({
+        eq: (_column: string, id: string) => ({
+          maybeSingle: async () => {
+            if (table !== 'billing_events') return fail(`no table ${table}`);
+            const row = events.get(id);
+            return ok(row ? { processed_at: row.processed_at === null ? null : new Date(row.processed_at).toISOString() } : null);
+          },
+        }),
+      }),
+    }),
     auth: {
       admin: {
         getUserById: async (id: string) => users.has(id)
@@ -883,6 +895,34 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const nobody = idsFor('Ghost2', newUserId());
     stripe.seed(nobody, 'nobody@example.com', { metadataUser: null });
     assert.equal((await deliver(eventText('customer.subscription.updated', nobody, 'ghost2'))).body.reason, 'unknown_user');
+  });
+
+  await check('a delivery that arrives while another still processes the event asks Stripe to retry', async () => {
+    const a = await account('Inflight1');
+    const raw = eventText('customer.subscription.created', a.ids, 'inflight1');
+    // The first delivery is still working on the event when the second lands.
+    let second: ReturnType<typeof mockRes> | null = null;
+    const busy = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        if (name === 'upsert_provider_entitlement' && !second) {
+          second = await deliver(raw);
+          throw new Error('the first delivery fails after all');
+        }
+        return supabase.rpc(name, args);
+      },
+    } as unknown as SupabaseClient;
+    const first = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, first as never, busy);
+    assert.equal(first.statusCode, 500);
+    assert.ok(second);
+    const overlapping = second as ReturnType<typeof mockRes>;
+    assert.deepEqual([overlapping.statusCode, overlapping.body.error?.code], [409, 'event_in_progress'], 'not a 200 that ends Stripe’s retries');
+    // Stripe's retry then applies it.
+    const retried = await deliver(raw);
+    assert.deepEqual([retried.statusCode, retried.body.outcome], [200, 'applied']);
+    assert.equal(await premium(a.userId), true);
+    assert.equal((await deliver(raw)).body.duplicate, true, 'a processed event stays a 200 duplicate');
   });
 
   await check('a failure part-way is retried by the next delivery', async () => {
