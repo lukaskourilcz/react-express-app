@@ -6,6 +6,9 @@
   width: 100%; max-width: var(--ss-width-task); margin: 0 auto; padding: 2rem 1.5rem;
   background: var(--color-background-surface); border-radius: var(--radius-container); text-align: center;
 }
+/* The panel's gap spaces its parts; a browser h1 margin (0.67em) put 48px
+   between the heading and the body when the panel is the page. */
+.ss-state-panel > h1, .ss-state-panel > h2 { margin: 0; }
 .ss-state-panel__body { margin: 0; max-width: 52ch; color: var(--color-text-secondary); line-height: 1.5; text-wrap: pretty; overflow-wrap: anywhere; }
 /* Every action is a 44px page action with the page-action type (.ss-action
    in app-shell.css, through the same Astryx variables), so a panel's buttons

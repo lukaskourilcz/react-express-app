@@ -58,4 +58,8 @@ describe('StatePanel', () => {
     expect(panel).toContain('margin: 0 auto');
     expect(panel).not.toMatch(/max-width: \d+px/);
   });
+
+  it('spaces the heading with the panel gap, not a browser h1 margin', () => {
+    expect(css).toContain('.ss-state-panel > h1, .ss-state-panel > h2 { margin: 0; }');
+  });
 });
