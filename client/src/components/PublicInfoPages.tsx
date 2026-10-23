@@ -24,7 +24,9 @@ export function Page({ kicker, title, lead, children }: { kicker?: string; title
 
 export function ClassroomPage() {
   const t = useT(); const navigate = useNavigate();
-  return <Page title={t('classroomPage.title')} lead={t('classroomPage.lead')}><section className="ss-info-card"><div className="ss-info-actions"><Button variant="primary" label={t('classroomPage.create')} onClick={() => navigate('/play?mode=classroom')} /><Button variant="secondary" label={t('classroomPage.join')} onClick={() => navigate('/play')} /></div><p>{t('classroomPage.note')}</p></section></Page>;
+  // One sentence and the two actions straight under it: a card around one
+  // row of buttons was 920px of mostly empty surface (social-account-23).
+  return <Page title={t('classroomPage.title')} lead={t('classroomPage.lead')}><div className="ss-info-actions"><Button variant="primary" label={t('classroomPage.create')} onClick={() => navigate('/play?mode=classroom')} /><Button variant="secondary" label={t('classroomPage.join')} onClick={() => navigate('/play')} /></div></Page>;
 }
 
 export function NotFoundPage() {

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
-import { NotFoundPage, Page } from '../src/components/PublicInfoPages';
+import { ClassroomPage, NotFoundPage, Page } from '../src/components/PublicInfoPages';
 
 const css = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
@@ -51,5 +51,15 @@ describe('the Page layout', () => {
     const billing = css('../src/components/PremiumBillingPages.css');
     expect(billing).toMatch(/\.ss-billing-card \{[^}]*max-width: var\(--ss-width-task\);/);
     expect(billing).not.toMatch(/\.ss-checkout-card \{[^}]*max-width/);
+  });
+});
+
+describe('the classroom page', () => {
+  it('puts its two actions straight under the lead, with no card around them', () => {
+    const { container } = renderIn(<ClassroomPage />);
+    expect(container.querySelector('.ss-info-card')).toBeNull();
+    const actions = container.querySelector('.ss-info-page > .ss-info-actions');
+    expect(actions?.querySelectorAll('button')).toHaveLength(2);
+    expect(screen.getByText(/the host controls question progress/)).toBe(container.querySelector('.ss-info-page__header p'));
   });
 });

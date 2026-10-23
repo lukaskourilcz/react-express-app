@@ -1066,10 +1066,9 @@ export const en = {
   'topicLanding.goHome': 'Go home',
   // The classroom invitation and the not-found page (PublicInfoPages.tsx).
   'classroomPage.title': 'Run a focused classroom challenge.',
-  'classroomPage.lead': 'Create a host-led room, share one link or QR code, and let signed-in learners join the same subject session.',
+  'classroomPage.lead': 'Create a host-led room and share one link or QR code. Learners sign in, open the link and join the same subject session, and the host controls question progress.',
   'classroomPage.create': 'Create a classroom',
   'classroomPage.join': 'Join with a room code',
-  'classroomPage.note': 'Participants sign in, open the room link, and the host controls question progress.',
   'notFoundPage.kicker': 'Page not found',
   'notFoundPage.title': 'That page is out of the water.',
   'notFoundPage.lead': 'The address may be old or incomplete. Your learning progress is safe.',
