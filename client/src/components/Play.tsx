@@ -1248,11 +1248,17 @@ function RunningQuestion({
 
   // Time-up auto-lock: clicking locks instantly, so this only catches a
   // keyboard user who arrow-browsed to an option but never pressed Enter.
+  // Once per question: a send that fails unlocks the answer, and `onAnswer`
+  // is new on every render, so without the mark a failing connection sent it
+  // again on every render, as fast as each request failed.
+  const autoLockedRef = useRef<string | null>(null);
+  const questionKey = `${match.id}:${questionIdx}`;
   useEffect(() => {
-    if (!noLimit && isPlayer && !submitted && !closedByTeacher && remainingMs === 0 && selected !== null) {
+    if (!noLimit && isPlayer && !submitted && !closedByTeacher && remainingMs === 0 && selected !== null && autoLockedRef.current !== questionKey) {
+      autoLockedRef.current = questionKey;
       onAnswer(selected);
     }
-  }, [remainingMs, noLimit, isPlayer, submitted, closedByTeacher, selected, onAnswer]);
+  }, [remainingMs, noLimit, isPlayer, submitted, closedByTeacher, selected, onAnswer, questionKey]);
 
   const timerColor = noLimit || closedByTeacher
     ? 'var(--astryx-color-text-secondary, currentColor)'

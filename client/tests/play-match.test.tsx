@@ -120,6 +120,27 @@ describe('a timed question', () => {
     expect(api.fetchMatchState.mock.calls.length).toBe(readsAtMount + 1);
   });
 
+  it('sends a browsed answer once at 0 s, even when that send fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const match = running({ question_started_at: new Date(Date.now() - 28_000).toISOString(), question_duration_s: 30 });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.submitMatchAnswer.mockRejectedValue(new Error('Failed to fetch'));
+    await mount();
+    await screen.findByText('Pick one?');
+    // Arrow keys browse to an option without locking it in.
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'alpha' }), { key: 'ArrowDown' });
+    expect(api.submitMatchAnswer).not.toHaveBeenCalled();
+    const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+    await tick(2_500);
+    await settle();
+    await tick(3_000);
+    await settle();
+    // The failed send unlocks the answer, but the clock is out: the auto-lock
+    // must not send it again on every render that follows.
+    expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1);
+  });
+
   it('says a refused late answer did not count and reads the room again', async () => {
     const match = running({ question_duration_s: 30 });
     api.joinMatch.mockResolvedValue(match);
