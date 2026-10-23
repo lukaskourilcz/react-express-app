@@ -11,7 +11,6 @@ import { SwimmingFin, Waterline } from './components/SharkFin';
 import BrandLogo from './components/BrandLogo';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredTrackOf } from './lib/trackPref';
-import { queryClient } from './lib/queryClient';
 import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
@@ -405,15 +404,8 @@ function App() {
     if (signedInId) syncProgressWithServer().catch(() => {});
   }, [signedInId]);
 
-  // Sign-out drops every cached account response. Without this, the next
-  // person to sign in on this browser could see the previous learner's
-  // enrollments or evidence from a warm cache before the refetch lands.
-  const lastUserId = useRef<string | null>(null);
-  useEffect(() => {
-    const id = user?.id ?? null;
-    if (lastUserId.current !== null && lastUserId.current !== id) queryClient.clear();
-    lastUserId.current = id;
-  }, [user]);
+  // Sign-out drops every cached account response before the next account
+  // draws (lib/auth.tsx, through beforeAccountChange).
 
   // Back to the page that asked for the sign-in, and to the new-password
   // form after a reset link (lib/authLanding.ts).

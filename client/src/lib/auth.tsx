@@ -12,7 +12,8 @@ import {
   supabaseLoadFailed,
 } from './supabaseClient';
 import { ApiError, apiFetch } from './api';
-import { clearAccountData, forgetOthersKeptDrafts } from './accountData';
+import { beforeAccountChange, clearAccountData, forgetOthersKeptDrafts } from './accountData';
+import { queryClient } from './queryClient';
 import { readString, removeStored, writeString } from './storage';
 import { clearAuthReturn, clearSignInResume, currentReturnPath, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
 import { RELOAD_GRACE_MS, browserRecovery, isChunkLoadError, reloadOnPress, type Recovery } from './routeRecovery';
@@ -83,6 +84,14 @@ function clearSignInReport(): void {
     // ignore
   }
 }
+
+// Every account change (a sign-out, another account's session replacing this
+// one, a Log out without the server, a deleted account) forgets the account's
+// data through clearAccountData, in the auth handler before the user state
+// changes. The cached responses go with it, so the next account's first
+// render cannot draw the previous learner's wallet, due concepts or saved
+// flashcards from shared keys that carry no account id.
+beforeAccountChange(() => queryClient.clear());
 
 // Read once, as the modules evaluate: whether the document before this one
 // reloaded on a sign-in press and left the sign-in for this one to finish.
