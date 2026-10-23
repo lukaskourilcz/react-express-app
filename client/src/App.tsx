@@ -37,7 +37,7 @@ import { useAuthLanding } from './lib/authLanding';
 import { installIntentPreloading, routeBoxKey, routeChunk } from './lib/routePreload';
 import { lazyPage, lazyShellPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
-import { PageWidthContext, effectivePageWidth, pageMaxWidth, routePageWidth, type RouteWidth } from './components/ui/pageWidth';
+import { pageMaxWidth } from './components/ui/pageWidth';
 import { ShellPartBoundary } from './components/ShellPartBoundary';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
@@ -165,7 +165,8 @@ const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 // stayed viewport-sized, tall cards overflowed straight through every padding,
 // and page ends slid under the waterline overlay. The first-load fallback gets
 // the same box, so the loader has the page's room.
-const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' } as const;
+// The route box's width is the route's page width (.ss-route in app-shell.css).
+const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, display: 'flex', flexDirection: 'column' } as const;
 
 // The head a coding task or a dated question of the day arrived with
 // (vite.config.ts), read before any route writes its own (lib/routeHead.ts).
@@ -488,20 +489,10 @@ function App() {
   // One page width per route (UX audit U1, #573), from the one map in
   // components/ui/pageWidth.ts: home, /profile and /play 1000px, /coding/*
   // 1200px, /dev uncapped and every other route 800px. Pages never set their
-  // own page max-width. A part that needs more room while it is mounted (a
-  // Learn or FDE coding phase, coding-03) asks with usePageWidthRequest, and
-  // the widest request wins until it unmounts.
-  const [widthRequests, setWidthRequests] = useState<Record<string, RouteWidth>>({});
-  const requestPageWidth = useCallback((id: string, width: RouteWidth | null) => {
-    setWidthRequests((prev) => {
-      if ((prev[id] ?? null) === width) return prev;
-      const next = { ...prev };
-      if (width) next[id] = width;
-      else delete next[id];
-      return next;
-    });
-  }, []);
-  const contentMaxWidth = pageMaxWidth(effectivePageWidth(routePageWidth(location.pathname), Object.values(widthRequests)));
+  // own page max-width. A part that needs the wide page while it is mounted (a
+  // Learn or FDE coding phase, coding-03) carries the class ss-wide-page, and
+  // the route box widens through CSS (.ss-route:has(.ss-wide-page)).
+  const pageWidth = pageMaxWidth(location.pathname);
 
   // 1–5 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load, each independently facing left or right so the school
@@ -754,9 +745,11 @@ function App() {
             its content, so the reserve always sits below the last card. */}
         <div
           style={{
-            // Full width: the route column and the footer below it each set
-            // their own box (the route's page width, the footer the header's
-            // 1168px), so the footer no longer moves with the route width.
+            // Full width: the route box and the footer below it each set
+            // their own box (the route's page width, read by .ss-route, and
+            // the header's 1168px), so the footer no longer moves with the
+            // route width.
+            ['--ss-page-width' as string]: pageWidth,
             width: '100%',
             minWidth: 0,
             minHeight: '100%',
@@ -790,10 +783,10 @@ function App() {
               next page can draw. It sits inside the keyed box so that each
               path mounts a fresh boundary, and leaving a failed page needs no
               retry. It renders no element of its own, so the route box stays
-              the page column's first child; the header, the nav and the footer
+              this wrapper's first child; the header, the nav and the footer
               stay outside it.
-              The footer sits inside this Suspense too, after the page column,
-              so it arrives with the first page. It keeps its own box, the
+              The footer sits inside this Suspense too, after the keyed box, so
+              it arrives with the first page. It keeps its own box, the
               header's (--ss-width-chrome), so it stands still from route to
               route whatever the page width (shell-public-01). Under the fallback it sat at the
               bottom of the empty box, and the landing page threw it below the
@@ -801,10 +794,6 @@ function App() {
               a desktop and 0.15 on a phone, and 0.98 when the header settled in
               the same frame. */}
           <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
-            {/* The page column: the route's one width (pageWidth.ts). It is
-                not keyed, so a route change only changes its max-width. */}
-            <div className="ss-page-column" style={{ maxWidth: contentMaxWidth }}>
-            <PageWidthContext.Provider value={requestPageWidth}>
             <m.div
               key={boxKey}
               className="ss-route"
@@ -868,8 +857,6 @@ function App() {
                 </Routes>
               </RouteErrorBoundary>
             </m.div>
-            </PageWidthContext.Provider>
-            </div>
             {showChrome && <BrandFooter />}
           </Suspense>
         </div>

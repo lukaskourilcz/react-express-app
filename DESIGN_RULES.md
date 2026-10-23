@@ -204,9 +204,9 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   with the shell, and the lazy account widget with its 56px placeholder is for
   a session. On a desktop that widget sits in `.ss-account-slot`, as wide as
   the widget can grow, so the centred nav stands still when it arrives. The
-  footer renders inside the route `Suspense`, after the page column that
-  holds the keyed box, so it arrives with the first page instead of sitting
-  under the first-load loader. It keeps its own box (`--ss-width-chrome`,
+  footer renders inside the route `Suspense`, after the keyed box, so it
+  arrives with the first page instead of sitting under the first-load
+  loader. It keeps its own box (`--ss-width-chrome`,
   the header's 1168px), never the route width. `tests/browser/first-load.spec.ts` holds the page's code
   back and fails when the header, `<main>` or the footer moves.
 - A shell part that fails keeps the shell too. A lazy part outside the route
@@ -267,8 +267,8 @@ coming back. The tokens and the map are in
   (`--ss-width-wide`) for `/coding/*`; 800px (`--ss-width-narrow`) for every
   other route; `/dev` uncapped. A page never sets its own page `max-width`. A
   part that needs the wide page while mounted (a Learn or FDE coding phase)
-  calls `usePageWidthRequest('wide')`. A new route goes into the map and its
-  test, not into a stylesheet.
+  puts the class `ss-wide-page` on its root. A new route goes into the map
+  and its test, not into a stylesheet.
 - **Task cards are 640px.** Auth, billing and checkout cards, and the question
   column, use `--ss-width-task` inside the 800px column. Do not add another
   card width.

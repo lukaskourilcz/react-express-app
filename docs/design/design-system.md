@@ -41,7 +41,7 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 
 ## Page widths
 
-Four tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573). The route shell in `client/src/App.tsx` picks one route width per route from the one map in `client/src/components/ui/pageWidth.ts` (`routePageWidth`) and caps the page column with it. A page never sets its own page `max-width`: it fills the column and sizes only what sits inside it.
+Four tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573). The route shell in `client/src/App.tsx` picks one route width per route from the one map in `client/src/components/ui/pageWidth.ts` (`pageMaxWidth`), writes it to `--ss-page-width`, and the keyed route box (`.ss-route`) takes it as its `max-width`. A page never sets its own page `max-width`: it fills the column and sizes only what sits inside it.
 
 | Token | Width | Used by |
 |---|---|---|
@@ -51,7 +51,7 @@ Four tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573). The rou
 | `--ss-width-wide` | 1200px | Operational screens: `/coding` and `/coding/*`, and a Learn or FDE coding phase while its editor is mounted. |
 | `--ss-width-chrome` | 1168px | The floating header and the footer. Both keep this box on every route, so neither moves when the route width changes. |
 
-`/dev` is uncapped. A part that needs more room while it is mounted calls `usePageWidthRequest('wide')` (same module); the shell takes the widest request until the part unmounts or passes `null`. A request never narrows a route. To give a new route a width, add it to `routePageWidth` and its test (`client/tests/page-width.test.tsx`); do not write a `max-width` on the page.
+`/dev` is uncapped. A part that needs the wide page while it is mounted (a Learn or FDE coding phase) puts the class `ss-wide-page` on its root: `.ss-route:has(.ss-wide-page)` widens the route box to `--ss-width-wide` for as long as the part is there, with no state and no extra render. To give a new route a width, add it to the map and its test (`client/tests/page-width.test.tsx`); do not write a `max-width` on the page.
 
 The shared `Page` layout (`PublicInfoPages.tsx`, `.ss-info-page`) fills the column, so every `Page` h1 starts at the same x. Its kicker line is always drawn (empty and `aria-hidden` when a page passes no kicker), so the h1 also sits at one y.
 

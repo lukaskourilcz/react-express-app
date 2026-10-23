@@ -38,7 +38,7 @@ describe('the Page layout', () => {
   });
 
   it('gives the empty kicker line a height, so it holds its place', () => {
-    expect(css('../src/styles/app-shell.css')).toMatch(/\.ss-info-page__kicker \{ min-height: 1\.4em;/);
+    expect(css('../src/styles/app-shell.css')).toMatch(/\.ss-info-page__kicker \{ min-height: 1lh;/);
   });
 
   it('sets no page max-width on the Page column: the route shell owns it', () => {

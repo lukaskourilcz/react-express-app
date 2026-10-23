@@ -322,18 +322,14 @@
 /* Compact footer: the legal links, devShark's own social profiles and the
    appearance and sound controls. It
    stays deliberately quiet so it never interrupts a learning flow. */
-/* The route shell's page column (App.tsx): its max-width is the route's one
-   page width (components/ui/pageWidth.ts). The footer is not in it: it keeps
-   the header's own box, so it never moves with the route width (UX audit
-   shell-public-01). */
-.ss-page-column {
-  flex: 1 0 auto;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
-  margin-inline: auto;
-}
+/* The route box (App.tsx): its max-width is the route's one page width
+   (components/ui/pageWidth.ts), which the shell writes to --ss-page-width. A
+   part that needs the wide page while it is mounted (a Learn or FDE coding
+   phase) carries .ss-wide-page on its root, and the box widens for as long
+   as it is there. The footer is not in the box: it keeps the header's own
+   box, so it never moves with the route width (UX audit shell-public-01). */
+.ss-route { width: 100%; max-width: var(--ss-page-width); margin-inline: auto; }
+.ss-route:has(.ss-wide-page) { max-width: var(--ss-width-wide); }
 .ss-brand-footer {
   box-sizing: border-box;
   width: 100%;
@@ -364,7 +360,8 @@
 .ss-footer-settings { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 /* The footer's appearance and sound toggles are compact utility controls
    (UX audit shell-public-03): pills like every other button, 36px with a
-   44px hit area on a mouse, 44px on a coarse pointer (the touch block). */
+   44px hit area on a mouse (the .ss-compact hit-area rule), 44px on a coarse
+   pointer (the touch block). */
 .ss-footer-settings button {
   position: relative;
   min-height: var(--ss-control-height-compact);
@@ -375,11 +372,6 @@
   color: inherit;
   font: 600 var(--ss-type-meta) var(--font-family-body);
   cursor: pointer;
-}
-.ss-footer-settings button::before {
-  content: '';
-  position: absolute;
-  inset: calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2);
 }
 .ss-footer-settings button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
 .ss-footer-settings button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
@@ -405,7 +397,7 @@
 .ss-info-page__header p { max-width: 68ch; margin: 0; color: var(--color-text-secondary); font-size: 1.05rem; }
 /* The kicker line is always there, empty when a Page passes none, so the h1
    sits at one y on every Page (UX audit shell-public-13). */
-.ss-info-page__kicker { min-height: 1.4em; color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; }
+.ss-info-page__kicker { min-height: 1lh; color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); letter-spacing: 0.08em; text-transform: uppercase; }
 
 .topic-practice { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); padding: 14px 16px; }
 .topic-practice summary { cursor: pointer; font-weight: 700; }
@@ -687,26 +679,19 @@
 }
 
 /* A component's own toolbar (the coding action bar, a runner's icon row):
-   36px controls on a mouse, each with a 44px hit area drawn by ::before.
-   Astryx buttons and segmented items are already position: relative; the
-   text field's wrapper is not, so it gets it here (a click on the wrapper
-   focuses the input, Astryx TextInput). */
+   36px buttons and segmented items on a mouse, each with a 44px hit area
+   drawn by ::before (both are already position: relative in Astryx); the
+   footer's compact toggles share the hit area. Text fields stay 44px
+   everywhere. On a coarse pointer the 44px floor holds. */
 @media (pointer: fine) {
   .ss-compact .astryx-button,
   .ss-compact .astryx-segmented-control-item {
     min-height: var(--ss-control-height-compact) !important;
     min-width: var(--ss-control-height-compact) !important;
   }
-  .ss-compact .astryx-text-input {
-    position: relative;
-    min-height: var(--ss-control-height-compact) !important;
-  }
-  .ss-compact .astryx-text-input > input {
-    min-height: calc(var(--ss-control-height-compact) - 2px) !important;
-  }
   .ss-compact .astryx-button::before,
   .ss-compact .astryx-segmented-control-item::before,
-  .ss-compact .astryx-text-input::before {
+  .ss-footer-settings button::before {
     content: '';
     position: absolute;
     inset: calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2);
