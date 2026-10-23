@@ -46,6 +46,12 @@ describe('pages fill the route width', () => {
     expect(source('components/Profile.tsx')).not.toMatch(/maxWidth: 1000/);
   });
 
+  it('the Learn page takes the route width and keeps its no-levels note on the column edge (learn-09)', () => {
+    const learn = source('components/Roadmap.tsx');
+    expect(learn).not.toMatch(/maxWidth: 1060\b/);
+    expect(learn).not.toMatch(/maxWidth: 620, margin: '32px auto 0'/);
+  });
+
   it('the Play lobby and its gates use the shared 640px task column, not 620 or 480px (social-account-01)', () => {
     const play = source('components/Play.tsx');
     expect(play).not.toMatch(/maxWidth: (480|620)\b/);

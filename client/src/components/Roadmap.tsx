@@ -916,7 +916,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
   return (
-    <div className="de-page" style={{ maxWidth: 1060 }}>
+    <div className="de-page">
       {/* One header in every auth state (UX audit learn-01): the h1 is
           always "Learn", the switcher below is the one place the section is
           named, and the section line under it is the one supporting line. */}
@@ -1016,7 +1016,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           </>
         )
       ) : levels.length === 0 ? (
-        <div style={{ maxWidth: 620, margin: '32px auto 0' }}>
+        <div style={{ marginTop: 16 }}>
           <Banner status="info" title={t('roadmap.noLevels')} description={t('roadmap.noLevelsBody')} />
         </div>
       ) : (
