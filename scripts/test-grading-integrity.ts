@@ -61,6 +61,14 @@ const clean = await runInSandbox({code:'function answer(){return 1}',calls:['ans
 assert.equal(clean.results[0]?.pass, true, 'an attack must not poison the next run');
 console.log('PASS integrity: lossless values and fresh run');
 
+// Reading a thrown promise releases its handle; releasing it again made the
+// run's error "Lifetime not alive" instead of what the code threw.
+const thrownPromise = await runInSandbox({ code: 'throw Promise.resolve(7);', calls: ['1'], expectations: [1] });
+const thrownObject = await runInSandbox({ code: 'throw {};', calls: ['1'], expectations: [1] });
+assert.notEqual(thrownObject.codeError, null);
+assert.equal(thrownPromise.codeError, thrownObject.codeError, 'a thrown promise reads like any other thrown object');
+console.log('PASS integrity: a thrown promise is reported as the code\'s error');
+
 // Correct arithmetic can produce -0 (`-a - b` with both zero), and no check
 // asks for a sign of zero: both graders take -0 for 0, and when a result is
 // wrong for another reason its -0 is shown as -0, not as the 0 it was not.

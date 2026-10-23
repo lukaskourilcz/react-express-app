@@ -488,14 +488,19 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
   vm.setProp(vm.global, URL_HOST_NAME, urlFunction);
   urlFunction.dispose();
   let driver: QuickJSHandle | null = null;
+  // `dump` releases a promise handle itself, and learner code can throw a
+  // promise. Releasing it a second time threw "Lifetime not alive", which
+  // came back as the run's error in place of what the code threw.
+  const dumpError = (handle: QuickJSHandle): unknown => {
+    try { return vm.dump(handle); } finally { if (handle.alive) handle.dispose(); }
+  };
   const readDriver = (name: string): unknown => {
     if (!driver) return undefined;
     const fn = vm.getProp(driver, name);
     try {
       const result = vm.callFunction(fn, vm.undefined);
       if (result.error) {
-        const error = vm.dump(result.error);
-        result.error.dispose();
+        const error = dumpError(result.error) as { message?: string } | undefined;
         throw new Error(error?.message ?? 'Evaluator failed');
       }
       try { return vm.dump(result.value); } finally { result.value.dispose(); }
@@ -517,8 +522,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
     const shownCalls = Math.max(0, Math.min(input.calls.length, Math.floor(input.shownCalls ?? input.calls.length)));
     const evaluated = vm.evalCode(program(input.code, input.calls, shownCalls, input.runtimePolicy), 'task.js');
     if (evaluated.error) {
-      const error = vm.dump(evaluated.error) as { message?: string; name?: string } | string;
-      evaluated.error.dispose();
+      const error = dumpError(evaluated.error) as { message?: string; name?: string } | string;
       const message = typeof error === 'string' ? error : `${error?.name ?? 'Error'}: ${error?.message ?? 'failed'}`;
       if (isInterrupt(message)) return failure(TIMEOUT_MESSAGE, true);
       if (isStackOverflow(message)) return failure(STACK_MESSAGE);
@@ -529,8 +533,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
     for (let tick = 0; tick < MAX_TICKS; tick++) {
       const jobs = runtime.executePendingJobs();
       if (jobs.error) {
-        const error = vm.dump(jobs.error) as { message?: string } | string;
-        jobs.error.dispose();
+        const error = dumpError(jobs.error) as { message?: string } | string;
         const message = typeof error === 'string' ? error : error?.message ?? 'failed';
         if (isInterrupt(message)) return failure(TIMEOUT_MESSAGE, true);
         // An unhandled rejection inside a job: keep pumping, the harness catches per call.
