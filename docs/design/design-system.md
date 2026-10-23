@@ -94,6 +94,19 @@ One frame for every place a coding task opens (UX audit U3, #575): `/coding/<tra
 - **Results pane.** Tabs in one order on every track: Results, Console, the track's tab (Types or Preview), Resources, then Solution and Approaches when they exist. A tab never shrinks; the strip scrolls with a 16px fade at its far edge, and below 600px Resources drops its count. React opens on Results, and Preview takes over after the first Run that renders; before it, Preview is one line and its frame takes no room. A count is said once: the tab's badge (Results and Types both read checks passed of checks), with the Types panel counting compiler errors and failing type checks apart ("1 compiler error · 4 of 5 type checks fail").
 - **Checks.** One divided list, not a card per check: hairline rows, a 3rem status column saying Pass, Fail or a dash in words and colour, the call in mono followed by "→ expected" and after a run "· got actual", the description as a quiet second line and one small `edge` tag. "Expected" is not printed; a screen reader hears it in place of the arrow.
 
+## Coding lists
+
+The Coding home, the FullStack page and each track page (UX audit U3, #575). The rules are in `client/src/coding/Coding.css` and pinned by `client/tests/coding-lists-layout.test.ts`.
+
+- **One SwimCta.** On `/coding` it is the next challenge's Continue. A project or path row's action is `FadeFinCta` labelled by progress: Start at none, Continue when part done, Review when complete. The run planner's actions are Astryx secondary.
+- **The Premium rule once per list.** A list's intro says it under the lead ("Level 1 of every path, and stages 1 and 2 of every project, come with the free plan. Premium opens the rest."); a row keeps only its "Premium" badge beside its progress line. The task screen's stage list keeps its own note.
+- **Long lists fold.** A list of more than five projects shows five and a ghost "Show all N challenges"; it opens the rest in place, moves focus to row six and turns into "Show fewer". No list scrolls inside the page.
+- **Tracks.** Four in one row from 1051px, 2x2 down to 701px, one column below. The technique groups are a 3x3 grid from 1051px.
+- **Task rows.** One 48px hairline line each: the title, the level as quiet meta, any tag, the status at the end. Two columns from 1024px.
+- **Challenge run.** Collapsed, a hairline row of 64px: the title and one line on what a run is, with "Plan a run" (Astryx secondary, `aria-expanded`) at its end.
+- **Filters.** One row from 1024px: the search, then one 44px select per filter (technique, difficulty, length, format, and status with Saved when signed in). Under 760px a 2-column grid with the search across both. "Showing N of M" speaks only once a filter narrows the list; its live region stays in place.
+- **Signed out.** The page says once, as a line under its lead, that a pass needs an account.
+
 ## Layout and density
 
 - Mobile gutter: 16px; tablet: 24px; desktop: 24–32px.
