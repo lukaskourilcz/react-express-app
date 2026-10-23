@@ -19,7 +19,8 @@
 .quiz-review-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  /* Paired cards end on one line. */
+  align-items: stretch;
   gap: 20px;
   width: 100%;
 }
@@ -36,6 +37,16 @@
 }
 .quiz-review-item.is-correct .quiz-review-card { border-top: 4px solid var(--ss-success-strong, #16803c) !important; }
 .quiz-review-item.is-incorrect .quiz-review-card { border-top: 4px solid var(--ss-error, #dc2626) !important; }
+.quiz-review-item > .quiz-review-card { height: 100%; }
+.quiz-review-explanation {
+  margin: 4px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--ss-card-line);
+  font-size: var(--ss-type-compact);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
 .quiz-review-question {
   min-width: 0;
   font-family: var(--font-family-heading);
@@ -70,4 +81,25 @@
 .quiz-setup__start { display: flex; align-items: center; }
 @media (max-width: 559px) {
   .quiz-setup__panel { padding: 16px; }
+}
+
+/* Results (UX audit U2, questions-12): the summary fills the route column, so
+   it and the review grid share both edges; its actions are the shared row. */
+.quiz-results { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.quiz-results__summary {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  border-radius: var(--radius-container);
+  text-align: center;
+}
+
+/* A stopped quiz (expired, graded, daily done, failed): the task column. */
+.quiz-stop { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: var(--ss-width-task); margin: 0 auto; }
+
+@media (max-width: 559px) {
+  .quiz-results__summary { padding: 24px 16px; }
 }

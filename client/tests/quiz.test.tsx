@@ -225,6 +225,42 @@ describe('the setup screen (UX audit U2)', () => {
   });
 });
 
+describe('the results screen (UX audit U2)', () => {
+  it('keeps the summary and the review on one column, with h1 then h2, and the shared action row', async () => {
+    server.use(http.post('*/api/quiz/submit', () => HttpResponse.json(graded([Q('a')]))));
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    await screen.findByText('1 / 1');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('1 / 1');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Review your answers (1)');
+    // No width of its own: the summary fills the column the review grid fills.
+    const summary = document.querySelector('.quiz-results__summary') as HTMLElement;
+    expect(summary.style.maxWidth).toBe('');
+    expect(summary.parentElement!.style.maxWidth).toBe('');
+    const newQuiz = screen.getByRole('button', { name: /^new quiz$/i });
+    expect(newQuiz).toHaveClass('ss-swim-cta--md');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /review answers/i }).closest('.ss-question-actions__secondary')).not.toBeNull();
+    // The explanation is text under a rule, not a box inside the card.
+    const explanation = screen.getByText('Why a');
+    expect(explanation).toHaveClass('quiz-review-explanation');
+    expect(explanation.style.border).toBe('');
+    const css = readFileSync(new URL('../src/components/Quiz.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.quiz-review-grid \{[^}]*align-items: stretch/);
+    expect(css).toMatch(/\.quiz-review-explanation \{[^}]*border-top: 1px solid var\(--ss-card-line\)/);
+  });
+
+  it('stops on the message with back to settings on the left and one primary on the right', async () => {
+    server.use(http.get('*/api/quiz/questions', () => HttpResponse.json({ error: { code: 'upstream', message: 'Busy' } }, { status: 503 })));
+    renderQuiz();
+    fireEvent.click(await screen.findByRole('button', { name: /start quiz/i }));
+    const retry = await screen.findByRole('button', { name: /^retry$/i });
+    expect(retry).toHaveClass('ss-swim-cta--md');
+    expect(screen.getByRole('button', { name: /back to settings/i }).closest('.ss-question-actions__secondary')).not.toBeNull();
+  });
+});
+
 describe('the question screen (UX audit U2)', () => {
   it('names the run in one h1 that is also the counter, and shows the difficulty', async () => {
     await startQuiz([Q('a', { difficulty: 3 }), Q('b')]);

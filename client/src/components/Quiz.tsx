@@ -871,21 +871,17 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         : stop === 'graded'
           ? { status: 'error' as const, title: t('quiz.alreadyGradedTitle'), description: t('quiz.alreadyGradedBody') }
           : { status: 'error' as const, title: error || t('error.somethingWrong') };
+    // The task column, the message, and the shared action row: back to the
+    // settings on the left, the one way on as the primary on the right.
     return (
-      <div style={{ width: '100%', maxWidth: 560, margin: '0 auto' }}>
-        <Card padding={5} width="100%">
-          <VStack gap={3}>
-            <Banner {...banner} />
-            <HStack gap={1.5} wrap="wrap">
-              {stop === 'daily-done' ? (
-                <Button variant="primary" label={t('quiz.dailyLeaderboard')} onClick={() => navigate('/leaderboard?tab=today')} />
-              ) : (
-                <Button variant="primary" label={stop ? t('quiz.startAgainSame') : t('quiz.retry')} onClick={startAgain} />
-              )}
-              <Button variant="secondary" label={t('quiz.backToSettings')} onClick={handleRestart} />
-            </HStack>
-          </VStack>
-        </Card>
+      <div className="quiz-stop">
+        <Banner {...banner} />
+        <QuestionActions
+          secondary={<Button variant="secondary" label={t('quiz.backToSettings')} onClick={handleRestart} />}
+          primary={stop === 'daily-done'
+            ? { label: t('quiz.dailyLeaderboard'), onClick: () => navigate('/leaderboard?tab=today') }
+            : { label: stop ? t('quiz.startAgainSame') : t('quiz.retry'), onClick: startAgain }}
+        />
       </div>
     );
   }
@@ -1013,12 +1009,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     const resultDifficulty = t(`difficulty.${mode === 'standard' ? difficultyMode : 'mixed'}` as TranslationKey);
     return (
       <>
-        <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
+        {/* The summary and the review share one column and both edges
+            (UX audit U2, questions-12). */}
+        <div className="ss-pop quiz-results">
           <div
-            className="ss-panel"
+            className="ss-panel quiz-results__summary"
             role="region"
             aria-labelledby="quiz-result-heading"
-            style={{ position: 'relative', overflow: 'hidden', padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, borderRadius: 'var(--radius-page)' }}
           >
             <Kicker center style={{ position: 'relative' }}>{t('quiz.complete')}</Kicker>
             <MotionPop>
@@ -1063,22 +1060,25 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </div>
             )}
 
-            <HStack gap={1.5} justify="center" wrap="wrap" style={{ position: 'relative', marginTop: 4 }}>
-              <Button variant="primary" label={t('quiz.newQuiz')} onClick={handleRestart} />
+          </div>
+          <QuestionActions
+            secondary={
               <Button
-                variant="ghost"
+                variant="secondary"
                 label={t('quiz.reviewAnswersArrow')}
                 onClick={() => {
-                  document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
+                  const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+                  document.getElementById('quiz-review')?.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
                 }}
               />
-            </HStack>
-          </div>
+            }
+            primary={{ label: t('quiz.newQuiz'), onClick: handleRestart }}
+          />
         </div>
 
-        <h3 id="quiz-review" className={`quiz-review-header ${reviewWave}`}>
+        <h2 id="quiz-review" className={`quiz-review-header ${reviewWave}`}>
           {t('quiz.reviewYourAnswers', { count: questions.length })}
-        </h3>
+        </h2>
         <div className="quiz-review-grid">
         {questions.map((question, index) => {
           const questionResult = resultsById.get(question.id);
@@ -1129,19 +1129,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       </Text>
                     </span>
                   )}
+                  {/* Plain secondary text under one hairline: a bordered
+                      box in every card was a panel inside a card. */}
                   {questionResult?.explanation && (
-                    <div
-                      style={{
-                        padding: '12px 14px',
-                        backgroundColor: 'var(--color-background-muted)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                    >
-                      <Text type="body" size="sm">
-                        {questionResult.explanation}
-                      </Text>
-                    </div>
+                    <p className="quiz-review-explanation">{questionResult.explanation}</p>
                   )}
                   {/* Shark Cards (owner decision 12): keep a question to come
                       back to, with the answer and explanation graded here. */}
