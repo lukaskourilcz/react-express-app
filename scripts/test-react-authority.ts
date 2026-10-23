@@ -3,6 +3,8 @@ import { runReactSuite } from '../lib/coding/react-runner';
 import { guestResultLine, readGuestResult, serializeGuestResult } from '../lib/coding/react-guest';
 import { LOG_LINE_CUT, MAX_LOG_LINE_CHARS } from '../shared/coding-evaluate';
 import { reactSpreadContracts } from './react-spread-contract';
+import { runInNewContext } from 'node:vm';
+import { lockDownRealm } from '../lib/coding/realm-lockdown';
 import { reactRecordContracts } from './react-record-contract';
 
 await reactSpreadContracts();
@@ -90,3 +92,20 @@ for(const appSource of [
 }
 
 console.log('PASS React authority: DOM, intrinsics, modules, elements, synchronous/async assertions, detached rejections and long error text');
+
+// The guest freezes every standard built-in before learner code runs
+// (lib/coding/realm-lockdown.ts). The list is checked against the names a
+// fresh realm of this Node has: SuppressedError, DisposableStack and
+// AsyncDisposableStack arrived with Node 24 and were left writable. Last in
+// this file, because it freezes this process.
+lockDownRealm();
+const notBuiltIns=new Set(['Infinity','NaN','undefined','globalThis','eval','console','WebAssembly']);
+const realmNames=(runInNewContext('Object.getOwnPropertyNames(globalThis)') as string[]).filter(name=>!notBuiltIns.has(name));
+assert.ok(realmNames.includes('Object')&&realmNames.length>50,'the fresh realm lists its built-ins');
+for(const name of realmNames) {
+  const value=(globalThis as Record<string,unknown>)[name] as {prototype?:unknown}|undefined;
+  assert.ok(value!==undefined,`${name} exists here`);
+  assert.ok(Object.isFrozen(value)||value===Error,`${name} is frozen`);
+  if(value.prototype&&typeof value.prototype==='object') assert.ok(Object.isFrozen(value.prototype),`${name}.prototype is frozen`);
+}
+console.log(`PASS React authority: realm lockdown freezes all ${realmNames.length} built-ins of this Node`);
