@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createServiceClient, jsonError, withTimeout, requireAuthSub, withRequestContext } from '../lib/http';
+import { createServiceClient, jsonError, withTimeout, requireAuthSub, withRequestContext, ServiceUnavailableError } from '../lib/http';
 import { enforceClassRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 import { deploymentSubjectIds } from '../lib/product-scope';
 import { isScopeSubject, subjectForCategory } from '../shared/subject-catalog';
@@ -101,7 +101,10 @@ export async function handleFlashcards(req: VercelRequest, res: VercelResponse, 
 
     res.setHeader('Allow', 'GET, POST, DELETE');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
-  } catch {
+  } catch (error) {
+    // A Supabase call that timed out is the service being down for a moment,
+    // which the client may retry: 503, as every other handler answers it.
+    if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }

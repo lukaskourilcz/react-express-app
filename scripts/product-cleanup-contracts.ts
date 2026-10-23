@@ -24,6 +24,7 @@ import { en as ENGLISH } from '../client/src/i18n/translations';
 import { annualSaving, launchOfferDisplay } from '../shared/launch-offer';
 import { PREMIUM_PRICE } from '../shared/tiers';
 import { handleFlashcards } from '../api/flashcards';
+import { UpstreamTimeoutError } from '../lib/http';
 import { retiredCardPacks } from '../api/user/[op]';
 import { getEffectiveQuestions } from '../lib/questions-store';
 import { isRoadmapTopic, levelQuestionIds } from '../lib/roadmap';
@@ -308,6 +309,23 @@ async function sharkCardContracts() {
     assert.equal(res.statusCode, 200);
     assert.equal(calls[0].op, 'delete');
     assert.deepEqual(calls[0].filters, [['user_id', owner], ['subject', 'webdev'], ['question_id', learnQuestion.id]]);
+  }
+  // A read that times out is the service being unavailable: 503, which the
+  // client may retry, not a 500 internal error.
+  {
+    const hung = { from: () => {
+      const link = {
+        select: () => link,
+        eq: () => link,
+        order: () => link,
+        then: (_resolve: unknown, reject: (error: unknown) => unknown) => reject(new UpstreamTimeoutError()),
+      };
+      return link;
+    } } as never;
+    const res = mockResponse();
+    await handleFlashcards(call('GET', owner), res as never, hung);
+    assert.equal(res.statusCode, 503, JSON.stringify(res.body));
+    assert.equal(errorCode(res), 'upstream_timeout');
   }
   // A signed-out request is refused.
   {
