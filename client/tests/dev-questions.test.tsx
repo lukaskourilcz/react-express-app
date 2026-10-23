@@ -3,8 +3,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import QuestionEditor from '../src/components/dev/QuestionEditor';
+import DevTriage from '../src/components/dev/DevTriage';
+import type { AdminQuestion } from '../src/lib/devApi';
 import { server } from './mocks/server';
 
 // jsdom has no modal dialogs: open and close the element as a browser would.
@@ -60,5 +63,48 @@ describe('/dev → the question editor', () => {
     );
     expect(screen.getByRole('textbox', { name: 'Question' })).toHaveValue('Which hook keeps state?');
     expect(screen.getByRole('textbox', { name: 'Option 1' })).toHaveValue('useState');
+  });
+});
+
+const question = (id: string): AdminQuestion => ({
+  id, tags: [], introduction: '', question: `Question ${id}?`, options: ['Yes', 'No'], correctAnswer: 0, category: 'react',
+  explanation: '', difficulty: 2, importance: 5, source: 'base', deleted: false, review: { active: true, reason: 'reviewed' },
+});
+const verdict = (mean: number) => ({ cat: 'react', diff: 2, rel: 2, disc: 2, fit: 2, clar: 2, mean, gate: false, greasons: [], dup: false, dec: 'cut', reasons: [], note: '' });
+
+function renderTriage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <LanguageProvider><DevTriage /></LanguageProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('/dev → Quality triage', () => {
+  it('shows again the rows a bulk delete did not reach when it stops on an error', async () => {
+    const deleted: string[] = [];
+    server.use(
+      http.get('*/api/admin/questions', () => HttpResponse.json({ questions: ['t1', 't2', 't3'].map(question), categories: ['react'], reportCounts: {} })),
+      http.get('*/triage-verdicts.json', () => HttpResponse.json({
+        meta: { total: 3, keep: 0, cut: 3, generatedFrom: 'test', keepRule: 'test' },
+        verdicts: { t1: verdict(1), t2: verdict(2), t3: verdict(3) },
+      })),
+      http.post('*/api/admin/delete', async ({ request }) => {
+        const { id } = (await request.json()) as { id: string };
+        if (id === 't2') return HttpResponse.json({ error: { code: 'internal_error', message: 'Internal error' } }, { status: 500 });
+        deleted.push(id);
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    renderTriage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete all 3 shown' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete permanently' }));
+    expect(await screen.findByText(/deleted 1 before stopping/)).toBeInTheDocument();
+    expect(deleted).toEqual(['t1']);
+    // t1 is gone; t2 failed and t3 was never sent, so both are still listed.
+    expect(screen.queryByText('Question t1?')).toBeNull();
+    expect(screen.getByText('Question t2?')).toBeInTheDocument();
+    expect(screen.getByText('Question t3?')).toBeInTheDocument();
   });
 });

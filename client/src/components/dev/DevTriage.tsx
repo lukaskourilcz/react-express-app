@@ -187,6 +187,10 @@ export default function DevTriage() {
       }
       setSnack(`Deleted ${n} question${n === 1 ? '' : 's'}`);
     } catch (err) {
+      // The rows from the one that failed on are still in the bank: show them
+      // again, or they looked deleted until the next reload.
+      const kept = ids.slice(n);
+      setRemoved((prev) => { const next = new Set(prev); kept.forEach((id) => next.delete(id)); return next; });
       setSnack(`${friendlyError(err)} (deleted ${n} before stopping)`);
     } finally {
       setBusy(false);
