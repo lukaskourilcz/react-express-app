@@ -5,14 +5,11 @@ import { Kicker } from './landing/LandingKit';
 import { retirementOf } from '../../../shared/retired-content';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
-import { Badge } from '@astryxdesign/core/Badge';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button as AxButton } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
-import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { AppToast } from './ui/AppToast';
-import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
@@ -98,10 +95,19 @@ import { gatedRef, type GatedContent } from '../../../shared/tiers';
 import { readJSON, readString, writeJSON, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { IconTile, BoltIcon, CloseIcon, TrophyIcon } from './ui/icons';
+import { IconTile, BoltIcon, TrophyIcon } from './ui/icons';
 import { SwimCta } from './landing/LandingKit';
 import { lazyShellPart } from '../lib/routeRecovery';
 import { ShellPartBoundary } from './ShellPartBoundary';
+import { CategoryTag } from './ui/CategoryTag';
+import {
+  AnswerOptionList,
+  ExitIcon,
+  QuestionActions,
+  QuestionHeader,
+  QuestionIconButton,
+  QuestionShell,
+} from './question';
 import ErrorRetry from './ErrorRetry';
 import { localDayChangeTime } from '../lib/utcDay';
 import './Roadmap.css';
@@ -1646,20 +1652,21 @@ function SkillCheckRunner({
     if (qIndex < roundSize - 1) setQIndex((i) => i + 1);
   };
 
+  // The skill check's screens share the question screen's 640px shell,
+  // header and action row (UX audit learn-03), with one SwimCta md each
+  // (learn-04). Exit sits at the header's right on the intro and every round.
+  const placementExit = <QuestionIconButton label={learnText('placement.cancel')} icon={<ExitIcon />} onClick={onCancel} />;
+
   if (phase === 'intro') {
     return (
-      <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
-        <Kicker as="h1" center>{learnText('placement.kicker')}</Kicker>
-
-        <div style={{ marginTop: 8 }}>
-          <Text color="secondary">{learnText('placement.subtitle')}</Text>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <AxButton variant="primary" label={learnText('placement.start')} onClick={() => void start()} />
-          <AxButton variant="secondary" label={learnText('placement.cancel')} onClick={onCancel} />
-        </div>
-      </div>
+      <QuestionShell
+        questionId="placement-intro"
+        focusable={false}
+        stable={false}
+        header={<QuestionHeader title={learnText('placement.kicker')} tools={placementExit} />}
+        question={<p className="rm-placement-lead">{learnText('placement.subtitle')}</p>}
+        actions={<QuestionActions primary={{ label: learnText('placement.start'), onClick: () => void start() }} />}
+      />
     );
   }
 
@@ -1687,49 +1694,54 @@ function SkillCheckRunner({
           : correct >= 10
             ? 'roadmap.skillCheckSome'
             : 'roadmap.skillCheckLow';
+    const back = { label: t('roadmap.skillCheckBack'), onClick: () => onFinished(correct, accountEpoch() === epochRef.current ? verifiedUnlocks : []) };
     return (
-      <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-          <IconTile size={52}>
-            <BoltIcon size={24} />
-          </IconTile>
-        </div>
-        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
-          {learnText('placement.done')}
-        </h1>
-        <div style={{ marginTop: 4 }}>
-          <Text color="secondary" weight="bold">{t('roadmap.skillCheckResult', { correct, total })}</Text>
-        </div>
-        {unapplied ? (
-          <div role="alert" style={{ marginTop: 8, marginBottom: 24 }}>
-            <Text color="secondary">{learnText('placement.applyFailed')}</Text>
+      <QuestionShell
+        questionId="placement-result"
+        focusable={false}
+        stable={false}
+        question={
+          <div className="rm-placement-result">
+            <IconTile size={52}>
+              <BoltIcon size={24} />
+            </IconTile>
+            <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
+              {learnText('placement.done')}
+            </h1>
+            <Text color="secondary" weight="bold">{t('roadmap.skillCheckResult', { correct, total })}</Text>
+            {unapplied ? (
+              <p role="alert" className="rm-placement-lead">{learnText('placement.applyFailed')}</p>
+            ) : (
+              <p className="rm-placement-lead">{t(tier as TranslationKey)}</p>
+            )}
           </div>
-        ) : (
+        }
+        actions={
           <>
-            <div style={{ marginTop: 8, marginBottom: 8 }}>
-              <Text color="secondary">{t(tier as TranslationKey)}</Text>
-            </div>
-
+            {/* One primary: Back to the map, or Try again while the receipt
+                could not be applied. */}
+            <QuestionActions
+              primary={unapplied ? { label: t('roadmap.retry'), onClick: () => void applyReceipt(unapplied), disabled: applying } : back}
+              secondary={
+                <>
+                  {unapplied && <AxButton variant="secondary" label={back.label} onClick={back.onClick} />}
+                  <AxButton variant="ghost" label={learnText('placement.retry')} onClick={() => void start()} />
+                </>
+              }
+            />
+            <section className="rm-placement-review" aria-label={learnText('placement.review')}>
+              <h2>{learnText('placement.review')}</h2>
+              {review.map((item, index) => <article className="ss-info-card" key={item.questionId}>
+                <h3>{index + 1}. {t(item.isCorrect ? 'quiz.correct' : 'quiz.incorrect')}</h3>
+                {renderQuestion(item.question.question)}
+                <p><strong>{learnText('placement.yourAnswer')}</strong> {item.question.options[item.selectedIndex] ?? learnText('placement.idkYet')}</p>
+                <p><strong>{learnText('placement.correctAnswer')}</strong> {item.question.options[item.correctAnswer]}</p>
+                <p>{item.explanation}</p>
+              </article>)}
+            </section>
           </>
-        )}
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {unapplied && (
-            <AxButton variant="primary" label={t('roadmap.retry')} isDisabled={applying} onClick={() => void applyReceipt(unapplied)} />
-          )}
-          <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, accountEpoch() === epochRef.current ? verifiedUnlocks : [])} />
-          <AxButton variant="secondary" label={learnText('placement.retry')} onClick={() => void start()} />
-        </div>
-        <section className="rm-placement-review" aria-label={learnText('placement.review')}>
-          <h2>{learnText('placement.review')}</h2>
-          {review.map((item, index) => <article className="ss-info-card" key={item.questionId}>
-            <h3>{index + 1}. {t(item.isCorrect ? 'quiz.correct' : 'quiz.incorrect')}</h3>
-            {renderQuestion(item.question.question)}
-            <p><strong>{learnText('placement.yourAnswer')}</strong> {item.question.options[item.selectedIndex] ?? learnText('placement.idkYet')}</p>
-            <p><strong>{learnText('placement.correctAnswer')}</strong> {item.question.options[item.correctAnswer]}</p>
-            <p>{item.explanation}</p>
-          </article>)}
-        </section>
-      </div>
+        }
+      />
     );
   }
 
@@ -1746,105 +1758,46 @@ function SkillCheckRunner({
   const onPrimary = isLastInRound ? () => void submitRound() : goNext;
   const optionValue = answered && answers[current.id] >= 0 ? answers[current.id] : null;
 
+  const roundLabel = learnText('placement.roundOf', { n: round, total: totalRounds });
   return (
-    <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <AxButton
-          isIconOnly
-          icon={<CloseIcon size={18} />}
-          variant="ghost"
-          size="sm"
-          label={learnText('placement.cancel')}
-          onClick={onCancel}
+    <QuestionShell
+      ref={questionRef}
+      questionId="placement-question"
+      header={
+        <QuestionHeader
+          run={learnText('placement.kicker')}
+          title={roundLabel}
+          progress={{ value: progressPct, label: roundLabel }}
+          status={<Text type="supporting" color="secondary">{qIndex + 1}/{roundSize}</Text>}
+          meta={<CategoryTag category={current.category} />}
+          tools={placementExit}
         />
-        <div style={{ flex: 1 }}>
-          <ProgressBar
-            label={learnText('placement.roundOf', { n: round, total: totalRounds })}
-            value={progressPct}
-            isLabelHidden
-            variant="accent"
-          />
-        </div>
-        <Badge variant="neutral" label={learnText('placement.roundOf', { n: round, total: totalRounds })} />
-      </div>
-
-      {/* Between-round feedback: which way the difficulty just moved. role=status
-          so assistive tech announces the shift when the round loads. */}
-      {step && qIndex === 0 && (
-        <div className="rm-step-banner" data-dir={step} role="status">
-          <span className="rm-step-banner__glyph" aria-hidden="true"><StepArrowIcon dir={step} /></span>
-          <strong>{stepLabel}</strong>
-          <span className="rm-step-banner__hint">{stepHint}</span>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <span
-          style={{
-            backgroundColor: getCategoryHexColor(current.category),
-            color: onCategoryColorText(current.category),
-            fontWeight: 600,
-            borderRadius: 999,
-            padding: '2px 10px',
-            fontSize: '0.8125rem',
-            display: 'inline-block',
-          }}
-        >
-          {t(categoryLabelKey(current.category))}
-        </span>
-        <div style={{ marginLeft: 'auto' }}>
-          <Text type="supporting" color="secondary">
-            {qIndex + 1}/{roundSize}
-          </Text>
-        </div>
-      </div>
-
-      <div id="placement-question" ref={questionRef} tabIndex={-1} style={{ fontWeight: 500, marginBottom: 16, outline: 'none' }}>{renderQuestion(current.question)}</div>
-
-      <RadioCardGroup
+      }
+      question={
+        <>
+          {/* Between-round feedback: which way the difficulty just moved.
+              role=status so assistive tech announces the shift when the round
+              loads. Inside the question block, so the answers keep their y. */}
+          {step && qIndex === 0 && (
+            <div className="rm-step-banner" data-dir={step} role="status">
+              <span className="rm-step-banner__glyph" aria-hidden="true"><StepArrowIcon dir={step} /></span>
+              <strong>{stepLabel}</strong>
+              <span className="rm-step-banner__hint">{stepHint}</span>
+            </div>
+          )}
+          {renderQuestion(current.question)}
+        </>
+      }
+      actions={<QuestionActions primary={{ label: primaryLabel, onClick: onPrimary, disabled: primaryDisabled }} />}
+    >
+      <AnswerOptionList
+        options={current.options}
         value={optionValue}
-        onChange={(value) => pick(Number(value))}
+        onChange={pick}
         labelledBy="placement-question"
-        style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
-      >
-        {current.options.map((option, idx) => {
-          const picked = answers[current.id] === idx;
-          return (
-            <RadioCard
-              key={idx}
-              value={idx}
-              index={idx}
-              className="rm-option"
-              style={{
-                ['--rm-accent']: 'var(--brand-accent)',
-                ...(picked ? { borderColor: 'var(--brand-accent)', backgroundColor: 'var(--brand-accent-soft)' } : {}),
-              } as CSSProperties}
-            >
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 24,
-                  height: 24,
-                  borderRadius: 4,
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  backgroundColor: 'var(--color-background-muted)',
-                  color: 'var(--color-text-secondary)',
-                  flexShrink: 0,
-                }}
-              >
-                {idx + 1}
-              </span>
-              <span style={{ flex: 1 }}>{option}</span>
-            </RadioCard>
-          );
-        })}
-      </RadioCardGroup>
-
-      {/* "I don't know yet" — an explicit miss (index -1), so an honest skip is
-          offered instead of forcing a blind guess. Selecting it clears any
+      />
+      {/* "I don't know yet" — an explicit miss (index -1), so an honest skip
+          is offered instead of forcing a blind guess. Selecting it clears any
           option pick for this question. */}
       <button
         type="button"
@@ -1855,13 +1808,8 @@ function SkillCheckRunner({
       >
         {learnText('placement.idkYet')}
       </button>
-      <div className="rm-idk-hint">{learnText('placement.idkYetHint')}</div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, gap: 12 }}>
-        <AxButton variant="ghost" label={learnText('placement.cancel')} onClick={onCancel} />
-        <AxButton variant="primary" label={primaryLabel} onClick={onPrimary} isDisabled={primaryDisabled} />
-      </div>
-    </div>
+      <p className="rm-idk-hint">{learnText('placement.idkYetHint')}</p>
+    </QuestionShell>
   );
 }
 
