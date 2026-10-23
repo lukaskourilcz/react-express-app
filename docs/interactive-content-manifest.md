@@ -37,7 +37,7 @@ Two or three original solutions to a task the learner has already passed, each w
 
 What a phone or tablet gets in place of an editor. Arranging authored lines shows the learner knows the shape of a solution; the server records it as ordering evidence in its own table and never as a code pass.
 
-**Source:** `lib/coding/puzzles.ts` (server-only; lines are shuffled per request, and accepted orders never leave the server).
+**Source:** `lib/coding/puzzles.ts` (server-only; lines are shuffled per request, a shuffle that lands on an accepted order is dealt again, and accepted orders never leave the server). A submitted order must hold only the line ids the session issued; anything else, or an order longer than the puzzle cap, answers 400.
 
 | Task | Lines | Accepted orders | Competencies |
 | --- | --- | --- | --- |
