@@ -11,10 +11,6 @@ export const en = {
   'publicSection.webDeveloper': 'Explore web development topics, guided Learn levels and coding practice across the frontend and backend.',
   'publicSection.softwareEngineer': 'Explore algorithms, data structures, databases, testing, security and delivery topics in the Software Engineer section.',
   'publicSection.fde': 'Explore the Forward Deployed Engineer path: customer discovery, integration, evaluation, security, deployment and handoff.',
-  'designPreview.label': 'Compare interface designs',
-  'designPreview.local': 'Local preview',
-  'designPreview.original': 'Original',
-  'designPreview.apple': 'Apple',
   // App shell / navigation
   'nav.quiz': 'Quiz',
   'nav.learn': 'Learn',
