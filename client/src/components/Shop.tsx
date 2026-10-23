@@ -29,12 +29,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
-import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
-import { Card } from '@astryxdesign/core/Card';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { AppToast } from './ui/AppToast';
@@ -314,6 +311,44 @@ function HowToEarn({ earn, welcomeReceived, premium }: { earn: EarnSummary; welc
   );
 }
 
+/* ── the crown and streak protection ───────────────────────────────────── */
+
+/** One coin item: a 44px icon, the name over its blurb, and the price with
+ * its action. When the coins fall short the row says by how much under the
+ * price, and the button names that line as its description (UX audit
+ * money-07), as merchandise says "Not enough coins". `price` is null for an
+ * item already owned (the crown), which has no price to show. */
+function SpendRow({ icon, name, blurb, price, balance, action }: {
+  icon: React.ReactNode;
+  name: string;
+  blurb: string;
+  price: number | null;
+  /** The learner's coins, or null while they are unknown. */
+  balance: number | null;
+  action: React.ReactNode | ((describedBy: string | undefined) => React.ReactNode);
+}) {
+  const t = useT();
+  const shortId = useId();
+  const short = price !== null && balance !== null && balance < price ? price - balance : 0;
+  const describedBy = short > 0 ? shortId : undefined;
+  return (
+    <li className="rw-spend__row">
+      <span className="rw-spend__icon" aria-hidden="true">{icon}</span>
+      <h3 className="rw-spend__name">{name}</h3>
+      <p className="rw-spend__blurb">{blurb}</p>
+      <div className="rw-spend__action">
+        {price !== null && (
+          <span className="rw-spend__price">
+            <strong>{t('shop.tokenPrice', { n: price.toLocaleString('en-GB') })}</strong>
+            {short > 0 && <span id={shortId} className="rw-spend__short">{t('shop.shortBy', { n: short.toLocaleString('en-GB') })}</span>}
+          </span>
+        )}
+        {typeof action === 'function' ? action(describedBy) : action}
+      </div>
+    </li>
+  );
+}
+
 /* ── merchandise ───────────────────────────────────────────────────────── */
 
 /** One merchandise tile: the mockup when the build found one, the item, a
@@ -527,6 +562,9 @@ function Shop() {
   const welcomeReceived = (wallet.data?.entries ?? []).some((entry) => entry.reason === 'signup');
 
   const balance = wallet.data?.balance ?? 0;
+  // The balance only once it is known: a row says how many coins are missing
+  // against a real number, never against the 0 above.
+  const knownBalance = isAuthenticated && wallet.data ? wallet.data.balance : null;
   const ownsCrown = useMemo(
     () => (wallet.data?.cosmetics ?? []).some((one) => one.id === 'crown'),
     [wallet.data],
@@ -600,75 +638,62 @@ function Shop() {
 
       <HowToEarn earn={earn} welcomeReceived={welcomeReceived} premium={premium} />
 
-      {/* The crown and streak protection: every account, coins only. */}
+      {/* The crown and streak protection: every account, coins only. Two
+          rows of one ruled list, like How to earn, built the same way so they
+          stand at one height on every width (UX audit money-02).
+          Streak protection is consumable, capped, and the one thing sold here
+          that touches learning at all (the bounded exception in
+          shared/rewards.ts): it costs coins earned by learning, restores the
+          same two-a-month budget and never exceeds it, and no leaderboard in
+          this product ranks by streak. */}
       {(shop.data?.crown.available || shop.data?.protection?.available) && (
         <section className="rw-section" aria-labelledby="rw-spend-title">
           <Kicker as="h2" id="rw-spend-title">{t('shop.crownSection')}</Kicker>
-          <VStack gap={2}>
+          <ul className="rw-spend">
             {shop.data?.crown.available && (
-              <Card variant="default" padding={3} width="100%">
-                <HStack gap={2} align="center" wrap="wrap">
-                  <Crown size={44} />
-                  <VStack gap={0.5}>
-                    <Heading level={3}>{t('shop.crownName')}</Heading>
-                    <Text type="supporting" color="secondary">{t('shop.crownBlurb')}</Text>
-                  </VStack>
-                  <div className="rw-spend__action">
-                    <HStack gap={1} align="center" wrap="wrap">
-                      {!ownsCrown && <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.crown.tokenPrice.toLocaleString('en-GB') })}</Text>}
-                      {ownsCrown ? (
-                        <Button
-                          variant="secondary"
-                          label={t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
-                          isDisabled={cosmetic.isPending}
-                          onClick={() => wearCrown(wearingCrown ? 'unequip' : 'equip')}
-                        />
-                      ) : (
-                        <Button
-                          variant="primary"
-                          label={t('shop.buy')}
-                          isDisabled={!isAuthenticated || cosmetic.isPending || balance < shop.data.crown.tokenPrice}
-                          onClick={buyCrown}
-                        />
-                      )}
-                    </HStack>
-                  </div>
-                </HStack>
-              </Card>
+              <SpendRow
+                icon={<Crown size={44} />}
+                name={t('shop.crownName')}
+                blurb={t('shop.crownBlurb')}
+                price={ownsCrown ? null : shop.data.crown.tokenPrice}
+                balance={knownBalance}
+                action={ownsCrown ? (
+                  <Button
+                    variant="secondary"
+                    label={t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
+                    isDisabled={cosmetic.isPending}
+                    onClick={() => wearCrown(wearingCrown ? 'unequip' : 'equip')}
+                  />
+                ) : (describedBy) => (
+                  <Button
+                    variant="primary"
+                    label={t('shop.buy')}
+                    aria-describedby={describedBy}
+                    isDisabled={!isAuthenticated || cosmetic.isPending || balance < shop.data!.crown.tokenPrice}
+                    onClick={buyCrown}
+                  />
+                )}
+              />
             )}
-
-            {/* Streak protection: consumable, capped, and the one thing sold
-                here that touches learning at all (the bounded exception in
-                shared/rewards.ts). It costs coins earned by learning, restores
-                the same two-a-month budget and never exceeds it, and no
-                leaderboard in this product ranks by streak. */}
             {shop.data?.protection?.available && (
-              <Card variant="default" padding={3} width="100%">
-                <HStack gap={2} align="center" wrap="wrap">
-                  <span aria-hidden style={{ color: 'var(--ss-warning)', display: 'inline-flex' }}>
-                    <ShieldIcon size={24} />
-                  </span>
-                  <VStack gap={0.5}>
-                    <Heading level={3}>{t('shop.protectionName')}</Heading>
-                    <Text type="supporting" color="secondary">
-                      {t('shop.protectionBlurb', { cap: shop.data.protection.cap })}
-                    </Text>
-                  </VStack>
-                  <div className="rw-spend__action">
-                    <HStack gap={1} align="center" wrap="wrap">
-                      <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.protection.tokenPrice.toLocaleString('en-GB') })}</Text>
-                      <Button
-                        variant="primary"
-                        label={t('shop.buy')}
-                        isDisabled={!isAuthenticated || protection.isPending || balance < shop.data.protection.tokenPrice}
-                        onClick={buyProtection}
-                      />
-                    </HStack>
-                  </div>
-                </HStack>
-              </Card>
+              <SpendRow
+                icon={<span className="rw-spend__shield"><ShieldIcon size={44} /></span>}
+                name={t('shop.protectionName')}
+                blurb={t('shop.protectionBlurb', { cap: shop.data.protection.cap })}
+                price={shop.data.protection.tokenPrice}
+                balance={knownBalance}
+                action={(describedBy) => (
+                  <Button
+                    variant="primary"
+                    label={t('shop.buy')}
+                    aria-describedby={describedBy}
+                    isDisabled={!isAuthenticated || protection.isPending || balance < shop.data!.protection!.tokenPrice}
+                    onClick={buyProtection}
+                  />
+                )}
+              />
             )}
-          </VStack>
+          </ul>
         </section>
       )}
 

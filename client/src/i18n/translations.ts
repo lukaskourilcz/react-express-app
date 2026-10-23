@@ -233,6 +233,7 @@ export const en = {
   'shop.balanceLabel': 'Your coins',
   'shop.tokensUnit': 'coins',
   'shop.insufficient': 'Not enough coins',
+  'shop.shortBy': '{n} more coins',
 
   // ── Coins and the Rewards screen (D8, #227). One block; English only. ──
   'register.bodyNoCoins': 'Sign in so the XP and streak you earn from now on are saved to your account.',

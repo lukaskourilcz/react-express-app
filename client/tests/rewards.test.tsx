@@ -183,6 +183,35 @@ describe('the Rewards screen', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Your coins' })).toHaveClass('ss-sr-only');
   });
 
+  // UX audit money-02 and money-07: the two coin items are rows of one ruled
+  // list with one structure, and a short balance says by how much.
+  it('lists the crown and streak protection as two rows and says how many coins are missing', async () => {
+    signIn();
+    routes({ wallet: wallet({ balance: 640 }) });
+    await mountShop();
+    await screen.findByText('640');
+    const section = screen.getByRole('region', { name: 'Crown and streak protection' });
+    const rows = within(section).getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row).toHaveClass('rw-spend__row');
+      expect(row.querySelector('.rw-spend__icon svg')).toHaveAttribute('width', '44');
+      expect(row.querySelector('.rw-spend__name')).not.toBeNull();
+      expect(row.querySelector('.rw-spend__blurb')).not.toBeNull();
+      expect(row.querySelector('.rw-spend__action')).not.toBeNull();
+    }
+    expect(section.querySelector('.astryx-card')).toBeNull();
+    // 1,200 against 640: the crown says 560 more, and its Buy names that line.
+    const crown = rows[0];
+    const short = within(crown).getByText('560 more coins');
+    const buy = within(crown).getByRole('button', { name: 'Buy' });
+    expect(buy).toBeDisabled();
+    expect(buy).toHaveAttribute('aria-describedby', short.id);
+    // 250 is covered: no line, no description.
+    expect(within(rows[1]).queryByText(/more coins/)).toBeNull();
+    expect(within(rows[1]).getByRole('button', { name: 'Buy' })).not.toHaveAttribute('aria-describedby');
+  });
+
   it('keeps the sections in the order of the handoff', async () => {
     signIn();
     merch.on = true;
