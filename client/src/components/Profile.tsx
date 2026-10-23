@@ -840,7 +840,6 @@ export function AccountDeletionCard() {
             <HStack justify="end">
               <Button
                 variant="secondary"
-                size="sm"
                 label={t('profile.signOutEverywhere')}
                 isDisabled={!isAuthenticated || signingOut}
                 onClick={signOutEverywhere}
@@ -855,7 +854,7 @@ export function AccountDeletionCard() {
               </Text>
             )}
             <HStack justify="end">
-              <Button variant="destructive" size="sm" label={t('profile.deleteAction')} onClick={requestDeletion} />
+              <Button variant="destructive" label={t('profile.deleteAction')} onClick={requestDeletion} />
             </HStack>
           </VStack>
         </div>
