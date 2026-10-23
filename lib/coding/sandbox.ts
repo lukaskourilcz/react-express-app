@@ -61,6 +61,15 @@ const HIDDEN_RUN_MESSAGES: ReadonlySet<string> = new Set([TIMEOUT_MESSAGE, STACK
 /** What a hidden run that failed any other way reports. */
 export const HIDDEN_RUN_FAILED_MESSAGE = 'A hidden check could not run.';
 
+/** Error text the program produced, cut the way a console line is. A
+ * top-level `throw 'x'.repeat(5e6)` came back whole as the run's error, five
+ * megabytes in one Submit response. The cut never splits a surrogate pair. */
+const cutErrorText = (text: string): string => {
+  if (text.length <= MAX_LOG_LINE_CHARS) return text;
+  const last = text.charCodeAt(MAX_LOG_LINE_CHARS - 1);
+  return text.slice(0, last >= 0xd800 && last <= 0xdbff ? MAX_LOG_LINE_CHARS - 1 : MAX_LOG_LINE_CHARS) + LOG_LINE_CUT;
+};
+
 /** Where the host's URL parser waits for the program, which takes it and
  * deletes the name before any learner code runs. */
 const URL_HOST_NAME = '__devsharkHostURL';
@@ -513,7 +522,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
   const failure = (message: string, timedOut = false): EvaluateResult => {
     let logs: string[] = [];
     try { logs = readLogs(); } catch { /* the VM may be unusable after an interrupt */ }
-    return { results: [], logs, codeError: message, timedOut };
+    return { results: [], logs, codeError: cutErrorText(message), timedOut };
   };
   const isInterrupt = (message: string) => /interrupted|InternalError: interrupted/i.test(message);
   const isStackOverflow = (message: string) => /stack overflow|maximum call stack|gc_obj_list/i.test(message);
@@ -556,7 +565,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
     if (!Array.isArray(parsed) || parsed.length !== input.calls.length) return failure('Incomplete evaluation.');
     const results = parsed.map((outcome, index) => {
       if (!Array.isArray(outcome)) throw new Error('Malformed result');
-      if (outcome[0] === 'error' && typeof outcome[1] === 'string') return { pass: false, actual: null, error: outcome[1] };
+      if (outcome[0] === 'error' && typeof outcome[1] === 'string') return { pass: false, actual: null, error: cutErrorText(outcome[1]) };
       if (outcome[0] !== 'value') throw new Error('Malformed result');
       const actual = decode(outcome[1]);
       return { pass: input.expectations ? deepEqual(actual, input.expectations[index]) : null, actual: displayValue(actual), error: null };

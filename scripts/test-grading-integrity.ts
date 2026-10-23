@@ -1259,6 +1259,17 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
   assert.equal(response.statusCode, 200);
   assert.ok(JSON.stringify(response.body).length < 200_000, `the Submit response stays small (${JSON.stringify(response.body).length} bytes)`);
   console.log('PASS integrity: console output is capped by size');
+
+  // What the code throws is capped the same way: a top-level throw of five
+  // million characters came back whole as the run's error.
+  const thrown = await runInSandbox({ code: 'throw new Error("z".repeat(5e6));', calls: ['1'], expectations: [1] });
+  assert.ok(thrown.codeError!.length <= MAX_LOG_LINE_CHARS + LOG_LINE_CUT.length, `the run's error is cut (${thrown.codeError!.length})`);
+  assert.ok(thrown.codeError!.endsWith(LOG_LINE_CUT), 'the cut is marked');
+  const perCall = await runInSandbox({ code: 'const f = () => { throw new Error("a" + "\u{1F988}".repeat(2e5)); };', calls: ['f()'], expectations: [1] });
+  const callError = perCall.results[0]?.error ?? '';
+  assert.ok(callError.length <= MAX_LOG_LINE_CHARS + LOG_LINE_CUT.length, `a call's error is cut (${callError.length})`);
+  assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(callError), 'the cut keeps surrogate pairs whole');
+  console.log('PASS integrity: thrown error text is capped by size');
 }
 
 // ── hidden checks cannot be answered by call order (CODE-11) ─────────────
