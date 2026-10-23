@@ -113,7 +113,7 @@ test('Clone Promise.all: Run blocks an initialization-time native alias and acce
 });
 
 
-test('React success stays compact and toolbar labels switch at 1220px with keyboard tooltips', async ({ page }) => {
+test('React success stays compact, and Run and Submit keep their words at every width while the rest folds into More actions below 1024px (coding-13)', async ({ page }) => {
   await prepare(page, { signedIn: true, verdict: {
     xpAwarded: 25, applied: true, firstPass: true,
     progress: { attempts: 1, passedAt: new Date().toISOString(), lastXpAt: new Date().toISOString() },
@@ -123,19 +123,21 @@ test('React success stays compact and toolbar labels switch at 1220px with keybo
   await openTask(page, `/coding/react/${id}`);
   await fillEditor(page, solutionFor(id)!.solution);
   const commands = page.locator('.cd-actions--commands');
-  for (const width of [1220, 1219, 360]) {
+  for (const width of [1220, 1024, 360]) {
     await page.setViewportSize({ width, height: 900 });
-    if (width === 360) await page.getByRole('button', { name: 'Use the editor on this screen' }).click();
+    if (width === 360) await page.getByRole('button', { name: 'Use the editor here' }).click();
     const run = commands.getByRole('button', { name: 'Run', exact: true });
     await expect(run).toBeVisible();
-    if (width >= 1220) await expect(run).toContainText('Run');
+    await expect(run).toContainText('Run');
+    await expect(commands.getByRole('button', { name: 'Submit', exact: true })).toContainText('Submit');
+    if (width >= 1024) await expect(commands.getByRole('button', { name: 'Hint', exact: true })).toBeVisible();
     else {
-      await expect(run).not.toContainText('Run');
-      await run.focus();
-      await run.press('Tab');
+      const more = commands.getByRole('button', { name: 'More actions', exact: true });
+      await more.focus();
+      await more.press('Tab');
       await page.keyboard.press('Shift+Tab');
-      await expect(page.getByRole('tooltip', { name: 'Run', exact: true })).toBeVisible();
-      await run.press('Escape');
+      await expect(page.getByRole('tooltip', { name: 'More actions', exact: true })).toBeVisible();
+      await more.press('Escape');
     }
   }
   await page.setViewportSize({ width: 1219, height: 900 });
@@ -177,9 +179,11 @@ test('React: a focus check passes on every Run, not just the first, and a build 
     await run.click();
     await expect(announced(page)).toHaveText(`${expectedCases} of ${expectedCases} passing`, { timeout: 30_000 });
     await expect(changed).toHaveCount(0);
-    // From the second Run on, Results is the open tab and the preview is
-    // not: its frame used to be display:none, and every focus check failed.
-    await expect(results, `Run ${attempt}`).toHaveAttribute('aria-selected', 'true');
+    // The first Run that renders opens the preview (coding-04); from the
+    // second Run on, Results is the open tab and the preview is not: its
+    // frame used to be display:none, and every focus check failed.
+    if (attempt === 1) await expect(page.getByRole('tab', { name: 'Preview' })).toHaveAttribute('aria-selected', 'true');
+    else await expect(results, `Run ${attempt}`).toHaveAttribute('aria-selected', 'true');
     await expect(results, `Run ${attempt}`).toContainText(`${expectedCases}/${expectedCases}`);
     // The suite moves focus inside the frame; the button that ran it keeps it.
     await expect(run).toBeFocused();
@@ -263,10 +267,10 @@ test('a phone waiting for a bigger screen loads no TypeScript compiler until the
   const runner: string[] = [];
   page.on('request', (request) => { if (request.url().includes('/assets/coding-worker/')) runner.push(request.url()); });
   await page.goto('/coding/typescript/ts-typed-slug');
-  await expect(page.getByText('This challenge needs an editor, so it is waiting for a bigger screen.')).toBeVisible();
+  await expect(page.getByText('This task works best on a bigger screen. Your code is kept.')).toBeVisible();
   await page.waitForTimeout(2_000);
   expect(runner).toEqual([]);
-  await page.getByRole('button', { name: 'Use the editor on this screen' }).click();
+  await page.getByRole('button', { name: 'Use the editor here' }).click();
   await expect.poll(() => runner.some((url) => /\/ts-compiler-[\w-]+\.js$/.test(url)), { timeout: 30_000 }).toBe(true);
 });
 
@@ -422,7 +426,7 @@ for (const width of [360, 1440]) {
       await page.reload();
       await expect(page.locator('#main-content')).toBeFocused();
       if (width === 1440) await page.addStyleTag({ content: 'html { font-size: 200%; }' });
-      if (width === 360) await page.getByRole('button', { name: 'Use the editor on this screen' }).click();
+      if (width === 360) await page.getByRole('button', { name: 'Use the editor here' }).click();
       const source = 'const double = values => values.map(value => value * 2);';
       await fillEditor(page, source);
       await page.getByRole('button', { name: 'Submit', exact: true }).click();
