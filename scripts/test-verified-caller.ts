@@ -444,6 +444,24 @@ async function main() {
     }
     console.log('PASS verified caller: an admin save refuses an invalid option instead of dropping it and moving the answer');
 
+    // Postgres refuses U+0000 in text and JSONB, which answered 500: the
+    // console's writes holding one are refused before the database, and a
+    // question that spells the escape out as text still saves.
+    seen.length = 0;
+    for (const [op, body] of [
+      ['save', { ...question, explanation: 'NUL \u0000 here' }],
+      ['save', { ...question, options: ['useState', 'use\u0000Ref'] }],
+      ['settings', { settings: { devTips: ['tip \u0000'] } }],
+      ['delete', { id: 'rm-js-\u00001' }],
+    ] as const) {
+      const refused = await admin(op, { method: 'POST', body });
+      assert.equal(refused.statusCode, 400, `op=${op} holding U+0000 is refused (${JSON.stringify(refused.body)})`);
+    }
+    assert.deepEqual(seen.filter((one) => one.method !== 'GET'), [], 'and nothing is written');
+    const spelled = await admin('save', { method: 'POST', body: { ...question, question: 'What does "\\u0000" print?' } });
+    assert.equal(spelled.statusCode, 200, `a question that spells the escape out saves (${JSON.stringify(spelled.body)})`);
+    console.log('PASS verified caller: an admin write holding U+0000 is refused with 400');
+
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
       ['stats', await user('stats', { account: A })],

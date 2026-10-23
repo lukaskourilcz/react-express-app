@@ -32,6 +32,16 @@ const MIN_OPTIONS = 2;
 const boundedString = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
 
+/** Postgres text and JSONB refuse U+0000 (22P05), so a question, a setting, a
+ * voucher note or an id holding it failed the write and answered 500. The
+ * values are walked, not the JSON text, so a question about escapes that
+ * spells `\u0000` out still saves. */
+function holdsNul(value: unknown, depth = 0): boolean {
+  if (typeof value === 'string') return value.includes('\u0000');
+  if (depth > 8 || value === null || typeof value !== 'object') return false;
+  return Object.values(value as Record<string, unknown>).some((one) => holdsNul(one, depth + 1));
+}
+
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // Anti-brute-force: at most ~1 auth attempt per second per IP, small burst.
   // Runs before password check so wrong guesses count toward the budget.
@@ -41,6 +51,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!(await requireAdmin(req, res))) return;
 
   const op = String(req.query.op || '').toLowerCase();
+  if (holdsNul(req.body)) {
+    return jsonError(res, 400, 'bad_request', 'Text cannot contain a NUL (U+0000) character');
+  }
   try {
     switch (op) {
       case 'questions':
