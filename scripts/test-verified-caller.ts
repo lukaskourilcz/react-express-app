@@ -350,7 +350,7 @@ async function main() {
       ['settings', await call(settings as Handler, {}), /^public, s-maxage=15/],
       ['health', await call(health as Handler, {}), /^no-store$/],
       ['the all-time board', await call(leaderboard as Handler, { query: { period: 'global' } }), /^public, s-maxage=60/],
-      ['the Learn map', await call(roadmap as Handler, {}), /^public, max-age=60$/],
+      ['the Learn map', await call(roadmap as Handler, {}), /^public, max-age=60, s-maxage=60, stale-while-revalidate=300$/],
     ];
     for (const [label, res, expected] of publicReads) {
       assert.equal(res.statusCode, 200, `${label}: ${JSON.stringify(res.body)}`);

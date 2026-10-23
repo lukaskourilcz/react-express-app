@@ -1587,7 +1587,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           return [topic, unavailableParts.length > 0 ? { ...withCounts, unavailableParts } : withCounts];
         }),
     );
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    // The map is the same for every caller, so the CDN may share it: one
+    // function run per minute per region instead of one per Learn visit.
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
     logEvent({ status: 200, kind: 'structure', latency_ms: Date.now() - started });
     return res.json({ topics, structure });
   }
