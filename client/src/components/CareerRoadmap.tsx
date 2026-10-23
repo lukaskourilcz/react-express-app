@@ -191,13 +191,19 @@ export default function CareerRoadmap() {
   const inPlan = useInPlan();
   const { hasPlan, members } = useLearnerSections();
   const extraUnlocks = useExtraUnlocks();
-  const levelCounts = Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([topic, data]) => [topic, data.levels.length]));
+  // Kept per structure, as on /learn: useLocks memoises its content index on
+  // this object, and a fresh one each render rebuilt the index and lockOf.
+  const levelCounts = useMemo(
+    () => Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([topic, data]) => [topic, data.levels.length])),
+    [structure],
+  );
+  const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
   const { lockOf } = useLocks(levelCounts);
   const fde = useFdePathSteps();
   const groups = LEARN_SECTIONS.map((section) => {
     const entries = railEntries(section.id, {
       liveTopics: Object.keys(levelCounts), inPlan, hasPlan, isMember: members.includes(section.id),
-      progress, extraUnlocks: new Set(extraUnlocks), lockOf,
+      progress, extraUnlocks: extraUnlocksSet, lockOf,
     });
     const shown = new Set(entries.map((entry) => entry.topic));
     const grouped = pillars.map((pillar) => ({ ...pillar, areas: pillar.areas.filter((area) => shown.has(area.topic)) }))
