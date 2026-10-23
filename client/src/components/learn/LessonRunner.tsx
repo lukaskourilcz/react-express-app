@@ -3,11 +3,11 @@
 // loads it when a level opens, with the level intros and worked-example
 // figures it shows, so the Learn map paints without them.
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button as AxButton } from '@astryxdesign/core/Button';
 import { Text } from '@astryxdesign/core/Text';
-import { Kicker } from '../landing/LandingKit';
+import { Kicker, SwimCta } from '../landing/LandingKit';
 import { AppToast } from '../ui/AppToast';
 import {
   AnswerOptionList,
@@ -19,8 +19,8 @@ import {
   QuestionIconButton,
   QuestionShell,
   ReportFlagIcon,
+  type QuestionPrimaryAction,
 } from '../question';
-import { useIsMobile } from '../../lib/useMediaQuery';
 import type { RoadmapPlayable, RoadmapQuestion, RoadmapAnswerResult } from '../../types/quiz';
 import type { LearnRepeatXp } from '../../../../shared/repeat-xp';
 import type { PlayableCodingTask } from '../../../../shared/coding-catalog';
@@ -29,7 +29,7 @@ import ReferralMoment from '../ReferralMoment';
 import ResultShareActions from '../ResultShareActions';
 import { ROADMAP_MAX_HEARTS } from '../../../../shared/assessment';
 import { levelIntro } from '../../lib/levelIntros';
-import { categoryLabelKey, hoverFilterOn, textOnColor } from '../../lib/categories';
+import { categoryLabelKey } from '../../lib/categories';
 import { BRAND } from '../../theme/MuiTheme';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
@@ -50,6 +50,7 @@ import { IconTile, CloseIcon, TrophyIcon } from '../ui/icons';
 import { lazyShellPart } from '../../lib/routeRecovery';
 import { ShellPartBoundary } from '../ShellPartBoundary';
 import ErrorRetry from '../ErrorRetry';
+import './LessonRunner.css';
 import { SaveSharkCard } from '../SaveSharkCard';
 import { CheckIcon } from './SectionRail';
 
@@ -200,18 +201,8 @@ export function LessonRunner({
   // Fixed when the level opens: the pass itself updates the progress the
   // parent reads, and the offer must stay on the finish screen.
   const [firstPassMoment] = useState(() => firstLevelPass && playable.kind === 'level');
-  // Read only to say whether this topic is part of the learner's own plan.
-  const isMobile = useIsMobile();
   const isCheckpoint = playable.kind === 'checkpoint';
   const accent = isCheckpoint ? CHECKPOINT_GOLD : topicColor;
-  // Accent-filled buttons take their text colour from the fill: topic hues run
-  // from CSS blue to JavaScript yellow and checkpoints use gold, so no single
-  // colour reads on all of them. The hover filter follows the text colour.
-  const accentFill = {
-    backgroundColor: accent,
-    ['--rm-on-accent']: textOnColor(accent),
-    ['--rm-accent-hover']: hoverFilterOn(accent),
-  } as CSSProperties;
   // A level opens with a short info panel (what this section is about + a core
   // principle) before the first question. Checkpoints/part-tests skip it, as do
   // levels with no authored intro.
@@ -453,85 +444,75 @@ export function LessonRunner({
     if (showingQuestion) questionRef.current?.focus({ preventScroll: true });
   }, [showingQuestion, qIndex]);
 
+  // The one header row of every screen in a level (UX audit learn-03): the
+  // level in the h1, progress and hearts (or the checkpoint score) on the
+  // first row, a line of context and the report and exit buttons on the
+  // second, at the same place on the intro and on every question.
+  const counter = t('roadmap.question', { current: qIndex + 1, total });
+  const progressPct = ((qIndex + (revealed ? 1 : 0)) / total) * 100;
+  const levelHeader = (meta: ReactNode, report = false) => (
+    <QuestionHeader
+      title={`${isCheckpoint ? t('roadmap.checkpoint') : t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
+      progress={{ value: progressPct, label: counter }}
+      status={isCheckpoint
+        ? <Text type="supporting" color="secondary" weight="bold">{correctCount}/{total}</Text>
+        : <HeartMeter mistakes={mistakes} max={MAX_HEARTS} hit={heartHit} t={t} />}
+      meta={meta}
+      tools={
+        <>
+          {report && <QuestionIconButton label={t('flag.ariaLabel')} icon={<ReportFlagIcon />} onClick={() => setFlagOpen(true)} />}
+          <QuestionIconButton label={t('roadmap.exit')} icon={<ExitIcon />} onClick={onExit} />
+        </>
+      }
+    />
+  );
+
   if (restart) {
     return (
-      <div
-        style={{
-          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          alignItems: 'center', textAlign: 'center', maxWidth: 520, margin: '0 auto', position: 'relative',
-          paddingLeft: 16, paddingRight: 16,
-        }}
+      <LessonResult
+        heading={restart === 'expired' ? t('roadmap.expiredTitle') : t('roadmap.signInChangedTitle')}
+        headingRef={resultHeadingRef}
+        primary={{ label: t('roadmap.restartLevel'), onClick: onReplay }}
+        secondary={<AxButton variant="ghost" label={t('roadmap.backToPath')} onClick={onExit} />}
       >
-        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
-          {restart === 'expired' ? t('roadmap.expiredTitle') : t('roadmap.signInChangedTitle')}
-        </h1>
-        <div role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
+        <p role="status" className="rm-result__line">
           {restart === 'expired' ? t('roadmap.expiredBody') : t('roadmap.signInChangedBody')}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          <button type="button" className="rm-accent-btn" onClick={onReplay} style={accentFill}>
-            {t('roadmap.restartLevel')}
-          </button>
-          <button type="button" className="rm-text-btn" onClick={onExit}>
-            {t('roadmap.backToPath')}
-          </button>
-        </div>
-      </div>
+        </p>
+      </LessonResult>
     );
   }
 
   if (showIntro && intro) {
+    // The intro uses the question screen's column, panel and header, so
+    // pressing Start moves nothing but the content (UX audit learn-03), and
+    // Start is the screen's one SwimCta md, right-aligned under the panel
+    // (learn-04).
     return (
-      <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="md" label={t('roadmap.exit')} onClick={onExit} />
-          <div style={{ flex: 1 }} />
-        </div>
-        <div
-          className="rm-feedback"
-          style={{
-            marginTop: 8,
-            padding: isMobile ? 20 : 24,
-            borderRadius: 8,
-            border: '1px solid var(--color-border)',
-            borderLeft: `4px solid ${accent}`,
-            backgroundColor: `${accent}0d`,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
-              {`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
-            </span>
-          </div>
-          <div style={{ color: 'var(--color-text-secondary)', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.75rem' }}>
-            {t('roadmap.introKicker')}
-          </div>
-          <div style={{ fontSize: '1.02rem', lineHeight: 1.6, marginTop: 4, marginBottom: 4 }}>
-            {intro}
-          </div>
-          {/* The worked example for this level's objective, before the
-              questions. Figures that would answer one of them are held back;
-              `figuresFor` filters them out at this phase rather than the
-              renderer hiding them afterwards. */}
-          <LessonFigures figures={figuresFor(playable.topic, playable.ref, 'before')} />
-          {codingTasks.length > 0 && (
-            <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-              <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
-              {codingTasks.map(({ task, session }, index) => <span key={task.id}>
-                {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title}</a>
-              </span>)}
-            </div>
-          )}
-        </div>
-        <button
-          type="button"
-          className="rm-accent-btn"
-          onClick={() => setShowIntro(false)}
-          style={{ marginTop: 20, width: '100%', ...accentFill }}
-        >
-          {t('roadmap.introStart')}
-        </button>
-      </div>
+      <QuestionShell
+        questionId="lesson-intro"
+        focusable={false}
+        stable={false}
+        header={levelHeader(<Text type="supporting" color="secondary" weight="bold">{t('roadmap.introKicker')}</Text>)}
+        question={
+          <>
+            <p className="rm-intro__text">{intro}</p>
+            {/* The worked example for this level's objective, before the
+                questions. Figures that would answer one of them are held back;
+                `figuresFor` filters them out at this phase rather than the
+                renderer hiding them afterwards. */}
+            <LessonFigures figures={figuresFor(playable.topic, playable.ref, 'before')} />
+            {codingTasks.length > 0 && (
+              <p className="rm-intro__coding">
+                <strong>{t('coding.lesson.kicker')}: </strong>
+                {codingTasks.map(({ task, session }, index) => <span key={task.id}>
+                  {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title}</a>
+                </span>)}
+              </p>
+            )}
+          </>
+        }
+        actions={<QuestionActions primary={{ label: t('roadmap.introStart'), onClick: () => setShowIntro(false) }} />}
+      />
     );
   }
 
@@ -570,9 +551,7 @@ export function LessonRunner({
         {solutionShown && (
           <div className="cd-note" role="status">
             <p style={{ margin: '0 0 12px' }}>{t('coding.lesson.solutionShown')}</p>
-            <button type="button" className="rm-accent-btn" onClick={() => void complete()} disabled={completing} style={accentFill}>
-              {t('coding.lesson.finishLevel')}
-            </button>
+            <SwimCta label={t('coding.lesson.finishLevel')} onClick={() => void complete()} disabled={completing} />
           </div>
         )}
         <span className="cd-visually-hidden" aria-live="polite">{t('coding.lesson.pending', { n: codingTasks.length - codingPassed.length })}: {title}</span>
@@ -582,26 +561,14 @@ export function LessonRunner({
 
   if (finished && invalidated) {
     return (
-      <div
-        style={{
-          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          alignItems: 'center', textAlign: 'center', maxWidth: 520, margin: '0 auto', position: 'relative',
-          paddingLeft: 16, paddingRight: 16,
-        }}
+      <LessonResult
+        heading={t('roadmap.invalidatedTitle')}
+        headingRef={resultHeadingRef}
+        primary={{ label: t('roadmap.retryLevel'), onClick: onReplay }}
+        secondary={<AxButton variant="ghost" label={t('roadmap.backToPath')} onClick={onExit} />}
       >
-        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">{t('roadmap.invalidatedTitle')}</h1>
-        <div role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-          {t('roadmap.invalidatedBody')}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          <button type="button" className="rm-accent-btn" onClick={onReplay} style={accentFill}>
-            {t('roadmap.retryLevel')}
-          </button>
-          <button type="button" className="rm-text-btn" onClick={onExit}>
-            {t('roadmap.backToPath')}
-          </button>
-        </div>
-      </div>
+        <p role="status" className="rm-result__line">{t('roadmap.invalidatedBody')}</p>
+      </LessonResult>
     );
   }
 
@@ -613,97 +580,73 @@ export function LessonRunner({
       : passed
         ? isCheckpoint ? t('roadmap.checkpointComplete') : t('roadmap.levelComplete')
         : isCheckpoint ? t('roadmap.checkpointFailed') : t('roadmap.levelFailed');
+    // One primary (UX audit learn-04): the next level after a pass, Retry
+    // after a miss, and back to the path when a pass has nothing after it.
+    const retry = { label: t('roadmap.retryLevel'), onClick: onReplay };
+    const back = { label: t('roadmap.backToPath'), onClick: onExit };
+    const primary = passed ? (hasNext ? { label: nextLabel, onClick: onNext } : back) : retry;
     return (
-      // Center vertically in the lesson viewport (celebration deserves the
-      // stage) and move focus to the outcome heading when grading completes.
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          maxWidth: 520,
-          margin: '0 auto',
-          position: 'relative',
-          paddingLeft: 16,
-          paddingRight: 16,
-        }}
+      <LessonResult
+        heading={title}
+        headingRef={resultHeadingRef}
+        primary={primary}
+        secondary={
+          <>
+            {passed && <AxButton variant="secondary" label={retry.label} onClick={retry.onClick} />}
+            {primary !== back && <AxButton variant="ghost" label={back.label} onClick={back.onClick} />}
+          </>
+        }
+        celebrate={passed ? (
+          <>
+            {/* Confetti IS the celebration on a pass; the icon stays quiet. */}
+            <Confetti color={accent} />
+            <div className="rm-celebrate rm-result__icon" aria-hidden>
+              <IconTile color={accent} size={56}>
+                {isCheckpoint ? <TrophyIcon size={26} /> : <CheckIcon size={26} />}
+              </IconTile>
+            </div>
+          </>
+        ) : null}
+        after={
+          <>
+            {/* The learner's first passed level is the moment to offer the
+                invite link (#239): a friend who joins gets the same first win. */}
+            {passed && firstPassMoment && <ReferralMoment signedIn={!!user} source="learn_level" />}
+            {passed && topicCompleted && <ResultShareActions centered kind="learn_topic_result"
+              label={t(categoryLabelKey(playable.topic))} headline={t('roadmap.topicCompleted')}
+              detail={t('roadmap.topicShareDetail')} text={t('roadmap.topicShareText', { topic: t(categoryLabelKey(playable.topic)) })}
+              path={`/learn?topic=${playable.topic}`} />}
+          </>
+        }
       >
-        {/* Confetti IS the celebration on a pass; the icon stays quiet. */}
-        {passed && <Confetti color={accent} />}
-        {passed && (
-          <div className="rm-celebrate" style={{ marginBottom: 12 }} aria-hidden>
-            <IconTile color={accent} size={56}>
-              {isCheckpoint ? <TrophyIcon size={26} /> : <CheckIcon size={26} />}
-            </IconTile>
-          </div>
-        )}
-        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">{title}</h1>
         {dead ? (
-          <div style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-            {t('roadmap.outOfHeartsBody', { max: MAX_HEARTS })}
-          </div>
+          <p className="rm-result__line">{t('roadmap.outOfHeartsBody', { max: MAX_HEARTS })}</p>
         ) : (
           <>
-            <div className="rm-count" style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 800, color: passed ? accent : 'var(--color-text-secondary)', marginBottom: 4 }}>
+            <div className="rm-count rm-result__score" style={{ color: passed ? accent : 'var(--color-text-secondary)' }}>
               {pct}%
             </div>
-            <div style={{ color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-              {t('roadmap.scoreLine', { correct: correctCount, total })}
-            </div>
+            <p className="rm-result__line">{t('roadmap.scoreLine', { correct: correctCount, total })}</p>
             {codingTasks.length > 0 && !codingUnverified && (
-              <div style={{ fontSize: '0.9rem', color: codingPending.length === 0 ? 'var(--ss-success-strong, var(--ss-success))' : 'var(--ss-warning)', fontWeight: 600, marginBottom: 8 }}>
+              <p className="rm-result__line" data-tone={codingPending.length === 0 ? 'success' : 'warning'}>
                 {codingPending.length === 0 ? t('coding.lesson.allPassed') : t('coding.lesson.pending', { n: codingPending.length })}
-              </div>
+              </p>
             )}
             {/* Signed out, a coding task's pass is never stored, so the level
                 passed on its questions and is kept on this device only. */}
             {codingTasks.length > 0 && codingUnverified && (
-              <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-                {t('coding.lesson.guestUnverified')}
-              </div>
+              <p className="rm-result__line">{t('coding.lesson.guestUnverified')}</p>
             )}
             {!passed && pct < playable.passPct && (
-              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-                {t('roadmap.passNeeded', { pct: playable.passPct })}
-              </div>
+              <p className="rm-result__line">{t('roadmap.passNeeded', { pct: playable.passPct })}</p>
             )}
           </>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          {passed && hasNext && (
-            <button type="button" className="rm-accent-btn" onClick={onNext} style={accentFill}>
-              {nextLabel}
-            </button>
-          )}
-          <button type="button" className={passed ? 'rm-outline-btn' : 'rm-accent-btn'} onClick={onReplay} style={passed ? undefined : accentFill}>
-            {t('roadmap.retryLevel')}
-          </button>
-          <button type="button" className="rm-text-btn" onClick={onExit}>
-            {t('roadmap.backToPath')}
-          </button>
-        </div>
-        {/* The learner's first passed level is the moment to offer the invite
-            link (#239): a friend who joins gets the same first win. */}
-        {passed && firstPassMoment && (
-          <div style={{ marginTop: 20, width: '100%' }}>
-            <ReferralMoment signedIn={!!user} source="learn_level" />
-          </div>
-        )}
-        {passed && topicCompleted && <ResultShareActions centered kind="learn_topic_result"
-          label={t(categoryLabelKey(playable.topic))} headline={t('roadmap.topicCompleted')}
-          detail={t('roadmap.topicShareDetail')} text={t('roadmap.topicShareText', { topic: t(categoryLabelKey(playable.topic)) })}
-          path={`/learn?topic=${playable.topic}`} />}
-      </div>
+      </LessonResult>
     );
   }
 
-  const progressPct = ((qIndex + (revealed ? 1 : 0)) / total) * 100;
   const isRight = grade?.isCorrect === true;
-  const counter = t('roadmap.question', { current: qIndex + 1, total });
   // After grading (or a failed send) the one primary is Continue, Finish, See
   // the result or Try again. A key per state remounts the row, so focus moves
   // to the new action each time.
@@ -732,22 +675,7 @@ export function LessonRunner({
       <QuestionShell
         ref={questionRef}
         questionId="lesson-question"
-        header={
-          <QuestionHeader
-            title={`${isCheckpoint ? t('roadmap.checkpoint') : t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
-            progress={{ value: progressPct, label: counter }}
-            status={isCheckpoint
-              ? <Text type="supporting" color="secondary" weight="bold">{correctCount}/{total}</Text>
-              : <HeartMeter mistakes={mistakes} max={MAX_HEARTS} hit={heartHit} t={t} />}
-            meta={<Text type="supporting" color="secondary">{counter}</Text>}
-            tools={
-              <>
-                <QuestionIconButton label={t('flag.ariaLabel')} icon={<ReportFlagIcon />} onClick={() => setFlagOpen(true)} />
-                <QuestionIconButton label={t('roadmap.exit')} icon={<ExitIcon />} onClick={onExit} />
-              </>
-            }
-          />
-        }
+        header={levelHeader(<Text type="supporting" color="secondary">{counter}</Text>, true)}
         question={
           <>
             {renderQuestion(question.question)}
@@ -811,6 +739,46 @@ export function LessonRunner({
         autoHideDuration={3000}
       />
     </>
+  );
+}
+
+/* ──── result screens ──────────────────────────────────────────────────── */
+
+/** A level's end (passed, failed, out of hearts) and the screens that start it
+ * again (timed out, sign-in changed, a retired question): the question
+ * screen's 640px column and panel (UX audit learn-03), the outcome as the h1,
+ * and one action row with the one SwimCta md (learn-04). */
+function LessonResult({ heading, headingRef, primary, secondary, celebrate, after, children }: {
+  heading: string;
+  headingRef: Ref<HTMLHeadingElement>;
+  primary: QuestionPrimaryAction;
+  secondary?: ReactNode;
+  /** Drawn over and above the heading on a pass. */
+  celebrate?: ReactNode;
+  /** Under the action row: the invite and share offers. */
+  after?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <QuestionShell
+      questionId="lesson-result"
+      focusable={false}
+      stable={false}
+      className="rm-result"
+      question={
+        <div className="rm-result__body">
+          {celebrate}
+          <h1 ref={headingRef} tabIndex={-1} className="rm-finish-title">{heading}</h1>
+          {children}
+        </div>
+      }
+      actions={
+        <>
+          <QuestionActions primary={primary} secondary={secondary} />
+          {after}
+        </>
+      }
+    />
   );
 }
 
