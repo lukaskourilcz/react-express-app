@@ -29,6 +29,7 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { openSignIn } from '../lib/signInDialog';
 import { entitlementKeys } from '../lib/entitlement';
 import {
@@ -138,14 +139,19 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
     redeeming.current = true;
     setBusy(true);
     setStep({ kind: 'form' });
+    const epoch = accountEpoch();
     try {
       const result = await redeemVoucher(code);
+      // Signed out while the code was checked: the answer is the account
+      // that left's, not news for whoever is here now.
+      if (accountEpoch() !== epoch) return;
       setCode('');
       setStep({ kind: 'done', validUntil: result.validUntil });
       // The plan changed on the server: every screen that reads it (this
       // page's "Your plan", the locks, the Profile) refetches now.
       void queryClient.invalidateQueries({ queryKey: user ? entitlementKeys.user(user.id) : entitlementKeys.all });
     } catch (error) {
+      if (accountEpoch() !== epoch) return;
       const refused = voucherRefusal(error);
       setStep({ kind: 'form', refusal: refused });
       // The code itself was the problem: back to the field to correct it.
