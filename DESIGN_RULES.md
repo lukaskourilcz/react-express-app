@@ -315,4 +315,7 @@ coming back. The tokens and the map are in
   filled `CoinIcon`, which reads as a status light at 20px).
 - **Every `Page` h1 sits at one x and one y.** The `Page` layout fills the
   column and always draws its kicker line.
+- **One section-title size.** A public page's section `h2` takes
+  `.ss-section-title` (1.75rem, 1.5rem under 600px); a section never sets its
+  own heading size inline or in its own stylesheet.
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".

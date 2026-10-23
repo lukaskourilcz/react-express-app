@@ -32,7 +32,7 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 |---|---|
 | Display hero | Public positioning only; compact line length. |
 | Page title | One `h1` per route. |
-| Section / card title | Scannable editorial hierarchy. |
+| Section / card title | Scannable editorial hierarchy. A public page's section `h2` (home's topic picker, roadmap panel, FDE section and plan table) is `.ss-section-title` in `app-shell.css`: 800 weight, 1.75rem, 1.5rem under 600px, -0.015em tracking. One size, never set inline. |
 | Question / answer | High-legibility body scale; stable wrapping. |
 | Body / compact body | Reading and operational density. |
 | Metadata / kicker / label | Short context; not long copy. |

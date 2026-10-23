@@ -121,10 +121,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
     <section aria-labelledby={headingId} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {!embedded && <Kicker>{t('landing.compare.kicker')}</Kicker>}
-        <h2
-          id={headingId}
-          style={{ margin: '4px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}
-        >
+        <h2 id={headingId} className="ss-section-title" style={{ marginTop: 4 }}>
           {t('landing.compare.title')}
         </h2>
         {!embedded && (

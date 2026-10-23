@@ -943,6 +943,22 @@
     padding-block: 0;
   }
 }
+/* One section-title size for the public pages (UX audit shell-public-16):
+   home's h2s were 24, 28 and 36px, each set inline or in another stylesheet.
+   Every home h2 (the topic picker, the roadmap panel, the FDE section and the
+   plan table) takes this class. */
+.ss-section-title {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+}
+@media (max-width: 599px) {
+  .ss-section-title { font-size: 1.5rem; }
+}
 .ss-home-sample { width: 100%; min-width: 0; max-width: 480px; justify-self: end; }
 @media (max-width: 1023px) {
   .ss-home-sample { justify-self: center; }

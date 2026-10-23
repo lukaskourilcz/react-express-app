@@ -151,6 +151,5 @@
 
 /* FDE outline uses the landing typography and waterline kicker. */
 .ss-fde-feature { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.ss-fde-feature h2 { margin: 0; font-family: var(--font-family-heading); font-size: clamp(1.5rem, 4vw, 2.25rem); line-height: 1.2; letter-spacing: -0.02em; }
 .ss-fde-feature p { margin: 0; max-width: 68ch; color: var(--color-text-secondary); line-height: 1.6; overflow-wrap: anywhere; }
 .ss-fde-feature .ss-fde-feature__inventory { color: var(--color-text-primary); font-size: var(--ss-type-compact); }

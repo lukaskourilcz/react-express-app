@@ -182,7 +182,7 @@ describe('the plan table', () => {
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
     const headers = within(table).getAllByRole('columnheader').map((cell) => cell.textContent);
-    expect(headers).toEqual(['What you get', 'FreeEvery account', 'Premium€4.99 a month, before VAT']);
+    expect(headers).toEqual(['Feature', 'FreeEvery account', 'Premium€4.99 a month, before VAT']);
     const rows = within(table).getAllByRole('rowheader').map((cell) => cell.textContent);
     expect(rows).toContain('React');
     // Nothing that has not opened yet (design audit P0.1), and no ads row:

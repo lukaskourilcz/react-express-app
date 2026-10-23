@@ -1176,9 +1176,9 @@ export const en = {
   'typing.error': 'Couldn’t load a snippet. Try again.',
 
   // ── Landing: cost-transparency comparison ─────────────────────────────
-  'landing.compare.title': 'What you get, free and with Premium',
+  'landing.compare.title': 'Free and Premium',
   'landing.compare.subtitle': 'Prices exclude VAT. Applicable VAT is added at checkout.',
-  'landing.compare.colFeature': 'What you get',
+  'landing.compare.colFeature': 'Feature',
   'landing.compare.colBrand': 'Free',
   'landing.compare.colOthers': 'Premium',
   'landing.compare.yes': 'Yes',

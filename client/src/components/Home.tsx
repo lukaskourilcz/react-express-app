@@ -120,7 +120,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
       style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-page)' }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', position: 'relative' }}>
-        <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
+        <h2 className="ss-section-title">
           {t('home.insideTopic', { name: topic.name })}
         </h2>
       </div>
@@ -252,7 +252,7 @@ export default function Home() {
       <section id="topics" ref={topicsRef} aria-label={t('home.topicsTitle')} style={{ display: 'flex', flexDirection: 'column', gap: 20, scrollMarginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <Kicker>{t('home.topicsKicker')}</Kicker>
-          <h2 ref={topicsHeadingRef} tabIndex={-1} style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
+          <h2 ref={topicsHeadingRef} tabIndex={-1} className="ss-section-title" style={{ marginTop: 6 }}>
             {t('home.topicsTitle')}
           </h2>
         </div>

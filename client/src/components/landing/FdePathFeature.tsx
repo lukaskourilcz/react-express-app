@@ -38,7 +38,7 @@ export function FdePathFeature() {
   const inventory = entry ? pathInventory(entry.manifest) : null;
   return <section ref={sectionRef} className="ss-fde-feature" aria-labelledby="home-fde-title">
     <Kicker>{t('home.fde.kicker')}</Kicker>
-    <h2 id="home-fde-title">{t('home.fde.title')}</h2>
+    <h2 id="home-fde-title" className="ss-section-title">{t('home.fde.title')}</h2>
     <p>{t('home.fde.body')}</p>
     {inventory && <p className="ss-fde-feature__inventory">{t('home.fde.inventory', {
       modules: inventory.modules, lessons: inventory.lessons,
