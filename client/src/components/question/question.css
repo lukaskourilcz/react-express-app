@@ -24,6 +24,9 @@
   max-width: var(--ss-width-task);
   margin: 0 auto;
   min-width: 0;
+  /* A runner that opens its next screen at the top (scrollIntoView start)
+     stops clear of the floating site header. */
+  scroll-margin-top: 6rem;
 }
 .ss-question__panel {
   display: flex;

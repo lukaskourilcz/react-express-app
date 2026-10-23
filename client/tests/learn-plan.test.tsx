@@ -837,4 +837,33 @@ describe('a level on the shared question parts', () => {
     expect(swimCtas()).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Try again' }).closest('.ss-question-actions__secondary')).not.toBeNull();
   });
+
+  // UX audit learn-02: Continue sits under the verdict, so the page has
+  // scrolled down to reach it; the next question must open at its top, with
+  // its header and text in sight, and the intro takes focus on its h1.
+  it('opens the intro on its h1 and the next question at its top when the page has scrolled past it', async () => {
+    const scrolled: Element[] = [];
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value(this: HTMLElement) { scrolled.push(this); },
+    });
+    // The shell's top is above the screen, as after scrolling to Continue.
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { top: this.classList.contains('ss-question') ? -300 : 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} } as DOMRect;
+    });
+    try {
+      const second = { ...QUESTION, id: 'q-2', question: 'Which option is second?' };
+      const start = await openLevel({ ...PLAYABLE, questions: [QUESTION, second] });
+      expect(screen.getByRole('heading', { level: 1, name: 'Level 1 · Level 1 title' })).toHaveFocus();
+      fireEvent.click(start);
+      fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Continue' }));
+      await waitFor(() => expect(document.getElementById('lesson-question')).toHaveFocus());
+      const shell = document.getElementById('lesson-question')!.closest('.ss-question');
+      expect(scrolled.at(-1)).toBe(shell);
+    } finally {
+      rect.mockRestore();
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
 });

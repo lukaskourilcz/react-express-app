@@ -81,6 +81,21 @@ function presentQuestions(questions: RoadmapQuestion[], prev?: RoadmapQuestion[]
 
 /* ──── lesson runner (instant feedback) ─────────────────────────────────── */
 
+/** A new screen of the level (the intro, a question, a result) takes focus
+ * without the browser's own scroll and, when its top is out of sight, opens
+ * at its top under the site header. The page scrolled down to reach the last
+ * Continue or Finish, under a long verdict, and the next screen otherwise
+ * opened with its header and question above the screen (UX audit learn-02).
+ * A screen already in sight does not move, so the exit button keeps its place
+ * from the intro to the first question (learn-03). */
+function openAtTop(target: HTMLElement | null) {
+  target?.focus({ preventScroll: true });
+  const shell = target?.closest<HTMLElement>('.ss-question');
+  if (!shell) return;
+  const clearance = parseFloat(getComputedStyle(shell).scrollMarginTop) || 0;
+  if (shell.getBoundingClientRect().top < clearance) shell.scrollIntoView?.({ block: 'start' });
+}
+
 const HEART_PATH =
   'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
 
@@ -430,7 +445,7 @@ export function LessonRunner({
   }, [finished, showIntro, codingPhase, revealed, question, choose, advance]);
 
   useEffect(() => {
-    if (finished || restart) resultHeadingRef.current?.focus({ preventScroll: true });
+    if (finished || restart) openAtTop(resultHeadingRef.current);
   }, [finished, restart]);
 
   // Focus follows the lesson. An answer disables the option that held focus
@@ -441,8 +456,15 @@ export function LessonRunner({
   const questionRef = useRef<HTMLDivElement>(null);
   const showingQuestion = !finished && !restart && !showIntro && !codingPhase;
   useEffect(() => {
-    if (showingQuestion) questionRef.current?.focus({ preventScroll: true });
+    if (showingQuestion) openAtTop(questionRef.current);
   }, [showingQuestion, qIndex]);
+  // The intro opens from the map, wherever it was scrolled; its h1 takes
+  // focus, as a result's does, so a screen reader starts at the level's name.
+  const introTitleRef = useRef<HTMLHeadingElement>(null);
+  const showingIntro = showIntro && !!intro && !restart;
+  useEffect(() => {
+    if (showingIntro) openAtTop(introTitleRef.current);
+  }, [showingIntro]);
 
   // The one header row of every screen in a level (UX audit learn-03): the
   // level in the h1, progress and hearts (or the checkpoint score) on the
@@ -450,8 +472,9 @@ export function LessonRunner({
   // second, at the same place on the intro and on every question.
   const counter = t('roadmap.question', { current: qIndex + 1, total });
   const progressPct = ((qIndex + (revealed ? 1 : 0)) / total) * 100;
-  const levelHeader = (meta: ReactNode, report = false) => (
+  const levelHeader = (meta: ReactNode, report = false, titleRef?: Ref<HTMLHeadingElement>) => (
     <QuestionHeader
+      titleRef={titleRef}
       title={`${isCheckpoint ? t('roadmap.checkpoint') : t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
       progress={{ value: progressPct, label: counter }}
       status={isCheckpoint
@@ -492,7 +515,7 @@ export function LessonRunner({
         questionId="lesson-intro"
         focusable={false}
         stable={false}
-        header={levelHeader(<Text type="supporting" color="secondary" weight="bold">{t('roadmap.introKicker')}</Text>)}
+        header={levelHeader(<Text type="supporting" color="secondary" weight="bold">{t('roadmap.introKicker')}</Text>, false, introTitleRef)}
         question={
           <>
             <p className="rm-intro__text">{intro}</p>
