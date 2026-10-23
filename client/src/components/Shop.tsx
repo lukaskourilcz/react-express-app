@@ -306,12 +306,13 @@ function HowToEarn({ earn, welcomeReceived, premium }: { earn: EarnSummary; welc
           </li>
         ))}
       </ul>
-      {/* One note says which rows pay Premium members, and the page's one
-          "See what Premium includes" sits under it. */}
-      <div className="rw-premium-note">
-        <p>{t('rewards.earn.premiumNote')}</p>
+      {/* One line says which rows pay Premium members, with the page's one
+          "See what Premium includes" at its end: plain text under the ruled
+          list, not a dashed box between two lists (UX audit money-14). */}
+      <div className="rw-earn__note">
+        <p className="rw-muted">{t('rewards.earn.premiumNote')}</p>
         {!premium && (
-          <Button variant="secondary" label={t('rewards.seePremium')} onClick={() => openUpgradeSheet({})} />
+          <Button variant="ghost" className="ss-action" label={t('rewards.seePremium')} onClick={() => openUpgradeSheet({})} />
         )}
       </div>
     </section>

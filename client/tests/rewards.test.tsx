@@ -212,6 +212,22 @@ describe('the Rewards screen', () => {
     expect(within(rows[1]).getByRole('button', { name: 'Buy' })).not.toHaveAttribute('aria-describedby');
   });
 
+  // UX audit money-14: no dashed box between the two ruled lists.
+  it('says which rows pay Premium members in a plain line with a ghost link to the sheet', async () => {
+    signIn();
+    routes();
+    await mountShop();
+    const earn = await screen.findByRole('region', { name: 'How to earn' });
+    expect(earn.querySelector('.rw-premium-note')).toBeNull();
+    const note = within(earn).getByText(/Premium milestones pay Premium members/);
+    expect(note).toHaveClass('rw-muted');
+    const see = within(earn).getByRole('button', { name: 'See what Premium includes' });
+    expect(see).toHaveClass('ghost', 'ss-action');
+    const sheet = renderHook(() => useUpgradeRequest());
+    fireEvent.click(see);
+    expect(sheet.result.current).not.toBeNull();
+  });
+
   it('keeps the sections in the order of the handoff', async () => {
     signIn();
     merch.on = true;

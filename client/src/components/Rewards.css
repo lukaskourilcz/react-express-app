@@ -75,6 +75,8 @@
 .rw-earn__figure { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rw-earn__figure.is-done { color: var(--color-text-secondary); }
 .rw-earn__row.is-done .rw-earn__label { color: var(--color-text-secondary); }
+.rw-earn__note { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; }
+.rw-earn__note p { flex: 1 1 20rem; max-width: 68ch; }
 
 .rw-premium-note {
   display: flex;
