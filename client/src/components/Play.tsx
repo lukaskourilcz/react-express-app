@@ -43,6 +43,7 @@ import { renderQuestion } from './CodeBlock';
 import { QuoteLoader } from './LoadingScreen';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
+import { StatePanel } from './ui/StatePanel';
 import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
 import './Play.css';
@@ -104,15 +105,20 @@ function PlayUnavailable() {
   const navigate = useNavigate();
   const t = useT();
   return (
-    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
-      <Card padding={6} width="100%">
-        <VStack gap={2} align="center">
-          <Heading level={1} justify="center">{t('play.unavailableTitle')}</Heading>
-          <Text color="secondary" justify="center">{t('play.unavailableBody')}</Text>
-          <Button variant="primary" label={t('common.back')} onClick={() => navigate('/')} />
-        </VStack>
-      </Card>
-    </div>
+    <StatePanel level={1} title={t('play.unavailableTitle')} body={t('play.unavailableBody')}>
+      <Button variant="primary" className="ss-action" label={t('common.back')} onClick={() => navigate('/')} />
+    </StatePanel>
+  );
+}
+
+/** /play and /play/:code signed out: the shared sign-in gate, as on /cards
+ * and /collection (UX audit social-account-16). */
+function PlaySignIn() {
+  const t = useT();
+  return (
+    <StatePanel level={1} title={t('play.signInTitle')} body={t('play.signInBody')}>
+      <Button variant="primary" className="ss-action" label={t('authPage.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+    </StatePanel>
   );
 }
 
@@ -180,25 +186,7 @@ export function PlayLanding() {
     return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
-        <Card padding={6} width="100%">
-          <VStack gap={2} align="center">
-            <Heading level={1} justify="center">
-              {t('play.signInTitle')}
-            </Heading>
-            <Text color="secondary" justify="center">
-              {t('play.signInBody')}
-            </Text>
-            <div style={{ marginTop: 8 }}>
-              <Button variant="primary" size="lg" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
-            </div>
-          </VStack>
-        </Card>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return <PlaySignIn />;
 
   const handleCreate = async () => {
     if (!user?.id || busyRef.current) return;
@@ -855,25 +843,7 @@ function PlayRoom() {
     return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
-        <Card padding={6} width="100%">
-          <VStack gap={2} align="center">
-            <Heading level={1} justify="center">{t('play.signInTitle')}</Heading>
-            <Text color="secondary" justify="center">{t('play.signInBody')}</Text>
-            <Button
-              variant="primary"
-              size="lg"
-              label={t('auth.logIn')}
-              aria-haspopup="dialog"
-              onClick={() => openSignIn()}
-            />
-          </VStack>
-        </Card>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return <PlaySignIn />;
 
   if (joining) {
     // Same loading look as the other study modes, but no artificial minimum
