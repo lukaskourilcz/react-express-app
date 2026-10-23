@@ -63,16 +63,19 @@ export default function BrandFooter() {
         {/* The full versions of these live in Profile → Preferences. A visitor
             who has not signed in still needs a comfortable contrast and a
             choice about sound, so the same two settings stay reachable here. */}
+        {/* Short visible labels, so the row fits one line even in an 800px
+            column (UX audit shell-public-03); the full action stays the
+            accessible name, which contains the visible words. */}
         <div className="ss-footer-settings" role="group" aria-label={t('profile.preferences')}>
           <button type="button" onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
-            {mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+            {mode === 'light' ? t('footer.darkMode') : t('footer.lightMode')}
           </button>
           <button
             type="button"
             onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
             aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
           >
-            {settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+            {settings.soundEffects ? t('footer.soundOff') : t('footer.soundOn')}
           </button>
         </div>
       </div>

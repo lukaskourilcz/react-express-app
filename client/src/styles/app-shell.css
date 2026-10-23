@@ -362,15 +362,24 @@
 .ss-brand-footer .ss-footer-link:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 3px; }
 .ss-brand-footer__social a { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
 .ss-footer-settings { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+/* The footer's appearance and sound toggles are compact utility controls
+   (UX audit shell-public-03): pills like every other button, 36px with a
+   44px hit area on a mouse, 44px on a coarse pointer (the touch block). */
 .ss-footer-settings button {
-  min-height: 32px;
-  padding: 0 0.55rem;
+  position: relative;
+  min-height: var(--ss-control-height-compact);
+  padding: 0 0.85rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-inner);
+  border-radius: 999px;
   background: transparent;
   color: inherit;
-  font: 600 var(--ss-type-label) var(--font-family-body);
+  font: 600 var(--ss-type-meta) var(--font-family-body);
   cursor: pointer;
+}
+.ss-footer-settings button::before {
+  content: '';
+  position: absolute;
+  inset: calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2);
 }
 .ss-footer-settings button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
 .ss-footer-settings button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }

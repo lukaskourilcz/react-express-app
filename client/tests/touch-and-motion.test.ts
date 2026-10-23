@@ -83,6 +83,15 @@ describe('control heights on every pointer', () => {
     expect(declared(topLevel, '.ss-compact .astryx-button', 'min-height')).toBe('');
   });
 
+  it('draws the footer toggles as compact pills: 36px with a 44px hit area, 44px on touch', () => {
+    expect(declared(topLevel, '.ss-footer-settings button', 'min-height')).toBe('var(--ss-control-height-compact)');
+    expect(declared(topLevel, '.ss-footer-settings button', 'border-radius')).toBe('999px');
+    expect(declared(topLevel, '.ss-footer-settings button::before', 'inset')).toBe(
+      'calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2)',
+    );
+    expect(declared(mediaRules(sheet, 'pointer: coarse'), '.ss-footer-settings button', 'min-height')).toBe('44px');
+  });
+
   it('keeps a 44px hit area around a compact control', () => {
     expect(declared(fine, '.ss-compact .astryx-button::before', 'position')).toBe('absolute');
     expect(declared(fine, '.ss-compact .astryx-button::before', 'inset')).toBe(

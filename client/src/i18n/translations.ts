@@ -331,6 +331,12 @@ export const en = {
   'common.lightMode': 'Switch to light mode',
   'common.soundOn': 'Turn sound on',
   'common.soundOff': 'Turn sound off',
+  // The footer's visible toggle labels; the common.* lines above stay their
+  // accessible names (UX audit shell-public-03).
+  'footer.darkMode': 'Dark mode',
+  'footer.lightMode': 'Light mode',
+  'footer.soundOn': 'Sound on',
+  'footer.soundOff': 'Sound off',
 
   // Auth
   'auth.logIn': 'Log in',
