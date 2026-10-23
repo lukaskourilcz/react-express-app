@@ -42,6 +42,12 @@ export function initSentry(): void {
         // of the person: no cookie, no storage key, no Session Replay, no
         // setUser. Keep it that way, or put it under analytics consent.
         sendDefaultPii: false,
+        // sendDefaultPii leaves addresses whole: every event, breadcrumb and
+        // span loses its query strings, fragments, e-mail addresses and tokens
+        // here (lib/sentry-sdk.ts).
+        beforeSend: (event) => Sentry.scrubEvent(event),
+        beforeSendTransaction: (event) => Sentry.scrubEvent(event),
+        beforeBreadcrumb: (crumb) => Sentry.scrubBreadcrumb(crumb),
       });
       sentry = Sentry;
     })
