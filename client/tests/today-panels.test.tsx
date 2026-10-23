@@ -2,6 +2,7 @@
 // talk about the next day, so both say when it starts on the learner's clock
 // (the server's day changes at 00:00 UTC). Reaching the target hands out
 // nothing, so the panel promises nothing.
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -134,6 +135,11 @@ describe('Today, a fresh plan', () => {
     const chip = screen.getByText('Start here');
     expect(chip.parentElement).toHaveClass('today-card__title');
     expect(chip.previousElementSibling).toHaveClass('today-card__meta');
+    // On a phone the tag wraps under its title; the cards of one list share
+    // the tallest card's height, so the Start here card is not the odd one.
+    const css = readFileSync(new URL('../src/components/Today.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/@media \(max-width: 560px\) \{\s*\.today-list \{ display: grid; grid-auto-rows: 1fr; \}/);
+    expect(css).toMatch(/\.today-list > li > \.today-card \{ flex: 1 1 auto;/);
     // Three new levels and three cards: the backlog line would repeat them.
     expect(screen.queryByText(/to finish|to review|\d+ new/)).toBeNull();
   });

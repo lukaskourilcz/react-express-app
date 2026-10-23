@@ -104,6 +104,14 @@
   color: var(--color-text-primary);
 }
 .today-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+/* Under 561px the Start here tag wraps under its title, which made that card
+   7px taller than its siblings; the rows of one list share the tallest
+   card's height instead (questions-13). */
+@media (max-width: 560px) {
+  .today-list { display: grid; grid-auto-rows: 1fr; }
+  .today-list > li { display: flex; min-width: 0; }
+  .today-list > li > .today-card { flex: 1 1 auto; min-width: 0; }
+}
 
 .today-card {
   display: flex;
