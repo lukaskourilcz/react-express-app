@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -186,5 +186,40 @@ it('moves focus to the topic picker from the hero call to action', () => {
     expect(within(picker).getByRole('heading', { level: 2 })).toHaveFocus();
   } finally {
     Element.prototype.scrollIntoView = original;
+  }
+});
+
+// The FDE outline is the whole public manifest and sits far below the fold:
+// the landing fetches it only once the section comes near.
+it('fetches the FDE path outline only when its section comes near', async () => {
+  const requests: string[] = [];
+  server.use(settingsHandler, freeEntitlementHandler, http.get('*/api/quiz/roadmap', ({ request }) => {
+    const resource = new URL(request.url).searchParams.get('resource');
+    if (resource !== 'learning-path-catalog') return undefined;
+    requests.push(resource);
+    return HttpResponse.json({ paths: [] });
+  }));
+  const observed: { callback: IntersectionObserverCallback; nodes: Element[] }[] = [];
+  vi.stubGlobal('IntersectionObserver', class {
+    nodes: Element[] = [];
+    constructor(callback: IntersectionObserverCallback) { observed.push({ callback, nodes: this.nodes }); }
+    observe(node: Element) { this.nodes.push(node); }
+    disconnect() { this.nodes.length = 0; }
+    unobserve() {}
+    takeRecords() { return []; }
+  });
+  try {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+    const section = screen.getByRole('region', { name: 'Forward Deployed Engineer' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(requests).toEqual([]);
+    const watcher = observed.find((one) => one.nodes.includes(section));
+    expect(watcher).toBeDefined();
+    act(() => watcher!.callback([{ isIntersecting: true, target: section } as unknown as IntersectionObserverEntry], {} as IntersectionObserver));
+    await waitFor(() => expect(requests).toEqual(['learning-path-catalog']));
+    expect(await within(section).findByText('The path outline could not load here. Try opening it in Learn.')).toBeInTheDocument();
+  } finally {
+    vi.unstubAllGlobals();
   }
 });
