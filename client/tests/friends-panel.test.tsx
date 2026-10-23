@@ -126,6 +126,42 @@ describe('a friends read that fails', () => {
   });
 });
 
+describe('answering two requests in a row', () => {
+  it('draws the later read, not an older one that lands after it', async () => {
+    const pending = [
+      { handle: 'mucho-chomp-shark', displayName: 'Dee Example', direction: 'incoming' },
+      { handle: 'gracias-sharkie', displayName: 'Gus Example', direction: 'incoming' },
+    ];
+    let reads = 0;
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((done) => { releaseFirst = done; });
+    server.use(
+      http.get('*/api/user/friends-handle', () => HttpResponse.json({ handle: 'thirsty-sharkie', discoverable: true, country: null, canChangeAt: null })),
+      http.get('*/api/user/friends-list', async () => {
+        reads += 1;
+        const snapshot = { friends: [], requests: [...pending] };
+        // The read after the first answer is slow and lands last.
+        if (reads === 2) await firstGate;
+        return HttpResponse.json(snapshot);
+      }),
+      http.post('*/api/user/friends-respond', async ({ request }) => {
+        const { handle } = await request.json() as { handle: string };
+        pending.splice(pending.findIndex((one) => one.handle === handle), 1);
+        return HttpResponse.json({ state: 'declined_in' });
+      }),
+    );
+    renderPanel();
+    fireEvent.click(await screen.findByRole('button', { name: 'Decline Dee Example' }));
+    await waitFor(() => expect(reads).toBe(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Decline Gus Example' }));
+    await waitFor(() => expect(screen.queryByText('Gus Example')).toBeNull());
+    releaseFirst();
+    await new Promise((done) => setTimeout(done, 50));
+    expect(screen.queryByText('Gus Example')).toBeNull();
+    expect(screen.queryByText('Dee Example')).toBeNull();
+  });
+});
+
 describe('your sharkname on the Friends tab', () => {
   it('says what friends add you by, and sends you to the Overview card to change it', async () => {
     serve();

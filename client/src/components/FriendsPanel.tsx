@@ -55,10 +55,15 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
   // The tab has drawn the learner's list once. A read after a change that
   // fails then keeps that list on screen, with the error above it.
   const loaded = useRef(false);
+  // Two answers in a row start two reads; only the later one may draw, or
+  // the earlier, older list brings back a request already answered.
+  const readSeq = useRef(0);
 
   const refresh = useCallback(async () => {
+    const seq = ++readSeq.current;
     try {
       const [own, list] = await Promise.all([getHandle(), listFriends()]);
+      if (seq !== readSeq.current) return;
       setHandleState(own);
       setFriends(list.friends);
       setRequests(list.requests);
@@ -66,6 +71,7 @@ export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void
       loaded.current = true;
       setState('ready');
     } catch (err) {
+      if (seq !== readSeq.current) return;
       setError(friendlyError(err));
       // The most likely cause of a first read failing is the migration not
       // being applied yet. Either way the honest thing is to say the tab is
