@@ -711,6 +711,11 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     const matchQuestions = match.questions as MatchQuestion[];
     const q = matchQuestions[body.question_idx];
     if (!q) return jsonError(res, 400, 'bad_request', 'question_idx out of range');
+    // An index past the question's options would be recorded as a wrong
+    // answer and counted in the distribution as an option nobody was shown.
+    if (!Array.isArray(q.options) || body.selected_idx >= q.options.length) {
+      return jsonError(res, 400, 'bad_request', 'selected_idx out of range');
+    }
 
     // A classroom host holds the answer key while the room runs; they present
     // and never compete.

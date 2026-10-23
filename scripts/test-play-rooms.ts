@@ -576,7 +576,19 @@ async function main() {
       assert.equal((await call('three', 'POST', 'heartbeat', { code })).statusCode, 200, 'the room is still there');
     }
 
-    // 10. Two hosts drawing the same room code at once: the unique key refuses
+    // 10. An answer names one of the options the question showed: an index
+    //     past them is refused and not recorded, so it never reaches the
+    //     scoreboard or the distribution as an option nobody saw.
+    {
+      const code = await open('multiplayer', ['one'], 'three');
+      const options = (room(code).questions as Array<{ options: string[] }>)[0].options.length;
+      const past = await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: options });
+      assert.equal(past.statusCode, 400, `an option index past the question's ${options} is refused (${JSON.stringify(past.body)})`);
+      assert.equal(tables.match_answers.filter((a) => a.match_id === room(code).id).length, 0, 'and not recorded');
+      assert.equal((await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: options - 1 })).statusCode, 200, 'the last option is an answer');
+    }
+
+    // 11. Two hosts drawing the same room code at once: the unique key refuses
     //     the second insert, and that host gets a room under a new code
     //     instead of a 500.
     {
