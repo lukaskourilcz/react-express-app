@@ -34,6 +34,20 @@
   --ss-type-large: 1.125rem;
   --ss-space-gutter: clamp(1rem, 0.6667rem + 1.4815vw, 2rem);
   --ss-space-section: clamp(2rem, 1.3333rem + 2.963vw, 4rem);
+  /* Page widths (UX audit U1, #573). The route shell in App.tsx picks one per
+     route (ROUTE_WIDTHS); a page never sets its own page max-width. The task
+     width is the column inside a page: questions, auth, billing and checkout
+     cards. */
+  --ss-width-task: 640px;
+  --ss-width-narrow: 800px;
+  --ss-width-standard: 1000px;
+  --ss-width-wide: 1200px;
+  /* Control heights (UX audit U1, #573). Every page action and form control is
+     44px tall on every pointer; only controls inside a component's own toolbar
+     (an element with class "ss-compact") are 36px, with a 44px hit area. The
+     floors live in app-shell.css. */
+  --ss-control-height: 44px;
+  --ss-control-height-compact: 36px;
 
   /* ————————————————————————— Brand: The Deep End —————————————————————————
      devShark's identity commits to the ocean the product already owns:
