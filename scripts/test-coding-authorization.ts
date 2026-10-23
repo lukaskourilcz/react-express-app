@@ -262,6 +262,13 @@ async function main() {
     const bad = await post({ code: '// x', base });
     assert.deepEqual([bad.status, bad.body.error?.code, bad.args], [400, 'bad_request', undefined], `base ${JSON.stringify(base)} is refused before the database`);
   }
+  // Postgres text cannot hold U+0000, so the routine raised on such code and
+  // the save answered 500 db_error. It is refused as a bad request before the
+  // database, as the size limit is.
+  {
+    const nul = await post({ code: 'const a = "\u0000";', base: null });
+    assert.deepEqual([nul.status, nul.body.error?.code, nul.args], [400, 'bad_request', undefined], `code holding U+0000 is refused before the database (${JSON.stringify(nul.body)})`);
+  }
   // save_coding_draft_v2 gives up after three concurrent first saves with
   // coding_draft_busy. That is a retry, not a 500.
   {
@@ -284,6 +291,13 @@ async function main() {
   const stageWrite = calls.find((one) => one.fn === 'save_coding_draft_v2');
   assert.equal(stageWrite?.args.p_force, true, 'the stage draft is written whatever the account held');
   assert.equal((submitted.body as { draftUpdatedAt?: string }).draftUpdatedAt, stored.get(`account-c:${stageId}`)?.updated_at, 'the verdict carries the time the stage draft was stored');
+  {
+    const nulSubmit = response();
+    calls.length = 0;
+    await handleCodingSubmit({ method: 'POST', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '203.0.113.59' }, query: { user_id: 'account-c' }, body: { session: stageSession, code: '// not there yet \u0000', user_id: 'account-c' } } as never, nulSubmit as never, conditional as never);
+    assert.deepEqual([nulSubmit.statusCode, errorCode(nulSubmit.body)], [400, 'bad_request'], `a stage Submit whose code holds U+0000 is a bad request, not a failed stage write (${JSON.stringify(nulSubmit.body)})`);
+    assert.equal(calls.some((one) => one.fn === 'save_coding_draft_v2' || one.fn === 'record_coding_verdict'), false, 'nothing is written for it');
+  }
   console.log('Coding evolving stage draft passed: Submit stores the stage code and returns its time.');
 
   // V3-2: an id no task could have (/coding/javascript/no-such-task) is as

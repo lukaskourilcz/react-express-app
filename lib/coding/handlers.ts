@@ -787,6 +787,9 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   } else {
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
+    // A signed-in Submit of an evolving stage stores its code as the stage
+    // draft, which Postgres text cannot hold with U+0000 in it.
+    if (userId && evolvingStage(task.id) && hasNul(body.code)) return jsonError(res, 400, 'bad_request', NUL_MESSAGE);
     code = body.code;
     const done = enterInFlight(req, 'grading', { item: gradingItem.task(task.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, userId ? `user:${userId}` : undefined);
     if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
@@ -991,6 +994,11 @@ function draftBusy(res: VercelResponse) {
  * time is read back: none when another save overtook it. Null for a database
  * error, 'missing' when neither routine exists, 'busy' when 059's routine
  * gave up on concurrent first saves. */
+/** Postgres text cannot hold U+0000: a draft holding it is refused before
+ * the database, which would raise and answer 500. */
+const hasNul = (code: string): boolean => code.includes('\u0000');
+const NUL_MESSAGE = 'Code cannot contain a NUL (U+0000) character';
+
 async function storeDraft(supabase: SupabaseClient, userId: string, taskId: string, code: string, base: string | null | 'force'): Promise<StoredDraft | 'missing' | 'busy' | null> {
   const force = base === 'force';
   const result = await withTimeout(supabase.rpc('save_coding_draft_v2', { p_user_id: userId, p_task_id: taskId, p_code: code, p_base: force ? null : base, p_force: force }));
@@ -1032,6 +1040,8 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     const body = (req.body ?? {}) as Partial<Record<keyof CodingDraftSaveRequest, unknown>>;
     const code = body.code;
     if (typeof code !== 'string' || Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required and limited to 20 kB');
+    // Refused here rather than raised by the save routine as a 500.
+    if (hasNul(code)) return jsonError(res, 400, 'bad_request', NUL_MESSAGE);
     // The account draft's time this code builds on (owner decision 10). A
     // client from before it sends none and writes as it always did.
     const base = !('base' in body) ? 'force' : body.base === null ? null : isDraftTime(body.base) ? body.base : undefined;
