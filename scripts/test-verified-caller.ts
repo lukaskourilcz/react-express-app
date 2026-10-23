@@ -62,7 +62,11 @@ const EMAIL: Account = {
     identity_data: { email: 'ada@example.invalid', email_verified: true, phone_verified: false, sub: '1a2b3c4d-0000-4000-8000-00000000000f' },
   }],
 };
-const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL];
+// An account whose own rows the database is too slow to read.
+const SLOW: Account = { id: '1a2b3c4d-0000-4000-8000-000000000010', token: 'slow-rows', email: 'slow@example.invalid', confirmed: true };
+const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW];
+// A token presented while Supabase Auth answers 500 (not one of ACCOUNTS).
+const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 'auth-is-down', email: 'down@example.invalid', confirmed: true };
 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
@@ -94,6 +98,8 @@ async function startStandIns() {
     const send = (status: number, body: unknown) => { res.statusCode = status; res.end(JSON.stringify(body)); };
     if (url.pathname === '/auth/v1/user') {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+      // Supabase Auth itself failing, for any token.
+      if (token === AUTH_DOWN.token) return send(500, { message: 'stand-in auth is down' });
       const account = ACCOUNTS.find((one) => one.token === token);
       if (!account) return send(401, { message: 'invalid token' });
       return send(200, {
@@ -118,6 +124,10 @@ async function startStandIns() {
     // A database too slow to answer within lib/http.ts's five seconds.
     if (url.pathname === '/rest/v1/question_reports' && (body as Row | undefined)?.detail === SLOW_REPORT) {
       setTimeout(() => send(201, [body]), 5_500);
+      return;
+    }
+    if (req.method === 'GET' && url.searchParams.get('user_id') === `eq.${SLOW.id}`) {
+      setTimeout(() => send(200, []), 5_500);
       return;
     }
     if (url.pathname === '/rest/v1/rpc/category_leaderboard' && (body as Row | undefined)?.p_min_attempts === SLOW_BOARD_MIN_ATTEMPTS) {
@@ -212,6 +222,7 @@ async function main() {
       { CODING_TASKS },
       { default: challenge },
       { default: submit },
+      { default: questions },
     ] = await Promise.all([
       import('../api/user/[op]'),
       import('../api/quiz/roadmap'),
@@ -225,6 +236,7 @@ async function main() {
       import('../lib/coding/catalog'),
       import('../api/quiz/challenge'),
       import('../api/quiz/submit'),
+      import('../api/quiz/questions'),
     ]);
 
     type Handler = (req: never, res: never) => unknown;
@@ -438,6 +450,14 @@ async function main() {
     assert.equal(errorCode(slowBoard), 'upstream_timeout');
     console.log('PASS verified caller: a timed-out leaderboard answers 503');
 
+    // So do the account ops whose own catch used to answer 500.
+    const slowOps = await Promise.all(['streak', 'xp', 'stats', 'leaderboard-visibility'].map(async (op) => [op, await user(op, { account: SLOW })] as const));
+    for (const [op, res] of slowOps) {
+      assert.equal(res.statusCode, 503, `op=${op} whose read timed out answers 503 (${JSON.stringify(res.body)})`);
+      assert.equal(errorCode(res), 'upstream_timeout');
+    }
+    console.log('PASS verified caller: account ops whose read timed out answer 503');
+
     // ── this month's XP board (migration 056) ───────────────────────────
     // Shared and cached for a minute without a session; with one it is the
     // token's own line, never the account a query names, and private.
@@ -486,6 +506,17 @@ async function main() {
     assert.equal(timedOut.statusCode, 503, `a handler whose Supabase call timed out answers 503, not 500 (${JSON.stringify(timedOut.body)})`);
     assert.equal(errorCode(timedOut), 'upstream_timeout');
     console.log('PASS verified caller: a Supabase timeout answers 503 upstream_timeout');
+
+    // ── Supabase Auth down ───────────────────────────────────────────────
+    for (const query of [{ resource: 'due' }, { resource: 'review', count: '5', categories: 'javascript' }] as Record<string, string>[]) {
+      const down = await call(questions as Handler, { account: AUTH_DOWN, query });
+      assert.equal(down.statusCode, 503, `${query.resource}: a sign-in service that is down is not an invalid session (${JSON.stringify(down.body)})`);
+      assert.equal(errorCode(down), 'auth_unavailable');
+    }
+    const refusedToken = await call(questions as Handler, { account: { ...A, token: 'not-a-token' }, query: { resource: 'due' } });
+    assert.equal(refusedToken.statusCode, 401, 'a token Supabase refuses is still 401');
+    assert.equal(errorCode(refusedToken), 'unauthorized');
+    console.log('PASS verified caller: Today\'s due list and a review keep 503 when Supabase Auth is down, and 401 for a refused token');
 
     // ── question reports ─────────────────────────────────────────────────
     seen.length = 0;
