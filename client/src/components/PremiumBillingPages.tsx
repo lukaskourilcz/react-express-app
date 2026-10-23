@@ -46,7 +46,9 @@ import { useLaunchOffer } from '../lib/launchOffer';
 import { LaunchOfferNote, OfferAmount, PremiumPriceSentence } from './LaunchOffer';
 import { Page } from './PublicInfoPages';
 import PremiumCheckoutButton from './PremiumCheckoutButton';
+import { SignedOutBlock } from './SignedOutBlock';
 import { planText } from './PlanLine';
+import './PremiumPage.css';
 import './PremiumBillingPages.css';
 import { CHECKOUT_APPEARANCE, loadCheckoutStripe, type CheckoutView } from '../lib/stripeCheckoutForm';
 import { isOnline } from '../lib/routeRecovery';
@@ -162,20 +164,39 @@ export function PremiumCheckoutPage() {
     }
   };
 
+  // The plan, as /premium draws it (UX audit money-04): the name, the price in
+  // ink at the plan cards' size, and one renewal line. Shown signed out too,
+  // so the lead's 'Review your plan' always has a plan to review.
+  const summary = validPlan && (
+    <div className="ss-premium-plan ss-checkout-plan">
+      <h2>{t(plan === 'annual' ? 'premium.page.annualName' : 'premium.page.monthlyName')}</h2>
+      <p className="ss-premium-plan__price">
+        {offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{PREMIUM_PRICE.symbol}{PREMIUM_PRICE[plan]}</strong>}{' '}
+        <span>{t(plan === 'annual' ? 'premium.page.perYear' : 'premium.page.perMonth')}</span>
+      </p>
+      {offer && <LaunchOfferNote offer={offer} compact />}
+      <p className="ss-premium-plan__terms">{t(plan === 'annual' ? 'premium.page.annualRenews' : 'premium.page.monthlyRenews')}</p>
+    </div>
+  );
+  const canContinue = !billing.failed && !loading && validPlan && billing.enabled && isAuthenticated && !paying && !ready;
+
+  // The 'devShark Premium' kicker names every purchase step (money-08).
   return <Page kicker={t('billing.kicker')} title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
     <section className="ss-info-card ss-billing-card ss-checkout-card" ref={card}>
       {billing.failed ? <><Banner status="error" title={t('premium.page.unreachable')} /><Button className="ss-action" label={t('profile.plan.retry')} onClick={billing.retry} /></>
         : loading ? <p role="status">{t('billing.checkout.loading')}</p> : !validPlan ? <Banner status="error" title={t('billing.checkout.choosePlan')} />
         : !billing.enabled ? <p>{t('billing.checkout.soon')}</p>
-          : !isAuthenticated ? <Button className="ss-action" label={t('billing.checkout.signIn')} onClick={() => openSignIn({ returnTo: `/premium/checkout?plan=${plan}` })} />
+          : !isAuthenticated ? <>
+              {summary}
+              {/* The money screens' one signed-out state (money-05), under the plan. */}
+              <SignedOutBlock message={t('billing.checkout.signedOut')} label={t('billing.checkout.signIn')} returnTo={`/premium/checkout?plan=${plan}`} />
+            </>
             : paying ? <PremiumCheckoutButton plan={plan} /> : <>
-              <h2>{t(plan === 'annual' ? 'premium.page.annualName' : 'premium.page.monthlyName')}</h2>
-              <p className="ss-checkout-price">{offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{PREMIUM_PRICE.symbol}{PREMIUM_PRICE[plan]}</strong>}</p>
-              {offer && <LaunchOfferNote offer={offer} compact />}
-              <p>{t(plan === 'annual' ? 'premium.page.annualRenews' : 'premium.page.monthlyRenews')}</p>
+              {summary}
               <p className="ss-text-links"><Link to="/terms">{t('legal.link.terms')}</Link><Link to="/privacy">{t('legal.link.privacy')}</Link></p>
-              <CheckboxInput value={consent} onChange={setConsent} label={t('billing.checkout.consent')} isRequired isDisabled={busy || ready} />
-              {!ready && <Button className="ss-action" label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
+              {/* The only box on the step, and Continue stays disabled until it
+                  is ticked, so it carries no 'Required' marker (money-04). */}
+              <CheckboxInput value={consent} onChange={setConsent} label={t('billing.checkout.consent')} isDisabled={busy || ready} />
               {busy && <p aria-hidden="true">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
               {/* A live region mounted with its words is not announced, so this
                   one stays on the page and only its text changes. */}
@@ -183,7 +204,13 @@ export function PremiumCheckoutPage() {
             </>}
       {error && <p role="alert">{error}</p>}
       <div id="checkout-form" className="ss-checkout-form" data-ready={ready} ref={formHost} tabIndex={-1} />
-      <div className="ss-info-actions"><Button variant="secondary" label={t('billing.checkout.back')} onClick={() => navigate('/premium')} /></div>
+      {/* One footer row (money-04): Back to plans as a ghost on the left, the
+          step's one primary on the right; below 600px the primary stacks
+          full width above it. */}
+      <div className="ss-checkout-actions">
+        <Button variant="ghost" className="ss-action" label={t('billing.checkout.back')} onClick={() => navigate('/premium')} />
+        {canContinue && <Button variant="primary" className="ss-action" label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
+      </div>
     </section>
   </Page>;
 }

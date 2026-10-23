@@ -35,7 +35,10 @@
   background: var(--color-background-muted);
 }
 .rw-wallet__head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
-.rw-wallet__balance { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+/* The balance column takes the row's remaining width, so on a phone the
+   signed-out sentence wraps beside the coin instead of pushing the coin onto a
+   44px row of its own (money-05). */
+.rw-wallet__balance { display: flex; flex-direction: column; gap: 0.2rem; flex: 1 1 0; min-width: 0; }
 .rw-wallet__amount { display: flex; align-items: baseline; gap: 0.4rem; margin: 0; color: var(--brand-accent); }
 .rw-wallet__amount strong {
   font: 800 clamp(2rem, 1.6rem + 1.8vw, 2.75rem)/1 var(--font-family-heading);
@@ -75,6 +78,18 @@
 .rw-earn__figure { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rw-earn__figure.is-done { color: var(--color-text-secondary); }
 .rw-earn__row.is-done .rw-earn__label { color: var(--color-text-secondary); }
+.rw-earn__note { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; }
+.rw-earn__note p { flex: 1 1 20rem; max-width: 68ch; }
+/* Where the note is too narrow for the sentence and the button side by side,
+   the ghost button goes under the sentence and pulls back its 20px inline
+   padding, so its label starts on the sentence's edge, not 20px in
+   (money-14). One column from 639px down, so no width wraps it unaligned. */
+@media (max-width: 639px) {
+  .rw-earn__note { flex-direction: column; align-items: flex-start; }
+  /* Its 20rem basis is a width in the row; in a column it would be height. */
+  .rw-earn__note p { flex: none; }
+  .rw-earn__note > .astryx-button.ghost { margin-inline-start: -20px; }
+}
 
 .rw-premium-note {
   display: flex;
@@ -88,7 +103,38 @@
 .rw-premium-note p { margin: 0; flex: 1 1 16rem; line-height: 1.5; }
 
 .rw-merch-lock { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-.rw-spend__action { margin-left: auto; }
+
+/* ── the crown and streak protection ─────────────────────────────────── */
+/* Two rows of one ruled list, in How to earn's rhythm, not two 1080px cards
+   (UX audit money-02). Both rows have one structure: the 44px icon, the name
+   over its blurb, then the price and the button. Below 600px the action
+   takes a row of its own under the text, right-aligned, so neither row
+   rewraps into a different shape. */
+.rw-spend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ss-card-line);
+}
+.rw-spend__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-areas: 'icon name action' 'icon blurb action';
+  gap: 0.15rem 1rem;
+  align-items: center;
+  min-height: 72px;
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--ss-card-line);
+}
+.rw-spend__icon { grid-area: icon; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+.rw-spend__shield { display: inline-flex; color: var(--ss-warning); }
+.rw-spend__name { grid-area: name; align-self: end; margin: 0; font: 650 1rem/1.3 var(--font-family-body); overflow-wrap: anywhere; }
+.rw-spend__blurb { grid-area: blurb; align-self: start; margin: 0; max-width: 68ch; font-size: 0.88rem; line-height: 1.45; color: var(--color-text-secondary); }
+.rw-spend__action { grid-area: action; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem 0.75rem; }
+/* The price, and under it how many coins are missing (money-07). */
+.rw-spend__price { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; text-align: right; }
+.rw-spend__price strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rw-spend__short { font-size: 0.85rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ── invite a friend (#228) ──────────────────────────────────────────── */
 .rw-invite__share { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
@@ -195,7 +241,24 @@
 .rw-checkout__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 @media (max-width: 599px) {
-  .rw-earn__row { flex-direction: column; align-items: flex-start; }
-  .rw-earn__meta { justify-content: flex-start; }
-  .rw-spend__action { margin-left: 0; }
+  /* How to earn on a phone (UX audit money-13): the label and its figure
+     share the first line, the figure right-aligned, and the detail spans the
+     row under them. A row with no figure leaves the cell empty. Stacked, each
+     figure was a bold line of its own that read like the next row's title. */
+  .rw-earn__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'label figure' 'detail detail';
+    align-items: baseline;
+    gap: 0.15rem 1rem;
+  }
+  .rw-earn__main { display: contents; }
+  .rw-earn__label { grid-area: label; }
+  .rw-earn__detail { grid-area: detail; }
+  .rw-earn__meta { grid-area: figure; }
+  .rw-spend__row {
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas: 'icon name' 'icon blurb' '. action';
+  }
+  .rw-spend__action { margin-top: 0.5rem; }
 }

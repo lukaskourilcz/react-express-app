@@ -29,12 +29,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
-import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
-import { Card } from '@astryxdesign/core/Card';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { AppToast } from './ui/AppToast';
@@ -43,6 +40,8 @@ import { CoinIcon, ShieldIcon } from './ui/icons';
 import { LockedButton } from './ui/LockedButton';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
+import { Page } from './PublicInfoPages';
+import { SignedOutBlock } from './SignedOutBlock';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
@@ -51,6 +50,7 @@ import { friendlyError } from '../lib/api';
 import { entitlementQuery, useEntitlement } from '../lib/entitlement';
 import { useGameConfig } from '../lib/gameConfig';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
+import { openSignIn } from '../lib/signInDialog';
 import { categoryLabelKey } from '../lib/categories';
 import { referralQuery } from '../lib/referral';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
@@ -152,15 +152,22 @@ function Wallet({ signedIn, restoring = false }: { signedIn: boolean; restoring?
       <div className="rw-wallet__head">
         <CoinIcon size={44} />
         <div className="rw-wallet__balance">
-          <h2 id="rw-wallet-title" className="rw-label">{t('shop.balanceLabel')}</h2>
-          <p className="rw-wallet__amount">
-            <strong>{signedIn && wallet.data ? wallet.data.balance.toLocaleString('en-GB') : '—'}</strong>
-            <span>{t('shop.tokensUnit')}</span>
-          </p>
+          {/* The h1 says Coins and the number says coins: the label names
+              the section for a screen reader only (UX audit money-12). */}
+          <h2 id="rw-wallet-title" className="ss-sr-only">{t('shop.balanceLabel')}</h2>
+          {/* Signed out, the money screens' one signed-out block stands where
+              the balance goes, so no '—' poses as a number (money-05). */}
+          {!signedIn && !restoring ? (
+            <SignedOutBlock message={t('shop.signInForWallet')} />
+          ) : (
+            <p className="rw-wallet__amount">
+              <strong>{signedIn && wallet.data ? wallet.data.balance.toLocaleString('en-GB') : '—'}</strong>
+              <span>{t('shop.tokensUnit')}</span>
+            </p>
+          )}
         </div>
       </div>
 
-      {!signedIn && !restoring && <p className="rw-muted">{t('shop.signInForWallet')}</p>}
       {loading && <p className="rw-muted" role="status">{t('common.loading')}</p>}
       {signedIn && wallet.isError && !wallet.data && (
         <div className="rw-inline-error" role="alert">
@@ -299,15 +306,54 @@ function HowToEarn({ earn, welcomeReceived, premium }: { earn: EarnSummary; welc
           </li>
         ))}
       </ul>
-      {/* One note says which rows pay Premium members, and the page's one
-          "See what Premium includes" sits under it. */}
-      <div className="rw-premium-note">
-        <p>{t('rewards.earn.premiumNote')}</p>
+      {/* One line says which rows pay Premium members, with the page's one
+          "See what Premium includes" at its end: plain text under the ruled
+          list, not a dashed box between two lists (UX audit money-14). */}
+      <div className="rw-earn__note">
+        <p className="rw-muted">{t('rewards.earn.premiumNote')}</p>
         {!premium && (
-          <Button variant="secondary" label={t('rewards.seePremium')} onClick={() => openUpgradeSheet({})} />
+          <Button variant="ghost" className="ss-action" label={t('rewards.seePremium')} onClick={() => openUpgradeSheet({})} />
         )}
       </div>
     </section>
+  );
+}
+
+/* ── the crown and streak protection ───────────────────────────────────── */
+
+/** One coin item: a 44px icon, the name over its blurb, and the price with
+ * its action. When the coins fall short the row says by how much under the
+ * price, and the button names that line as its description (UX audit
+ * money-07), as merchandise says "Not enough coins". `price` is null for an
+ * item already owned (the crown), which has no price to show. */
+function SpendRow({ icon, name, blurb, price, balance, action }: {
+  icon: React.ReactNode;
+  name: string;
+  blurb: string;
+  price: number | null;
+  /** The learner's coins, or null while they are unknown. */
+  balance: number | null;
+  action: React.ReactNode | ((describedBy: string | undefined) => React.ReactNode);
+}) {
+  const t = useT();
+  const shortId = useId();
+  const short = price !== null && balance !== null && balance < price ? price - balance : 0;
+  const describedBy = short > 0 ? shortId : undefined;
+  return (
+    <li className="rw-spend__row">
+      <span className="rw-spend__icon" aria-hidden="true">{icon}</span>
+      <h3 className="rw-spend__name">{name}</h3>
+      <p className="rw-spend__blurb">{blurb}</p>
+      <div className="rw-spend__action">
+        {price !== null && (
+          <span className="rw-spend__price">
+            <strong>{t('shop.tokenPrice', { n: price.toLocaleString('en-GB') })}</strong>
+            {short > 0 && <span id={shortId} className="rw-spend__short">{t('shop.shortBy', { n: short.toLocaleString('en-GB') })}</span>}
+          </span>
+        )}
+        {typeof action === 'function' ? action(describedBy) : action}
+      </div>
+    </li>
   );
 }
 
@@ -524,6 +570,16 @@ function Shop() {
   const welcomeReceived = (wallet.data?.entries ?? []).some((entry) => entry.reason === 'signup');
 
   const balance = wallet.data?.balance ?? 0;
+  // The balance only once it is known: a row says how many coins are missing
+  // against a real number, never against the 0 above.
+  const knownBalance = isAuthenticated && wallet.data ? wallet.data.balance : null;
+  // Signed out, Buy says what it needs and asks for it, instead of sitting
+  // disabled without a reason (UX audit money-05). Secondary: the wallet's
+  // Sign in above is the screen's primary.
+  const signedOut = !isAuthenticated && !restoring;
+  const signInToBuy = (
+    <Button variant="secondary" label={t('shop.signInToBuy')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+  );
   const ownsCrown = useMemo(
     () => (wallet.data?.cosmetics ?? []).some((one) => one.id === 'crown'),
     [wallet.data],
@@ -582,14 +638,11 @@ function Shop() {
 
   // The page fills the route's narrow 800px column (components/ui/pageWidth.ts),
   // which centres it; it sets no width of its own (UX audit money-01).
+  // The editorial header every money page has (UX audit money-08): fin,
+  // kicker, h1. The lead adds what the sections below do not say (money-12).
   return (
+    <Page kicker={t('shop.kicker')} title={t('shop.title')} lead={`${t('shop.subtitle')}${merchOpen ? ` ${t('shop.subtitleMerch')}` : ''}`}>
     <VStack gap={5} width="100%">
-      <VStack gap={1}>
-        <Heading level={1} type="display-3">{t('shop.title')}</Heading>
-        <Text type="large" color="secondary">
-          {t('shop.subtitle')}{merchOpen ? ` ${t('shop.subtitleMerch')}` : ''}
-        </Text>
-      </VStack>
 
       {/* Test mode is for the owner's staging checks; production never shows it. */}
       {!import.meta.env.PROD && shop.data?.testMode && <Banner status="warning" title={t('shop.testMode')} />}
@@ -600,75 +653,62 @@ function Shop() {
 
       <HowToEarn earn={earn} welcomeReceived={welcomeReceived} premium={premium} />
 
-      {/* The crown and streak protection: every account, coins only. */}
+      {/* The crown and streak protection: every account, coins only. Two
+          rows of one ruled list, like How to earn, built the same way so they
+          stand at one height on every width (UX audit money-02).
+          Streak protection is consumable, capped, and the one thing sold here
+          that touches learning at all (the bounded exception in
+          shared/rewards.ts): it costs coins earned by learning, restores the
+          same two-a-month budget and never exceeds it, and no leaderboard in
+          this product ranks by streak. */}
       {(shop.data?.crown.available || shop.data?.protection?.available) && (
         <section className="rw-section" aria-labelledby="rw-spend-title">
           <Kicker as="h2" id="rw-spend-title">{t('shop.crownSection')}</Kicker>
-          <VStack gap={2}>
+          <ul className="rw-spend">
             {shop.data?.crown.available && (
-              <Card variant="default" padding={3} width="100%">
-                <HStack gap={2} align="center" wrap="wrap">
-                  <Crown size={44} />
-                  <VStack gap={0.5}>
-                    <Heading level={3}>{t('shop.crownName')}</Heading>
-                    <Text type="supporting" color="secondary">{t('shop.crownBlurb')}</Text>
-                  </VStack>
-                  <div className="rw-spend__action">
-                    <HStack gap={1} align="center" wrap="wrap">
-                      {!ownsCrown && <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.crown.tokenPrice.toLocaleString('en-GB') })}</Text>}
-                      {ownsCrown ? (
-                        <Button
-                          variant="secondary"
-                          label={t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
-                          isDisabled={cosmetic.isPending}
-                          onClick={() => wearCrown(wearingCrown ? 'unequip' : 'equip')}
-                        />
-                      ) : (
-                        <Button
-                          variant="primary"
-                          label={t('shop.buy')}
-                          isDisabled={!isAuthenticated || cosmetic.isPending || balance < shop.data.crown.tokenPrice}
-                          onClick={buyCrown}
-                        />
-                      )}
-                    </HStack>
-                  </div>
-                </HStack>
-              </Card>
+              <SpendRow
+                icon={<Crown size={44} />}
+                name={t('shop.crownName')}
+                blurb={t('shop.crownBlurb')}
+                price={ownsCrown ? null : shop.data.crown.tokenPrice}
+                balance={knownBalance}
+                action={ownsCrown ? (
+                  <Button
+                    variant="secondary"
+                    label={t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
+                    isDisabled={cosmetic.isPending}
+                    onClick={() => wearCrown(wearingCrown ? 'unequip' : 'equip')}
+                  />
+                ) : signedOut ? signInToBuy : (describedBy) => (
+                  <Button
+                    variant="primary"
+                    label={t('shop.buy')}
+                    aria-describedby={describedBy}
+                    isDisabled={!isAuthenticated || cosmetic.isPending || balance < shop.data!.crown.tokenPrice}
+                    onClick={buyCrown}
+                  />
+                )}
+              />
             )}
-
-            {/* Streak protection: consumable, capped, and the one thing sold
-                here that touches learning at all (the bounded exception in
-                shared/rewards.ts). It costs coins earned by learning, restores
-                the same two-a-month budget and never exceeds it, and no
-                leaderboard in this product ranks by streak. */}
             {shop.data?.protection?.available && (
-              <Card variant="default" padding={3} width="100%">
-                <HStack gap={2} align="center" wrap="wrap">
-                  <span aria-hidden style={{ color: 'var(--ss-warning)', display: 'inline-flex' }}>
-                    <ShieldIcon size={24} />
-                  </span>
-                  <VStack gap={0.5}>
-                    <Heading level={3}>{t('shop.protectionName')}</Heading>
-                    <Text type="supporting" color="secondary">
-                      {t('shop.protectionBlurb', { cap: shop.data.protection.cap })}
-                    </Text>
-                  </VStack>
-                  <div className="rw-spend__action">
-                    <HStack gap={1} align="center" wrap="wrap">
-                      <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.protection.tokenPrice.toLocaleString('en-GB') })}</Text>
-                      <Button
-                        variant="primary"
-                        label={t('shop.buy')}
-                        isDisabled={!isAuthenticated || protection.isPending || balance < shop.data.protection.tokenPrice}
-                        onClick={buyProtection}
-                      />
-                    </HStack>
-                  </div>
-                </HStack>
-              </Card>
+              <SpendRow
+                icon={<span className="rw-spend__shield"><ShieldIcon size={44} /></span>}
+                name={t('shop.protectionName')}
+                blurb={t('shop.protectionBlurb', { cap: shop.data.protection.cap })}
+                price={shop.data.protection.tokenPrice}
+                balance={knownBalance}
+                action={signedOut ? signInToBuy : (describedBy) => (
+                  <Button
+                    variant="primary"
+                    label={t('shop.buy')}
+                    aria-describedby={describedBy}
+                    isDisabled={!isAuthenticated || protection.isPending || balance < shop.data!.protection!.tokenPrice}
+                    onClick={buyProtection}
+                  />
+                )}
+              />
             )}
-          </VStack>
+          </ul>
         </section>
       )}
 
@@ -817,6 +857,7 @@ function Shop() {
         message={toast?.msg ?? ''}
       />
     </VStack>
+    </Page>
   );
 }
 

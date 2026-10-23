@@ -30,7 +30,7 @@ it('opens the sign-in dialog from the hero link', () => {
   server.use(settingsHandler, freeEntitlementHandler);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
-  const link = screen.getByRole('button', { name: 'Sign in or create an account' });
+  const link = screen.getByRole('button', { name: 'Sign in' });
   expect(link).toHaveAttribute('aria-haspopup', 'dialog');
   fireEvent.click(link);
   expect(openSignIn).toHaveBeenCalledTimes(1);

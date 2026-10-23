@@ -13,6 +13,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { privacyEn, type PrivacyKey } from '../i18n/translations.privacy';
 import { useBilling } from '../lib/billing';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { openConsentSettings } from '../lib/consent';
 import { useLaunchOffer } from '../lib/launchOffer';
 import { TRADER } from '../../product-catalog';
@@ -340,6 +341,39 @@ function LegalTable({ caption, head, rows }: { caption: CopyKey; head: CopyKey[]
   );
 }
 
+/**
+ * 'On this page': the section titles as jump links, under the lead (UX audit
+ * shell-public-18). The privacy policy is 26 sections over 9,000px. Body type
+ * and no panel; closed on a phone, where it would push the first section a
+ * screen down, and open from 1024px. The titles are the sections' own, so no
+ * legal wording changes. A jump scrolls inside <main> and moves focus to the
+ * section's heading, so the next Tab continues from there.
+ */
+function LegalIndex({ sections }: { sections: Section[] }) {
+  const t = useCopy();
+  const wide = useMediaQuery('(min-width: 1024px)');
+  const jump = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ block: 'start' });
+    document.getElementById(`${id}-title`)?.focus({ preventScroll: true });
+  };
+  return (
+    // Keyed by the width, so it opens or closes when the breakpoint is crossed
+    // and otherwise keeps what the reader chose.
+    <details key={wide ? 'wide' : 'narrow'} className="ss-legal-index" open={wide}>
+      <summary>{t('page.onThisPage')}</summary>
+      <nav aria-label={t('page.onThisPage')}>
+        <ol>
+          {sections.map((section) => (
+            <li key={section.id}>
+              <Link to={`#${section.id}`} onClick={() => jump(section.id)}>{t(section.title)}</Link>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </details>
+  );
+}
+
 function LegalDocument({ title, lead, sections }: { title: CopyKey; lead: CopyKey; sections: Section[] }) {
   const t = useCopy();
   const billing = useBilling();
@@ -387,12 +421,15 @@ function LegalDocument({ title, lead, sections }: { title: CopyKey; lead: CopyKe
   };
 
   return (
-    <Page title={t(title)} lead={t(lead)}>
+    // The 'Legal' kicker, as the purchase steps carry 'devShark Premium'
+    // (UX audit money-08): every Page names its group above the h1.
+    <Page kicker={t('page.legalKicker')} title={t(title)} lead={t(lead)}>
       <p className="ss-legal-updated">{t('legal.updated', { date: updated })}</p>
+      <LegalIndex sections={sections} />
       <div className="ss-legal">
         {sections.map((section) => (
           <section key={section.id} id={section.id} className="ss-legal-section" aria-labelledby={`${section.id}-title`}>
-            <h2 id={`${section.id}-title`}>{t(section.title)}</h2>
+            <h2 id={`${section.id}-title`} tabIndex={-1}>{t(section.title)}</h2>
             {section.blocks.map(render)}
           </section>
         ))}

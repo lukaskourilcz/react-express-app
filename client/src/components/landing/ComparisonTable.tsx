@@ -5,9 +5,12 @@
 // registries, and every word from the landing.compare.* keys.
 //
 // Deep End v2: an editorial section (kicker, h2, subtitle), one .ss-panel
-// wrapping a real <table> that scrolls sideways INSIDE its own container on
-// narrow widths so the page body never scrolls horizontally. Status is a
-// ✓ / – / ✗ glyph PLUS a word, so it never relies on colour alone.
+// wrapping a real <table>. Under 600px each row becomes a small block: the
+// feature on its own line, then Free and Premium side by side (UX audit
+// shell-public-07 and money-16), so no cell is squeezed to 77px. The table
+// keeps explicit ARIA roles, because a table drawn with display: grid or
+// block loses its implicit ones in some browsers. Status is a ✓ / – / ✗
+// glyph PLUS a word, so it never relies on colour alone.
 
 import { useId, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -16,6 +19,7 @@ import type { TranslationKey } from '../../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../../shared/tiers';
 import { useLaunchOffer } from '../../lib/launchOffer';
 import { useEntitlement } from '../../lib/entitlement';
+import { useAuth } from '../../lib/auth';
 import { LaunchOfferNote, PremiumMonthlyCaption } from '../LaunchOffer';
 import { SUBJECT_SCOPE_CATALOG } from '../../../../shared/subject-catalog';
 import { Button } from '@astryxdesign/core/Button';
@@ -54,13 +58,17 @@ const YES: Cell = { mark: 'yes', key: 'landing.compare.yes' };
 const NO: Cell = { mark: 'no', key: 'landing.compare.no' };
 
 // Access first, then what both plans share, then coins once redemption opens.
-// The FDE path and coins are Premium; the AI and bilingual rows of
-// the old table are gone, because devShark ships neither.
+// Projects and the FDE path have rows of their own (UX audit money-03), so the
+// table says everything the Premium list says and /premium can drop the list;
+// the coding row no longer folds the project stages into its free cell. The
+// AI and bilingual rows of the old table are gone, because devShark ships
+// neither.
 export const PLAN_ROWS: readonly PlanRow[] = [
   { labelKey: 'landing.compare.rowLessons', free: { mark: 'partial', key: 'landing.compare.othersLessons' }, premium: { mark: 'yes', key: 'landing.compare.premiumLessons' } },
   { labelKey: 'landing.compare.rowReact', free: { mark: 'partial', key: 'landing.compare.freeReact' }, premium: { mark: 'yes', key: 'landing.compare.premiumReact' } },
   { labelKey: 'landing.compare.rowCoding', free: { mark: 'partial', key: 'landing.compare.freeCoding' }, premium: { mark: 'yes', key: 'landing.compare.premiumCoding' } },
-  { labelKey: 'landing.compare.rowPaths', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumPaths' }, when: 'paths' },
+  { labelKey: 'landing.compare.rowProjects', free: { mark: 'partial', key: 'landing.compare.freeProjects' }, premium: { mark: 'yes', key: 'landing.compare.premiumProjects' } },
+  { labelKey: 'landing.compare.rowPaths', free: { mark: 'partial', key: 'landing.compare.freePaths' }, premium: { mark: 'yes', key: 'landing.compare.premiumPaths' }, when: 'paths' },
   { labelKey: 'landing.compare.rowQuizzes', free: YES, premium: YES },
   { labelKey: 'landing.compare.rowLeaderboards', free: YES, premium: YES },
   // Redemption ships closed until the owner opens it, so the claim says so,
@@ -80,12 +88,17 @@ export interface ComparisonTableProps {
   showOfferNote?: boolean;
   /** Optional homepage announcement directly below the comparison card. */
   afterTable?: ReactNode;
+  /** Inside a page that already has its own section kicker and states VAT by
+   *  its prices (/premium): the table leaves out its kicker, its subtitle and
+   *  the Premium caption's ", before VAT" (UX audit money-03). */
+  embedded?: boolean;
 }
 
-export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true, showOfferNote = true, afterTable }: ComparisonTableProps) {
+export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true, showOfferNote = true, afterTable, embedded = false }: ComparisonTableProps) {
   const t = useT();
   const offer = useLaunchOffer();
   const entitlement = useEntitlement();
+  const { isAuthenticated } = useAuth();
   const headingId = useId();
   const config = useGameConfig();
   const open = { paths: anyLearningPathOpen(config), redemption: redemptionOpen(config) };
@@ -108,16 +121,15 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
   return (
     <section aria-labelledby={headingId} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Kicker>{t('landing.compare.kicker')}</Kicker>
-        <h2
-          id={headingId}
-          style={{ margin: '4px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}
-        >
+        {!embedded && <Kicker>{t('landing.compare.kicker')}</Kicker>}
+        <h2 id={headingId} className="ss-section-title" style={{ marginTop: 4 }}>
           {t('landing.compare.title')}
         </h2>
-        <p style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text-secondary)', maxWidth: '70ch' }}>
-          {t('landing.compare.subtitle', vars)}
-        </p>
+        {!embedded && (
+          <p style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text-secondary)', maxWidth: '70ch' }}>
+            {t('landing.compare.subtitle', vars)}
+          </p>
+        )}
       </div>
 
       <div className="ss-panel" style={{ overflow: 'hidden' }}>
@@ -127,26 +139,26 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
           aria-label={t('landing.compare.title')}
           tabIndex={0}
         >
-          <table className="ss-compare">
-            <thead>
-              <tr>
-                <th scope="col">{t('landing.compare.colFeature')}</th>
-                <th scope="col">
+          <table className="ss-compare" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th scope="col" role="columnheader" className="ss-compare__featurecol">{t('landing.compare.colFeature')}</th>
+                <th scope="col" role="columnheader">
                   {t('landing.compare.colBrand')}
                   <span className="ss-compare-caption">{t('landing.compare.freeCaption')}</span>
                 </th>
-                <th scope="col" className="ss-compare__herocell">
+                <th scope="col" role="columnheader" className="ss-compare__herocell">
                   {t('landing.compare.colOthers')}
-                  <span className="ss-compare-caption"><PremiumMonthlyCaption offer={offer} /></span>
+                  <span className="ss-compare-caption"><PremiumMonthlyCaption offer={offer} withVat={!embedded} /></span>
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {rows.map((row) => (
-                <tr key={row.labelKey}>
-                  <th scope="row">{t(row.labelKey)}</th>
-                  <td>{cell(row.free)}</td>
-                  <td className="ss-compare__herocell">{cell(row.premium)}</td>
+                <tr key={row.labelKey} role="row">
+                  <th scope="row" role="rowheader">{t(row.labelKey)}</th>
+                  <td role="cell">{cell(row.free)}</td>
+                  <td role="cell" className="ss-compare__herocell">{cell(row.premium)}</td>
                 </tr>
               ))}
             </tbody>
@@ -162,14 +174,21 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
         {t('landing.compare.footnote')}
       </p>
 
-      {showCta && (
+      {/* 'Start free' is for a visitor without an account (UX audit
+          shell-public-17). A signed-in free learner already started: the
+          table's next step for them is Premium, as a secondary link, and a
+          Premium member needs no action here at all. */}
+      {showCta && isAuthenticated && !entitlement.loading && !entitlement.failed && entitlement.tier !== 'premium' && (
+        <div className="ss-compare-cta">
+          <Button variant="secondary" size="md" className="ss-action" as={Link} href="/premium" label={t('landing.compare.seePremium')} />
+        </div>
+      )}
+      {showCta && !isAuthenticated && (
         <div className="ss-compare-cta">
           {entitlement.loading ? (
             <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled isLoading />
           ) : entitlement.failed ? (
             <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled tooltip={t('profile.plan.failed')} />
-          ) : entitlement.tier === 'premium' ? (
-            <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled tooltip={t('premium.memberThanks')} />
           ) : onStart ? (
             <SwimCta label={t('landing.compare.cta')} onClick={onStart} dir={1} />
           ) : (

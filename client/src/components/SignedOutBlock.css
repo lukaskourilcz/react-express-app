@@ -1,0 +1,5 @@
+/* The signed-out block (SignedOutBlock.tsx, UX audit money-05): a sentence and
+   the Sign in page action under it, on the surface it replaces content on. No
+   border, no background: it is not a card. */
+.ss-signed-out { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; min-width: 0; }
+.ss-signed-out .ss-signed-out__text { margin: 0; max-width: 68ch; color: var(--color-text-secondary); line-height: 1.5; }
