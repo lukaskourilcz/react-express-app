@@ -110,6 +110,24 @@ describe('an account made with an email and password', () => {
     expect((await screen.findAllByText('el-tiburon-loco')).length).toBeGreaterThan(0);
   });
 
+  it('moves between the Profile tabs with the arrow keys, from one Tab stop', async () => {
+    serveAccount(false);
+    await mount('/profile', <Profile />);
+    const overview = await screen.findByRole('tab', { name: 'Overview' });
+    const friends = screen.getByRole('tab', { name: 'Friends' });
+    expect(overview).toHaveAttribute('tabindex', '0');
+    expect(friends).toHaveAttribute('tabindex', '-1');
+    overview.focus();
+    fireEvent.keyDown(overview, { key: 'ArrowRight' });
+    expect(friends).toHaveAttribute('aria-selected', 'true');
+    expect(friends).toHaveFocus();
+    expect(await screen.findByText('gracias-sharkie')).toBeInTheDocument();
+    fireEvent.keyDown(friends, { key: 'Home' });
+    expect(overview).toHaveAttribute('aria-selected', 'true');
+    expect(overview).toHaveAttribute('tabindex', '0');
+    expect(friends).toHaveAttribute('tabindex', '-1');
+  });
+
   it('starts the cards’ reads with the stats read instead of after it', async () => {
     serveAccount(false);
     let release!: () => void;

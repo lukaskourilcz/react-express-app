@@ -277,13 +277,29 @@ function ProfileBody({
         {/* Two tabs. The overview is everything the profile has always been;
             Friends is the only thing on this page about anybody else, so it
             gets its own space rather than becoming a ninth card. */}
-        <div className="de-tabs" role="tablist" aria-label={t('nav.profile')}>
+        {/* A tab list as the ARIA pattern has it: one Tab stop, the arrow
+            keys (and Home and End) move between the two tabs. */}
+        <div
+          className="de-tabs"
+          role="tablist"
+          aria-label={t('nav.profile')}
+          onKeyDown={(event) => {
+            const next = event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+              ? (tab === 'overview' ? 'friends' : 'overview')
+              : event.key === 'Home' ? 'overview' : event.key === 'End' ? 'friends' : null;
+            if (!next) return;
+            event.preventDefault();
+            setTab(next);
+            document.getElementById(`profile-tab-${next}`)?.focus();
+          }}
+        >
           <button
             type="button"
             role="tab"
             id="profile-tab-overview"
             aria-selected={tab === 'overview'}
             aria-controls="profile-panel-overview"
+            tabIndex={tab === 'overview' ? 0 : -1}
             className="de-tab"
             onClick={() => setTab('overview')}
           >
@@ -295,6 +311,7 @@ function ProfileBody({
             id="profile-tab-friends"
             aria-selected={tab === 'friends'}
             aria-controls="profile-panel-friends"
+            tabIndex={tab === 'friends' ? 0 : -1}
             className="de-tab"
             onClick={() => setTab('friends')}
           >
