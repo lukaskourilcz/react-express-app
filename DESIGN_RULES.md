@@ -355,3 +355,10 @@ their props), never drawn again by hand.
   (Previous and Next together on the left). Their one filled primary is the
   next step: "Show the answer" face down, Got it once the card is turned. Got
   it stays in one place and only its fill changes.
+- **A run's other screens share its shell.** A Learn level's intro and its
+  result, the screens that start a level again (timed out, sign-in changed,
+  a retired question) and every skill-check screen render inside
+  `QuestionShell` with the same header, so the exit button does not move
+  when Start is pressed. Each has one primary in `QuestionActions`; a track
+  or checkpoint colour may tint the hearts, the score or the confetti, never
+  a button.
