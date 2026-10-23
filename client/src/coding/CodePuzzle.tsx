@@ -65,7 +65,9 @@ export function CodePuzzle({
       // With a modifier the line moves; without one, focus does. Both are
       // useful, and conflating them makes reordering by accident too easy.
       if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) {
-        move(id, delta);
+        // Not while an order is being checked, as the Up and Down buttons:
+        // the verdict would describe an arrangement no longer on screen.
+        if (!busy) move(id, delta);
       } else {
         const next = lines[index + delta];
         if (next) {
@@ -83,7 +85,7 @@ export function CodePuzzle({
         refs.current[target.id]?.focus();
       }
     }
-  }, [indexOf, lines, move]);
+  }, [busy, indexOf, lines, move]);
 
   const selectedIndex = selected ? indexOf(selected) : -1;
 

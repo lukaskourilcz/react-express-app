@@ -190,3 +190,17 @@ it('says where a moved puzzle line landed', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Move down' }));
   expect(status).toHaveTextContent('const one = () => { moved to position 2 of 3');
 });
+
+// While an order was being checked the Up and Down buttons were off but Shift
+// and an arrow still moved lines, so the verdict described an arrangement no
+// longer on screen.
+it('moves no puzzle line from the keyboard while the order is being checked', () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockReturnValue(new Promise(() => {}));
+  mountPuzzle();
+  fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
+  expect(submitCoding).toHaveBeenCalledWith(expect.objectContaining({ order: ['b1', 'b2', 'b3'] }));
+  const first = screen.getAllByRole('option')[0];
+  fireEvent.keyDown(first, { key: 'ArrowDown', shiftKey: true });
+  expect(screen.getAllByRole('option').map((option) => option.querySelector('code')?.textContent)).toEqual(['}', 'const one = () => {', '  return 1;']);
+});
