@@ -52,5 +52,8 @@
   .rm-stage { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
   .rm-stage__label { padding-top: 0; }
   .rm-stage:not(:last-child) > .rm-stage__label::after { display: none; }
-  .rm-stage__topics { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  /* 176px cards keep each of the three part cells at least 44px wide
+     (verification round 1: 140px cards made them 40px at 390), so a phone
+     shows one card a row and a wider narrow map two. */
+  .rm-stage__topics { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
 }

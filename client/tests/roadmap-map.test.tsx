@@ -69,5 +69,7 @@ describe('the career roadmap map', () => {
     expect(css).toMatch(/\.rm-stage \{[^}]*grid-template-columns: 180px minmax\(0, 1fr\);/);
     expect(css).toMatch(/\.rm-stage:not\(:last-child\) > \.rm-stage__label::after \{[^}]*width: 2px;/);
     expect(css).toMatch(/@container \(max-width: 519px\) \{\s*\.rm-stage \{ grid-template-columns: minmax\(0, 1fr\);/);
+    // Narrow cards stay wide enough for three 44px part cells (learn-17).
+    expect(css).toMatch(/@container \(max-width: 519px\) \{[^@]*\.rm-stage__topics \{ grid-template-columns: repeat\(auto-fill, minmax\(176px, 1fr\)\); \}/);
   });
 });
