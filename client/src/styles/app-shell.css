@@ -707,9 +707,8 @@
     min-height: 44px;
     min-width: 44px;
   }
-  /* The Learn map's Skill check (36px), the career roadmap's part pills (31px)
-     and path links (28px). */
-  .rm-skillcheck-cta,
+  /* The career roadmap's part pills (31px) and path links (28px). The Learn
+     map's Skill check is 44px on every pointer in Roadmap.css. */
   .rm-part-pill {
     min-height: 44px;
   }

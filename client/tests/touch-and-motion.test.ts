@@ -13,7 +13,6 @@ describe('touch targets on a coarse pointer', () => {
   // Measured in the round-3 audit: 40, 36, 31 and 28px.
   it.each([
     ['.rm-node button', 'a Learn map level, locked or Premium'],
-    ['.rm-skillcheck-cta', 'the Learn map’s Skill check'],
     ['.rm-part-pill', 'a career roadmap part'],
     ['.lp-module__title a', 'a learning path link on the career roadmap'],
   ])('raises %s (%s) to 44px', (selector) => {
@@ -22,6 +21,13 @@ describe('touch targets on a coarse pointer', () => {
 
   it('gives a level node 44px of width as well', () => {
     expect(declared(coarse, '.rm-node button', 'min-width')).toBe('44px');
+  });
+
+  // UX audit learn-18: the Skill check is a page action, so it is 44px with a
+  // mouse as well, set once in Roadmap.css rather than only for touch.
+  it('keeps the Learn map’s Skill check at the control height on every pointer', () => {
+    const roadmap = [...addSheet('roadmap').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+    expect(declared(roadmap, '.rm-skillcheck-cta', 'min-height')).toBe('var(--ss-control-height)');
   });
 });
 
