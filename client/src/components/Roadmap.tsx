@@ -1858,7 +1858,8 @@ export function BigOIntroduction() {
       <SwimCta label={t('bigO.firstLesson')} onClick={() => open(1)} />
       <AxButton variant="secondary" label={t('bigO.secondLesson')} onClick={() => open(2)} />
     </div>
-    <p><Link to="/big-o">{t('bigO.backToGuide')}</Link></p>
+    {/* The shared text link (44px, brand accent), not the browser's own blue. */}
+    <p className="ss-text-links"><Link to="/big-o">{t('bigO.backToGuide')}</Link></p>
   </div>;
 }
 
