@@ -71,7 +71,12 @@ export function AnswerOptionList({ options, value, onChange, onActivate, labelle
           >
             <span className="ss-answer-option__row">
               <span className="ss-answer-option__key" aria-hidden>{index + 1}</span>
-              <span className="ss-answer-option__text">{renderOption ? renderOption(option, index) : option}</span>
+              {/* data-reserve: a hidden semibold copy of the words holds the
+                  row's height, so selecting or grading a row (its text turns
+                  semibold) never rewraps it. */}
+              <span className="ss-answer-option__text" data-reserve={option}>
+                <span className="ss-answer-option__label">{renderOption ? renderOption(option, index) : option}</span>
+              </span>
               {markText && (
                 <span className="ss-answer-option__mark">
                   <span aria-hidden>{mark === 'correct' ? '✓' : '✕'}</span>

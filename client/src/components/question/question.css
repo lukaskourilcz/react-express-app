@@ -156,8 +156,21 @@
   font-weight: 700;
 }
 .ss-answer-option[data-selected='true'] .ss-answer-option__key { background: var(--brand-accent); color: var(--brand-on-accent); }
-.ss-answer-option__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: 400; }
+.ss-answer-option__text { display: grid; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: 400; }
 .ss-answer-option[data-selected='true'] .ss-answer-option__text { font-weight: 600; }
+/* The words and a hidden semibold copy of them share one grid cell, so the
+   row is always as tall as its semibold text: a line near the row's edge that
+   wraps once it turns semibold (selected, or the Learn pick at grading) has
+   its second line held already, and the rows under it do not move. */
+.ss-answer-option__label { grid-area: 1 / 1; align-self: center; min-width: 0; }
+.ss-answer-option__text::after {
+  content: attr(data-reserve);
+  grid-area: 1 / 1;
+  min-width: 0;
+  font-weight: 600;
+  visibility: hidden;
+  pointer-events: none;
+}
 /* A graded row never changes height. With the words beside the text,
    "mutable by the component ✕ Your pick" went to two lines on a 320px phone
    row, and so did a 44–62 character answer (a quarter of the bank) on the

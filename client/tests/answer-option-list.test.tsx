@@ -76,6 +76,15 @@ describe('AnswerOptionList', () => {
     expect(css).toMatch(/\.ss-answer-option__mark-text \{[^}]*clip-path: inset\(50%\)/);
   });
 
+  it('holds each row at its semibold height, so selecting a row never rewraps it', () => {
+    renderList();
+    const text = screen.getAllByRole('radio')[1].querySelector('.ss-answer-option__text');
+    expect(text).toHaveAttribute('data-reserve', '"object"');
+    expect(text?.querySelector('.ss-answer-option__label')).toHaveTextContent('"object"');
+    expect(css).toMatch(/\.ss-answer-option__text::after \{\s*content: attr\(data-reserve\);\s*grid-area: 1 \/ 1;[^}]*font-weight: 600;\s*visibility: hidden;/);
+    expect(css).toMatch(/\.ss-answer-option__label \{ grid-area: 1 \/ 1;/);
+  });
+
   it('marks only the right answer when the pick was right, or when nothing was picked', () => {
     const { unmount } = renderList({ value: 1, grade: { correct: 1, picked: 1 }, disabled: true });
     expect(screen.queryByText('Your pick')).toBeNull();
