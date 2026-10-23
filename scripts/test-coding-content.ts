@@ -1243,6 +1243,9 @@ async function main() {
   const puzzlesStarted = Date.now();
   let puzzleOrders = 0;
   assert.ok(puzzleIds.length > 0, 'the puzzle manifest must cover something');
+  for (const inherited of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    assert.equal(puzzleFor(inherited), undefined, `puzzleFor(${inherited}) must not answer an Object prototype member`);
+  }
   for (const id of puzzleIds) {
     const task = CODING_TASKS.find((one) => one.id === id);
     assert.ok(task, `puzzle ${id} must name a real task`);
@@ -1283,8 +1286,13 @@ async function main() {
     // What the browser sees carries no authored id, and sorting what it sees
     // never produces an accepted order — the ids say nothing about the answer.
     const reversed = <T>(list: T[]) => [...list].reverse();
-    for (const shuffle of [reversed, <T>(list: T[]) => [...list.slice(1), ...list.slice(0, 1)]]) {
+    // The identity is a shuffle a fair one can return: it deals the authored
+    // order, so the puzzle would start solved.
+    const unchanged = <T>(list: T[]) => [...list];
+    for (const shuffle of [reversed, <T>(list: T[]) => [...list.slice(1), ...list.slice(0, 1)], unchanged]) {
       const presented = presentPuzzle(puzzle, shuffle);
+      assert.equal(isAcceptedOrder(presented.map, puzzle.accepted), false, `${id}: the puzzle is never dealt already solved`);
+      assert.deepEqual([...presented.map].sort(), puzzle.lines.map((line) => line.id).sort(), `${id}: every line is dealt exactly once`);
       const authored = new Set(puzzle.lines.map((line) => line.id));
       assert.ok(presented.lines.every((line) => !authored.has(line.id)), `${id}: presented ids must not be the authored ids`);
       const sorted = [...presented.lines.map((line) => line.id)].sort();

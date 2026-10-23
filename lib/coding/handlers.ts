@@ -741,7 +741,12 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     // for. An id this session never issued fails the whole submission.
     const map = session.key?.puzzle;
     if (!map) return jsonError(res, 400, 'invalid_session', 'This session did not issue a puzzle');
-    const resolved = resolvePuzzleOrder(body.order.filter((id): id is string => typeof id === 'string').slice(0, PUZZLE_MAX_LINES), map);
+    // Every entry must be an id: dropping the others would accept an order
+    // padded with junk as if it were the arrangement the learner sent.
+    if (body.order.length > PUZZLE_MAX_LINES || !body.order.every((id): id is string => typeof id === 'string')) {
+      return jsonError(res, 400, 'bad_request', 'Arrange every line exactly once');
+    }
+    const resolved = resolvePuzzleOrder(body.order as string[], map);
     const order = resolved.filter((id): id is string => id !== null);
     if (order.length !== resolved.length || !isCompleteOrder(order, puzzle.lines)) {
       return jsonError(res, 400, 'bad_request', 'Arrange every line exactly once');

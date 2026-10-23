@@ -4,7 +4,14 @@ import ts from 'typescript';
 import { complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
 import type { CodingTask } from '../../shared/coding-catalog';
 
-const inputNames = (text: string, names: Set<string>) => [...names].some((name) => new RegExp(`\\b${name}\\b`).test(text));
+/** Whether `text` mentions one of `names` as a whole identifier. One scan of
+ * the text, not one RegExp per name: a loop condition was matched against a
+ * new pattern for every input binding, so a submission with hundreds of
+ * bindings and loops spent seconds here. Names are identifiers and are never
+ * read as patterns, so `$` in one is a character, not an anchor. */
+const IDENTIFIER_TOKEN = /[\w$]+/g;
+const inputNames = (text: string, names: ReadonlySet<string>): boolean =>
+  names.size > 0 && (text.match(IDENTIFIER_TOKEN) ?? []).some((token) => names.has(token));
 
 type Cost = { power: number; log: number };
 const constant: Cost = { power: 0, log: 0 };
@@ -22,6 +29,14 @@ const targetCost = (value: string): Cost | null => {
   const power = value.match(/^O\(n\^(\d+)\)$/);
   return power ? { power: Number(power[1]), log: 0 } : null;
 };
+/** Node visits one assessment may spend outside the cost walk: the deferred-
+ * work check and the binding passes run again for every call of a helper, so
+ * a helper called a thousand times was inspected a thousand times with no
+ * shared limit. The authored solutions use at most a few thousand. */
+const ANALYSIS_STEPS = 150_000;
+type AnalysisBudget = { left: number };
+const ANALYSIS_LIMIT_MESSAGE = 'The analysis limit was reached. Review the code manually.';
+
 const scanMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'includes', 'indexOf', 'lastIndexOf', 'slice', 'split', 'join', 'reverse', 'toReversed', 'flat', 'flatMap', 'concat', 'replace', 'replaceAll', 'toLowerCase', 'toUpperCase', 'trim', 'substring', 'substr', 'shift', 'unshift', 'splice']);
 const rangeMethods = new Set(['slice', 'substring', 'substr']);
 const callbackMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'flatMap', 'sort', 'toSorted']);
@@ -32,7 +47,7 @@ const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delet
  * or mistaking map/Promise callbacks for functions returned to the caller.
  * Unresolved dynamic factories still require manual review; this is not a
  * general interprocedural type or lifetime analysis. */
-function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
+function returnsDeferredWork(fn: ts.FunctionLikeDeclaration, budget: AnalysisBudget): boolean {
   if (!fn.body) return false;
   const bindings = new Map<string, ts.Node[]>();
   const aliases = new Map<string, Set<string>>();
@@ -59,7 +74,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
     }
   };
   const collect = (node: ts.Node): void => {
-    if (++visited > 12_000) { limited = true; return; }
+    if (++visited > 12_000 || --budget.left < 0) { limited = true; return; }
     if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && node.name) bind(node.name.text, node);
     if (callable(node)) return;
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) bind(node.name.text, node.initializer);
@@ -83,7 +98,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
     const pending = [owner];
     const seen = new Set<string>();
     while (pending.length) {
-      if (++visited > 12_000) { limited = true; break; }
+      if (++visited > 12_000 || --budget.left < 0) { limited = true; break; }
       const name = pending.pop()!;
       if (seen.has(name)) continue;
       seen.add(name);
@@ -92,7 +107,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
     }
   }
   const deferred = (node: ts.Node, seen = new Set<ts.Node>()): boolean => {
-    if (++visited > 12_000) return true;
+    if (++visited > 12_000 || --budget.left < 0) return true;
     if (seen.has(node)) return false;
     // Reachability has no per-path type state: visit each value node once,
     // rather than copying a growing Set for a long chain of aliases.
@@ -124,7 +139,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
   if (!ts.isBlock(fn.body)) return limited || deferred(fn.body);
   let found = limited;
   const returns = (node: ts.Node): void => {
-    if (++visited > 12_000) { found = true; return; }
+    if (++visited > 12_000 || --budget.left < 0) { found = true; return; }
     if (callable(node)) return;
     if (ts.isReturnStatement(node) && node.expression && deferred(node.expression)) found = true;
     if (!found) ts.forEachChild(node, returns);
@@ -183,8 +198,13 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   }
   const evidence = new Set<string>();
   let visited = 0;
+  const budget: AnalysisBudget = { left: ANALYSIS_STEPS };
+  // Whether a function returns deferred work depends on its source alone.
+  const deferredWork = new Map<ts.FunctionLikeDeclaration, boolean>();
   const inspectFunction = (fn: ts.FunctionLikeDeclaration, stack: Set<string>, inherited: Set<string> = new Set(), inputParameters?: Set<string>): Cost => {
-    if (returnsDeferredWork(fn)) {
+    let deferred = deferredWork.get(fn);
+    if (deferred === undefined) deferredWork.set(fn, deferred = returnsDeferredWork(fn, budget));
+    if (deferred) {
       uncertainty = 'Construction and the returned callable workload need separate complexity scopes.';
       return constant;
     }
@@ -235,6 +255,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     for (const name of testedStrings.get(fn) ?? []) strings.add(name);
     const regexes = new Map<string, string>();
     const collect = (node: ts.Node) => {
+      if (--budget.left < 0) return;
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.type?.kind === ts.SyntaxKind.StringKeyword) strings.add(node.name.text);
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
         const kind = collectionKind(node.initializer);
@@ -251,20 +272,62 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       ts.forEachChild(node, collect);
     };
     if (fn.body) collect(fn.body);
+    // Input sizes, before loop indices join `bounds`. A `var` index outlives
+    // its loop, so it joins these too.
+    const sizes = new Set(bounds);
     // A loop index can bound a nested scan (for j < i).
     if (fn.body) {
       const indices = (node: ts.Node) => {
+        if (--budget.left < 0) return;
         if (ts.isForStatement(node) && node.condition && inputNames(node.condition.getText(file), bounds) && node.initializer && ts.isVariableDeclarationList(node.initializer)) {
-          for (const declaration of node.initializer.declarations) if (ts.isIdentifier(declaration.name)) bounds.add(declaration.name.text);
+          const blockScoped = (node.initializer.flags & ts.NodeFlags.BlockScoped) !== 0;
+          for (const declaration of node.initializer.declarations) if (ts.isIdentifier(declaration.name)) {
+            bounds.add(declaration.name.text);
+            if (!blockScoped) sizes.add(declaration.name.text);
+          }
         }
         ts.forEachChild(node, indices);
       };
       indices(fn.body);
     }
     const inputBound = (node: ts.Node): boolean => inputNames(node.getText(file), bounds);
+    // A `let` index bounds a loop only inside the loop that declares it. Read
+    // from `bounds`, which holds every index of the function, a later loop
+    // that reuses the name (for (let i = 0; i < 26; i++)) counted as input-
+    // sized, so an O(n) solution read as O(n^2), above target, with less XP.
+    const declaresIndex = (loop: ts.ForStatement, name: string): boolean => !!loop.initializer
+      && ts.isVariableDeclarationList(loop.initializer)
+      && loop.initializer.declarations.some((declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === name);
+    const indexLoops = new Map<ts.ForStatement, boolean>();
+    const indexBounded = (loop: ts.ForStatement): boolean => {
+      let known = indexLoops.get(loop);
+      if (known === undefined) indexLoops.set(loop, known = !!loop.condition && loopInputBound(loop, loop.condition));
+      return known;
+    };
+    const loopInputBound = (loop: ts.Node, condition: ts.Expression): boolean => {
+      const names = condition.getText(file).match(IDENTIFIER_TOKEN) ?? [];
+      if (names.some((name) => sizes.has(name))) return true;
+      return names.some((name) => {
+        if (!bounds.has(name)) return false;
+        for (let scope: ts.Node | undefined = loop; scope; scope = scope.parent) {
+          if (--budget.left < 0) return false;
+          // A loop's own index is not its bound.
+          if (ts.isForStatement(scope) && declaresIndex(scope, name)) return scope !== loop && indexBounded(scope);
+        }
+        return false;
+      });
+    };
+    const fixedBound = (operand: ts.Expression): boolean => {
+      if (ts.isParenthesizedExpression(operand)) return fixedBound(operand.expression);
+      if (numericLiteral(operand) !== null) return true;
+      if (ts.isIdentifier(operand)) return fixedCollections.has(operand.text);
+      if (ts.isPropertyAccessExpression(operand) && operand.name.text === 'length') return collectionKind(operand.expression) === 'fixed';
+      return ts.isBinaryExpression(operand) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken].includes(operand.operatorToken.kind)
+        && numericLiteral(operand.right) !== null && fixedBound(operand.left);
+    };
     const walk = (node: ts.Node): Cost => {
       visited += 1;
-      if (visited > 12_000) { uncertainty = 'The analysis limit was reached. Review the code manually.'; return constant; }
+      if (visited > 12_000 || budget.left < 0) { uncertainty = ANALYSIS_LIMIT_MESSAGE; return constant; }
       if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && strings.has(node.left.text) && [ts.SyntaxKind.PlusEqualsToken, ts.SyntaxKind.EqualsToken].includes(node.operatorToken.kind)) uncertainty = 'Growing immutable strings need a manual review of copying costs.';
       if (ts.isTemplateExpression(node) && node.templateSpans.some(span => collectionKind(span.expression) !== 'fixed')) {
         uncertainty = 'Input-dependent string construction needs a manual review of output costs.';
@@ -323,10 +386,14 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
           ts.forEachChild(child, inspectControl);
         };
         inspectControl(node.statement);
-        if (inputBound(condition)) {
+        if (loopInputBound(node, condition)) {
           loop = /\/=\s*2|\*=\s*2|>>=\s*1/.test(increment) ? { power: 0, log: 1 } : linear;
           evidence.add(loop.log ? 'Halving or doubling loop' : 'Input-bounded loop');
-        } else if (![...fixedCollections].some(name => new RegExp(`\\b${name}\\b`).test(condition.getText(file))) && (!/^[\w\s<>=!+\-\d.]+$/.test(condition.getText(file)) || !/\b\d+\b/.test(condition.getText(file)))) {
+        } else if (!(ts.isBinaryExpression(condition) && fixedBound(condition.left) && fixedBound(condition.right))) {
+          // Both sides must be fixed. A counter started at a literal is fixed
+          // itself, so mentioning one fixed name let i < unknown.length pass as
+          // constant work, and a quadratic walk over a destructured input read
+          // as O(1).
           uncertainty = 'A loop bound cannot be related to the input size.';
         }
         // Conditions and increment expressions run on every iteration; the
@@ -408,6 +475,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   };
   let cost = constant;
   for (const name of entries) cost = max(cost, inspectFunction(functions.get(name)!, new Set([name])));
+  if (budget.left < 0) return unknown(ANALYSIS_LIMIT_MESSAGE);
   if (uncertainty) return unknown(uncertainty);
   const time = label(cost);
   const target = guidance.targetTime ? targetCost(guidance.targetTime) : null;

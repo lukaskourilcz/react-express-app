@@ -374,10 +374,33 @@ export interface CodingLadderInput {
   javascriptLevelsCleared: number;
 }
 
+/** The ids each tier of each track counts, per task list, computed once.
+ * `evolvingStage` scans every project for one id, and a practice run or the
+ * section list asks the ladder about every task, so recounting the list on
+ * each question cost about 40 ms per pass over the catalogue. The lists are
+ * readonly catalogues, so a list is keyed by identity. */
+const LADDER_TIERS = new WeakMap<readonly CodingTaskSummary[], Map<string, string[]>>();
+const ladderTier = (tasks: readonly CodingTaskSummary[], track: CodingTrack, tier: CodingTier): readonly string[] => {
+  let tiers = LADDER_TIERS.get(tasks);
+  if (!tiers) {
+    tiers = new Map();
+    for (const task of tasks) {
+      if (evolvingStage(task.id)) continue;
+      const key = `${task.track}:${task.tier}`;
+      const ids = tiers.get(key);
+      if (ids) ids.push(task.id);
+      else tiers.set(key, [task.id]);
+    }
+    LADDER_TIERS.set(tasks, tiers);
+  }
+  return tiers.get(`${track}:${tier}`) ?? [];
+};
+
 const tierPassRatio = (tier: CodingTier, input: CodingLadderInput): number => {
-  const inTier = input.tasks.filter((task) => !evolvingStage(task.id) && task.track === input.track && task.tier === tier);
+  const inTier = ladderTier(input.tasks, input.track, tier);
   if (inTier.length === 0) return 0;
-  const passed = inTier.filter((task) => input.progress.passed.has(task.id)).length;
+  let passed = 0;
+  for (const id of inTier) if (input.progress.passed.has(id)) passed += 1;
   return passed / inTier.length;
 };
 

@@ -97,6 +97,32 @@ export function complexityContracts() {
   assert.equal(check('function solve(xs) { for (let i=mystery(xs);i<xs.length;i++) {} return xs; }').assessment, 'unknown');
   assert.equal(check('const solve = xs => /[a-z]/.test(xs);').time, 'O(n)');
   assert.equal(check('function solve(xs) { let i=1; while(i<xs.length) i*=2; return i; }').time, 'O(log n)');
+  // An identifier is matched as a name, never as a pattern: `$` once read as
+  // an end-of-text anchor, so a `$`-named input never bounded its own loop.
+  assert.equal(check('function solve($xs) { let t=0; for (let i=0;i<$xs.length;i++) t+=$xs[i]; return t; }').time, 'O(n)', '$ in an input name is part of the name');
+  // A counter that starts at a literal is fixed, and a bound that names it is
+  // not thereby fixed: these walked whole inputs and were labelled O(1).
+  for (const code of [
+    'function solve({ items }) { let t=0; for (let i=0;i<items.length;i++) for (let j=0;j<items.length;j++) t+=items[j]; return t; }',
+    'function solve(xs) { const half = Math.floor(xs.length / 2); for (let i=0;i<half;i++) xs[i]=xs[xs.length-1-i]; return xs; }',
+    'function solve(xs) { let t=0; for (let i=0;i<$xs.length;i++) t+=xs[i]; return t; }',
+    'function solve(xs) { let i=0; while (i<ys.length) i++; return xs; }',
+  ]) {
+    assert.equal(check(code).time, null, code);
+    assert.equal(check(code).assessment, 'unknown', code);
+  }
+  for (const code of [
+    'function solve(xs) { let t=0; for (let i=0;i<3;i++) t+=i; return xs.length + t; }',
+    'function solve(xs) { const fixed=[1,2,3]; let t=0; for (let i=0;i<fixed.length-1;i++) t+=fixed[i]; return xs.length + t; }',
+  ]) assert.equal(check(code).time, 'O(1)', code + ': a literal or fixed-collection bound stays constant work');
+  // A loop index bounds a nested loop only inside the loop that declares it.
+  // A later loop reusing the name over a literal read as input-sized, so this
+  // O(n) solution was labelled O(n^2), above target, and paid 15 XP.
+  const reusedIndex = check('function solve(xs) { let t=0; for (let i=0;i<xs.length;i++) t+=xs[i]; for (let i=0;i<3;i++) for (let j=0;j<xs.length;j++) t++; return t; }');
+  assert.equal(reusedIndex.time, 'O(n)', 'a reused index name is not an input size outside its own loop');
+  assert.equal(codingPassXp(reusedIndex), 25);
+  assert.equal(check('function solve(xs) { let t=0; for (let i=0;i<xs.length;i++) for (let j=0;j<i;j++) t++; return t; }').time, 'O(n^2)', 'an enclosing index still bounds a nested loop');
+  assert.equal(check('function solve(xs) { let t=0; for (var i=0;i<xs.length;i++) t++; for (let j=0;j<i;j++) t++; return t; }').time, 'O(n)', 'a var index outlives its loop and still bounds a later one');
   assert.equal(check('const solve = xs => xs.length ? solve(xs.slice(1)) : 0;').assessment, 'unknown');
   assert.equal(check('const solve = xs => mystery(xs);').time, null);
   assert.equal(check('const solve = xs => { while(xs.length) xs = mystery(xs); return 1; };').assessment, 'unknown');
@@ -105,6 +131,16 @@ export function complexityContracts() {
   assert.doesNotThrow(() => check(deeplyNested), 'an advisory parser failure cannot replace the grader verdict');
   assert.equal(check(deeplyNested).assessment, 'unknown');
   assert.equal(check('const solve = xs => { let out = ""; for (let i=0;i<xs.length;i++) out+=xs[i]; return out; };').assessment, 'unknown');
+  // A helper is inspected again at every call, so one helper called a
+  // thousand times was a thousand full inspections: 13 kB held a request for
+  // seconds. One shared budget covers every pass of one assessment.
+  const bindings = Array.from({ length: 500 }, (_, i) => `b${i}=a`).join(',');
+  const repeatedHelper = `function h(a){const z=()=>{const ${bindings};${'for(let i=0;q<q;);'.repeat(200)}};return 1;}`
+    + `function solve(xs){${'h(xs);'.repeat(1000)}return 1;}`;
+  const limited = check(repeatedHelper);
+  assert.equal(limited.assessment, 'unknown', 'a repeatedly inspected helper stops at the shared analysis budget');
+  assert.equal(limited.explanation, 'The analysis limit was reached. Review the code manually.');
+  assert.equal(codingPassXp(limited), 25, 'an exhausted analysis keeps the base reward');
   assert.equal(check('const solve = xs => /^(a+)+$/.test(xs);').assessment, 'unknown');
   assert.equal(check('const cache = mystery(); const solve = xs => cache[xs];').assessment, 'unknown');
   for (const code of [

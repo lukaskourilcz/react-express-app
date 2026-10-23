@@ -33,11 +33,12 @@ const auth = vi.hoisted(() => ({
 vi.mock('../src/lib/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/auth')>()), useAuth: () => auth.value }));
 
 // The /roadmap track switch saves the plan through this one writer.
-const saves = vi.hoisted(() => ({ calls: [] as unknown[][] }));
+const saves = vi.hoisted(() => ({ calls: [] as unknown[][], hold: null as null | Promise<void> }));
 vi.mock('../src/lib/trackPref', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/trackPref')>()),
   saveLearningPreference: async (...args: unknown[]) => {
     saves.calls.push(args);
+    if (saves.hold) await saves.hold;
     return { ok: true, preference: args[1] };
   },
 }));
@@ -73,6 +74,7 @@ const signInAs = (preference: unknown = null) => {
 afterEach(() => {
   auth.value = { ...auth.value, user: null, isAuthenticated: false };
   saves.calls.length = 0;
+  saves.hold = null;
   closeUpgradeSheet();
   setTrackValue('fullstack');
 });
@@ -109,6 +111,7 @@ interface Answers {
   complete?: () => Response;
   placement?: unknown;
   skillCheck?: () => Response;
+  structure?: unknown;
 }
 /** Every read and write the Learn screens make; counts the level fetches. */
 function answer(options: Answers = {}) {
@@ -124,7 +127,7 @@ function answer(options: Answers = {}) {
         seen.levelFetches += 1;
         return HttpResponse.json((options.playable ?? PLAYABLE) as never);
       }
-      return HttpResponse.json(STRUCTURE as never);
+      return HttpResponse.json((options.structure ?? STRUCTURE) as never);
     }),
     http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: options.progress ?? {}, extra: { unlocked: options.unlocked ?? [] } })),
     http.post('*/api/quiz/roadmap', ({ request }) => {
@@ -225,6 +228,60 @@ describe('the plan', () => {
     expect(saves.calls[0][0]).toBe('user-1');
     expect(saves.calls[0][1]).toMatchObject({ baseTrack: 'frontend', specialization: null });
     expect(await screen.findByText('Saved: Frontend')).toBeInTheDocument();
+  });
+
+  // The headline counted only the curated pillar areas, so Git, which every
+  // track holds and the map draws, was left out: 0 / 37 instead of 0 / 52.
+  it('counts every topic of the chosen track in the /roadmap headline', async () => {
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    expect(await screen.findByText('0 / 52 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+  });
+
+  // Math.round drew 199 of 200 levels as a finished, green 100%.
+  it('shows 100% on /roadmap only once every level is passed', async () => {
+    signInAs(BACKEND);
+    const passed = Object.fromEntries(Array.from({ length: 199 }, (_, i) => [String(i + 1), MASTERED]));
+    answer({
+      structure: { topics: ['javascript'], structure: { javascript: { levels: levels(200), checkpoints: [] } } },
+      progress: { javascript: { levels: passed, checkpoints: {} } },
+    });
+    await mountAt('/roadmap', <CareerRoadmap />);
+    expect(await screen.findByText('199 / 200 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+    expect(screen.getAllByText('99%').length).toBeGreaterThan(0);
+    expect(screen.queryByText('100%')).toBeNull();
+  });
+
+  // Both choices land before React draws the disabled chooser, as two quick
+  // clicks do: the second must not start a save that races the first.
+  it('saves one /roadmap track at a time', async () => {
+    signInAs(BACKEND);
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    act(() => {
+      fireEvent.click(screen.getByRole('radio', { name: 'Frontend' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Backend' }));
+    });
+    expect(await screen.findByText('Saved: Frontend')).toBeInTheDocument();
+    expect(saves.calls).toHaveLength(1);
+    expect(saves.calls[0][1]).toMatchObject({ baseTrack: 'frontend' });
+  });
+
+  // A sign-out while the save was in flight still announced "Saved" to
+  // whoever used the page next.
+  it('announces nothing for a /roadmap track save once the account has signed out', async () => {
+    signInAs(BACKEND);
+    answer();
+    let release = () => {};
+    saves.hold = new Promise<void>((resolve) => { release = resolve; });
+    await mountAt('/roadmap', <CareerRoadmap />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Frontend' }));
+    await waitFor(() => expect(saves.calls).toHaveLength(1));
+    act(() => { clearAccountData(); });
+    await act(async () => { release(); });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByText('Saved: Frontend')).toBeNull();
+    expect(screen.getByRole('radio', { name: 'Backend' })).not.toBeDisabled();
   });
 
   it('only changes the view for a visitor', async () => {

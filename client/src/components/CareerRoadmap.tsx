@@ -8,7 +8,7 @@
 // SegmentedControl track chooser, ProgressBars and Badges — all logic, hooks and
 // i18n preserved verbatim.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -32,9 +32,10 @@ import {
 } from '../lib/roadmap';
 import { roadmapStructureQuery, useRoadmapStructure } from '../lib/queries';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { enrollmentsQuery, pathCatalogQuery } from '../lib/learningPaths';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
-import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useTrack, trackTopics, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { preferredLearningOf, saveLearningPreference } from '../lib/trackPref';
 import { eligibilityKeys, useInPlan, useLearnerSections } from '../lib/eligibility';
 import { useLocks } from '../lib/locks';
@@ -122,8 +123,13 @@ const BEYOND: { id: string; labelKey: TranslationKey; detailKey: TranslationKey 
 
 const SENIOR_RANK_TITLE = 'Senior Developer';
 
+/** A whole percent, rounded as the section figures are (sectionProgress in
+ * learn/sections.ts): 100 only once every level is passed, and at least 1 once
+ * one is. Math.round showed 199 of 200 levels as a finished 100%. */
 function pct(passed: number, total: number): number {
-  return total > 0 ? Math.round((passed / total) * 100) : 0;
+  if (total <= 0) return 0;
+  const percent = Math.floor((100 * passed) / total);
+  return percent === 0 && passed > 0 ? 1 : percent;
 }
 
 export default function CareerRoadmap() {
@@ -146,21 +152,35 @@ export default function CareerRoadmap() {
   // Learn and Today to (a topic outside it answers 403 not_in_plan). Changing
   // it here changes it there too, or the map would show one track while every
   // level of it was refused. Signed out, it only chooses what the map shows.
+  // The chooser is disabled while a save runs, but that reaches React a
+  // render after the click: a second choice in between started a second save
+  // that could land first and leave the account on the other track.
+  const savingRef = useRef(false);
   const chooseTrack = async (next: Track) => {
+    if (savingRef.current) return;
     setTrack(next);
     setTrackNotice(null);
     if (!user) return;
+    savingRef.current = true;
     setSavingTrack(true);
-    const saved = await saveLearningPreference(user.id, {
-      schemaVersion: 1,
-      baseTrack: next,
-      specialization: preferredLearningOf(user)?.specialization ?? null,
-    });
-    if (saved.ok) await queryClient.invalidateQueries({ queryKey: eligibilityKeys.all });
-    setSavingTrack(false);
-    setTrackNotice(saved.ok
-      ? t('profile.pathSaved', { track: t(trackLabelKey(subject, next)), role: '' })
-      : t('paths.picker.saveFailed'));
+    const epoch = accountEpoch();
+    try {
+      const saved = await saveLearningPreference(user.id, {
+        schemaVersion: 1,
+        baseTrack: next,
+        specialization: preferredLearningOf(user)?.specialization ?? null,
+      });
+      // The account signed out during the save (as Learn's section join
+      // checks): its outcome is not this page's to announce.
+      if (accountEpoch() !== epoch) return;
+      if (saved.ok) await queryClient.invalidateQueries({ queryKey: eligibilityKeys.all });
+      setTrackNotice(saved.ok
+        ? t('profile.pathSaved', { track: t(trackLabelKey(subject, next)), role: '' })
+        : t('paths.picker.saveFailed'));
+    } finally {
+      savingRef.current = false;
+      setSavingTrack(false);
+    }
   };
   const pillars = useMemo(() => webdevPillars(t), [t]);
 
@@ -176,13 +196,19 @@ export default function CareerRoadmap() {
   const inPlan = useInPlan();
   const { hasPlan, members } = useLearnerSections();
   const extraUnlocks = useExtraUnlocks();
-  const levelCounts = Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([topic, data]) => [topic, data.levels.length]));
+  // Kept per structure, as on /learn: useLocks memoises its content index on
+  // this object, and a fresh one each render rebuilt the index and lockOf.
+  const levelCounts = useMemo(
+    () => Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([topic, data]) => [topic, data.levels.length])),
+    [structure],
+  );
+  const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
   const { lockOf } = useLocks(levelCounts);
   const fde = useFdePathSteps();
   const groups = LEARN_SECTIONS.map((section) => {
     const entries = railEntries(section.id, {
       liveTopics: Object.keys(levelCounts), inPlan, hasPlan, isMember: members.includes(section.id),
-      progress, extraUnlocks: new Set(extraUnlocks), lockOf,
+      progress, extraUnlocks: extraUnlocksSet, lockOf,
     });
     const shown = new Set(entries.map((entry) => entry.topic));
     const grouped = pillars.map((pillar) => ({ ...pillar, areas: pillar.areas.filter((area) => shown.has(area.topic)) }))
@@ -196,19 +222,19 @@ export default function CareerRoadmap() {
     return { section, pillars: grouped, figure };
   });
 
-  // Aggregate completion across the areas that belong to the chosen track.
+  // Aggregate completion across every topic of the chosen track, the stages
+  // the map below draws. The pillars name only the curated areas, so counting
+  // through them left Git and AI & LLMs, which every track holds, out of it.
   const overall = useMemo(() => {
     let passed = 0;
     let total = 0;
-    for (const pillar of pillars) {
-      for (const area of pillar.areas) {
-        if (!isTopicInTrack(track, area.topic)) continue;
-        total += levelsFor(area.topic);
-        passed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
-      }
+    for (const topic of trackTopics(track)) {
+      const count = levelsFor(topic);
+      total += count;
+      passed += Math.min(passedLevelCount(progress, topic), count);
     }
     return { passed, total, pct: pct(passed, total) };
-  }, [progress, structure, track, pillars]);
+  }, [progress, structure, track]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const info = levelForXp(totalXp);
   const rankKeys = rankLabelKeyFor(info.rank, track);

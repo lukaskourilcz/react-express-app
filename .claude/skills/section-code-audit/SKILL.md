@@ -1,6 +1,6 @@
 ---
 name: section-code-audit
-description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563) and Web Developer audits of 22–23 October 2026.
+description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564) and Software Engineer audits of 22–23 October 2026.
 ---
 
 # Section code audit
@@ -45,6 +45,11 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Read errors treated as "nothing there": a failed passed-tasks read re-offered finished work; a failed draft read looked like no draft. Answer 503 or log and flag it.
 - Public responses the same for every caller: `max-age` alone keeps them out of the CDN. Add `s-maxage` and `stale-while-revalidate` when no caller data is in them.
 - Sorting with an expensive comparator: compute each key once before the sort.
+- Analysers over learner input (the complexity estimator): build no `RegExp` per input name, share one step budget across every pass, memoise per node, and answer "unknown" when the budget runs out. Make sure an uncertain answer never lowers XP. Snapshot every authored solution's report before and after a change to prove nothing else moved.
+- Shuffles that can return the answer: a dealt puzzle must never start solved. Redraw, and test the identity shuffle.
+- Lookups by id on plain objects: use `Object.hasOwn` (or a `Map`), or `constructor` and `__proto__` resolve to Object members.
+- Arrays from the client: refuse entries of the wrong type with 400 instead of filtering them out and accepting the rest.
+- Repeated work over the whole catalogue per call (`filter` over 769 tasks on each unlock check): index it once in a `WeakMap` keyed by the readonly list.
 
 **Client**
 - Lost keystrokes: debounced autosaves dropped on unmount, or routed to the activity just opened instead of the one left. Flush on unmount through a latest-callback ref, and route by the id the view was opened with.
@@ -65,6 +70,10 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Keyboard shortcuts must ignore keys from forms and dialogs inside the screen, and must not act on a hidden editor.
 - Workers and heavy idle warm-ups: stop a browser run when the learner leaves; skip idle preloads when `navigator.connection.saveData` is set.
 - `ShellPartBoundary` goes inside `Suspense`, as its doc comment says.
+- Focus on controls that disable or re-insert themselves: when Next on the last step, a moved list item or a replaced Submit button loses focus, move it to the nearest control that still works, or to the verdict.
+- Head tags: write `og:url` beside the canonical on client navigation, and treat a trailing slash as the same route.
+- Initial-chunk weight: strings and defaults nothing reads (fallback labels, dev tips) still ship. Delete them, and measure with `check:bundle`.
+- Touch targets: every button is at least 44px tall.
 
 ## 3. How to work
 

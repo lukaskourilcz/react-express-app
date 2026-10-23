@@ -3,7 +3,7 @@
 // Answers are graded on the server against the key sealed in the session. The
 // explanations and the correct options arrive with a passing verdict, never
 // before and never with a failed one: that says only which answers were wrong.
-import { useCallback, useId, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Kicker } from '../components/landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -29,7 +29,15 @@ export interface DesignRunnerProps {
   onContinue?: () => void;
 }
 
-export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict, onRetry, nextHref, backHref, onContinue }: DesignRunnerProps) {
+/** One attempt per session. Try again opens a new session whose options come
+ * back in a new order, so the answers, the verdict and "already checked" of
+ * the last one must not carry over: an answer is an option's index, and the
+ * same index names another option now. Keyed like the code puzzle. */
+export function DesignRunner(props: DesignRunnerProps) {
+  return <DesignAttempt key={`${props.task.id}:${props.session ?? ''}`} {...props} />;
+}
+
+function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRetry, nextHref, backHref, onContinue }: DesignRunnerProps) {
   const { t } = useLanguage();
   const baseId = useId();
   const design = task.design;
@@ -47,6 +55,32 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
   // lost still used it up. Only a new attempt, opened again, can be checked.
   const [sessionUsed, setSessionUsed] = useState(false);
   const [moved, setMoved] = useState('');
+  // A verdict that arrives after this attempt was left (a new session, another
+  // task, another page) belongs to nothing on screen: it must not reach
+  // `onVerdict`, which would record it against what the learner opened since.
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => { live.current = false; };
+  }, []);
+  // Each question is its own keyed block, so Next and Previous are replaced
+  // as they are pressed and focus fell to the page. It goes to the question
+  // that opened instead, as in a skill check.
+  const questionRef = useRef<HTMLHeadingElement>(null);
+  const stepped = useRef(false);
+  const goToStep = (to: number) => {
+    stepped.current = true;
+    setStepIndex(Math.max(0, Math.min(steps.length - 1, to)));
+  };
+  useEffect(() => {
+    if (!stepped.current) return;
+    stepped.current = false;
+    questionRef.current?.focus();
+  }, [stepIndex]);
+  // The verdict replaces the questions and the Submit button with them, so
+  // focus goes to the verdict, as on the code workbench.
+  const verdictRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
 
   const answered = useMemo(() => answers.filter((one) => one !== null).length, [answers]);
   const drillAnswer = useMemo((): DesignAnswer | null => {
@@ -68,9 +102,11 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
     setError(null);
     try {
       const result = await submitCoding({ session, answers: payload });
+      if (!live.current) return;
       setVerdict(result);
       onVerdict?.(result);
     } catch (caught) {
+      if (!live.current) return;
       if (caught instanceof ApiError && caught.code === 'design_session_used') {
         setSessionUsed(true);
         setError(t('coding.design.sessionUsed'));
@@ -78,21 +114,34 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
         setError(caught instanceof ApiError && caught.code === 'invalid_session' ? t('coding.verdict.sessionExpired') : friendlyError(caught));
       }
     } finally {
-      setSubmitting(false);
+      if (live.current) setSubmitting(false);
     }
   }, [session, submitting, sessionUsed, design, answers, answered, steps.length, drillAnswer, onVerdict, t]);
 
+  // Each press is its own event, rendered before the next, so `order` is the
+  // arrangement on screen.
+  const moveButtons = useRef<Record<string, HTMLButtonElement | null>>({});
+  const focusAfterMove = useRef<string | null>(null);
   const move = (from: number, direction: -1 | 1) => {
-    setOrder((prev) => {
-      const to = from + direction;
-      if (to < 0 || to >= prev.length) return prev;
-      const next = [...prev];
-      [next[from], next[to]] = [next[to], next[from]];
-      // Reordering is silent otherwise: say what moved and where it landed.
-      setMoved(t('coding.design.moved', { step: drill!.steps![next[to]], n: to + 1, total: next.length }));
-      return next;
-    });
+    const to = from + direction;
+    if (!drill?.steps || to < 0 || to >= order.length) return;
+    const next = [...order];
+    [next[from], next[to]] = [next[to], next[from]];
+    setOrder(next);
+    // Reordering is silent otherwise: say what moved and where it landed.
+    setMoved(t('coding.design.moved', { step: drill.steps[next[to]], n: to + 1, total: next.length }));
+    // A step moved down is re-inserted, which drops focus, and one that
+    // reaches either end turns its own button off. Focus stays with the step:
+    // on the same button while it still moves, on the other one at an end.
+    const atEnd = direction === -1 ? to === 0 : to === next.length - 1;
+    const way = (direction === -1) === atEnd ? 'down' : 'up';
+    focusAfterMove.current = `${next[to]}:${way}`;
   };
+  useEffect(() => {
+    const key = focusAfterMove.current;
+    focusAfterMove.current = null;
+    if (key) moveButtons.current[key]?.focus();
+  }, [order]);
 
   const header = (
     <div className="cd-pane__head">
@@ -136,7 +185,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
         <section className="cd-pane">
           <span className="cd-visually-hidden" role="status" aria-live="polite">{label}</span>
           {header}
-          <section className={`cd-verdict cd-verdict--${verdict.verdict}`}>
+          <section className={`cd-verdict cd-verdict--${verdict.verdict}`} ref={verdictRef} tabIndex={-1}>
             <h3 className="cd-verdict__title">
               <span>{label}</span>
               {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
@@ -218,7 +267,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
 
         {design && current && (
           <div className="cd-design__step" key={current.key}>
-            <h3 id={`${baseId}-q`} style={{ margin: 0 }}>{current.title}</h3>
+            <h3 id={`${baseId}-q`} ref={questionRef} tabIndex={-1} style={{ margin: 0 }}>{current.title}</h3>
             <p className="cd-design__brief">{current.prompt}</p>
             <RadioCardGroup value={answers[stepIndex] === null ? null : String(answers[stepIndex])} onChange={(value) => setAnswers((prev) => prev.map((one, i) => (i === stepIndex ? Number(value) : one)))} labelledBy={`${baseId}-q`}>
               {current.options.map((option, index) => (
@@ -226,9 +275,9 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
               ))}
             </RadioCardGroup>
             <div className="cd-design__nav">
-              <Button variant="secondary" onClick={() => setStepIndex((i) => Math.max(0, i - 1))} isDisabled={stepIndex === 0} label={t('coding.design.previous')} />
+              <Button variant="secondary" onClick={() => goToStep(stepIndex - 1)} isDisabled={stepIndex === 0} label={t('coding.design.previous')} />
               {stepIndex < steps.length - 1
-                ? <Button variant="primary" onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))} isDisabled={answers[stepIndex] === null} label={t('coding.design.next')} />
+                ? <Button variant="primary" onClick={() => goToStep(stepIndex + 1)} isDisabled={answers[stepIndex] === null} label={t('coding.design.next')} />
                 : <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || sessionUsed || answered < steps.length} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />}
             </div>
           </div>
@@ -259,8 +308,8 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
                     <li key={original}>
                       <span className="cd-sequence__n">{position + 1}</span>
                       <span>{drill.steps![original]}</span>
-                      <Button variant="ghost" onClick={() => move(position, -1)} isDisabled={position === 0} label={`${t('coding.design.moveUp')}: ${drill.steps![original]}`}>↑</Button>
-                      <Button variant="ghost" onClick={() => move(position, 1)} isDisabled={position === order.length - 1} label={`${t('coding.design.moveDown')}: ${drill.steps![original]}`}>↓</Button>
+                      <Button ref={(node) => { moveButtons.current[`${original}:up`] = node; }} variant="ghost" onClick={() => move(position, -1)} isDisabled={position === 0} label={`${t('coding.design.moveUp')}: ${drill.steps![original]}`}>↑</Button>
+                      <Button ref={(node) => { moveButtons.current[`${original}:down`] = node; }} variant="ghost" onClick={() => move(position, 1)} isDisabled={position === order.length - 1} label={`${t('coding.design.moveDown')}: ${drill.steps![original]}`}>↓</Button>
                     </li>
                   ))}
                 </ol>

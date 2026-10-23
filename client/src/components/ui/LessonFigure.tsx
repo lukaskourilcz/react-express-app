@@ -18,7 +18,7 @@
 //   * Nothing moves under a reduced-motion preference, because nothing moves at
 //     all — the frames are states, not an animation.
 
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useT } from '../../i18n/LanguageContext';
 import { TermsBar } from './Terms';
 import { glossaryDomainFor } from '../../lib/glossaryDomain';
@@ -165,7 +165,28 @@ function TableView({ body }: { body: Extract<Figure['body'], { kind: 'table' }> 
 function StepsView({ body }: { body: Extract<Figure['body'], { kind: 'steps' }> }) {
   const t = useT();
   const [index, setIndex] = useState(0);
-  const frame = body.frames[Math.min(index, body.frames.length - 1)];
+  const previousRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  // A control that turns itself off drops keyboard focus to the page: Reset
+  // always does, Next on the last step and Previous on the first. Focus goes
+  // to the control that still has something to do, once it is on again.
+  const focusAfter = useRef<'previous' | 'next' | null>(null);
+  useEffect(() => {
+    const target = focusAfter.current === 'previous' ? previousRef.current : focusAfter.current === 'next' ? nextRef.current : null;
+    focusAfter.current = null;
+    target?.focus();
+  }, [index]);
+  const last = body.frames.length - 1;
+  const go = (to: number) => {
+    const clamped = Math.max(0, Math.min(last, to));
+    if (clamped === 0) focusAfter.current = 'next';
+    else if (clamped === last) focusAfter.current = 'previous';
+    setIndex(clamped);
+  };
+  const frame = body.frames[Math.min(index, last)];
+  // A sequence with no frames has nothing to step through; the figure's words
+  // still carry it. Reading `frame.cells` threw and took the lesson with it.
+  if (!frame) return null;
 
   return (
     <div className="ss-figure__steps">
@@ -199,28 +220,30 @@ function StepsView({ body }: { body: Extract<Figure['body'], { kind: 'steps' }> 
 
       <div className="ss-figure__controls">
         <button
+          ref={previousRef}
           type="button"
           className="ss-figure__button"
-          onClick={() => setIndex((current) => Math.max(0, current - 1))}
+          onClick={() => go(index - 1)}
           disabled={index === 0}
         >
           {t('figure.previous')}
         </button>
         <span className="ss-figure__position">
-          {t('figure.step', { current: Math.min(index, body.frames.length - 1) + 1, total: body.frames.length })}
+          {t('figure.step', { current: Math.min(index, last) + 1, total: body.frames.length })}
         </span>
         <button
+          ref={nextRef}
           type="button"
           className="ss-figure__button"
-          onClick={() => setIndex((current) => Math.min(body.frames.length - 1, current + 1))}
-          disabled={index >= body.frames.length - 1}
+          onClick={() => go(index + 1)}
+          disabled={index >= last}
         >
           {t('figure.next')}
         </button>
         <button
           type="button"
           className="ss-figure__button ss-figure__button--quiet"
-          onClick={() => setIndex(0)}
+          onClick={() => go(0)}
           disabled={index === 0}
         >
           {t('figure.reset')}

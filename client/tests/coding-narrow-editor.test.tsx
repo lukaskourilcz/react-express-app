@@ -7,6 +7,8 @@ import { submitCoding } from '../src/coding/api';
 import { runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
 import { formatCode } from '../src/coding/runner/format';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { readFileSync } from 'node:fs';
+import { declared } from './css';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -165,4 +167,49 @@ it('does not tell a signed-in learner to sign in after an accepted order', async
   expect(await screen.findByRole('heading', { level: 1, name: 'Passed +0 XP' })).toBeVisible();
   expect(screen.getByRole('link', { name: 'Back to the list' })).toBeVisible();
   expect(screen.queryByText('Checked, not recorded: sign in to keep passes.')).toBeNull();
+});
+
+// A long puzzle line keeps its indentation and scrolls inside its own box at
+// 360 px and 200 % text. The line's code is a scroll container, so as a flex
+// item its automatic minimum width is already zero, and the pane around the
+// puzzle may shrink below its content: the stylesheet is what keeps the page
+// from widening, so the test reads it.
+it('lets a long puzzle line scroll inside its own box instead of widening the page', () => {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+  document.head.append(style);
+  const rules = [...style.sheet!.cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+  expect(declared(rules, '.cd-puzzle__line code', 'white-space')).toBe('pre');
+  expect(declared(rules, '.cd-puzzle__line code', 'overflow-x')).toBe('auto');
+  expect(declared(rules, '.cd-pane', 'min-width')).toBe('0px');
+  style.remove();
+});
+
+// A line moved up keeps focus, so a screen reader heard nothing of where it
+// landed; the puzzle now says it in its own status line.
+it('says where a moved puzzle line landed', () => {
+  mountPuzzle();
+  const status = document.querySelector<HTMLElement>('.cd-puzzle > [role="status"]')!;
+  expect(status).toHaveTextContent('');
+  const second = screen.getAllByRole('option')[1];
+  fireEvent.click(second);
+  fireEvent.keyDown(second, { key: 'ArrowUp', shiftKey: true });
+  expect(screen.getAllByRole('option')[0]).toHaveTextContent('const one = () => {');
+  expect(status).toHaveTextContent('const one = () => { moved to position 1 of 3');
+  fireEvent.click(screen.getByRole('button', { name: 'Move down' }));
+  expect(status).toHaveTextContent('const one = () => { moved to position 2 of 3');
+});
+
+// While an order was being checked the Up and Down buttons were off but Shift
+// and an arrow still moved lines, so the verdict described an arrangement no
+// longer on screen.
+it('moves no puzzle line from the keyboard while the order is being checked', () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockReturnValue(new Promise(() => {}));
+  mountPuzzle();
+  fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
+  expect(submitCoding).toHaveBeenCalledWith(expect.objectContaining({ order: ['b1', 'b2', 'b3'] }));
+  const first = screen.getAllByRole('option')[0];
+  fireEvent.keyDown(first, { key: 'ArrowDown', shiftKey: true });
+  expect(screen.getAllByRole('option').map((option) => option.querySelector('code')?.textContent)).toEqual(['}', 'const one = () => {', '  return 1;']);
 });

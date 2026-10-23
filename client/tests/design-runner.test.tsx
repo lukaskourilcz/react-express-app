@@ -3,7 +3,7 @@
 // until a pass, and the runner does not invent them. A pass shows the whole
 // walkthrough.
 import { expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { DesignRunner } from '../src/coding/DesignRunner';
@@ -155,4 +155,91 @@ it('says a used walkthrough must be opened again, offers Try again, and stops re
   expect(submitCoding).toHaveBeenCalledTimes(2);
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(onRetry).toHaveBeenCalledTimes(1);
+});
+
+// Try again opens a new session with the options in a new order. The runner
+// kept the last attempt's verdict and answers, so the new session showed the
+// old verdict, and a resubmit would have sent indexes that now name other
+// options.
+it('starts a new attempt clean when the session changes', async () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockResolvedValue(verdict({ design: [{ correct: true, given: 0 }, { correct: false, given: 1 }, { correct: false, given: 0 }] }));
+  const view = (session: string) => (
+    <MemoryRouter><LanguageProvider>
+      <DesignRunner task={task} session={session} locked={null} signedIn mode="section" onRetry={vi.fn()} />
+    </LanguageProvider></MemoryRouter>
+  );
+  const { rerender } = render(view('first-session'));
+  expect(await answerAndSubmit()).toHaveTextContent('Failed');
+  rerender(view('second-session'));
+  expect(screen.queryByRole('heading', { level: 3, name: /^Failed/ })).toBeNull();
+  expect(screen.getByRole('heading', { level: 3, name: 'What are we building' })).toBeVisible();
+  expect(screen.getByRole('radio', { name: 'Reads dominate' })).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'Next question' })).toBeDisabled();
+});
+
+// A verdict for an attempt the learner had already left still reached
+// onVerdict, which records it against whatever was opened since.
+it('reports no verdict for an attempt that was left before it arrived', async () => {
+  vi.mocked(submitCoding).mockReset();
+  let answer: (value: CodingVerdictResponse) => void = () => {};
+  vi.mocked(submitCoding).mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+  const onVerdict = vi.fn();
+  const view = (session: string) => (
+    <MemoryRouter><LanguageProvider>
+      <DesignRunner task={task} session={session} locked={null} signedIn mode="section" onVerdict={onVerdict} />
+    </LanguageProvider></MemoryRouter>
+  );
+  const { rerender } = render(view('left-session'));
+  fireEvent.click(screen.getByRole('radio', { name: 'Reads dominate' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Only the code' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'A cache' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }));
+  expect(submitCoding).toHaveBeenCalledWith({ session: 'left-session', answers: [0, 1, 0] });
+  rerender(view('new-session'));
+  await act(async () => { answer(verdict({ verdict: 'passed', design: [] })); });
+  expect(onVerdict).not.toHaveBeenCalled();
+  expect(screen.queryByRole('heading', { level: 3, name: /^Passed/ })).toBeNull();
+});
+
+// Each question is a keyed block, so the Next and Previous buttons were
+// replaced as they were pressed and keyboard focus fell to the page.
+it('moves focus to the question that opens on Next and Previous', () => {
+  mount();
+  expect(document.activeElement).toBe(document.body);
+  fireEvent.click(screen.getByRole('radio', { name: 'Reads dominate' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: 'What we store' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Previous question' }));
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: 'What are we building' }));
+});
+
+// The verdict replaced the questions and the Submit button with them, and
+// keyboard focus fell to the page.
+it('moves focus to the verdict when it arrives', async () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockResolvedValue(verdict({ design: [{ correct: true, given: 0 }, { correct: false, given: 1 }, { correct: false, given: 0 }] }));
+  mount();
+  const heading = await answerAndSubmit();
+  expect(document.activeElement).toBe(heading.closest('.cd-verdict'));
+});
+
+// A sequence step moved down is re-inserted, which drops focus, and one moved
+// to either end turned its own button off: focus fell to the page.
+it('keeps focus with a sequence step as it moves', () => {
+  const drill: PlayableCodingTask = {
+    ...task, id: 'dd-test-sequence', verify: 'drill', design: undefined,
+    drill: { format: 'sequence', scenario: 'A deploy.', prompt: 'In what order?', steps: ['Build', 'Test', 'Ship'] },
+  };
+  render(<MemoryRouter><LanguageProvider><DesignRunner task={drill} session="drill-session" locked={null} signedIn mode="section" /></LanguageProvider></MemoryRouter>);
+  const down = screen.getByRole('button', { name: 'Move down: Build' });
+  down.focus();
+  fireEvent.click(down);
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move down: Build' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Move down: Build' }));
+  expect(screen.getByRole('button', { name: 'Move down: Build' })).toBeDisabled();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move up: Build' }));
+  expect(screen.getByText('Build moved to position 3 of 3')).toBeInTheDocument();
 });

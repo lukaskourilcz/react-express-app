@@ -45,6 +45,10 @@ describe('the tab title', () => {
     ['/daily', 'Question of the day · devShark'],
     ['/no-such-page', 'Page not found · devShark'],
     ['/roadmap/paths/not-a-path', 'Page not found · devShark'],
+    // React Router renders a trailing slash as the page itself.
+    ['/quiz/', 'Quiz · devShark'],
+    ['/learn/big-o/', 'Big O introduction'],
+    ['/learn/software-engineer/', 'Software Engineer · devShark'],
   ])('%s reads "%s"', (pathname, title) => {
     visit(pathname);
     expect(document.title).toBe(title);
@@ -138,6 +142,15 @@ describe('a share page opened directly', () => {
   });
 });
 
+describe('a trailing slash', () => {
+  it('keeps a Stripe return and an email link out of search results', () => {
+    visit('/premium/success/');
+    expect(robots()).toEqual(['noindex']);
+    visit('/reset-password/');
+    expect(robots()).toEqual(['noindex']);
+  });
+});
+
 describe('the not-found page', () => {
   it('asks search engines not to index it while it shows, and only then', () => {
     visit('/no-such-page');
@@ -167,9 +180,13 @@ for (const [section, name] of [['web-developer', 'Web Developer'], ['software-en
     visit(`/learn/${section}`);
     expect(document.title).toBe(`${name} · devShark`);
     expect(canonical()).toBe(`https://devshark.app/learn/${section}`);
+    // The prerendered page carries og:url beside its canonical; the app kept
+    // the canonical and dropped og:url.
+    expect(meta('meta[property="og:url"]')).toBe(`https://devshark.app/learn/${section}`);
     expect(meta('meta[name="description"]')).not.toBe('shell description');
     expect(robots()).toEqual([]);
     visit('/quiz');
     expect(canonical()).toBeNull();
+    expect(meta('meta[property="og:url"]')).toBeUndefined();
   });
 }

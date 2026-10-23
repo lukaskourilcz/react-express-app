@@ -710,6 +710,12 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     const forged = reply();
     await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: opened.body!.session, order: lines.map((_, index) => `b${index + 2}`) } } as never, forged as never, null);
     assert.equal(forged.statusCode, 400, `${id}: an id the session never issued is refused`);
+    // A right order padded with entries that are not ids is not the order
+    // the learner sent; it is refused, not accepted with the junk dropped.
+    const padded = reply();
+    const rightIds = authored.accepted[0].map((line) => byCode.get(authored.lines.find((one) => one.id === line)!.code)!);
+    await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: opened.body!.session, order: [...rightIds, {}, 42] } } as never, padded as never, null);
+    assert.equal(padded.statusCode, 400, `${id}: an order padded with non-ids is refused`);
   }
   // A signed-in arrangement whose record fails is still answered, and the
   // lost record is logged rather than dropped without a trace.

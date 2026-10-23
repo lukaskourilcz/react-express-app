@@ -10,7 +10,7 @@
  * every covered id is a real task, that each accepted order is a permutation of
  * that puzzle's own lines, and that no puzzle is small enough to be guessable. */
 
-import type { PuzzleCompetency, PuzzleLine } from '../../shared/coding-puzzle';
+import { isAcceptedOrder, type PuzzleCompetency, type PuzzleLine } from '../../shared/coding-puzzle';
 
 /** What the browser is shown: the lines under presentation ids that say
  * nothing about the solution, and — for the sealed session only — the
@@ -28,9 +28,17 @@ export interface PresentedPuzzle {
  * always an accepted one — convenient for authoring, and a giveaway if it ever
  * reached the browser: sorting by id would solve every puzzle without reading
  * a line. So the browser sees `b1..bn` in shuffled order, the session keeps
- * the translation, and the submit handler maps it back before grading. */
+ * the translation, and the submit handler maps it back before grading.
+ *
+ * A shuffle can also land on an accepted order (1 in 120 for a five-line
+ * puzzle), which would deal the puzzle already solved: Submit without moving
+ * a line would pass. Such a deal is drawn again, and a shuffle that keeps
+ * giving it is rotated until the start is not an answer. */
 export function presentPuzzle(puzzle: AuthoredPuzzle, shuffle: <T>(list: T[]) => T[]): PresentedPuzzle {
-  const shuffled = shuffle([...puzzle.lines]);
+  const solved = (lines: readonly PuzzleLine[]) => isAcceptedOrder(lines.map((line) => line.id), puzzle.accepted);
+  let shuffled = shuffle([...puzzle.lines]);
+  for (let draw = 0; draw < 8 && solved(shuffled); draw++) shuffled = shuffle([...puzzle.lines]);
+  for (let turn = 1; turn < shuffled.length && solved(shuffled); turn++) shuffled = [...shuffled.slice(1), shuffled[0]];
   return {
     lines: shuffled.map((line, index) => ({ id: `b${index + 1}`, code: line.code })),
     map: shuffled.map((line) => line.id),
@@ -182,5 +190,8 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
   },
 };
 
-export const puzzleFor = (taskId: string): AuthoredPuzzle | undefined => PUZZLES[taskId];
+// Own keys only: PUZZLES is a plain object, so PUZZLES['constructor'] would
+// answer Object's constructor as if it were an authored puzzle.
+export const puzzleFor = (taskId: string): AuthoredPuzzle | undefined =>
+  Object.hasOwn(PUZZLES, taskId) ? PUZZLES[taskId] : undefined;
 export const puzzleCoverage = (): string[] => Object.keys(PUZZLES);

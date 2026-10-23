@@ -18,10 +18,10 @@ export type Track = 'frontend' | 'backend' | 'fullstack';
 export const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
 
 /*
- * Translation keys for track/topic copy. The registry fields below are
- * fallbacks; user-visible surfaces render t(trackLabelKey(...)) etc., so
- * the copy lives in translations.ts (same pattern as subjectNameKey in
- * subjects.ts).
+ * Translation keys for track/topic copy. User-visible surfaces render
+ * t(trackLabelKey(...)) etc., so the copy lives in translations.ts only (same
+ * pattern as subjectNameKey in subjects.ts). The app shell imports this module,
+ * so English copies kept here as fallbacks rode in the initial chunk unread.
  */
 export const trackLabelKey = (subject: SubjectId, track: Track): TranslationKey =>
   `track.${subject}.${track}.label` as TranslationKey;
@@ -39,31 +39,15 @@ export interface Stage {
   topics: RoadmapTopic[];
 }
 export interface TrackDef {
-  label: string;
-  blurb: string;
   stages: Stage[];
 }
 
-// A one-line "what you'll learn" detail shown on each topic node / pillar row.
-export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
-  html: 'Semantic markup, forms, accessibility.',
-  css: 'Layout, flexbox & grid, responsive design.',
-  javascript: 'Closures, async, and the event loop.',
-  typescript: 'Types, generics, and safer refactors.',
-  git: 'Branches, merges, pull requests, history.',
-  react: 'Components, hooks, state, rendering.',
-  nextjs: 'Routing, server components, data fetching.',
-  nodejs: 'Modules, async, HTTP, Express, streams.',
-  general: 'How the web works: HTTP, caching, auth.',
-  databases: 'SQL, schema design, indexing, transactions.',
-  dsa: 'Growth, arrays, maps, lists, search, sorting and trees.',
-  'dsa-advanced': 'Heaps, graphs, algorithmic patterns and dynamic programming.',
-  algorithms: 'Problem-solving: recursion, combinatorics, math.',
-  testing: 'Unit, integration, and end-to-end testing.',
-  'system-design': 'Caching, queues, sharding, trade-offs.',
-  devops: 'CI/CD, containers, observability, the cloud.',
-  security: 'Auth, the OWASP Top 10, secure defaults.',
-};
+// The topics that show a one-line "what you'll learn" detail on their topic
+// node (topicDetail.* in translations.ts).
+const TOPICS_WITH_DETAIL: ReadonlySet<string> = new Set([
+  'html', 'css', 'javascript', 'typescript', 'git', 'react', 'nextjs', 'nodejs', 'general', 'databases',
+  'dsa', 'dsa-advanced', 'algorithms', 'testing', 'system-design', 'devops', 'security',
+]);
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
 // production. Fullstack is the union; Frontend and Backend share the core
@@ -71,8 +55,9 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
 // (Cool Stuff, AI, Abbreviations) are intentionally left off.
 // The topics of each devShark stage come from shared/progression.ts, which is
 // the same plan the server reads when it decides whether a level may be served.
-// Only the stage titles live here (as English fallbacks behind the i18n keys),
-// so the map a learner sees and the map the API enforces cannot drift apart.
+// Only the stage titles live here (the map keys its stages by them; it draws
+// stageTitleKey), so the map a learner sees and the map the API enforces cannot
+// drift apart.
 const WEBDEV_STAGE_TITLES: Record<Track, string[]> = {
   frontend: ['Foundations', 'Version control', 'The React stack', 'Types on top', 'How the web works'],
   backend: ['Foundations', 'The server & the web', 'Data & computer science', 'Types on top', 'Production & scale'],
@@ -86,21 +71,9 @@ const webdevStages = (track: Track): Stage[] =>
   }));
 
 const WEBDEV_TRACKS: Record<Track, TrackDef> = {
-  frontend: {
-    label: 'Frontend',
-    blurb: 'Build the interfaces people actually touch: markup, styling, and the React stack.',
-    stages: webdevStages('frontend'),
-  },
-  backend: {
-    label: 'Backend',
-    blurb: 'Build and run the server: APIs, data, and systems that hold up under load.',
-    stages: webdevStages('backend'),
-  },
-  fullstack: {
-    label: 'Fullstack',
-    blurb: 'The whole picture: frontend, backend, and everything that ties them together.',
-    stages: webdevStages('fullstack'),
-  },
+  frontend: { stages: webdevStages('frontend') },
+  backend: { stages: webdevStages('backend') },
+  fullstack: { stages: webdevStages('fullstack') },
 };
 
 export const TRACKS_BY_SUBJECT: Record<SubjectId, Record<Track, TrackDef>> = {
@@ -112,15 +85,13 @@ export const tracksForActiveSubject = (): Record<Track, TrackDef> => TRACKS_BY_S
 
 /**
  * A topic's localized one-line detail, or undefined for topics that have none
- * (the TOPIC_DETAIL registry decides coverage; the dictionaries carry the
- * text). Shared by the roadmap tree and the career pillars so both surfaces
- * agree on which topics show a detail line.
+ * (TOPICS_WITH_DETAIL decides coverage; the dictionaries carry the text).
  */
 export function localizedTopicDetail(
   t: (key: TranslationKey) => string,
   topic: RoadmapTopic,
 ): string | undefined {
-  return TOPIC_DETAIL[topic] ? t(topicDetailKey(topic)) : undefined;
+  return TOPICS_WITH_DETAIL.has(topic) ? t(topicDetailKey(topic)) : undefined;
 }
 
 // The set of topics a track covers = the union of its stages. Used to filter
@@ -131,9 +102,6 @@ const topicsOf = (tracks: Record<Track, TrackDef>, track: Track): Set<RoadmapTop
 /** The topics a track covers, within the active subject. */
 export const trackTopics = (track: Track): Set<RoadmapTopic> =>
   topicsOf(tracksForActiveSubject(), track);
-
-export const isTopicInTrack = (track: Track, topic: RoadmapTopic): boolean =>
-  trackTopics(track).has(topic);
 
 // The career-title flavor each track maps to (drives "Junior Frontend
 // Developer", "Senior Backend Engineer", etc.).
@@ -191,8 +159,9 @@ export function setTrackValue(next: Track): void {
   trackStore.emit();
 }
 
-/** Live, persisted roadmap track plus a setter. Shared across the page. */
+/** Live, persisted roadmap track plus a setter. Shared across the page. The
+ * setter is the same function every render, so a callback that lists it in
+ * its dependencies (LearningPathsCard's apply) is not rebuilt each time. */
 export function useTrack(): [Track, (next: Track) => void] {
-  const track = useStore(trackStore);
-  return [track, (next: Track) => setTrackValue(next)];
+  return [useStore(trackStore), setTrackValue];
 }
