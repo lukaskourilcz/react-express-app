@@ -39,6 +39,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const boundedString = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
 
+/** At most `max` characters, cut by code point: a cut by UTF-16 unit could
+ * split an emoji and store half of it. */
+const cutText = (text: string, max: number): string =>
+  text.length <= max ? text : Array.from(text).slice(0, max).join('');
+
 /** Postgres text and JSONB refuse U+0000 (22P05), so a question, a setting, a
  * voucher note or an id holding it failed the write and answered 500. The
  * values are walked, not the JSON text, so a question about escapes that
@@ -251,8 +256,8 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
     ? b.tags.filter((t): t is string => typeof t === 'string' && t.length > 0 && t.length <= MAX_TAG).slice(0, MAX_TAGS)
     : [];
 
-  const explanation = typeof b.explanation === 'string' ? b.explanation.slice(0, MAX_TEXT) : '';
-  const introduction = typeof b.introduction === 'string' ? b.introduction.slice(0, MAX_TEXT) : '';
+  const explanation = typeof b.explanation === 'string' ? cutText(b.explanation, MAX_TEXT) : '';
+  const introduction = typeof b.introduction === 'string' ? cutText(b.introduction, MAX_TEXT) : '';
   const id = boundedString(b.id, 64) ?? undefined;
 
   const saved = await saveQuestion({

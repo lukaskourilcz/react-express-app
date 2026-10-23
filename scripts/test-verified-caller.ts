@@ -498,6 +498,15 @@ async function main() {
     assert.equal(scoped.statusCode, 200, `a quality scan of two categories answers (${errorCode(scoped)})`);
     console.log('PASS verified caller: a quality scan refuses a repeated categories parameter');
 
+    // A long explanation is cut to 4,000 characters by code point, so an
+    // emoji at the cut is kept whole rather than stored as half a pair.
+    seen.length = 0;
+    const long = await admin('save', { method: 'POST', body: { ...question, explanation: `${'a'.repeat(3_999)}🦈 and more` } });
+    assert.equal(long.statusCode, 200, JSON.stringify(long.body));
+    const stored = (reads('/rest/v1/question_edits').find((one) => one.method === 'POST')?.body as Row | undefined)?.explanation as string;
+    assert.equal(stored, `${'a'.repeat(3_999)}🦈`, 'the cut keeps the emoji whole');
+    console.log('PASS verified caller: an admin save cuts long text by code point');
+
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
       ['stats', await user('stats', { account: A })],
