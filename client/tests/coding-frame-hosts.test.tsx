@@ -53,5 +53,5 @@ it('gives every editor call site the shared floor instead of a number of its own
   expect(source('coding/CodingWorkbench.tsx')).not.toMatch(/narrow \? 280 : 480/);
   const css = source('coding/Coding.css');
   expect(css).toContain('--cd-editor-min: 280px;');
-  expect(css).toMatch(/@media \(min-width: 1024px\) \{\s*:root \{ --cd-editor-min: 240px; \}/);
+  expect(css).toMatch(/@media \(min-width: 1024px\) \{\s*:root \{ --cd-editor-min: 200px; \}/);
 });

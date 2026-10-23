@@ -217,15 +217,16 @@
    and 48px under it are left out, within 600–900px. The audit asked for a
    560px floor; 600px leaves the editor its own floor beside a capped brief
    and the action bar. The editor's minimum is one token for every place a
-   task opens: 280px stacked, where it grows with the code, and 240px inside
-   the frame, which normally leaves it far more. */
+   task opens: 280px stacked, where it grows with the code, and 200px inside
+   the frame (what a 600px frame leaves under a capped brief, the editor's
+   toolbar and the action bar), which a taller viewport gives far more. */
 :root {
   --cd-frame-h: clamp(600px, calc(100dvh - 7rem - 48px), 900px);
   --cd-editor-min: 280px;
   --cd-brief-cap: 120px;
 }
 @media (min-width: 1024px) {
-  :root { --cd-editor-min: 240px; }
+  :root { --cd-editor-min: 200px; }
 }
 .cd-workbench { display: flex; flex-direction: column; gap: 16px; }
 .cd-complexity { display: flex; align-items: center; gap: .25rem; font-size: var(--ss-type-label); font-weight: 600; line-height: 1.5; }
@@ -267,10 +268,11 @@
   }
   /* The frame: the first row is --cd-frame-h on every task, so the editor
      starts and Run and Submit sit at the same place whatever the brief says.
-     Hints, confirmations and errors take the row under it. */
+     Hints, confirmations and errors take an implicit row under it, which
+     exists (with its gap) only while they do. */
   .cd-workbench--section .cd-workbench__grid,
   .cd-workbench--lesson .cd-workbench__grid,
-  .cd-workbench--activity .cd-workbench__grid { grid-template-rows: var(--cd-frame-h) auto; }
+  .cd-workbench--activity .cd-workbench__grid { grid-template-rows: var(--cd-frame-h); }
   /* A path's code activity has no separator: its second pane takes the
      workbench's third column, so the code pane is the same width. */
   .cd-workbench--activity .cd-pane--editor { grid-column: 1; grid-row: 1; }
@@ -289,7 +291,7 @@
   /* The full brief still leaves the editor its floor and the bar its row. */
   .cd-workbench--section .cd-brief__body[data-capped='false'],
   .cd-workbench--lesson .cd-brief__body[data-capped='false'],
-  .cd-workbench--activity .cd-brief__body[data-capped='false'] { max-height: calc(var(--cd-frame-h) - var(--cd-editor-min) - 180px); overflow-y: auto; }
+  .cd-workbench--activity .cd-brief__body[data-capped='false'] { max-height: calc(var(--cd-frame-h) - var(--cd-editor-min) - 270px); overflow-y: auto; }
   /* The output pane fills the same frame and scrolls inside. Size
      containment stops its content from growing the row. Scoped to this
      layout: stacked, the pane has a row of its own and would collapse. */
