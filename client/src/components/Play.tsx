@@ -517,9 +517,12 @@ export function PlayMatch() {
   // so the first click is the one that counts.
   const submitLockRef = useRef(false);
 
-  // Initial join + state load.
+  // Initial join + state load. Keyed by the account's id, not the user
+  // object: every session refresh hands over a new object for the same
+  // account, and joining again mid-round would redraw the room from scratch.
+  const userId = user?.id;
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || !code || !playOn) return;
+    if (!isAuthenticated || !userId || !code || !playOn) return;
     let cancelled = false;
     (async () => {
       try {
@@ -528,7 +531,7 @@ export function PlayMatch() {
         try {
           const { server_now: serverNow, ...room } = await joinMatch({
             code,
-            user_id: user.id,
+            user_id: userId,
           });
           noteServerClock(serverNow, sentAt);
           joined = room;
@@ -540,7 +543,7 @@ export function PlayMatch() {
         if (cancelled) return;
         if (joined) setMatch(joined);
         sentAt = Date.now();
-        const state = await fetchMatchState(code, user.id);
+        const state = await fetchMatchState(code, userId);
         if (cancelled) return;
         noteServerClock(state.server_now, sentAt);
         if (!joined) setMatch(state.match);
@@ -557,7 +560,7 @@ export function PlayMatch() {
     return () => {
       cancelled = true;
     };
-  }, [code, isAuthenticated, user, joinAttempt, playOn]);
+  }, [code, isAuthenticated, userId, joinAttempt, playOn, noteServerClock]);
 
   // Pull the latest match state. Shared by the realtime/poll loop and by
   // submitAnswer so an auto-advance is reflected immediately for the answerer.

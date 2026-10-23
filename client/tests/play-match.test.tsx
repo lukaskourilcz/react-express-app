@@ -25,8 +25,10 @@ vi.mock('../src/lib/play', async (importOriginal) => ({
   ...api,
 }));
 const USER = { id: 'player-1', user_metadata: {} };
+// A session refresh hands the screen a new object for the same account.
+let currentUser = USER;
 vi.mock('../src/lib/auth', () => ({
-  useAuth: () => ({ user: USER, isAuthenticated: true, isLoading: false, signInWithGoogle: vi.fn() }),
+  useAuth: () => ({ user: currentUser, isAuthenticated: true, isLoading: false, signInWithGoogle: vi.fn() }),
   getUserProfile: () => ({}),
   displayNameFromProfile: (_profile: unknown, fallback: string) => fallback,
 }));
@@ -86,6 +88,7 @@ async function mount(path = '/play/ABC123', multiplayerOn = true) {
 const settle = () => act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
 
 beforeEach(() => {
+  currentUser = USER;
   for (const fn of Object.values(api)) fn.mockReset();
   api.sendHeartbeat.mockResolvedValue({ ok: true });
   live.listeners.clear();
@@ -143,6 +146,20 @@ describe('recovery', () => {
     expect(api.joinMatch).toHaveBeenCalledTimes(2);
     fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
     await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not join again when a session refresh hands over a new user object', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    await screen.findByText('Pick one?');
+    currentUser = { ...USER };
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await fire('match_updated', { status: 'running', current_index: 1 });
+    await screen.findByText('Next one?');
+    await settle();
+    expect(api.joinMatch).toHaveBeenCalledTimes(1);
   });
 
   it('shows the results of a room that finished instead of an error', async () => {
