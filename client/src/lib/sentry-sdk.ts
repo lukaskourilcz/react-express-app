@@ -5,8 +5,36 @@
 // The scrubber below travels in this lazy chunk with the SDK, so the shell
 // carries none of it.
 import type { Breadcrumb, Event } from '@sentry/react';
+import { init, browserTracingIntegration } from '@sentry/react';
 
-export { init, browserTracingIntegration, captureException } from '@sentry/react';
+export { captureException } from '@sentry/react';
+
+/** Start monitoring. The options live here, in the lazy chunk, so the shell
+ * carries only the DSN check and the import (lib/sentry.ts). */
+export function start(dsn: string, environment: string): void {
+  init({
+    dsn,
+    environment,
+    // Performance tracing (Web Vitals + transactions) at a low sample rate,
+    // without the cost of full sampling or Session Replay.
+    // `linkPreviousTrace: 'in-memory'` is the SDK's default, pinned: the
+    // other setting keeps the last trace in sessionStorage.
+    integrations: [browserTracingIntegration({ linkPreviousTrace: 'in-memory' })],
+    tracesSampleRate: 0.1,
+    // No IP address, cookies or user context. Error monitoring runs for
+    // every visitor without asking (lib/consent.ts, "necessary") only
+    // because it stores nothing in the browser and carries no identifier
+    // of the person: no cookie, no storage key, no Session Replay, no
+    // setUser. Keep it that way, or put it under analytics consent.
+    sendDefaultPii: false,
+    // sendDefaultPii leaves addresses whole: every event, breadcrumb and
+    // span loses its query strings, fragments, e-mail addresses and tokens
+    // here (scrubEvent and scrubBreadcrumb below).
+    beforeSend: (event) => scrubEvent(event),
+    beforeSendTransaction: (event) => scrubEvent(event),
+    beforeBreadcrumb: (crumb) => scrubBreadcrumb(crumb),
+  });
+}
 
 /* ── what an event may carry ─────────────────────────────────────────────
  * Error monitoring runs without asking only while it sends no personal data
