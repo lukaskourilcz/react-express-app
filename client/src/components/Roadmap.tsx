@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { retirementOf } from '../../../shared/retired-content';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button as AxButton } from '@astryxdesign/core/Button';
@@ -1051,28 +1050,33 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
             })}
           </div>
 
-          {/* Current-part progress */}
+          {/* The next step, in one row (UX audit learn-06): the selected
+              tile above already names the topic and its count, so the card
+              says only what the tile does not, the next level, with the
+              topic's progress as a 4px bar under it and Continue on the
+              right. */}
           <div className="rm-overview-card">
+            <span className="rm-overview-fin" aria-hidden="true" />
             <div className="rm-overview-copy">
-              <span className="rm-overview-fin" aria-hidden="true" />
-              <div><Heading level={2}>{t(categoryLabelKey(topic))} — {t('roadmap.wholeSwim')}</Heading>
-                <Text type="supporting" color="secondary">{t('roadmap.progress', { done: topicDone, total: levels.length })}</Text></div>
-            </div>
-            <div className="rm-overview-actions">
+              <p id="rm-overview-step" className="rm-overview-step">
+                {continueLevel
+                  ? learnText('learn.overview.next', { n: continueLevel.level, total: levels.length, title: continueLevel.title })
+                  : t('roadmap.progress', { done: topicDone, total: levels.length })}
+              </p>
               <div
-              role="progressbar"
-              aria-label={t('roadmap.progress', { done: topicDone, total: levels.length })}
-              aria-valuenow={Math.round(levels.length ? (topicDone / levels.length) * 100 : 0)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              className="rm-overview-progress"
-            >
-              <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
+                role="progressbar"
+                aria-label={t('roadmap.progress', { done: topicDone, total: levels.length })}
+                aria-valuenow={Math.round(levels.length ? (topicDone / levels.length) * 100 : 0)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="rm-overview-progress"
+              >
+                <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
               </div>
-            {continueLevel && (
-              <SwimCta label={t('roadmap.continueLevel', { n: continueLevel.level })} dir={-1} onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })} />
-            )}
             </div>
+            {continueLevel && (
+              <SwimCta label={t('roadmap.continue')} describedBy="rm-overview-step" dir={-1} onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })} />
+            )}
           </div>
 
           {/* Reads the node colours: white = not started, amber = cleared,

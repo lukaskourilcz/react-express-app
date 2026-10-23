@@ -805,8 +805,6 @@ export const en = {
   'roadmap.retired.code-snippets': 'Code Snippets is no longer a path of its own. Reading and reasoning about code is now a question format inside the topic each snippet teaches.',
   'roadmap.retiredHistory': 'Anything you passed there is still recorded. Nothing was taken away.',
   'roadmap.title': 'Learn',
-  'roadmap.wholeSwim': 'all topics',
-  'roadmap.continueLevel': 'Continue — Level {n}',
   'roadmap.topicsAria': 'Choose a topic',
   'roadmap.partsAria': 'Choose a part',
   'roadmap.partLabel': 'Part {n}',

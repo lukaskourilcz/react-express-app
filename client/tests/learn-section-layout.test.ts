@@ -64,3 +64,18 @@ describe('a section with nothing open (learn-09)', () => {
     expect(declared(rules, '.rm-section-empty__actions', 'display')).toBe('flex');
   });
 });
+
+describe('the next-step card (learn-06)', () => {
+  it('is one 72px row with a 4px bar at the text\'s width', () => {
+    const sheet = addSheet('roadmap');
+    const rules = topRules(sheet);
+    expect(declared(rules, '.rm-overview-card', 'min-height')).toBe('72px');
+    expect(declared(rules, '.rm-overview-card', 'padding')).toBe('14px 20px');
+    expect(declared(rules, '.rm-overview-progress', 'height')).toBe('4px');
+    expect(declared(rules, '.rm-overview-progress', 'width')).toBe('100%');
+    // On a phone Continue takes its own full-width row.
+    const phone = mediaRules(sheet, 'max-width: 560px');
+    expect(declared(phone, '.rm-overview-card', 'flex-wrap')).toBe('wrap');
+    expect(declared(phone, '.rm-overview-card > .ss-swim-cta', 'flex')).toBe('1 0 100%');
+  });
+});

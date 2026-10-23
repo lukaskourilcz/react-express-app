@@ -43,6 +43,7 @@ export const learnEn = {
   'learn.join.offline': 'You’re offline. Add it when the connection returns.',
   'learn.rail.notJoined': 'Not in your plan',
   'learn.rail.notJoinedAria': '{topic}, not in your plan. Add {section} to open it.',
+  'learn.overview.next': 'Level {n} of {total} · {title}',
   'learn.empty.title': 'Nothing here is open yet',
   'learn.empty.body': 'Pass {count} levels of {prereq} to open {topic}.',
   'learn.empty.action': 'Go to {prereq}',

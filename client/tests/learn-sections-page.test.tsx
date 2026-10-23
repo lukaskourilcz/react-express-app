@@ -362,6 +362,22 @@ describe('a section with nothing open (UX audit learn-09)', () => {
   });
 });
 
+describe('the next-step card (UX audit learn-06)', () => {
+  it('says only the next level, with the bar under it and Continue beside it', async () => {
+    answer();
+    await mountAt('/learn/web-developer');
+    const go = await screen.findByRole('button', { name: 'Continue', description: 'Level 1 of 10 · Level 1 title' });
+    const card = go.closest('.rm-overview-card') as HTMLElement;
+    expect(card.querySelector('.rm-overview-step')).toHaveTextContent('Level 1 of 10 · Level 1 title');
+    expect(card.querySelector('.rm-overview-copy [role="progressbar"]')).toHaveAccessibleName('0 / 10 levels');
+    // The selected tile names the topic and its count; the card does not.
+    const tile = document.querySelector<HTMLElement>('.rm-topic-rail [role="radio"][aria-checked="true"]')!;
+    expect(card.textContent).not.toContain(tile.getAttribute('aria-label')!);
+    expect(card.textContent).not.toContain('/ 10 levels');
+    expect(within(card).queryByRole('heading')).toBeNull();
+  });
+});
+
 describe('a section without a plan', () => {
   it('asks a visitor to sign in, and dims nothing', async () => {
     answer();
