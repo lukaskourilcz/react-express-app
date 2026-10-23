@@ -211,6 +211,23 @@ describe('/daily', () => {
     expect(reads).toEqual(['no-store', 'no-store']);
   });
 
+  it('keeps the focus through an expired check and the reload that follows', async () => {
+    let reads = 0;
+    server.use(
+      http.get('*/api/quiz/daily', () => { reads++; return HttpResponse.json({ ...QUESTION, sessionId: `sealed-session-${reads}` }); }),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ error: { code: 'invalid_session', message: 'expired' } }, { status: 400 })),
+    );
+    renderAt('/daily');
+    fireEvent.click((await screen.findAllByRole('radio'))[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
+    const again = await screen.findByRole('button', { name: 'Load it again' });
+    await waitFor(() => expect(document.activeElement).toContainElement(again));
+    expect(document.activeElement).not.toBe(document.body);
+    fireEvent.click(again);
+    await screen.findByRole('button', { name: 'Check answer' });
+    await waitFor(() => expect(document.activeElement).toHaveClass('ss-daily__question'));
+  });
+
   it('starts the question over even if a reload brings back the same session', async () => {
     // What a browser that still holds a cached response hands back.
     let reads = 0;
