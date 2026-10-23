@@ -20,7 +20,8 @@
   font-weight: 400;
 }
 .rm-result__icon { margin-bottom: 8px; }
-.rm-result__score { font-size: 3rem; line-height: 1.1; font-weight: 800; }
+.rm-result__score { font-size: 3rem; line-height: 1.1; font-weight: 800; color: var(--color-text-secondary); }
+.rm-result__score[data-passed] { color: var(--color-text-primary); }
 .rm-result__line { margin: 0; color: var(--color-text-secondary); }
 .rm-result__line[data-tone='success'] { color: var(--ss-success-strong, var(--ss-success)); font-weight: 600; }
 .rm-result__line[data-tone='warning'] { color: var(--ss-warning); font-weight: 600; }

@@ -836,6 +836,11 @@ describe('a level on the shared question parts', () => {
     expect(heading.closest('.ss-question')).not.toBeNull();
     expect(swimCtas()).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Try again' }).closest('.ss-question-actions__secondary')).not.toBeNull();
+    // The score is text, so it keeps a text colour: the track colour
+    // (JavaScript's yellow) is under 3:1 on the panel.
+    const score = screen.getByText('100%');
+    expect(score).toHaveAttribute('data-passed', 'true');
+    expect(score.getAttribute('style')).toBeNull();
   });
 
   // UX audit learn-02: Continue sits under the verdict, so the page has

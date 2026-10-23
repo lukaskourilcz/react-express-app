@@ -646,7 +646,10 @@ export function LessonRunner({
           <p className="rm-result__line">{t('roadmap.outOfHeartsBody', { max: MAX_HEARTS })}</p>
         ) : (
           <>
-            <div className="rm-count rm-result__score" style={{ color: passed ? accent : 'var(--color-text-secondary)' }}>
+            {/* In text colours: the track colour (JavaScript's #f7df1e,
+                the checkpoint gold) is under 3:1 on the panel. It stays on
+                the confetti and the icon tile. */}
+            <div className="rm-count rm-result__score" data-passed={passed || undefined}>
               {pct}%
             </div>
             <p className="rm-result__line">{t('roadmap.scoreLine', { correct: correctCount, total })}</p>
