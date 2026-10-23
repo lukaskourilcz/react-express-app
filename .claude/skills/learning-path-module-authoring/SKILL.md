@@ -38,7 +38,7 @@ Ids:
 ### Lessons
 
 - `LessonSource`: `id`, `title`, `summary`, `estimatedMinutes`, `sources`, `sections` (`types.ts`). At least one section (`empty_lesson`) and at least one source (`no_sources`).
-- Section kinds (`LessonSectionSource` in `types.ts`): `prose`, `code` (language, code, caption), `table` (caption, headers, rows), `trace` (caption, frames of `cells`, optional `marks`, a `note` and an optional `counter`; shapes `array`, `stack`, `queue`, `tree`, `counter` from `TraceSpec` in `shared/learning-path-api.ts`), `example` (a runnable snippet with a `note` that says nothing is graded), and `callout` (tone `note` or `warning`).
+- Section kinds (`LessonSectionSource` in `types.ts`): `prose`, `code` (language, code, caption), `table` (caption, headers, rows), `trace` (caption, frames of `cells`, optional `marks`, a `note` and an optional `counter`; shapes `array`, `stack`, `queue`, `tree`, `counter` from `TraceSpec` in `shared/learning-path-api.ts`; at least one frame, or `empty_trace`), `example` (a runnable snippet with a `caption` and a `note` that says nothing is graded; a blank one is `missing_copy`), and `callout` (tone `note` or `warning`).
 - Each source is `{ label, url, reviewedOn }` (`SourceReference` in `shared/learning-paths.ts`): an `https` URL (`bad_source_url`) and an ISO date (`bad_review_date`) on which you checked the claim you cite.
 - A lesson activity (`kind: 'lesson'`) names a lesson of its own module in `lessonId` (`unknown_lesson`) and is `self_reviewed` (`lesson_verification`). Lessons never gate completion; `test:paths` checks that the next action sends a new learner through the lessons before the first requirement ("the next action teaches before it checks").
 
@@ -49,11 +49,11 @@ Every `ActivitySource` carries `kind` (`lesson`, `check`, `code`, `artifact`), `
 | Kind | Verification | What the validator demands (`validate.ts`, `validateActivity`) |
 |---|---|---|
 | `lesson` | `self_reviewed` | `lessonId` of a lesson in this module |
-| `check` | `machine_verified` | At least one question; `passThreshold` in (0, 1], 0.8 in every FDE check; per question at least three distinct options, `correct` indexing one of them, known competencies. A `domains` list makes every question name one of its domains and every domain hold a question |
-| `code` | `machine_verified` | A body (`code`) or a `reuseTaskId`, never both; a non-empty starter, at least one hint, visible `tests` (or a `suite` for React), unique criterion ids, at least one critical criterion, positive weights, and tests that name declared criteria |
-| `artifact` | `self_reviewed` | A `brief`, at least one field, unique field ids, `maxLength` from 1 to 8,000, rubric dimensions that exist in `FDE_PATH.rubric` |
+| `check` | `machine_verified` | At least one question; `passThreshold` a finite number in (0, 1], 0.8 in every FDE check; per question at least three distinct options, `correct` an integer index of one of them, known competencies. A `domains` list makes every question name one of its domains and every domain hold a question |
+| `code` | `machine_verified` | A body (`code`) or a `reuseTaskId`, never both; a non-empty starter, at least one hint, visible `tests` (or a `suite` for React), unique criterion ids, at least one critical criterion, positive finite weights (`bad_weight`), and tests that name declared criteria |
+| `artifact` | `self_reviewed` | A `brief`, at least one field, unique field ids, `maxLength` an integer from 1 to 8,000, rubric dimensions that exist in `FDE_PATH.rubric` |
 
-Purpose: `exercise` for module work. `project` is a capstone or final: a failed project check withholds its key and explanations until a pass (`keyWithheld` in `lib/learning-paths/grade.ts`). `diagnostic` is placement and can never be required (`diagnostic_required`).
+Purpose: `exercise` for module work. `project` is a capstone or final: a failed project check withholds its key and explanations until a pass (`keyWithheld` in `lib/learning-paths/grade.ts`). `diagnostic` is placement and can never be required (`diagnostic_required`); the path's diagnostic must be a `check` (`diagnostic_not_check`), because the competency report is built from its questions.
 
 The server shuffles a check's options for every attempt (`shuffleWithOrder` in `lib/learning-paths/handlers.ts`), so `correct: 0` on every question, as `content/fde/m01.ts` writes them, leaks nothing.
 
