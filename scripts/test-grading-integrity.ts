@@ -1748,6 +1748,29 @@ for (const name of ['sandbox', 'ts_check']) {
   console.log('PASS integrity: a thread that would not start is tried again after a pause, and no run moves to the request thread on a deployment');
 }
 
+// ── a thread that cannot run the program says the grader is busy ─────────
+// A thread that started but could not run the program (QuickJS would not
+// load or allocate, before any learner code ran) answered with a plain error,
+// which the Submit handler turned into HTTP 500. It is the host's fault, so
+// the caller is told the grader is busy, as for a thread that would not start.
+{
+  const sandboxBundle = join(process.cwd(), SANDBOX_WORKER_FILE);
+  const sandboxSource = readFileSync(sandboxBundle);
+  try {
+    writeFileSync(sandboxBundle, "const { parentPort } = require('node:worker_threads');\nparentPort.on('message', () => { parentPort.postMessage({ type: 'start' }); parentPort.postMessage({ type: 'fail', message: 'QuickJS would not load' }); });\n");
+    process.env.VERCEL = '1';
+    // Two threads stay loaded with the real bundle, so four runs at once
+    // need at least two new ones.
+    const runs = await Promise.all(Array.from({ length: 4 }, () => timed(runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] }))));
+    assert.ok(runs.some((run) => run.busy === 'sandbox_worker_run_failed'), runs.map((run) => run.busy).join(', '));
+    assert.ok(runs.every((run) => run.busy === 'sandbox_worker_run_failed' || (run.value as { results: { pass: boolean | null }[] }).results[0]?.pass === true), 'the loaded threads still grade');
+  } finally {
+    delete process.env.VERCEL;
+    writeFileSync(sandboxBundle, sandboxSource);
+  }
+  console.log('PASS integrity: a thread that cannot run the program says the grader is busy');
+}
+
 // ── deeply nested TypeScript gets a verdict (C1-5) ───────────────────────
 // The handler transpiled TypeScript on the request thread after the type
 // check. A thousand nested arrows overflowed the compiler's stack there, the

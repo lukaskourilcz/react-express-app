@@ -417,8 +417,14 @@ function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult>
         return;
       }
       settle(reply.type === 'done');
-      if (reply.type === 'done') resolve(reply.result);
-      else reject(new Error(reply.message));
+      if (reply.type === 'done') { resolve(reply.result); return; }
+      // The thread could not run the program at all: QuickJS would not load
+      // or would not give it a runtime, before any learner code ran. That is
+      // the host's fault, so the caller hears the grader is busy and records
+      // nothing, as for a thread that would not start; a plain error was an
+      // HTTP 500. The thread is stopped above.
+      console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_run_failed' }));
+      reject(new GraderBusyError('sandbox_worker_run_failed'));
     };
     // A thread that dies mid-run (its heap limit, a WebAssembly abort) took
     // the learner's program with it, and says so like any other failed run.
