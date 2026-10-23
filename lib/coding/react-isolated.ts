@@ -39,6 +39,14 @@ const deadline = (): ReactSuiteOutcome => ({
   timedOut: true,
 });
 
+/** The fixture modules every run gets. Their sources are constants, so they
+ * are converted once per instance rather than twice on every Submit. */
+let compiledFixtureModules: Record<'./fetchStub' | './localFetch', string> | null = null;
+const fixtures = () => compiledFixtureModules ??= {
+  './fetchStub': compileReactLearner(FETCH_STUB_SOURCE, false),
+  './localFetch': compileReactLearner(LOCAL_FETCH_SOURCE, false),
+};
+
 /** No code, environment secrets, or writable state are shared between runs.
  * Authentication stays in this API process; only source + fixtures enter the
  * VM. No in-process fallback is allowed when infrastructure is unavailable.
@@ -66,7 +74,7 @@ export async function runIsolatedReactSuite(input: {
   ).catch((error) => { throw runnerFailure('Artifact', error); });
   const signal = AbortSignal.timeout(22_000);
   const nonce = randomBytes(24).toString('hex');
-  const compiledFixtures={'./fetchStub':compileReactLearner(FETCH_STUB_SOURCE,false),'./localFetch':compileReactLearner(LOCAL_FETCH_SOURCE,false)};
+  const compiledFixtures = fixtures();
   const credentials =
     process.env.VERCEL_TOKEN &&
     process.env.VERCEL_TEAM_ID &&
