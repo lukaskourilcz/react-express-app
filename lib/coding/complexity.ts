@@ -4,7 +4,14 @@ import ts from 'typescript';
 import { complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
 import type { CodingTask } from '../../shared/coding-catalog';
 
-const inputNames = (text: string, names: Set<string>) => [...names].some((name) => new RegExp(`\\b${name}\\b`).test(text));
+/** Whether `text` mentions one of `names` as a whole identifier. One scan of
+ * the text, not one RegExp per name: a loop condition was matched against a
+ * new pattern for every input binding, so a submission with hundreds of
+ * bindings and loops spent seconds here. Names are identifiers and are never
+ * read as patterns, so `$` in one is a character, not an anchor. */
+const IDENTIFIER_TOKEN = /[\w$]+/g;
+const inputNames = (text: string, names: ReadonlySet<string>): boolean =>
+  names.size > 0 && (text.match(IDENTIFIER_TOKEN) ?? []).some((token) => names.has(token));
 
 type Cost = { power: number; log: number };
 const constant: Cost = { power: 0, log: 0 };
@@ -326,7 +333,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
         if (inputBound(condition)) {
           loop = /\/=\s*2|\*=\s*2|>>=\s*1/.test(increment) ? { power: 0, log: 1 } : linear;
           evidence.add(loop.log ? 'Halving or doubling loop' : 'Input-bounded loop');
-        } else if (![...fixedCollections].some(name => new RegExp(`\\b${name}\\b`).test(condition.getText(file))) && (!/^[\w\s<>=!+\-\d.]+$/.test(condition.getText(file)) || !/\b\d+\b/.test(condition.getText(file)))) {
+        } else if (!inputNames(condition.getText(file), fixedCollections) && (!/^[\w\s<>=!+\-\d.]+$/.test(condition.getText(file)) || !/\b\d+\b/.test(condition.getText(file)))) {
           uncertainty = 'A loop bound cannot be related to the input size.';
         }
         // Conditions and increment expressions run on every iteration; the

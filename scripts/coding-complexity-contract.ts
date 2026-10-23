@@ -97,6 +97,9 @@ export function complexityContracts() {
   assert.equal(check('function solve(xs) { for (let i=mystery(xs);i<xs.length;i++) {} return xs; }').assessment, 'unknown');
   assert.equal(check('const solve = xs => /[a-z]/.test(xs);').time, 'O(n)');
   assert.equal(check('function solve(xs) { let i=1; while(i<xs.length) i*=2; return i; }').time, 'O(log n)');
+  // An identifier is matched as a name, never as a pattern: `$` once read as
+  // an end-of-text anchor, so a `$`-named input never bounded its own loop.
+  assert.equal(check('function solve($xs) { let t=0; for (let i=0;i<$xs.length;i++) t+=$xs[i]; return t; }').time, 'O(n)', '$ in an input name is part of the name');
   assert.equal(check('const solve = xs => xs.length ? solve(xs.slice(1)) : 0;').assessment, 'unknown');
   assert.equal(check('const solve = xs => mystery(xs);').time, null);
   assert.equal(check('const solve = xs => { while(xs.length) xs = mystery(xs); return 1; };').assessment, 'unknown');
