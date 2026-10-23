@@ -110,6 +110,19 @@ describe('the Shark Cards deck', () => {
     expect(screen.getByText('Card 1 of 2')).toBeInTheDocument();
   });
 
+  it('keeps the focus on the turn button as the arrow keys step through the deck', async () => {
+    signIn();
+    serveDeck([LEARN_CARD, QUIZ_CARD]);
+    await mount(<Flashcards />);
+    const turn = await screen.findByRole('button', { name: 'Show the answer' });
+    turn.focus();
+    fireEvent.keyDown(turn, { key: 'ArrowRight' });
+    expect(screen.getByText('Card 2 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show the answer' })).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(screen.getByText('Card 1 of 2')).toBeInTheDocument();
+  });
+
   it('takes a card out with Got it, moves to the next one, and puts it back with Undo', async () => {
     signIn();
     const { sent } = serveDeck([LEARN_CARD, QUIZ_CARD]);

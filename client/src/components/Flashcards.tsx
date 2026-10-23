@@ -102,8 +102,18 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
     if (index > 0 && index >= count) setIndex(Math.max(0, count - 1));
   }, [count, index]);
   const shown = card?.question_id ?? null;
+  // A move to another card redraws the card, so focus on its turn button
+  // fell to the page, and the arrow keys, which the deck hears, stopped after
+  // one card; Previous and Next drop it too as they disable at either end.
+  // The new card's turn button takes it then.
+  const lastShown = useRef<string | null>(null);
   useEffect(() => {
-    if (!focusNext.current || !shown) return;
+    const moved = lastShown.current !== null && shown !== lastShown.current;
+    lastShown.current = shown;
+    if (!shown) return;
+    const active = document.activeElement;
+    const dropped = !active || active === document.body || (active instanceof HTMLButtonElement && active.disabled);
+    if (!focusNext.current && !(moved && dropped)) return;
     focusNext.current = false;
     flipRef.current?.focus();
   }, [shown]);
