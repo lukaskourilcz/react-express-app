@@ -5,6 +5,7 @@ import { createCodingSession as encodeCodingSession } from '../lib/coding/sessio
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
 import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
@@ -304,6 +305,59 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   assert.equal(deep.body?.graderUnavailable, undefined, 'over-deep code is not a grader outage');
   assert.match(deep.body?.codeError ?? '', /nests too deeply/);
   console.log('PASS integrity: React code nested too deeply for the compiler is an error verdict, not a runner outage');
+}
+
+// ── a slow React VM is a runner outage, not the learner's timeout ────────
+// The isolated runner stops everything at 22 s. Any stop counted as the
+// learner's timeout, also one while the files were written or the verdict
+// was read, or one that left the command less than its 10 s: a slow VM was
+// recorded as a timed-out attempt. Only a command that had its whole budget
+// is the learner's.
+{
+  const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))('./lib/coding/generated/vercel-sandbox.cjs') as { Sandbox: { create: (...args: unknown[]) => Promise<unknown> } };
+  const { runIsolatedReactSuite } = await import('../lib/coding/react-isolated');
+  const realCreate = Sandbox.create;
+  const realTimeout = AbortSignal.timeout;
+  const realNow = Date.now;
+  let skew = 0;
+  const aborted = (signal: AbortSignal) => new Promise<never>((_, reject) => {
+    if (signal.aborted) reject(signal.reason);
+    else signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  });
+  const vm = (overrides: Record<string, unknown>) => {
+    Sandbox.create = async () => ({
+      writeFiles: async () => undefined,
+      runCommand: async () => ({ exitCode: 1, stdout: async () => '' }),
+      stop: async () => undefined,
+      ...overrides,
+    });
+  };
+  const input = { suite: "test('renders', () => {});", appSource: 'export default function App() { return null; }' };
+  process.env.REACT_RUNNER_SNAPSHOT_ID = 'snapshot-test';
+  AbortSignal.timeout = (ms: number) => realTimeout.call(AbortSignal, ms === 22_000 ? 150 : ms);
+  Date.now = () => realNow() + skew;
+  // AbortSignal.timeout does not keep the process alive; this does.
+  const awake = setInterval(() => undefined, 1_000);
+  try {
+    vm({ writeFiles: async (_files: unknown, options: { signal: AbortSignal }) => aborted(options.signal) });
+    await assert.rejects(runIsolatedReactSuite(input), /unavailable/, 'a stop while the files are written is ours');
+    vm({ runCommand: async () => ({ exitCode: 0, stdout: async (options: { signal: AbortSignal }) => aborted(options.signal) }) });
+    await assert.rejects(runIsolatedReactSuite(input), /unavailable/, 'a stop while the verdict is read is ours');
+    vm({ runCommand: async (options: { signal: AbortSignal }) => aborted(options.signal) });
+    await assert.rejects(runIsolatedReactSuite(input), /unavailable/, 'a command stopped before its budget ran out was started late');
+    vm({ runCommand: async (options: { signal: AbortSignal }) => { skew = 10_000; return aborted(options.signal); } });
+    assert.equal((await runIsolatedReactSuite(input)).timedOut, true, 'a command still going after its whole budget is the learner\'s timeout');
+    skew = 0;
+    vm({ runCommand: async () => ({ exitCode: 124, stdout: async () => '' }) });
+    assert.equal((await runIsolatedReactSuite(input)).timedOut, true, 'a command its own limit stopped is the learner\'s timeout');
+  } finally {
+    clearInterval(awake);
+    Sandbox.create = realCreate;
+    AbortSignal.timeout = realTimeout;
+    Date.now = realNow;
+    delete process.env.REACT_RUNNER_SNAPSHOT_ID;
+  }
+  console.log('PASS integrity: a slow React VM is a runner outage, not the learner\'s timeout');
 }
 
 // ── a checkpoint hands over nothing that passes its milestone ───────────

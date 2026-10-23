@@ -39,6 +39,10 @@ const deadline = (): ReactSuiteOutcome => ({
   timedOut: true,
 });
 
+/** How long the guest command may run: the learner's whole budget, node
+ * start-up and the page runtime included. */
+const COMMAND_TIMEOUT_MS = 10_000;
+
 /** The fixture modules every run gets. Their sources are constants, so they
  * are converted once per instance rather than twice on every Submit. */
 let compiledFixtureModules: Record<'./fetchStub' | './localFetch', string> | null = null;
@@ -94,6 +98,13 @@ export async function runIsolatedReactSuite(input: {
     resources: { vcpus: 1 },
     signal,
   }).catch((error) => { throw runnerFailure('Startup', error); });
+  // When the command's budget would have run out. The run's signal stops
+  // everything at 22 s; it is the learner's timeout only when it fires while
+  // their command has had its whole budget and is still going. Fired while
+  // the files were written, the verdict was read, or a slow start left the
+  // command less than its budget, it is ours: a timeout recorded against the
+  // learner for a slow VM is a failed attempt they did not make.
+  let commandBudgetEnds: number | null = null;
   try {
     await sandbox.writeFiles(
       [
@@ -105,21 +116,23 @@ export async function runIsolatedReactSuite(input: {
       ],
       { signal },
     );
+    commandBudgetEnds = Date.now() + COMMAND_TIMEOUT_MS;
     const command = await sandbox.runCommand({
       cmd: 'node',
       args: [...GUEST_NODE_FLAGS, '/vercel/sandbox/runner.cjs', '/vercel/sandbox/input.json'],
       env: { ...GUEST_ENV },
-      timeoutMs: 10_000,
+      timeoutMs: COMMAND_TIMEOUT_MS,
       signal,
     });
+    commandBudgetEnds = null;
     if (command.exitCode === 137 || command.exitCode === 124) return deadline();
     // The verdict is the stdout line marked with this run's nonce, and a
     // guest that crashed after it started the learner's code was crashed by
     // that code (react-guest.ts). Nothing is read from the VM's filesystem.
     return readGuestRun(command.exitCode, await command.stdout({ signal }), nonce, input.suite);
   } catch (error) {
-    if (signal.aborted) return deadline();
-    throw runnerFailure('Execution', error);
+    if (signal.aborted && commandBudgetEnds !== null && Date.now() >= commandBudgetEnds) return deadline();
+    throw runnerFailure(signal.aborted ? 'Deadline' : 'Execution', error);
   } finally {
     // A bounded cleanup call plus the VM's expiry covers lost connections too.
     await sandbox
