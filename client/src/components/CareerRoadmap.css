@@ -35,30 +35,54 @@
 }
 .career-pillar { min-width: 0; }
 .career-pillar__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.career-topics { margin: 0; padding: 0; list-style: none; }
-/* One 44px row: the topic (and its tag) on the left, the bar, the count. */
-.career-topic {
+/* The rows share one set of columns (subgrid), so every bar in a group
+   starts at the same x whatever its count says ('0/6' or '0/25 levels'). */
+.career-topics {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 72px auto;
-  align-items: center;
   column-gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* One 44px row: the topic (and its "Also in" line) on the left, the bar, the
+   count. */
+.career-topic {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
   min-height: 44px;
   padding-block: 6px;
   border-top: 1px solid var(--ss-card-line);
 }
-.career-topic__name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
-.career-topic__dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; }
-.career-topic__label { font-weight: 600; overflow-wrap: anywhere; }
-.career-topic__also { font-size: 0.72rem; font-weight: 600; color: var(--color-text-secondary); white-space: normal; }
+/* The dot stays beside the name when the name wraps, and "Also in" is one
+   meta line under the name, inside the name's column: it wraps there and
+   never runs under the bar or the count. */
+.career-topic__name {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+}
+.career-topic__dot { grid-column: 1; grid-row: 1; width: 9px; height: 9px; border-radius: 50%; }
+.career-topic__label { grid-column: 2; grid-row: 1; font-weight: 600; overflow-wrap: anywhere; }
+.career-topic__also {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: var(--ss-type-meta);
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+}
 .career-topic__count {
   font-size: var(--ss-type-meta);
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: end;
-  min-width: 6.5ch;
 }
 @media (max-width: 599px) {
   .career-pillars { padding: 16px; }
-  .career-topic { grid-template-columns: minmax(0, 1fr) 48px auto; column-gap: 8px; }
+  .career-topics { grid-template-columns: minmax(0, 1fr) 48px auto; column-gap: 8px; }
 }

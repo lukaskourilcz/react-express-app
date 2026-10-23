@@ -418,7 +418,7 @@ export default function CareerRoadmap() {
                                 <span aria-hidden className="career-topic__dot" style={{ backgroundColor: getCategoryHexColor(area.topic) }} />
                                 <span className="career-topic__label">{area.label}</span>
                                 {area.alsoIn.length > 0 && (
-                                  <span className="ss-tag career-topic__also">
+                                  <span className="career-topic__also">
                                     {t('careerRoadmap.alsoIn', { sections: area.alsoIn.map((id) => learnText(`learn.section.${id}`)).join(', ') })}
                                   </span>
                                 )}

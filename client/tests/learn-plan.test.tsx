@@ -252,6 +252,10 @@ describe('the plan', () => {
     const git = [...document.querySelectorAll('.career-topic')].find((row) => row.querySelector('.career-topic__label')?.textContent === 'Git')!;
     expect(git.closest('section')).toHaveAttribute('aria-labelledby', 'career-web-developer');
     expect(git).toHaveTextContent('Also in: Software Engineer');
+    // "Also in" is a meta line in the name's column, not a pill that runs
+    // under the bar and the count.
+    expect(git.querySelector('.career-topic__name > .career-topic__also')).toHaveTextContent('Also in: Software Engineer');
+    expect(git.querySelector('.ss-tag')).toBeNull();
     // The groups size to their content, one panel per section.
     expect(document.querySelectorAll('section .ss-panel.career-pillars').length).toBeGreaterThan(0);
   });
