@@ -13,15 +13,17 @@ describe('the mobile drawer', () => {
   const top = [...sheet.cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
 
   it('splits Practice from You in the desktop header’s order', () => {
-    expect(app).toMatch(/const DRAWER_YOU_ROUTES = \['\/roadmap', '\/collection', '\/leaderboard', '\/shop', '\/premium'\];/);
-    expect(app).toMatch(/className="ss-drawer-group" role="group" aria-labelledby=/);
+    // You: Career, Shark Cards, Leaderboard, Coins, Premium, in that order.
+    const you = [...app.matchAll(/\{ to: '([^']+)'[^\n]*you: true \}/g)].map((match) => match[1]);
+    expect(you).toEqual(['/roadmap', '/collection', '/leaderboard', '/shop', '/premium']);
+    expect(app).toMatch(/className="ss-drawer-group" role="group" aria-label=\{label\}/);
     expect(declared(top, '.ss-drawer-group + .ss-drawer-group', 'border-top')).toBe('1px solid var(--color-border)');
   });
 
   it('pins the toggles to the bottom as 44px rows and hides the footer pair below 1024px', () => {
-    expect(app).toMatch(/<DrawerSettings \/>/);
+    expect(app).toMatch(/className="ss-drawer-settings"[\s\S]{0,200}<SettingsToggles className="ss-drawer-link" \/>/);
     expect(declared(top, '.ss-drawer-settings', 'margin-top')).toBe('auto');
-    expect(declared(top, '.ss-drawer-settings .ss-drawer-link', 'min-height')).toBe('var(--ss-control-height)');
+    expect(declared(top, '.ss-drawer-link', 'min-height')).toBe('var(--ss-control-height)');
     expect(declared(mediaRules(sheet, 'max-width: 1023px'), '.ss-footer-settings', 'display')).toBe('none');
   });
 });

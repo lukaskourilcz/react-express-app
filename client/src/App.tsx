@@ -26,9 +26,7 @@ import { useEntitlement } from './lib/entitlement';
 import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m, AnimatePresence, useReducedMotion } from './lib/motion';
-import BrandFooter from './components/BrandFooter';
-import { useColorMode } from './theme/ColorModeContext';
-import { useSettings } from './lib/settings';
+import BrandFooter, { SettingsToggles } from './components/BrandFooter';
 import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
 import { CloseIcon, CoinsIcon, TrophyIcon } from './components/ui/icons';
@@ -204,6 +202,10 @@ const NAV_ITEMS: {
   feature?: keyof GameConfig['features'];
   signedIn?: true;
   drawerOnly?: true;
+  /** In the mobile drawer's second group, 'You' (UX audit shell-public-15):
+   * the learner's own pages and the purchase ones, as the desktop header
+   * splits them from the learning destinations. */
+  you?: true;
 }[] = [
   { to: '/today', key: 'nav.today', isActive: (p) => p === '/today', signedIn: true },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
@@ -211,44 +213,12 @@ const NAV_ITEMS: {
   { to: '/coding', key: 'nav.coding', isActive: (p) => p.startsWith('/coding') },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
-  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap', drawerOnly: true },
-  { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards', signedIn: true, drawerOnly: true },
-  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard', signedIn: true },
-  { to: '/premium', key: 'nav.premium', isActive: (p) => p === '/premium' || p.startsWith('/premium/') },
-  { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop', signedIn: true },
+  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap', drawerOnly: true, you: true },
+  { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards', signedIn: true, drawerOnly: true, you: true },
+  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard', signedIn: true, you: true },
+  { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop', signedIn: true, you: true },
+  { to: '/premium', key: 'nav.premium', isActive: (p) => p === '/premium' || p.startsWith('/premium/'), you: true },
 ];
-
-// The mobile drawer splits the same items as the desktop header does (UX
-// audit shell-public-15): the learning destinations, then the learner's own
-// pages and the purchase ones, each under a small label. 'You' keeps this
-// order; anything not listed here is practice.
-const DRAWER_YOU_ROUTES = ['/roadmap', '/collection', '/leaderboard', '/shop', '/premium'];
-
-/** The appearance and sound toggles, pinned to the bottom of the mobile
- * drawer: below the nav breakpoint the footer's pair hides, so they live in
- * one place and are not buried under a long page behind the open drawer. The
- * same labels as the footer's (BrandFooter.tsx). */
-function DrawerSettings() {
-  const { t } = useLanguage();
-  const { mode, toggle } = useColorMode();
-  const [settings, updateSettings] = useSettings();
-  return (
-    // Pressing a toggle keeps the drawer open: the panel closes on a click.
-    <div className="ss-drawer-settings" role="group" aria-label={t('profile.preferences')} onClick={(event) => event.stopPropagation()}>
-      <button type="button" className="ss-drawer-link" onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
-        {mode === 'light' ? t('footer.darkMode') : t('footer.lightMode')}
-      </button>
-      <button
-        type="button"
-        className="ss-drawer-link"
-        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-        aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-      >
-        {settings.soundEffects ? t('footer.soundOff') : t('footer.soundOn')}
-      </button>
-    </div>
-  );
-}
 
 // Shown only while the first page of a visit loads: a navigation keeps the
 // current page until the next one can render (see the route Suspense below).
@@ -713,13 +683,15 @@ function App() {
                 <BrandLogo height={20} />
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
-              {([
-                ['practice', navItems.filter((item) => !DRAWER_YOU_ROUTES.includes(item.to))],
-                ['you', DRAWER_YOU_ROUTES.flatMap((to) => navItems.filter((item) => item.to === to))],
-              ] as const).filter(([, items]) => items.length > 0).map(([group, items]) => (
-                <div key={group} className="ss-drawer-group" role="group" aria-labelledby={`ss-drawer-${group}`}>
-                  <p id={`ss-drawer-${group}`} className="ss-drawer-group__label">{t(group === 'practice' ? 'nav.groupPractice' : 'nav.groupYou')}</p>
-                  {items.map((item) => (
+              {/* Practice, then You, each under a small label (UX audit
+                  shell-public-15). Both always hold links: Learn and Quiz,
+                  Career and Premium are shown to everyone. */}
+              {[0, 1].map((you) => {
+                const label = t(you ? 'nav.groupYou' : 'nav.groupPractice');
+                return (
+                <div key={you} className="ss-drawer-group" role="group" aria-label={label}>
+                  <p className="ss-drawer-group__label" aria-hidden="true">{label}</p>
+                  {navItems.filter((item) => !item.you === !you).map((item) => (
                     <Link
                       key={item.to}
                       to={item.to}
@@ -732,8 +704,15 @@ function App() {
                     </Link>
                   ))}
                 </div>
-              ))}
-              <DrawerSettings />
+                );
+              })}
+              {/* The appearance and sound toggles, pinned to the drawer's
+                  bottom: below the nav breakpoint the footer's pair hides,
+                  so they are not buried under a long page behind the open
+                  drawer. Pressing one keeps the drawer open. */}
+              <div className="ss-drawer-settings" role="group" aria-label={t('profile.preferences')} onClick={(event) => event.stopPropagation()}>
+                <SettingsToggles className="ss-drawer-link" />
+              </div>
             </m.div>
           </m.div>
         )}

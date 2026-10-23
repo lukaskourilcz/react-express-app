@@ -140,6 +140,24 @@
   .ss-compare-caption { font-size: var(--ss-type-label); }
 }
 
+/* One section-title size for the public pages (UX audit shell-public-16):
+   home's h2s were 24, 28 and 36px, each set inline or in another stylesheet.
+   Every home h2 (the topic picker, the roadmap panel, the FDE section and the
+   plan table, also on /premium) takes this class. It lives here, with the
+   landing kit both pages load, so the first download does not carry it. */
+.ss-section-title {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+}
+@media (max-width: 599px) {
+  .ss-section-title { font-size: 1.5rem; }
+}
+
 /* ── Topic picker ──────────────────────────────────────────────────────────
    Four across at 1280. Under 600px two tiles a row instead of one: seven
    one-word cards and "And 10 more" stacked into 820px, a phone screen of
@@ -175,4 +193,70 @@
 .ss-fde-feature__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 32px; }
 @media (min-width: 1024px) {
   .ss-fde-feature { grid-template-columns: minmax(0, 1fr) 320px; gap: 48px; align-items: center; }
+}
+
+/* ── The home page's own layout ─────────────────────────────────────────────
+   The hero, the topic cards and the roadmap preview, with their Apple-layer
+   treatment. Only Home draws these, so they live with the landing kit Home
+   loads rather than in app-shell.css, which every first visit downloads.
+   Moved as written, in the same order. */
+:root[data-design='apple'] .ss-home { gap: clamp(3rem, 6vw, 5rem) !important; }
+:root[data-design='apple'] .ss-hero-grid { gap: clamp(2rem, 4vw, 4rem); padding-block: 1rem 1.5rem; }
+@media (min-width: 1024px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+    align-items: center;
+    /* Main starts at 7rem below the floating header. Reserve the same space
+       below the hero so its content is centred on the whole viewport. Tall
+       content can grow naturally on short screens and at increased zoom. */
+    min-height: calc(100dvh - 14rem);
+    padding-block: 0;
+  }
+}
+.ss-home-sample { width: 100%; min-width: 0; max-width: 480px; justify-self: end; }
+@media (max-width: 1023px) {
+  .ss-home-sample { justify-self: center; }
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.ss-home-path { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem 0; padding-block: 6px; width: 100%; }
+.ss-home-path__step { position: relative; display: flex; min-width: 0; }
+.ss-home-path__node { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; min-width: 0; padding-inline: .5rem; }
+.ss-home-path__node > span:first-child { flex-shrink: 0; }
+.ss-home-path__connector { position: absolute; top: 16px; left: calc(50% + 28px); width: calc(100% - 56px); height: 8px; opacity: .3; }
+.ss-home-path__actions { display: flex; justify-content: flex-end; margin-top: auto; position: relative; }
+@media (max-width: 767px) {
+  .ss-home-path { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ss-home-path__step:nth-child(3n) .ss-home-path__connector { display: none; }
+  .ss-home-roadmap { padding: 20px !important; }
+}
+:root[data-design='apple'] .ss-hero-grid h1 { font-weight: 650 !important; letter-spacing: -.045em !important; line-height: 1.035 !important; text-wrap: balance; }
+:root[data-design='apple'] .ss-hero-grid > div:first-child { gap: 1.5rem !important; }
+:root[data-design='apple'] .ss-hero-grid > div:first-child > p { font-size: 1.2rem !important; line-height: 1.55; }
+:root[data-design='apple'] .ss-home h2 { font-weight: 650 !important; letter-spacing: -.025em !important; }
+:root[data-design='apple'] .ss-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-width: 32rem;
+  gap: 1.25rem 2.25rem;
+  margin-top: .5rem;
+}
+:root[data-design='apple'] .ss-hero-stats > div { min-width: 0; }
+:root[data-design='apple'] .ss-hero-stats > div > span:first-child { font-size: 1.75rem !important; font-weight: 600 !important; }
+:root[data-design='apple'] .ss-hero-stats > div > span:last-child { letter-spacing: .045em !important; font-size: .7rem !important; }
+:root[data-design='apple'] .ss-topic-card {
+  min-height: 5rem;
+  border-bottom-width: 1px !important;
+  box-shadow: none !important;
+  padding: 1.25rem !important;
+}
+:root[data-design='apple'] .ss-topic-card[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--brand-accent) !important; }
+:root[data-design='apple'] .ss-topic-card:hover { border-color: var(--brand-accent) !important; }
+/* Topic cards do not move: colour, the wave and the fins carry their response. */
+:root[data-design='apple'] .ss-topic-card:active { filter: brightness(.96); }
+@media (max-width: 760px) {
+  :root[data-design='apple'] .ss-hero-grid { grid-template-columns: 1fr; gap: 2rem; padding-top: 0; }
+  :root[data-design='apple'] .ss-hero-grid h1 { font-size: clamp(2.6rem, 7vw, 3.8rem) !important; }
 }
