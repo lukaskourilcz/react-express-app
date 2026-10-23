@@ -404,6 +404,11 @@ async function main() {
     const role = await fulfilment(ROLE_ADMIN);
     assert.equal(role.statusCode, 200, `the admin role works without a confirmed address (${JSON.stringify(role.body)})`);
     console.log('PASS verified caller: the admin allow-list counts a confirmed address, the role still works');
+    // Supabase Auth that is down refused nobody: the admin hears that, not 403.
+    const gateDown = await fulfilment(AUTH_DOWN);
+    assert.equal(gateDown.statusCode, 503, `an Auth outage at the admin gate is not "not an admin" (${JSON.stringify(gateDown.body)})`);
+    assert.equal(errorCode(gateDown), 'auth_unavailable');
+    console.log('PASS verified caller: the admin gate answers 503 during an Auth outage');
 
     // The fulfilment op takes the admin bucket before the gate, GET included.
     // With the clock still: the bucket refills a token a second.

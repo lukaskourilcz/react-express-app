@@ -10,7 +10,7 @@
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { timingSafeEqual } from 'node:crypto';
 import { jsonError } from './http';
-import { confirmedEmail, requireAuth } from './auth';
+import { AuthError, confirmedEmail, requireAuth } from './auth';
 
 const IS_PROD = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
 const RAW_DEV_PASSWORD = process.env.DEV_PASSWORD;
@@ -72,19 +72,31 @@ function hasAdminRole(payload: Record<string, unknown>): boolean {
 const verifiedAdmins = new WeakMap<VercelRequest, string>();
 
 /** Verify a Supabase admin identity, with an explicitly enabled legacy-password
- * fallback for controlled migrations. Authorization never trusts user_metadata. */
+ * fallback for controlled migrations. Authorization never trusts user_metadata.
+ *
+ * A missing or refused session may still use the legacy gate. Supabase Auth
+ * that could not decide (its 503 or 504) refused nobody: the admin is told the
+ * sign-in service is down instead of 403 "not an admin", unless they sent the
+ * legacy password, which needs no Auth. */
 export async function requireAdmin(req: VercelRequest, res: VercelResponse): Promise<boolean> {
+  let undecided: AuthError | null = null;
   try {
     const auth = await requireAuth(req);
     if (hasAdminRole(auth.payload)) {
       verifiedAdmins.set(req, auth.sub);
       return true;
     }
-  } catch {
-    // A missing/invalid session may still use the explicitly enabled legacy gate.
+  } catch (error) {
+    if (!(error instanceof AuthError)) undecided = new AuthError(503, 'auth_unavailable', 'Authentication service is unavailable');
+    else if (error.status >= 500) undecided = error;
   }
 
-  if (ALLOW_LEGACY_PASSWORD && RAW_DEV_PASSWORD) return requireDevPassword(req, res);
+  const legacy = ALLOW_LEGACY_PASSWORD && Boolean(RAW_DEV_PASSWORD);
+  if (legacy && (!undecided || suppliedPassword(req) !== '')) return requireDevPassword(req, res);
+  if (undecided) {
+    jsonError(res, undecided.status, undecided.code, undecided.message);
+    return false;
+  }
   jsonError(res, 403, 'forbidden', 'Administrative access required');
   return false;
 }
