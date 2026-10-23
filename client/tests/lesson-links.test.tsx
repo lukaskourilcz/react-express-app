@@ -40,6 +40,18 @@ it('leaves dangerous/unsupported destinations, HTML and inline-code examples as 
   expect(container.querySelectorAll('code')[1]).toHaveTextContent('[double](https://example.invalid) `example`');
 });
 
+// Authored emphasis printed its asterisks: "name *which* cost function"
+// (UX audit learn-21). Code, multiplication and globs keep theirs.
+it('renders *emphasis* as <em> outside code spans only', () => {
+  const { container } = render(<RichText text={'Best and worst name *which* cost function, an upper *and a lower* bound. `*literal*` stays, 2 * n * 3 stays, a*b*c stays, s3:* stays. See [the *docs*](https://www.typescriptlang.org/docs/) (*this* too).'} />);
+  const ems = [...container.querySelectorAll('em')].map((em) => em.textContent);
+  expect(ems).toEqual(['which', 'and a lower', 'this']);
+  expect(container.querySelector('code')).toHaveTextContent('*literal*');
+  expect(container).toHaveTextContent('2 * n * 3 stays, a*b*c stays, s3:* stays.');
+  expect(container).not.toHaveTextContent('*which*');
+  expect(screen.getByRole('link', { name: 'the *docs*' })).toBeInTheDocument();
+});
+
 it('renders authored case-bank links in row headings without interpreting HTML cells', () => {
   render(<LanguageProvider><LessonView lesson={{ id: 'case-bank', title: 'Case bank', sources: [], sections: [{ kind: 'table', caption: 'Cases', headers: ['Case', 'Focus'], rows: [
     ['[Dashboard](/learn/forward-deployed-engineer/path/fde-v1-m02?activity=fde-v1-m02-cases-dashboard)', '<img src=x> [Docs](https://www.typescriptlang.org/docs/)'],

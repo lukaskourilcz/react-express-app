@@ -1,8 +1,8 @@
 // The Learn page's sections (#488): a level stays open while the address
 // moves to another section, and a section's single action joins it, asks a
 // visitor to sign in, or sends an account with no plan to choose one.
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -32,6 +32,12 @@ vi.mock('../src/lib/signInDialog', async (importOriginal) => ({
   openSignIn: (detail: unknown) => { signIns.calls.push(detail); },
 }));
 
+const sheets = vi.hoisted(() => ({ calls: [] as unknown[] }));
+vi.mock('../src/lib/upgradeSheet', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/upgradeSheet')>()),
+  openUpgradeSheet: (detail: unknown) => { sheets.calls.push(detail); },
+}));
+
 const FRONTEND = { schemaVersion: 1, baseTrack: 'frontend', specialization: null };
 const signIn = (metadata: Record<string, unknown>) => {
   auth.value = { ...auth.value, user: { id: 'user-1', user_metadata: metadata }, isAuthenticated: true };
@@ -42,6 +48,7 @@ afterEach(() => {
   saves.calls = [];
   saves.results = [];
   signIns.calls = [];
+  sheets.calls = [];
   localStorage.clear();
   window.history.replaceState({}, '', '/');
 });
@@ -156,12 +163,12 @@ describe('joining Software Engineer', () => {
     expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /^Git, Premium$/ })).not.toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add it to your plan' }));
     expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
     expect(saves.calls).toEqual([['user-1', { schemaVersion: 1, baseTrack: 'frontend', specialization: null }, { sections: ['software-engineer'] }]]);
     expect(notInPlan()).toHaveLength(0);
     expect(screen.getByRole('radio', { name: /^Algorithms/ })).not.toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Add Software Engineer to your plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add it to your plan' })).toBeNull();
     // The button is gone; focus is on the line that replaced it.
     expect(screen.getByText(/Software Engineer is in your plan\./)).toHaveFocus();
 
@@ -180,7 +187,7 @@ describe('joining Software Engineer', () => {
     signIn({ devquiz_learning_preference_v1: FRONTEND });
     answer();
     await mountAt('/learn/software-engineer');
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add it to your plan' }));
     expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
     expect(notInPlan()).toHaveLength(0);
 
@@ -188,7 +195,7 @@ describe('joining Software Engineer', () => {
     act(() => clearAccountData());
     expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
     expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Add Software Engineer to your plan' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add it to your plan' })).toBeInTheDocument();
   });
 
   it('drops a join whose save lands after the account changed', async () => {
@@ -197,7 +204,7 @@ describe('joining Software Engineer', () => {
     let land!: (outcome: unknown) => void;
     saves.results.push(new Promise((resolve) => { land = resolve; }));
     await mountAt('/learn/software-engineer');
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add it to your plan' }));
     await waitFor(() => expect(saves.calls).toHaveLength(1));
 
     auth.value = { ...auth.value, user: { id: 'user-2', user_metadata: { devquiz_learning_preference_v1: FRONTEND } }, isAuthenticated: true };
@@ -211,7 +218,7 @@ describe('joining Software Engineer', () => {
     signIn({ devquiz_learning_preference_v1: FRONTEND });
     answer();
     await mountAt('/learn/software-engineer');
-    const add = await screen.findByRole('button', { name: 'Add Software Engineer to your plan' });
+    const add = await screen.findByRole('button', { name: 'Add it to your plan' });
     act(() => {
       add.click();
       add.click();
@@ -225,11 +232,11 @@ describe('joining Software Engineer', () => {
     answer();
     saves.results.push({ ok: false, reason: 'network', message: 'network' });
     await mountAt('/learn/software-engineer');
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add it to your plan' }));
     expect(await screen.findByText('Software Engineer was not added to your plan. Try again.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Try again' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Try again' })).toHaveFocus();
-    expect(screen.queryByRole('button', { name: 'Add Software Engineer to your plan' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add it to your plan' })).toBeNull();
     expect(notInPlan().length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -270,11 +277,179 @@ describe('joining Forward Deployed Engineer', () => {
   });
 });
 
+describe('the Learn header (UX audit learn-01)', () => {
+  // One h1 in every auth state; the switcher is the one place the section
+  // is named, so the section body never repeats it.
+  const bodyText = () => document.querySelector('.rm-section-body')?.textContent ?? '';
+
+  it('is "Learn" for a visitor, with the section named only in the switcher', async () => {
+    answer();
+    await mountAt('/learn/software-engineer');
+    await screen.findByRole('button', { name: 'Sign in to add it to your plan' });
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => h.textContent)).toEqual(['Learn']);
+    expect(screen.getByRole('radio', { name: /^Software Engineer/ })).toHaveAttribute('aria-checked', 'true');
+    expect(bodyText()).not.toContain('Software Engineer');
+    expect(screen.queryByText('Clear the levels in each part, then pass its test.')).toBeNull();
+    // The device-only note is the small status in the section header.
+    expect(screen.getByText(/this progress stays on this device only/).closest('.rm-section-header')).not.toBeNull();
+  });
+
+  it('stays "Learn" once signed in', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    await mountAt('/learn/software-engineer');
+    await screen.findByRole('button', { name: 'Add it to your plan' });
+    expect(screen.getAllByRole('heading', { level: 1 }).map((h) => h.textContent)).toEqual(['Learn']);
+    expect(bodyText()).not.toContain('Software Engineer');
+    expect(screen.queryByText(/this progress stays on this device only/)).toBeNull();
+  });
+});
+
+describe('the section switcher (UX audit learn-20)', () => {
+  it('draws each name and percent apart under one accessible name, and moves with Up and Down', async () => {
+    answer();
+    await mountAt('/learn/web-developer');
+    const web = await screen.findByRole('radio', { name: 'Web Developer · 0%' });
+    expect(web.querySelector('.rm-switcher-item__name')).toHaveTextContent('Web Developer');
+    expect(web.querySelector('.rm-switcher-item__percent')).toHaveTextContent('0%');
+    const radios = screen.getAllByRole('radio').filter((radio) => radio.closest('.rm-section-switcher'));
+    expect(radios).toHaveLength(3);
+    act(() => web.focus());
+    fireEvent.keyDown(web, { key: 'ArrowDown' });
+    expect(radios[1]).toHaveFocus();
+    fireEvent.keyDown(radios[1], { key: 'ArrowUp' });
+    expect(web).toHaveFocus();
+    fireEvent.keyDown(web, { key: 'ArrowUp' });
+    expect(radios[2]).toHaveFocus();
+    // Focus moves; nothing opens.
+    expect(screen.getByTestId('probe-path')).toHaveTextContent('/learn/web-developer');
+    expect(web).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
+describe('the topic rail (UX audit learn-07)', () => {
+  it('says locked once per tile, and counts the locked topics beside the skill check', async () => {
+    answer();
+    await mountAt('/learn/web-developer');
+    await screen.findByRole('radio', { name: /^JavaScript/ });
+    const tiles = [...document.querySelectorAll<HTMLElement>('.rm-topic-rail [role="radio"]')];
+    const locked = tiles.filter((tile) => tile.getAttribute('data-locked') === 'true');
+    expect(locked.length).toBeGreaterThan(0);
+    for (const tile of locked) {
+      expect(tile).toHaveAccessibleName(/ — Locked/);
+      expect(tile.textContent).not.toContain('Locked');
+      expect(tile.querySelectorAll('.rm-topic-lock')).toHaveLength(1);
+    }
+    for (const tile of tiles) {
+      // "Premium" shows, once and in sentence case, only where it applies.
+      const premium = /, Premium$/.test(tile.getAttribute('aria-label') ?? '');
+      expect(within(tile).queryAllByText('Premium')).toHaveLength(premium ? 1 : 0);
+    }
+    // The rail shares its tiles evenly across its rows: ten are two of five.
+    const rail = document.querySelector<HTMLElement>('.rm-topic-rail')!;
+    expect(rail.style.getPropertyValue('--rm-rail-cols')).toBe(String(Math.ceil(tiles.length / Math.ceil(tiles.length / 5))));
+    const note = screen.getByText(/paths still locked\./);
+    expect(note.closest('.rm-skillcheck-row')).not.toBeNull();
+    expect(note.closest('.rm-skillcheck-row')!.querySelector('.rm-skillcheck-cta')).not.toBeNull();
+  });
+});
+
+describe('a section with nothing open (UX audit learn-09)', () => {
+  it('ends on one row of next steps: the prerequisite as the one primary and the skill check beside it', async () => {
+    answer();
+    await mountAt('/learn/software-engineer');
+    const title = await screen.findByRole('heading', { level: 2, name: 'Nothing here is open yet' });
+    const empty = title.closest('.rm-section-empty') as HTMLElement;
+    const go = within(empty).getByRole('button', { name: /^Go to / });
+    expect(go).toHaveClass('ss-swim-cta');
+    const check = within(empty).getByRole('button', { name: 'Take the skill check' });
+    expect(go.parentElement).toBe(check.parentElement);
+    // The separate skill-check row is not drawn in this state.
+    expect(document.querySelector('.rm-skillcheck-row')).toBeNull();
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    fireEvent.click(check);
+    expect(await screen.findByRole('button', { name: 'Start placement' })).toBeInTheDocument();
+  });
+});
+
+describe('the next-step card (UX audit learn-06)', () => {
+  it('says only the next level, with the bar under it and Continue beside it', async () => {
+    answer();
+    await mountAt('/learn/web-developer');
+    const go = await screen.findByRole('button', { name: 'Continue', description: 'Level 1 of 10 · Level 1 title' });
+    const card = go.closest('.rm-overview-card') as HTMLElement;
+    expect(card.querySelector('.rm-overview-step')).toHaveTextContent('Level 1 of 10 · Level 1 title');
+    expect(card.querySelector('.rm-overview-copy [role="progressbar"]')).toHaveAccessibleName('0 / 10 levels');
+    // The selected tile names the topic and its count; the card does not.
+    const tile = document.querySelector<HTMLElement>('.rm-topic-rail [role="radio"][aria-checked="true"]')!;
+    expect(card.textContent).not.toContain(tile.getAttribute('aria-label')!);
+    expect(card.textContent).not.toContain('/ 10 levels');
+    expect(within(card).queryByRole('heading')).toBeNull();
+  });
+});
+
+describe('a topic Premium opens, on a free account (UX audit learn-22)', () => {
+  it('says Premium once, in the card, whose button says it opens Premium; the map nodes carry no label', async () => {
+    // The map measures its column; jsdom lays nothing out.
+    const measure = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ width: 800, height: 0, top: 0, left: 0, right: 800, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect);
+    onTestFinished(() => measure.mockRestore());
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer({ javascript: { levels: Object.fromEntries(levels(5).map(({ level: n }) => [String(n), { passed: true }])), checkpoints: {} } });
+    await mountAt('/learn/web-developer');
+    fireEvent.click(await screen.findByRole('radio', { name: /^Git, Premium$/ }));
+    const see = await screen.findByRole('button', { name: 'See Premium', description: 'Git is part of Premium' });
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
+    // Each node keeps "Premium" in its name, and shows the lock alone.
+    const nodes = await screen.findAllByRole('button', { name: /^Level \d+: .*, Premium$/ });
+    expect(nodes.length).toBeGreaterThan(0);
+    const canvas = document.querySelector('.rm-path-canvas') as HTMLElement;
+    expect(within(canvas).queryAllByText('Premium')).toHaveLength(0);
+    fireEvent.click(see);
+    expect(sheets.calls).toEqual([{ kind: 'learn-level', ref: expect.anything() }]);
+  });
+});
+
+describe('a topic whose first levels are free, on a free account (UX audit learn-22)', () => {
+  it('says the level Premium starts at, not that the whole topic is Premium', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    const passed = (count: number) => ({ levels: Object.fromEntries(levels(count).map(({ level: n }) => [String(n), { passed: true }])), checkpoints: {} });
+    answer({ javascript: passed(5), dsa: passed(5) });
+    await mountAt('/learn/software-engineer?topic=dsa');
+    const see = await screen.findByRole('button', { name: 'See Premium', description: 'From level 6, DSA Foundations is part of Premium' });
+    expect(screen.queryByText('DSA Foundations is part of Premium')).toBeNull();
+    fireEvent.click(see);
+    expect(sheets.calls).toEqual([{ kind: 'learn-level', ref: expect.anything() }]);
+  });
+});
+
+describe('one primary in a section the learner has not joined', () => {
+  it('keeps the join as the one SwimCta, and the card of a shared open topic turns secondary', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer({ javascript: { levels: Object.fromEntries(levels(5).map(({ level: n }) => [String(n), { passed: true }])), checkpoints: {} } });
+    await mountAt('/learn/software-engineer?topic=git');
+    const join = await screen.findByRole('button', { name: 'Add it to your plan' });
+    expect(join).toHaveClass('ss-swim-cta');
+    // Git is shared with Web Developer, so it is open here with its card.
+    const card = (await screen.findByText('Git is part of Premium')).closest('.rm-overview-card') as HTMLElement;
+    const see = within(card).getByRole('button', { name: 'See Premium', description: 'Git is part of Premium' });
+    expect(see).not.toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    fireEvent.click(see);
+    expect(sheets.calls).toEqual([{ kind: 'learn-level', ref: expect.anything() }]);
+
+    // Once joined, the header has no action and the card's button is the primary.
+    fireEvent.click(join);
+    expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
+    await waitFor(() => expect(within(card).getByRole('button', { name: 'See Premium' })).toHaveClass('ss-swim-cta'));
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+  });
+});
+
 describe('a section without a plan', () => {
   it('asks a visitor to sign in, and dims nothing', async () => {
     answer();
     await mountAt('/learn/software-engineer');
-    const action = await screen.findByRole('button', { name: 'Sign in to add Software Engineer to your plan' });
+    const action = await screen.findByRole('button', { name: 'Sign in to add it to your plan' });
     expect(notInPlan()).toHaveLength(0);
     fireEvent.click(action);
     expect(signIns.calls).toEqual([{ returnTo: '/learn/software-engineer' }]);
@@ -289,7 +464,7 @@ describe('a section without a plan', () => {
     expect(choose).toHaveAttribute('href', '/profile#learning-plan');
     fireEvent.click(choose);
     expect(notInPlan()).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: /Add Forward Deployed Engineer/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add it to your plan' })).toBeNull();
     await waitFor(() => expect(screen.getByTestId('probe-path')).toHaveTextContent('/profile'));
   });
 });

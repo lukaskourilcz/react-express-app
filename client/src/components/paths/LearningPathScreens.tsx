@@ -1,4 +1,4 @@
-import { FdeHub } from './FdeHub';
+import { FdeEvidence, FdeLoop } from './FdeHub';
 // The learning-path screens of the FDE role specialization, the one
 // published path since E5 (#496) retired DSA Foundations:
 //
@@ -21,6 +21,8 @@ import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { ApiError, friendlyError } from '../../lib/api';
 import { isBarred, useLocks } from '../../lib/locks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
+import { openSignIn } from '../../lib/signInDialog';
+import { SwimCta } from '../landing/LandingKit';
 import { useTrack } from '../../lib/tracks';
 import { capturePathEvent } from '../../lib/analytics';
 import { CodingCompletion } from '../../coding/CodingCompletion';
@@ -35,6 +37,7 @@ import {
   CriteriaList,
   Feedback,
   LessonActivity,
+  STATE_GLYPH,
   StateBadge,
   type DraftStatus,
 } from './ActivityViews';
@@ -107,6 +110,23 @@ function statesOf(progress: PathProgressResponse | undefined): Map<string, Evide
   return map;
 }
 
+/**
+ * An activity's title without the kind its row already shows (UX audit
+ * learn-12). Reviewed content titles a lesson 'Read: baseline and scope', and
+ * the row's kind column says 'Read' beside it; the prefix is dropped here, at
+ * render time, and the content stays as reviewed.
+ */
+function titleWithoutKind(title: string, kindLabel: string): string {
+  const prefix = `${kindLabel.toLowerCase()}:`;
+  if (!title.toLowerCase().startsWith(prefix)) return title;
+  const rest = title.slice(prefix.length).trimStart();
+  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : title;
+}
+
+// The module page's next row title, which describes a primary whose label cut
+// the title short (UX audit learn-13). One module page shows at a time.
+const NEXT_TITLE_ID = 'lp-module-next-title';
+
 function ActivityRow({
   pathId,
   moduleId,
@@ -114,29 +134,48 @@ function ActivityRow({
   state,
   interactive,
   locked = false,
+  compact = false,
+  next = false,
+  premiumSaid = false,
 }: {
   pathId: LearningPathId;
   locked?: boolean;
+  /** The module's head already says Premium for every row: the row keeps
+   * the word for screen readers only. */
+  premiumSaid?: boolean;
   moduleId: string;
   activity: ActivitySummary;
   state: EvidenceState;
   interactive: boolean;
+  /** One 48px line (kind · title · minutes), without the summary: the hub. */
+  compact?: boolean;
+  /** The module's next activity, marked with the accent edge (learn-13). */
+  next?: boolean;
 }) {
   const t = useT();
+  const kind = t(`paths.kind.${activity.kind}` as never);
+  const className = ['lp-activity', 'lp-activity--row', compact ? 'lp-activity--compact' : '', next ? 'lp-activity--next' : ''].filter(Boolean).join(' ');
   const body = (
     <>
-      <span className="lp-activity__kind">{t(`paths.kind.${activity.kind}` as never)}</span>
-      <span className="lp-activity__title">{activity.title}</span>
+      <span className="lp-activity__kind">{kind}</span>
+      <span className="lp-activity__title" id={next ? NEXT_TITLE_ID : undefined}>{titleWithoutKind(activity.title, kind)}</span>
       <span className="lp-activity__minutes">{t('paths.minutes', { minutes: activity.estimatedMinutes })}</span>
-      <StateBadge state={state} />
-      {locked && <span className="ss-premium-label">{t('premium.badge')}</span>}
-      <p className="lp-activity__summary">{activity.summary}</p>
+      {/* 'Not started' is every row's default and goes unsaid; any other
+          state is a glyph beside the minutes, its words read aloud. */}
+      {state !== 'not_started' && (
+        <span className={`lp-activity__state lp-activity__state--${state}`}>
+          <span aria-hidden="true">{STATE_GLYPH[state]}</span>
+          <span className="ss-sr-only">{t(`paths.state.${state}` as never)}</span>
+        </span>
+      )}
+      {locked && <span className={premiumSaid ? 'ss-sr-only' : 'ss-premium-label'}>{t('premium.badge')}</span>}
+      {!compact && <p className="lp-activity__summary">{activity.summary}</p>}
     </>
   );
-  if (!interactive) return <li className="lp-activity">{body}</li>;
+  if (!interactive) return <li className={className}>{body}</li>;
   return (
     <li>
-      <Link className="lp-activity" to={activityHref(pathId, moduleId, activity.id)} onClick={event => { if (locked) { event.preventDefault(); openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${activity.id}` }); } }}>
+      <Link className={className} to={activityHref(pathId, moduleId, activity.id)} onClick={event => { if (locked) { event.preventDefault(); openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${activity.id}` }); } }}>
         {body}
       </Link>
     </li>
@@ -161,6 +200,10 @@ function ModuleCard({
   activityLock: (activityId: string, state: EvidenceState) => boolean;
 }) {
   const t = useT();
+  // A module whose every activity Premium opens says Premium once, in its
+  // head, instead of on each row (as the Learn map does, UX audit learn-22).
+  const lockedRows = module.activities.map((activity) => activityLock(activity.id, states.get(activity.id) ?? 'not_started'));
+  const allLocked = lockedRows.length > 0 && lockedRows.every(Boolean);
   const className = [
     'lp-module',
     completed ? 'lp-module--done' : '',
@@ -178,7 +221,7 @@ function ModuleCard({
           {interactive ? <Link to={moduleHref(pathId, module.id)}>{module.title}</Link> : module.title}
         </h2>
         <span className="lp-module__meta">
-          {module.shelf && <span className="ss-premium-label">{t('premium.badge')}</span>}
+          {(module.shelf || allLocked) && <><span className="ss-premium-label">{t('premium.badge')}</span>{' '}</>}
           {t('paths.minutes', { minutes: module.estimatedMinutes })}
           {completed ? ` · ${t('paths.module.complete')}` : ''}
         </span>
@@ -189,15 +232,17 @@ function ModuleCard({
         ))}
       </ul>
       <ul className="lp-activities">
-        {module.activities.map((activity) => (
+        {module.activities.map((activity, position) => (
           <ActivityRow
             key={activity.id}
             pathId={pathId}
             moduleId={module.id}
             activity={activity}
-            locked={activityLock(activity.id, states.get(activity.id) ?? 'not_started')}
+            locked={lockedRows[position]}
+            premiumSaid={allLocked}
             state={states.get(activity.id) ?? 'not_started'}
             interactive={interactive}
+            compact
           />
         ))}
       </ul>
@@ -290,9 +335,43 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   // evidence without dead ends.
   const reachable = Boolean(enrollment) && enrollment?.status !== 'paused' && open && !barred;
   const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
+  const hubState = {
+    manifest,
+    progress: progress.data,
+    pending: Boolean((isAuthenticated && enrollments.isPending) || (enrollment && progress.isPending)),
+    error: Boolean(enrollments.error || progress.error),
+  };
   const diagnosticModule = manifest.diagnosticActivityId
     ? manifest.modules.find(module => module.activities.some(activity => activity.id === manifest.diagnosticActivityId))
     : undefined;
+
+  // The one action row under the hero (UX audit learn-10): at most one filled
+  // primary (SwimCta md) and a ghost Pause, left-aligned in every state. A
+  // guest is offered Sign in only while the path is open; a closed path's
+  // notice already says the outline stays readable.
+  const actions = [
+    !isAuthenticated && open && (
+      <SwimCta key="sign-in" label={pathCopy['paths.action.signIn']} onClick={() => openSignIn({ returnTo: pathHref(pathId) })} />
+    ),
+    open && (barred || nextBarred) && <span key="premium">{premiumMark}</span>,
+    // Only once the account's enrollments are known: while they load (or
+    // after they failed) an enrolled learner would be offered Start.
+    isAuthenticated && enrollments.data && !enrollment && open && (
+      <SwimCta key="start" onClick={() => (barred ? askForPremium() : void enrol('enroll'))} disabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
+    ),
+    isAuthenticated && enrollment?.status === 'paused' && open && (
+      <SwimCta key="resume" onClick={() => (barred ? askForPremium() : void enrol('resume'))} disabled={enrolling} label={t('paths.action.resume')} />
+    ),
+    enrollment?.status === 'active' && open && next && nextModule && (
+      <SwimCta key="continue" onClick={() => (nextBarred ? openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${next}` }) : navigate(activityHref(pathId, nextModule.id, next)))} label={t('paths.action.continue')} />
+    ),
+    enrollment?.status === 'active' && (
+      <Button key="pause" variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
+    ),
+  ].filter(Boolean);
+  // While a signed-in learner's enrollments load, the row keeps its 44px, so
+  // the page below does not move down when Start, Resume or Continue arrives.
+  const actionsPending = isAuthenticated && open && enrollments.isPending;
 
   return (
     <div className="lp-page">
@@ -326,32 +405,10 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               {t('paths.inventory.hours', { min: manifest.estimatedHours.min, max: manifest.estimatedHours.max })}
             </li>
           </ul>
-          {/* What the four kinds of activity are for, said once at the top of
-              the path rather than repeated at each one. The last sentence is
-              the one that matters: coming back to earlier material is the plan
-              working, not the plan slipping. */}
-          <p className="lp-note">
-            {pathCopy['paths.activityKinds']}
-          </p>
         </div>
-        <div className="lp-head__actions">
-          {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}
-          {open && (barred || nextBarred) && premiumMark}
-          {/* Only once the account's enrollments are known: while they load
-              (or after they failed) an enrolled learner would be offered Start. */}
-          {isAuthenticated && enrollments.data && !enrollment && open && (
-            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('enroll'))} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
-          )}
-          {isAuthenticated && enrollment?.status === 'paused' && open && (
-            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('resume'))} isDisabled={enrolling} label={t('paths.action.resume')} />
-          )}
-          {enrollment?.status === 'active' && open && next && nextModule && (
-            <Button variant="primary" onClick={() => (nextBarred ? openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${next}` }) : navigate(activityHref(pathId, nextModule.id, next)))} label={t('paths.action.continue')} />
-          )}
-          {enrollment?.status === 'active' && (
-            <Button variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
-          )}
-        </div>
+        {(actions.length > 0 || actionsPending) && (
+          <div className="lp-head__actions" aria-busy={actions.length === 0 || undefined}>{actions}</div>
+        )}
       </header>
 
       {enrollError && (
@@ -396,17 +453,24 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         <p className="lp-lead">{manifest.entryRequirement}</p>
       </section>
 
-      {pathId === 'fde' && <FdeHub manifest={manifest} progress={progress.data} reachable={reachable} activityLock={activityLock}
-        pending={Boolean((isAuthenticated && enrollments.isPending) || (enrollment && progress.isPending))}
-        error={Boolean(enrollments.error || progress.error)}
-        retry={() => { void enrollments.refetch(); if (enrollment) void progress.refetch(); }} />}
+      {pathId === 'fde' && <FdeLoop {...hubState} retry={() => { void enrollments.refetch(); if (enrollment) void progress.refetch(); }} />}
 
       {progress.data && (
         <section className="lp-card lp-completion">
           <h2>{t('paths.progressTitle')}</h2>
+          {/* 'Guided path' and its state (UX audit learn-14): the content's
+              completion label ('… guided path completed') read as a claim
+              beside an 'In progress' badge. */}
           <div className="lp-completion__line">
-            <span className="lp-completion__label">{manifest.completionLabel}</span>
-            <StateBadge state={progress.data.guidedComplete ? 'verified_pass' : 'in_progress'} />
+            <span className="lp-completion__label">{pathCopy['paths.guidedPath']}</span>
+            {progress.data.guidedComplete ? (
+              <span className="lp-state lp-state--verified_pass">
+                <span className="lp-state__glyph" aria-hidden="true">✓</span>
+                {pathCopy['paths.guidedPath.completed']}
+              </span>
+            ) : (
+              <StateBadge state="in_progress" />
+            )}
           </div>
           {inventory.artifacts > 0 && (
             <>
@@ -425,7 +489,6 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               {enrollment && <PortfolioExport key={`${userId}:${enrollment.enrollmentId}`} manifest={manifest} enrollmentId={enrollment.enrollmentId} states={states} />}
             </>
           )}
-          <p className="lp-completion__note">{t('paths.completionNote')}</p>
         </section>
       )}
 
@@ -493,6 +556,11 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
 
       <section className="lp-section">
         <h2>{t('paths.outline')}</h2>
+        {/* What the four kinds of activity are for, said once above the
+            modules rather than at each one (UX audit learn-10 moved it out of
+            the hero). The last sentence is the one that matters: coming back
+            to earlier material is the plan working, not the plan slipping. */}
+        <p className="lp-note">{pathCopy['paths.activityKinds']}</p>
         <div className="lp-modules">
           {requiredModules.map((module, index) => (
             <ModuleCard
@@ -508,6 +576,10 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
           ))}
         </div>
       </section>
+
+      {/* Competency evidence sums up the modules, so it follows them, closed
+          (UX audit learn-11). */}
+      {pathId === 'fde' && <FdeEvidence {...hubState} reachable={reachable} activityLock={activityLock} />}
 
       {/* The loop, then the shelves, then placement and bridges. */}
       {shelves.map(({ shelf, modules }) => (
@@ -938,14 +1010,47 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       levels: dimension.levels as unknown as Record<string, string>,
     }));
   const shown = activity ?? open?.activity;
+  // The module's one primary (UX audit learn-13): the first activity that is
+  // neither passed nor self-reviewed, 'Start module' while nothing is recorded
+  // and 'Continue: <title>' after. It shows while the list is the screen; an
+  // open activity carries its own primary.
+  // It waits for the recorded progress: before it arrives, a learner part-way
+  // through would read 'Start module' aimed at the first row. Until then the
+  // row keeps its 44px, so the list does not move when the primary arrives.
+  const started = Boolean(moduleProgress?.activities.some((one) => one.state !== 'not_started'));
+  const target = reachable && progress.data
+    ? module.activities.find((one) => {
+        const state = states.get(one.id) ?? 'not_started';
+        return state !== 'verified_pass' && state !== 'self_reviewed';
+      })
+    : undefined;
+  const targetLocked = target ? activityLock(target.id, states.get(target.id) ?? 'not_started') : false;
+  const targetTitle = target ? titleWithoutKind(target.title, t(`paths.kind.${target.kind}` as never)) : '';
+  const targetCut = targetTitle.length > 32;
+  const ctaLabel = started
+    ? pathCopy['paths.action.continueTo'].replace('{title}', targetCut ? `${targetTitle.slice(0, 31).trimEnd()}…` : targetTitle)
+    : pathCopy['paths.action.startModule'];
+  const ctaPending = !target && isAuthenticated && !enrollments.error && !progress.error
+    && (enrollments.isPending || (reachable && !progress.data));
 
   return (
     <div className="lp-page">
       <header className="lp-head">
         <div className="lp-head__text">
-          <p className="lp-kicker">
-            <Link to={pathHref(pathId)}>{entry.manifest.title}</Link>
-          </p>
+          <div className="lp-head__kicker-row">
+            <p className="lp-kicker">
+              <Link to={pathHref(pathId)}>{entry.manifest.title}</Link>
+            </p>
+            <span className="lp-head__status">
+              {/* An off-loop module never completes, so "In progress" would
+                  read as unfinished for good. A module with no recorded
+                  evidence has not started, whatever the enrollment says. */}
+              {offLoop(module)
+                ? t('paths.module.optional')
+                : moduleProgress?.completed ? t('paths.module.complete')
+                  : started ? t('paths.module.inProgress') : t('paths.module.notStarted')}
+            </span>
+          </div>
           <h1>{module.title}</h1>
           <ul className="lp-module__outcomes">
             {module.outcomes.map((outcome, index) => (
@@ -953,17 +1058,19 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             ))}
           </ul>
         </div>
-        <div className="lp-head__actions">
-          <span className="lp-module__meta">
-            {/* An off-loop module never completes, so "In progress" would
-                read as unfinished for good. A module with no recorded
-                evidence has not started, whatever the enrollment says. */}
-            {offLoop(module)
-              ? t('paths.module.optional')
-              : moduleProgress?.completed ? t('paths.module.complete')
-                : moduleProgress?.activities.some((one) => one.state !== 'not_started') ? t('paths.module.inProgress') : t('paths.module.notStarted')}
-          </span>
-        </div>
+        {!activityId && (target || ctaPending) && (
+          <div className="lp-head__actions" aria-busy={!target || undefined}>
+            {target && <SwimCta
+              label={ctaLabel}
+              // A title cut at 32 characters is read whole from the marked row.
+              describedBy={targetCut ? NEXT_TITLE_ID : undefined}
+              onClick={() => (targetLocked
+                ? openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${target.id}` })
+                : navigate(activityHref(pathId, module.id, target.id)))}
+            />}
+            {targetLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
+          </div>
+        )}
       </header>
 
       {!isAuthenticated && (
@@ -1017,6 +1124,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               locked={activityLock(one.id, states.get(one.id) ?? 'not_started')}
               state={states.get(one.id) ?? 'not_started'}
               interactive={reachable}
+              next={one.id === target?.id}
             />
           ))}
         </ul>

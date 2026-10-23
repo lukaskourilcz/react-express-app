@@ -1,9 +1,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
+import { BigOLessons } from './learn/BigOLessons';
 import { retirementOf } from '../../../shared/retired-content';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button as AxButton } from '@astryxdesign/core/Button';
@@ -85,7 +85,7 @@ import {
   type RailEntry,
 } from './learn/sections';
 import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionSwitcher';
-import { CheckIcon, LockIcon, SectionEmpty, SectionRail } from './learn/SectionRail';
+import { CheckIcon, LockIcon, LockedNote, SectionEmpty, SectionRail } from './learn/SectionRail';
 import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
 import { useFdePathSteps } from './learn/useFdePathSteps';
 import { useOnline } from './learn/useOnline';
@@ -895,30 +895,38 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     };
   });
   const gate = sectionHasOpen ? null : sectionGate(entries, progress, extraUnlocksSet, members);
+  // The skill check and what it opens: the count of locked topics and how to
+  // open them sit here, beside the action they name (UX audit learn-07).
   const skillCheckRow = (
     <div className="rm-skillcheck-row">
-      <span>{t('roadmap.skillCheckSubtitle')}</span>
+      <div className="rm-skillcheck-copy">
+        {!loadingStructure && <LockedNote entries={entries} t={t} />}
+        <span>{t('roadmap.skillCheckSubtitle')}</span>
+      </div>
       <button type="button" className="rm-skillcheck-cta" onClick={() => setSkillCheckOpen(true)}>
         <BoltIcon size={15} /> {t('roadmap.skillCheckCta')}
       </button>
     </div>
   );
+  // The section header offers the join as the one filled primary
+  // (SectionHeader's `joinable`); the gate's action or the next-step card's
+  // button under it then stays secondary.
+  const headerJoins = section !== 'web-developer' && !authLoading && isAuthenticated && hasPlan && !isMember;
   const topicDone = passedLevelCount(progress, topic);
+  const continueBarred = !!continueLevel && isBarred(lockOf({ kind: 'learn-level', topic, level: continueLevel.level }));
+  // React and DSA open their first levels to every account: there Premium
+  // starts at a level, not with the topic.
+  const premiumFrom = !!continueLevel && continueBarred && continueLevel.level > 1 && !isBarred(lockOf({ kind: 'learn-level', topic, level: 1 }));
   const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
   return (
-    <div className="de-page" style={{ maxWidth: 1060 }}>
-      <div className="rm-journey-heading">
-        <Kicker as="h1" className="ss-section-title">{!isAuthenticated && !authLoading ? sectionName : t('roadmap.journeyTitle')}</Kicker>
-        <div style={{ marginTop: 4 }}>
-          <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
-        </div>
-        {!isAuthenticated && !authLoading && (
-          <div style={{ marginTop: 4 }}>
-            <Text type="supporting" color="secondary">{t('register.deviceOnly')}</Text>
-          </div>
-        )}
-      </div>
+    <div className="de-page">
+      {/* One header in every auth state (UX audit learn-01): the h1 is
+          always "Learn", the switcher below is the one place the section is
+          named, and the section line under it is the one supporting line. */}
+      <header className="rm-journey-heading">
+        <Kicker as="h1" className="ss-section-title">{t('roadmap.title')}</Kicker>
+      </header>
 
       {retired && (
         <div className="cd-note" role="status" style={{ marginBottom: 16 }}>
@@ -955,6 +963,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending || enrollments.isLoading, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
           premiumLabel={t('premium.badge')}
           retryLabel={t('roadmap.retry')}
+          deviceNote={t('register.deviceOnly')}
         />
 
         {LEARN_SECTIONS.find((one) => one.id === section)!.paths.length > 0 && (
@@ -989,25 +998,29 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           <AxButton variant="secondary" label={t('roadmap.retry')} onClick={() => structureQuery.refetch()} />
         </div>
       ) : !sectionHasOpen && (gate || !isMember) ? (
-        <>
-          {gate ? (
-            <SectionEmpty
-              kind="gate"
-              prereq={gate.prereq}
-              topic={gate.topic}
-              onGo={() => {
-                focusOnArrival.current = gate.prereqSection;
-                switchSection(gate.prereqSection, gate.prereq as RoadmapTopic);
-              }}
-              t={t}
-            />
-          ) : (
+        gate ? (
+          // The gate's own action row holds the skill check (UX audit
+          // learn-09), so the separate skill-check row is not drawn here.
+          <SectionEmpty
+            kind="gate"
+            prereq={gate.prereq}
+            topic={gate.topic}
+            onGo={() => {
+              focusOnArrival.current = gate.prereqSection;
+              switchSection(gate.prereqSection, gate.prereq as RoadmapTopic);
+            }}
+            onSkillCheck={() => setSkillCheckOpen(true)}
+            quiet={headerJoins}
+            t={t}
+          />
+        ) : (
+          <>
             <SectionEmpty kind="notMember" name={sectionName} />
-          )}
-          {skillCheckRow}
-        </>
+            {skillCheckRow}
+          </>
+        )
       ) : levels.length === 0 ? (
-        <div style={{ maxWidth: 620, margin: '32px auto 0' }}>
+        <div style={{ marginTop: 16 }}>
           <Banner status="info" title={t('roadmap.noLevels')} description={t('roadmap.noLevelsBody')} />
         </div>
       ) : (
@@ -1043,28 +1056,55 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
             })}
           </div>
 
-          {/* Current-part progress */}
+          {/* The next step, in one row (UX audit learn-06): the selected
+              tile above already names the topic and its count, so the card
+              says only what the tile does not, the next level, with the
+              topic's progress as a 4px bar under it and Continue on the
+              right. */}
+          {/* A next level Premium opens says so once, here, and its button
+              says what it does (UX audit learn-22): it opens the upgrade
+              sheet, not a level. */}
           <div className="rm-overview-card">
+            <span className="rm-overview-fin" aria-hidden="true" />
             <div className="rm-overview-copy">
-              <span className="rm-overview-fin" aria-hidden="true" />
-              <div><Heading level={2}>{t(categoryLabelKey(topic))} — {t('roadmap.wholeSwim')}</Heading>
-                <Text type="supporting" color="secondary">{t('roadmap.progress', { done: topicDone, total: levels.length })}</Text></div>
-            </div>
-            <div className="rm-overview-actions">
+              <p id="rm-overview-step" className="rm-overview-step">
+                {continueLevel
+                  ? continueBarred
+                    ? premiumFrom
+                      ? learnText('learn.overview.premiumFrom', { n: continueLevel.level, topic: t(categoryLabelKey(topic)) })
+                      : learnText('learn.overview.premium', { topic: t(categoryLabelKey(topic)) })
+                    : learnText('learn.overview.next', { n: continueLevel.level, total: levels.length, title: continueLevel.title })
+                  : t('roadmap.progress', { done: topicDone, total: levels.length })}
+              </p>
               <div
-              role="progressbar"
-              aria-label={t('roadmap.progress', { done: topicDone, total: levels.length })}
-              aria-valuenow={Math.round(levels.length ? (topicDone / levels.length) * 100 : 0)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              className="rm-overview-progress"
-            >
-              <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
+                role="progressbar"
+                aria-label={t('roadmap.progress', { done: topicDone, total: levels.length })}
+                aria-valuenow={Math.round(levels.length ? (topicDone / levels.length) * 100 : 0)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="rm-overview-progress"
+              >
+                <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
               </div>
-            {continueLevel && (
-              <SwimCta label={t('roadmap.continueLevel', { n: continueLevel.level })} dir={-1} onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })} />
-            )}
             </div>
+            {/* In a section the learner has not joined, a topic it shares
+                with their plan is open here too, but the header's join is
+                the screen's one primary, so this action is a secondary. */}
+            {continueLevel && (headerJoins ? (
+              <AxButton
+                variant="secondary"
+                label={continueBarred ? learnText('learn.overview.seePremium') : t('roadmap.continue')}
+                aria-describedby="rm-overview-step"
+                onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })}
+              />
+            ) : (
+              <SwimCta
+                label={continueBarred ? learnText('learn.overview.seePremium') : t('roadmap.continue')}
+                describedBy="rm-overview-step"
+                dir={-1}
+                onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })}
+              />
+            ))}
           </div>
 
           {/* Reads the node colours: white = not started, amber = cleared,
@@ -1382,8 +1422,11 @@ function PartTestNode({
 /* ──── Premium node ─────────────────────────────────────────────────────── */
 
 /** A level or part test that Premium opens, on a free account. It keeps its
- * place and title on the map, reads "Premium" as text rather than colour,
- * stays in the tab order with `aria-disabled`, and opens the upgrade sheet. */
+ * place and title on the map, stays in the tab order with `aria-disabled`,
+ * and opens the upgrade sheet. Premium is said once for the topic, on its
+ * tile and in the next-step card (UX audit learn-22), so the node shows no
+ * label of its own: the lock and the dashed edge mark it, and "Premium" is
+ * in its accessible name ("Level 7: Union Types, Premium"). */
 function PremiumNode({ shape, label, title, cellW, onClick, t }: {
   shape: 'level' | 'test'; label: string; title: string; cellW: number; onClick: () => void; t: TFn;
 }) {
@@ -1418,16 +1461,15 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
           maxWidth: Math.min(cellW - 4, Math.max(72, Math.min(150, cellW - 10))),
           textAlign: 'center',
           lineHeight: 1.15,
-          // One line of title, so the "Premium" line fits the row's label band.
+          // Two lines, as every other node's title.
           display: '-webkit-box',
-          WebkitLineClamp: 1,
+          WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
         }}
       >
         {title}
       </div>
-      <span className="ss-premium-label rm-premium-label" aria-hidden="true" style={{ maxWidth: Math.max(40, cellW - 4) }}>{t('premium.badge')}</span>
     </div>
   );
 }
@@ -1821,10 +1863,24 @@ function SkillCheckRunner({
 export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
   const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
-  const [level, setLevel] = useState<1 | 2 | null>(null);
+  // /big-o's "Start lesson 1" opens a lesson directly (?lesson=1, UX audit
+  // learn-19): the lesson's reading is the first screen, and the parameter is
+  // dropped so Back and a reload land on the introduction.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const asked = new URLSearchParams(location.search).get('lesson');
+  const [level, setLevel] = useState<1 | 2 | null>(() => (asked === '1' ? 1 : asked === '2' ? 2 : null));
   const [generation, setGeneration] = useState(0);
   const [reading, setReading] = useState(true);
   const before = useRef(0);
+  useEffect(() => {
+    if (asked === null) return;
+    if (level !== null) {
+      preloadLessonRunner();
+      before.current = computeLearningXp(getRoadmapProgress());
+    }
+    navigate({ pathname: location.pathname, hash: location.hash }, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival
   const lesson = useQuery({
     queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
     enabled: level !== null && !reading,
@@ -1853,18 +1909,9 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
         if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
       }} /></LessonStage>;
   }
-  // The route shell sets the width. Lesson 1 is the one SwimCta md and lesson
-  // 2 a secondary, both 44px (UX audit learn-04).
-  return <div className="de-page">
-    <h1>{t('bigO.pathTitle')}</h1>
-    <p>{t('bigO.pathLead')}</p>
-    <div className="ss-info-actions">
-      <SwimCta label={t('bigO.firstLesson')} onClick={() => open(1)} />
-      <AxButton variant="secondary" label={t('bigO.secondLesson')} onClick={() => open(2)} />
-    </div>
-    {/* The shared text link (44px, brand accent), not the browser's own blue. */}
-    <p className="ss-text-links"><Link to="/big-o">{t('bigO.backToGuide')}</Link></p>
-  </div>;
+  // The route shell sets the width. The Learn header, then lesson 1 as the one
+  // SwimCta md and lesson 2 a secondary, both 44px (UX audit learn-04, -15, -19).
+  return <BigOLessons onOpen={open} />;
 }
 
 export default Roadmap;

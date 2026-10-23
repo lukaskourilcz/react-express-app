@@ -234,7 +234,30 @@ describe('the plan', () => {
   it('counts every topic of the chosen track in the /roadmap headline', async () => {
     answer();
     await mountAt('/roadmap', <CareerRoadmap />);
-    expect(await screen.findByText('0 / 52 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+    expect(await screen.findByText('0 / 52 learning-path levels passed')).toBeInTheDocument();
+  });
+
+  // The track was named three times and the same topics were listed under
+  // every section that holds them (UX audit learn-16).
+  it('names the /roadmap track once and lists each topic once, under the first section that holds it', async () => {
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    await screen.findByText('0 / 52 learning-path levels passed');
+    // The segment is the one track label: no badge, no "on the Fullstack track".
+    expect(screen.getAllByText('Fullstack')).toHaveLength(1);
+    expect(screen.queryByText(/Choose Frontend, Backend or Fullstack/)).toBeNull();
+    const labels = [...document.querySelectorAll('.career-topic__label')].map((label) => label.textContent);
+    expect(labels).toContain('Git');
+    expect(new Set(labels).size).toBe(labels.length);
+    const git = [...document.querySelectorAll('.career-topic')].find((row) => row.querySelector('.career-topic__label')?.textContent === 'Git')!;
+    expect(git.closest('section')).toHaveAttribute('aria-labelledby', 'career-web-developer');
+    expect(git).toHaveTextContent('Also in: Software Engineer');
+    // "Also in" is a meta line in the name's column, not a pill that runs
+    // under the bar and the count.
+    expect(git.querySelector('.career-topic__name > .career-topic__also')).toHaveTextContent('Also in: Software Engineer');
+    expect(git.querySelector('.ss-tag')).toBeNull();
+    // The groups size to their content, one panel per section.
+    expect(document.querySelectorAll('section .ss-panel.career-pillars').length).toBeGreaterThan(0);
   });
 
   // Math.round drew 199 of 200 levels as a finished, green 100%.
@@ -246,7 +269,7 @@ describe('the plan', () => {
       progress: { javascript: { levels: passed, checkpoints: {} } },
     });
     await mountAt('/roadmap', <CareerRoadmap />);
-    expect(await screen.findByText('199 / 200 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+    expect(await screen.findByText('199 / 200 learning-path levels passed')).toBeInTheDocument();
     expect(screen.getAllByText('99%').length).toBeGreaterThan(0);
     expect(screen.queryByText('100%')).toBeNull();
   });
@@ -458,7 +481,7 @@ describe('Premium on Today', () => {
 describe('a level whose session cannot be used', () => {
   async function openLevelAndAnswer() {
     await mountAt('/learn', <Roadmap />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue', description: /^Level 1 of \d+ · Level 1 title$/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
     fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
   }
@@ -521,7 +544,7 @@ describe('a level whose session cannot be used', () => {
       return new Promise<Response>(() => {});
     }));
     await mountAt('/learn', <Roadmap />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue', description: /^Level 1 of \d+ · Level 1 title$/ }));
     await waitFor(() => expect(signal).not.toBeNull());
     cleanup();
     await waitFor(() => expect(signal!.aborted).toBe(true));
@@ -533,7 +556,7 @@ describe('a level whose session cannot be used', () => {
     let answers = 0;
     answer({ answer: () => { answers += 1; return HttpResponse.json({ selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: 'Because it is first.' }); } });
     await mountAt('/learn', <Roadmap />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue', description: /^Level 1 of \d+ · Level 1 title$/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
     act(() => {
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }));
@@ -550,7 +573,7 @@ describe('a level whose session cannot be used', () => {
     const second = { ...QUESTION, id: 'q-2', question: 'Which option is second?' };
     answer({ playable: { ...PLAYABLE, questions: [QUESTION, second] } });
     await mountAt('/learn', <Roadmap />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue', description: /^Level 1 of \d+ · Level 1 title$/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
     const question = document.getElementById('lesson-question')!;
     expect(question).toHaveFocus();
@@ -649,7 +672,7 @@ describe('the coding step and the account draft', () => {
   }
   async function openCodingStep() {
     await mountAt('/learn', <Roadmap />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue', description: /^Level 1 of \d+ · Level 1 title$/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
     fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
@@ -762,7 +785,7 @@ describe('a level on the shared question parts', () => {
         : undefined,
     });
     await mountAt('/learn', <Roadmap />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue', description: /^Level 1 of \d+ · Level 1 title$/ }));
     return screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 });
   }
 
@@ -833,7 +856,7 @@ describe('a level on the shared question parts', () => {
     const onActiveChange = (active: boolean) => { seen.push(active); };
     answer({ playable: PLAYABLE });
     await mountAt('/learn', <Roadmap onActiveChange={onActiveChange} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue', description: /^Level 1 of \d+ · Level 1 title$/ }));
     const start = await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 });
     // The intro keeps the chrome: nothing is live yet.
     expect(seen[seen.length - 1] ?? false).toBe(false);

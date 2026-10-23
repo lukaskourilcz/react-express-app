@@ -347,6 +347,30 @@ coming back. The tokens and the map are in
   the two settings stay independent. Account actions are settings rows whose
   title never repeats the button. The banner does not repeat the footer's
   appearance and sound controls (UX audit U6, #578).
+- **A Learn section names itself once** (UX audit U4, #576). The h1 is
+  'Learn' in every auth state; the section switcher is the only place the
+  section's name appears, and the section line is the one supporting line.
+  A locked topic carries one lock signal (the lock glyph, plus 'Premium'
+  only where Premium opens it), and Premium is said once per topic, on its
+  tile and in the next-step card, whose button then says 'See Premium'
+  rather than 'Continue'. An empty section sits on the column's left edge
+  with one row of next steps, not a centred card. While the header offers
+  the join, the join is the one `SwimCta` and every action under it is a
+  secondary.
+- **One Learn page header** (UX audit learn-15). A Learn-area page that is
+  not a section (`/roadmap`, `/big-o`, `/learn/big-o`) opens with
+  `LearnPageHeader` (`components/learn/LearnPageHeader.tsx`): the Learn
+  title (`<Kicker as="h1">`, 800 weight, wave) on the `PageHeader` frame, one
+  supporting line, and at most one context link above the title. It sets no
+  width; the route shell's 800px column holds it. A link in the Learn area
+  is the accent with a 1px underline (`.learn-link`), never the browser's
+  blue; a heading that links somewhere stays in the text colour with an
+  accent arrow.
+- **A summary on request goes below what it sums up.** Evidence, counts and
+  other recaps of a page's content follow that content as one closed
+  disclosure (`.lp-disclosure`), not a long section before it. A row that is
+  in its default state says nothing about it; a recorded state is a glyph
+  with its words for a screen reader (UX audit U4, #576).
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
 
 ## 11. One question system

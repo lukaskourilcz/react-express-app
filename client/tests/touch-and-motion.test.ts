@@ -28,6 +28,9 @@ describe('touch targets on a coarse pointer', () => {
   it('keeps the Learn map’s Skill check at the control height on every pointer', () => {
     const roadmap = [...addSheet('roadmap').cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
     expect(declared(roadmap, '.rm-skillcheck-cta', 'min-height')).toBe('var(--ss-control-height)');
+    // One line beside the locked-topics note (UX audit learn-07).
+    expect(declared(roadmap, '.rm-skillcheck-cta', 'white-space')).toBe('nowrap');
+    expect(declared(roadmap, '.rm-skillcheck-cta', 'flex-shrink')).toBe('0');
   });
 
   // UX audit learn-04: Skill check is a secondary pill with no outline of its

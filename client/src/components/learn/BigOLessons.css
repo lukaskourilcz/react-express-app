@@ -1,0 +1,15 @@
+/* The two Big O lessons in one row (UX audit learn-19), each button with its
+   'Lesson 1 of 2' line under it. Below 480px each lesson takes the row. */
+.bo-lessons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.bo-lesson { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.bo-lesson__count { font-size: var(--ss-type-meta); color: var(--color-text-secondary); }
+@media (max-width: 479px) {
+  .bo-lesson { flex: 1 1 100%; align-items: stretch; }
+}

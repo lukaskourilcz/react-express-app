@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { SwimCta } from './landing/LandingKit';
 import { useLanguage } from '../i18n/LanguageContext';
+import { LearnPageHeader } from './learn/LearnPageHeader';
 import './BigOPage.css';
 
 const curves = [
@@ -12,9 +14,11 @@ const curves = [
 
 export default function BigOPage() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  // The Learn page header (UX audit learn-15); the route shell sets the 800px
+  // column.
   return <article className="de-page bo-page">
-    <h1>{t('bigO.title')}</h1>
-    <p>{t('bigO.lead')}</p>
+    <LearnPageHeader title={t('bigO.title')} lead={t('bigO.lead')} />
     <section className="ss-info-card">
       <h2>{t('bigO.inputTitle')}</h2>
       <p>{t('bigO.inputBody')}</p>
@@ -44,6 +48,12 @@ export default function BigOPage() {
       </table></div>
       <p>{t('bigO.simplify')}</p>
     </section>
-    <section className="ss-info-card"><h2>{t('bigO.practiceTitle')}</h2><p>{t('bigO.pathLead')}</p><Link className="bo-cta" to="/learn/big-o">{t('bigO.practiceLink')}</Link></section>
+    {/* One row, not a card with the introduction's paragraph and a link
+        (UX audit learn-19): the offer and the one primary, which opens lesson
+        1 itself rather than the page that lists it. */}
+    <section className="bo-next" aria-labelledby="bo-next-title">
+      <h2 id="bo-next-title">{t('bigO.freeLessons')}</h2>
+      <SwimCta label={t('bigO.startLesson')} onClick={() => navigate('/learn/big-o?lesson=1')} />
+    </section>
   </article>;
 }

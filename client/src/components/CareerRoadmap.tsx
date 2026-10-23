@@ -13,7 +13,6 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
@@ -49,9 +48,11 @@ import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
+import { LearnPageHeader } from './learn/LearnPageHeader';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import './DeepEndScreens.css';
+import './CareerRoadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -82,12 +83,10 @@ function useRoadmapFirstData() {
 interface Area {
   topic: RoadmapTopic;
   label: string;
-  blurb: string;
 }
 interface Pillar {
   id: string;
   title: string;
-  intro: string;
   areas: Area[];
 }
 
@@ -96,12 +95,10 @@ function webdevPillars(t: TFn): Pillar[] {
   const area = (topic: RoadmapTopic): Area => ({
     topic,
     label: t(`careerRoadmap.area.${topic}.label` as TranslationKey),
-    blurb: t(`careerRoadmap.area.${topic}.blurb` as TranslationKey),
   });
   const p = (id: string, areas: Area[]): Pillar => ({
     id,
     title: t(`careerRoadmap.pillar.${id}.title` as TranslationKey),
-    intro: t(`careerRoadmap.pillar.${id}.intro` as TranslationKey),
     areas,
   });
   return [
@@ -205,7 +202,7 @@ export default function CareerRoadmap() {
   const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
   const { lockOf } = useLocks(levelCounts);
   const fde = useFdePathSteps();
-  const groups = LEARN_SECTIONS.map((section) => {
+  const sectionGroups = LEARN_SECTIONS.map((section) => {
     const entries = railEntries(section.id, {
       liveTopics: Object.keys(levelCounts), inPlan, hasPlan, isMember: members.includes(section.id),
       progress, extraUnlocks: extraUnlocksSet, lockOf,
@@ -215,12 +212,34 @@ export default function CareerRoadmap() {
       .filter((pillar) => pillar.areas.length > 0);
     const covered = new Set(grouped.flatMap((pillar) => pillar.areas.map((area) => area.topic)));
     const extra = entries.filter((entry) => !covered.has(entry.topic as RoadmapTopic)).map((entry) => ({
-      topic: entry.topic as RoadmapTopic, label: t(categoryLabelKey(entry.topic)), blurb: '',
+      topic: entry.topic as RoadmapTopic, label: t(categoryLabelKey(entry.topic)),
     }));
-    if (extra.length) grouped.push({ id: 'other', title: learnText('career.section.topics'), intro: '', areas: extra });
+    if (extra.length) grouped.push({ id: 'other', title: learnText('career.section.topics'), areas: extra });
     const figure = sectionProgress(entries, progress, levelCounts, section.id === 'forward-deployed-engineer' ? fde.steps : null);
     return { section, pillars: grouped, figure };
   });
+  // A topic is listed once (UX audit learn-16), under the first section that
+  // holds it, with the other sections that hold it as a small "Also in" tag;
+  // the section's progress figure still counts every topic it holds.
+  const sectionsOfTopic = new Map<RoadmapTopic, (typeof LEARN_SECTIONS)[number]['id'][]>();
+  for (const { section, pillars: sectionPillars } of sectionGroups) {
+    for (const area of sectionPillars.flatMap((pillar) => pillar.areas)) {
+      const ids = sectionsOfTopic.get(area.topic) ?? [];
+      if (!ids.includes(section.id)) ids.push(section.id);
+      sectionsOfTopic.set(area.topic, ids);
+    }
+  }
+  const groups = sectionGroups.map((group) => ({
+    ...group,
+    pillars: group.pillars
+      .map((pillar) => ({
+        ...pillar,
+        areas: pillar.areas
+          .filter((area) => sectionsOfTopic.get(area.topic)?.[0] === group.section.id)
+          .map((area) => ({ ...area, alsoIn: (sectionsOfTopic.get(area.topic) ?? []).slice(1) })),
+      }))
+      .filter((pillar) => pillar.areas.length > 0),
+  }));
 
   // Aggregate completion across every topic of the chosen track, the stages
   // the map below draws. The pillars name only the curated areas, so counting
@@ -249,19 +268,11 @@ export default function CareerRoadmap() {
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 780, margin: '0 auto' }}>
+    // The route shell sets the 800px column (UX audit learn-15): no width of
+    // its own, and the Learn page header, as on /learn and Big O.
+    <div className="career-roadmap">
       <VStack gap={4}>
-        {/* Header */}
-        <div className="ss-pop" style={{ width: '100%' }}>
-          <VStack gap={1}>
-            <Heading level={1} type="display-3">
-              {pageTitle}
-            </Heading>
-            <Text type="large" color="secondary">
-              {headerBody}
-            </Text>
-          </VStack>
-        </div>
+        <LearnPageHeader title={pageTitle} lead={headerBody} />
 
         {/* Track chooser — drives the headline %, the map and the pillars below. */}
         <VStack gap={1.5} align="center">
@@ -299,12 +310,10 @@ export default function CareerRoadmap() {
         <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-container)', width: '100%' }}>
           <Card variant="muted" padding={5} width="100%">
           <VStack gap={2}>
-            <HStack justify="between" align="center" gap={1} wrap="wrap">
-              <Text type="label" color="secondary">
-                {t('careerRoadmap.progressTitle')}
-              </Text>
-              <Badge variant="neutral" label={t(trackLabelKey(subject, track))} />
-            </HStack>
+            {/* The segment above is the only track label (learn-16). */}
+            <Text type="label" color="secondary">
+              {t('careerRoadmap.progressTitle')}
+            </Text>
 
             <HStack gap={2} align="end" wrap="wrap">
               <Text type="display-1" color="accent" weight="bold">
@@ -315,7 +324,6 @@ export default function CareerRoadmap() {
                   {t('careerRoadmap.progressCaption', {
                     passed: overall.passed,
                     total: overall.total || '…',
-                    track: t(trackLabelKey(subject, track)),
                   })}
                 </Text>
               </div>
@@ -365,8 +373,12 @@ export default function CareerRoadmap() {
         <section key={section.id} aria-labelledby={`career-${section.id}`} style={{ width: '100%' }}>
           <VStack gap={2}>
             <HStack justify="between" align="center" gap={1} wrap="wrap">
+              {/* A text-colour heading with the accent arrow, not the
+                  browser's blue link (learn-15). */}
               <Heading level={2} id={`career-${section.id}`}>
-                <Link to={`/learn/${section.id}`}>{learnText(`learn.section.${section.id}`)}</Link>
+                <Link className="career-section__link" to={`/learn/${section.id}`}>
+                  {learnText(`learn.section.${section.id}`)}
+                </Link>
               </Heading>
               <Text type="supporting" color="secondary">
                 {section.id === 'forward-deployed-engineer' && fde.pending
@@ -375,69 +387,59 @@ export default function CareerRoadmap() {
               </Text>
             </HStack>
             <Text type="supporting" color="secondary">{learnText(`learn.section.line.${section.id}`)}</Text>
-            <Grid columns={{ minWidth: 300, max: 2 }} gap={2}>
-          {sectionPillars.map((pillar) => {
-            const areas = pillar.areas;
-            if (areas.length === 0) return null;
-            let pPassed = 0;
-            let pTotal = 0;
-            for (const area of areas) {
-              pTotal += levelsFor(area.topic);
-              pPassed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
-            }
-            const pPct = pct(pPassed, pTotal);
-            return (
-              <div key={pillar.id} className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-              <Card variant="default" padding={5} width="100%">
-                <VStack gap={2}>
-                  <HStack justify="between" align="center" gap={1} wrap="wrap">
-                    <Heading level={3}>{pillar.title}</Heading>
-                    <Badge variant={pPct === 100 ? 'success' : 'neutral'} label={`${pPct}%`} />
-                  </HStack>
-                  {pillar.intro && (
-                    <Text type="supporting" color="secondary">{pillar.intro}</Text>
-                  )}
-                  <VStack gap={2}>
-                    {areas.map((area) => {
-                      const total = levelsFor(area.topic);
-                      const passed = Math.min(passedLevelCount(progress, area.topic), total);
-                      const aPct = pct(passed, total);
-                      const color = getCategoryHexColor(area.topic);
-                      return (
-                        <VStack key={area.topic} gap={0.5}>
-                          <HStack justify="between" align="center" gap={1}>
-                            <HStack gap={1} align="center">
-                              <span
-                                aria-hidden
-                                style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }}
-                              />
-                              <Text type="body" weight="semibold">{area.label}</Text>
-                            </HStack>
-                            <Text type="supporting" size="xsm" color="secondary">
-                              {total ? t('careerRoadmap.areaLevels', { passed, total }) : '—'}
-                            </Text>
-                          </HStack>
-                          {area.blurb && (
-                            <div style={{ paddingLeft: 17 }}>
-                              <Text type="supporting" size="xsm" color="secondary">{area.blurb}</Text>
-                            </div>
-                          )}
-                          <ProgressBar
-                            label={area.label}
-                            value={aPct}
-                            variant={aPct === 100 ? 'success' : 'accent'}
-                            isLabelHidden
-                          />
-                        </VStack>
-                      );
-                    })}
-                  </VStack>
-                </VStack>
-              </Card>
+            {/* One compact list per section (learn-16): a pillar heading, then
+                one 44px row per topic with its levels and bar. The groups
+                size to their content (align-items: start). */}
+            {sectionPillars.length > 0 ? (
+              <div className="ss-panel career-pillars">
+                {sectionPillars.map((pillar) => {
+                  const areas = pillar.areas;
+                  let pPassed = 0;
+                  let pTotal = 0;
+                  for (const area of areas) {
+                    pTotal += levelsFor(area.topic);
+                    pPassed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
+                  }
+                  const pPct = pct(pPassed, pTotal);
+                  return (
+                    <div key={pillar.id} className="career-pillar">
+                      <div className="career-pillar__head">
+                        <Heading level={3}>{pillar.title}</Heading>
+                        <Badge variant={pPct === 100 ? 'success' : 'neutral'} label={`${pPct}%`} />
+                      </div>
+                      <ul className="career-topics">
+                        {areas.map((area) => {
+                          const total = levelsFor(area.topic);
+                          const passed = Math.min(passedLevelCount(progress, area.topic), total);
+                          const aPct = pct(passed, total);
+                          return (
+                            <li key={area.topic} className="career-topic">
+                              <span className="career-topic__name">
+                                <span aria-hidden className="career-topic__dot" style={{ backgroundColor: getCategoryHexColor(area.topic) }} />
+                                <span className="career-topic__label">{area.label}</span>
+                                {area.alsoIn.length > 0 && (
+                                  <span className="career-topic__also">
+                                    {t('careerRoadmap.alsoIn', { sections: area.alsoIn.map((id) => learnText(`learn.section.${id}`)).join(', ') })}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="career-topic__bar">
+                                <ProgressBar label={area.label} value={aPct} variant={aPct === 100 ? 'success' : 'accent'} isLabelHidden />
+                              </span>
+                              <span className="career-topic__count">
+                                {total ? t('careerRoadmap.areaLevels', { passed, total }) : '—'}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-            </Grid>
+            ) : (
+              <Text type="supporting" color="secondary">{t('careerRoadmap.allListedAbove')}</Text>
+            )}
           </VStack>
         </section>
         ))}

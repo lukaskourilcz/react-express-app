@@ -32,14 +32,20 @@ export function PathCard({ entry, enrollment, premium }: {
   const t = useT();
   const { manifest, inventory, availability } = entry;
   const open = isOpen(availability);
+  const cardTitle = learnText(open ? 'learn.paths.card' : 'learn.paths.cardOutline');
   return (
     <section className="lp-module">
       <div className="lp-module__head">
+        {/* The section switcher above names the path's section, so the card
+            does not name it again (UX audit learn-01): its title says what
+            the card is, and the path's name is in the link's name only. */}
         <h3 className="lp-module__title">
-          <span className="lp-module__index">
-            {t('paths.kicker.role')}
-          </span>
-          <Link to={pathHref(manifest.id)}>{manifest.title}</Link>
+          <Link
+            to={pathHref(manifest.id)}
+            aria-label={learnText('learn.paths.cardAria', { card: cardTitle, path: manifest.title })}
+          >
+            {cardTitle}
+          </Link>
         </h3>
         <span className="lp-module__meta">
           {premium && <><span className="ss-premium-label">{t('premium.badge')}</span>{' '}</>}

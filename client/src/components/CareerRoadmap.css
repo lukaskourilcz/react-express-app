@@ -1,0 +1,88 @@
+/* The career roadmap (/roadmap). The route shell sets the column (800px). */
+.career-roadmap { width: 100%; }
+
+/* A section heading is a text-colour heading with an accent arrow (UX audit
+   learn-15): the whole heading is the link to the section on /learn, its
+   underline only on hover, and its press 44px tall. */
+.career-section__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ss-control-height);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+.career-section__link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+.career-section__link:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+/* Drawn, not written: the heading's name stays the section's name. */
+.career-section__link::after {
+  content: '\2192';
+  content: '\2192' / '';
+  margin-inline-start: 0.35em;
+  color: var(--color-text-accent);
+}
+
+/* Each section is one compact list (UX audit learn-16): one panel, its pillar
+   groups two to a row from 640px, each sized to its own content
+   (align-items: start), so a one-topic group is not stretched to its
+   neighbour's height. A topic is listed under the first section that holds
+   it, with "Also in" naming the others. */
+.career-pillars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  align-items: start;
+  gap: 20px 32px;
+  padding: 20px 24px;
+}
+.career-pillar { min-width: 0; }
+.career-pillar__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+/* The rows share one set of columns (subgrid), so every bar in a group
+   starts at the same x whatever its count says ('0/6' or '0/25 levels'). */
+.career-topics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px auto;
+  column-gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* One 44px row: the topic (and its "Also in" line) on the left, the bar, the
+   count. */
+.career-topic {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  min-height: 44px;
+  padding-block: 6px;
+  border-top: 1px solid var(--ss-card-line);
+}
+/* The dot stays beside the name when the name wraps, and "Also in" is one
+   meta line under the name, inside the name's column: it wraps there and
+   never runs under the bar or the count. */
+.career-topic__name {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+}
+.career-topic__dot { grid-column: 1; grid-row: 1; width: 9px; height: 9px; border-radius: 50%; }
+.career-topic__label { grid-column: 2; grid-row: 1; font-weight: 600; overflow-wrap: anywhere; }
+.career-topic__also {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: var(--ss-type-meta);
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+}
+.career-topic__count {
+  font-size: var(--ss-type-meta);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: end;
+}
+@media (max-width: 599px) {
+  .career-pillars { padding: 16px; }
+  .career-topics { grid-template-columns: minmax(0, 1fr) 48px auto; column-gap: 8px; }
+}

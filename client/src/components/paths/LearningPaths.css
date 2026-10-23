@@ -30,19 +30,44 @@
 
 /* ── header ────────────────────────────────────────────────────────────── */
 
+/* The path and module headers stack in every state (UX audit learn-10): the
+   text takes the whole column, and the one action row sits left-aligned under
+   it. As a wrapping row, the actions took a right column 44px tall and
+   squeezed the lead into 486px beside a 277x355px blank. */
 .lp-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px 24px;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
 }
-.lp-head__text { flex: 1 1 380px; min-width: 0; }
-.lp-head__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; max-width: 100%; }
+.lp-head__text { min-width: 0; }
+/* 44px even while it waits for the account's enrollment or progress, so the
+   page does not move down when the primary arrives. */
+.lp-head__actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; max-width: 100%; min-height: 44px; }
+/* An open activity's own header keeps its title and Close on one row. */
+.lp-workspace > .lp-head { flex-direction: row; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start; justify-content: space-between; }
+.lp-workspace > .lp-head > .lp-head__text { flex: 1 1 380px; }
 /* With large text on a phone a one-line label ran past the screen edge;
    path action labels wrap inside their button instead. */
 .lp-head__actions .astryx-button,
+.lp-head__actions .ss-swim-cta,
 .lp-portfolio-export__actions .astryx-button { max-width: 100%; height: auto; min-height: 44px; white-space: normal; text-align: center; }
+
+/* The module page's kicker row: the path link, then the module's state as a
+   small badge beside it (UX audit learn-13), where the action used to be. */
+.lp-head__kicker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 4px; }
+.lp-head__kicker-row > .lp-kicker { margin: 0; }
+.lp-head__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ss-card-line);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
 
 .lp-kicker {
   margin: 0 0 4px;
@@ -80,6 +105,8 @@
 }
 .lp-card--muted { background: var(--color-background-muted); }
 .lp-section { display: flex; flex-direction: column; gap: 12px; }
+/* A section's gap already spaces its note from the heading above it. */
+.lp-section > .lp-note { margin: 0; }
 .lp-list { margin: 0; padding-left: 1.15em; color: var(--color-text-secondary); line-height: 1.6; }
 .lp-list li + li { margin-top: 6px; }
 .lp-list--plain { list-style: none; padding-left: 0; }
@@ -153,10 +180,12 @@
 }
 a.lp-activity:hover { border-color: var(--color-border-strong); }
 a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+/* The kind column is 4.5rem (UX audit learn-12): 'Check' and 'Write' fit,
+   and the title no longer sits 64px away from 'Read'. */
 .lp-activity__kind {
   flex: 0 1 auto;
   width: auto;
-  min-width: 5.5rem;
+  min-width: 4.5rem;
   font-size: 0.78rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -165,6 +194,26 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-activity__title { flex: 1 1 200px; min-width: 0; font-weight: 600; }
 .lp-activity__summary { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; margin: 0; font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.5; }
 .lp-activity__minutes { flex: 0 1 auto; min-width: 0; font-size: 0.85rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+/* A recorded state is one glyph beside the minutes; the words are for a
+   screen reader, and the glyph's shape, not its colour, tells them apart. */
+.lp-activity__state { flex: none; display: inline-flex; justify-content: center; min-width: 1.25rem; font-size: 0.95rem; line-height: 1; color: var(--color-text-secondary); }
+.lp-activity__state--verified_pass { color: var(--ss-success-strong); font-weight: 700; }
+/* The module's next activity, the one its primary opens: a 3px accent edge
+   inside the row, so nothing shifts (UX audit learn-13). */
+.lp-activity--next { box-shadow: inset 3px 0 0 var(--brand-accent); }
+/* On the hub a row is one 48px line: kind · title · minutes. */
+.lp-activity--compact { flex-wrap: nowrap; min-height: 48px; padding-block: 8px; }
+.lp-activity--compact .lp-activity__title { flex: 1 1 auto; overflow-wrap: anywhere; }
+/* On a phone the title cannot share a line with the kind and the minutes,
+   and wrapping left each row a different shape (kind alone, minutes or the
+   glyph alone on a line). Every row takes the same two lines instead: kind,
+   minutes and state on the first, the title under them, the summary last. */
+@media (max-width: 30rem) {
+  .lp-activity--row { flex-wrap: wrap; row-gap: 2px; }
+  .lp-activity--row > .lp-activity__kind { flex: 1 1 auto; min-width: 0; }
+  .lp-activity--row > .lp-activity__title { order: 1; flex: 1 1 100%; }
+  .lp-activity--row > .lp-activity__summary { order: 2; margin-top: 4px; }
+}
 
 /* The profile card can carry long goal names and every joined section's full
  * name. Keep both the current choice and saved answers inside the card at every
@@ -674,24 +723,88 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-plan-anchor { scroll-margin-top: 6rem; }
 
 /* The loop and board use text and recorded counts, with no animated score. */
-.lp-loop { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 0; list-style: none; }
-.lp-loop > li { display: flex; flex-direction: column; gap: 8px; border-top: 3px solid var(--ss-card-line); padding-top: 12px; min-width: 0; overflow-wrap: break-word; }
+/* The delivery loop (UX audit learn-23): five phases in one row at 800px,
+   four or fewer on a narrower column, never under 140px, so each title and
+   its '0 / 3' count stay on one line. */
+.lp-loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 16px 8px; margin: 0; padding: 0; list-style: none; }
+.lp-loop > li { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; border-top: 3px solid var(--ss-card-line); padding-top: 12px; min-width: 0; overflow-wrap: break-word; }
 .lp-loop > li[aria-current='step'] { border-color: var(--brand-accent); }
-.lp-loop span { color: var(--color-text-secondary); font-size: 0.875rem; }
+.lp-loop h3 { font-size: 0.95rem; line-height: 1.35; }
+.lp-loop__count { color: var(--color-text-secondary); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+/* Competency evidence (UX audit learn-11): one 56px disclosure below the
+   modules, closed by default, with one 56px row per competency inside. Each
+   row is its own disclosure for the activities behind its count. Hairlines,
+   not cards; the chevron turns without motion under reduced motion. */
+.lp-disclosure { border-block: 1px solid var(--ss-card-line); }
+.lp-disclosure__summary,
+.lp-evidence__row {
+  cursor: pointer;
+  list-style: none;
+  min-height: 56px;
+  border-radius: var(--radius-inner);
+}
+.lp-disclosure__summary::-webkit-details-marker,
+.lp-evidence__row::-webkit-details-marker { display: none; }
+.lp-disclosure__summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 0; }
+.lp-disclosure__meta { color: var(--color-text-secondary); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.lp-disclosure__meta::before { content: '· '; }
+.lp-disclosure__chevron {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-inline: 4px 6px;
+  border: solid var(--color-text-secondary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(-45deg);
+  transition: transform var(--ss-motion-feedback, 160ms) ease;
+}
+details[open] > summary > .lp-disclosure__chevron { transform: rotate(45deg); }
+.lp-disclosure__summary:focus-visible,
+.lp-evidence__row:focus-visible,
+.lp-evidence a:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.lp-disclosure > .lp-note { margin: 0 0 8px; }
 .lp-evidence { list-style: none; margin: 0; padding: 0; }
-.lp-evidence > li { border-top: 1px solid var(--ss-card-line); padding: 18px 0; }
-.lp-evidence p { color: var(--color-text-secondary); line-height: 1.6; }
-.lp-evidence__states { display: flex; flex-wrap: wrap; gap: 12px; padding: 0; list-style: none; }
-.lp-evidence__states li { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
-.lp-evidence summary { cursor: pointer; min-height: 44px; line-height: 44px; text-decoration: underline; text-underline-offset: 3px; }
-.lp-evidence details a { display: inline-flex; align-items: center; min-height: 44px; }
-.lp-evidence summary:focus-visible, .lp-evidence a:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 4px; }
-@media (max-width: 767px) { .lp-loop { grid-template-columns: 1fr; } }
+.lp-evidence > li { border-top: 1px solid var(--ss-card-line); }
+.lp-evidence__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'chevron title count' 'chevron summary count';
+  align-items: center;
+  column-gap: 12px;
+  padding: 8px 0;
+}
+.lp-evidence__row > .lp-disclosure__chevron { grid-area: chevron; }
+.lp-evidence__row > h3 { grid-area: title; font-size: 1rem; line-height: 1.35; min-width: 0; overflow-wrap: anywhere; }
+/* One line while closed; the whole sentence once the row is open. */
+.lp-evidence__summary {
+  grid-area: summary;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+details[open] > .lp-evidence__row > .lp-evidence__summary { white-space: normal; overflow-wrap: anywhere; }
+.lp-evidence__count { grid-area: count; justify-self: end; text-align: end; font-size: 0.875rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.lp-evidence__activities { margin: 0 0 12px; padding-left: calc(18px + 1.15em); }
+.lp-evidence__activities a { display: inline-flex; align-items: center; min-height: 44px; }
+@media (max-width: 30rem) {
+  .lp-evidence__row { grid-template-areas: 'chevron title' 'chevron summary' 'chevron count'; grid-template-columns: auto minmax(0, 1fr); }
+  .lp-evidence__count { justify-self: start; text-align: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-disclosure__chevron { transition: none; }
+}
 
 /* ── a Learn section's paths shelf (PathShelf.tsx, #489) ───────────────── */
 
 .rm-path-shelf { margin: 0 0 18px; }
 .rm-path-shelf__title { margin: 0; color: var(--color-text-primary); }
+/* The card sits outside .lp-page, so its h3 drops the browser's own margin
+   here, which left an empty band above 'Guided path outline'. */
+.rm-path-shelf .lp-module__title { margin: 0; }
 /* The card's title is the shelf's link into the path: a 44px target, and it
    wraps at 360px with 200 % text instead of overflowing. */
 .rm-path-shelf .lp-module__title a {

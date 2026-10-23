@@ -24,7 +24,7 @@ const pathManifest = (id: 'fde') => ({
     activities: [{ ...lesson('fde-diagnostic-check', 'Diagnostic check'), kind: 'check', purpose: 'diagnostic' }], requires: [], estimatedMinutes: 10,
   }] : []), {
     id: `${id}-m01`, title: 'Module one', outcomes: [], competencies: [], dependsOn: [], lessons: [],
-    activities: [lesson(`${id}-m01-l1-read`, `${id} first lesson`)], requires: [], estimatedMinutes: 10,
+    activities: [{ ...lesson(`${id}-m01-l1-read`, `${state.readPrefix ? 'Read: ' : ''}${id} first lesson`), competencies: ['integration'] }], requires: [], estimatedMinutes: 10,
   }, ...(state.secondModule ? [{ id: `${id}-m02`, title: 'Module two', outcomes: [], competencies: [], dependsOn: [], lessons: [], activities: [lesson(`${id}-m02-l1-read`, `${id} second lesson`)], requires: [], estimatedMinutes: 10 }] : []), ...(id === 'fde' && state.shelf ? [{
     id: 'fde-ip01', title: 'Learning round', optional: true, shelf: 'interview-prep', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [lesson('fde-ip01-l1', 'Interview lesson')], requires: [], estimatedMinutes: 10,
@@ -52,10 +52,20 @@ const state = vi.hoisted(() => ({
   changes: [] as Record<string, unknown>[],
   saves: [] as unknown[][],
   sheet: vi.fn(),
+  signIn: vi.fn(),
+  guest: false,
+  readPrefix: false,
+  guidedComplete: false,
 }));
 
 vi.mock('../src/lib/auth', () => ({
-  useAuth: () => ({ user: { id: 'user-1', user_metadata: state.metadata }, isAuthenticated: true, isLoading: false }),
+  useAuth: () => (state.guest
+    ? { user: null, isAuthenticated: false, isLoading: false }
+    : { user: { id: 'user-1', user_metadata: state.metadata }, isAuthenticated: true, isLoading: false }),
+}));
+vi.mock('../src/lib/signInDialog', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../src/lib/signInDialog')>(),
+  openSignIn: state.signIn,
 }));
 vi.mock('../src/lib/entitlement', () => ({
   useEntitlement: () => ({ tier: state.tier, signedIn: true, loading: false, failed: false, data: null, refetch: () => {} }),
@@ -74,7 +84,7 @@ vi.mock('../src/lib/trackPref', async (importOriginal) => ({
 vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const progressFor = (pathId: string) => ({
-    enrollment: null, modules: state.passedActivity ? [{ moduleId: `${pathId}-m02`, activities: [{ activityId: state.passedActivity, state: 'verified_pass' }] }] : [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: false,
+    enrollment: null, modules: state.passedActivity ? [{ moduleId: `${pathId}-m02`, activities: [{ activityId: state.passedActivity, state: 'verified_pass' }] }] : [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: state.guidedComplete,
     // FDE's modules require three written pieces; `noArtifacts` stands in for
     // a path with none.
     artifacts: pathId === 'fde' && !state.noArtifacts ? { submitted: 1, total: 3 } : { submitted: 0, total: 0 },
@@ -153,6 +163,10 @@ beforeEach(() => {
   state.changes.length = 0;
   state.saves.length = 0;
   state.sheet.mockReset();
+  state.signIn.mockReset();
+  state.guest = false;
+  state.readPrefix = false;
+  state.guidedComplete = false;
   server.use(http.get('*/api/user/learning-path-reward', () => HttpResponse.json({ eligible: false, claimed: false, orderId: null })));
 });
 
@@ -230,6 +244,20 @@ describe('the path page', () => {
     expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path-activity', ref: 'fde:fde-m02-l1-read' });
   });
 
+  it('says Premium once on a module whose every activity Premium opens, in its head, not on each row', async () => {
+    state.tier = 'free'; state.enrollments = [enrolled('fde')]; state.secondModule = true;
+    await overview('fde');
+    const second = screen.getByRole('link', { name: 'Module two' }).closest('section') as HTMLElement;
+    expect(second.querySelector('.lp-module__meta')!.textContent).toBe('Premium 10 min');
+    const link = within(second).getByRole('link', { name: /fde second lesson/ });
+    // The row keeps the word for a screen reader, and draws no label of its own.
+    expect(link).toHaveAccessibleName(/Premium$/);
+    expect(link.querySelector('.ss-premium-label')).toBeNull();
+    // The open first module says nothing about Premium.
+    const first = screen.getByRole('link', { name: 'Module one' }).closest('section') as HTMLElement;
+    expect(within(first).queryByText('Premium')).toBeNull();
+  });
+
   it('starting the role specialization records the base track it sits above', async () => {
     const { setTrackValue } = await import('../src/lib/tracks');
     setTrackValue('backend');
@@ -258,6 +286,25 @@ describe('the path page', () => {
     expect(within(progress).queryByText('Portfolio self-reviewed')).toBeNull();
   });
 
+  // UX audit learn-14: the card names the guided path and its state, and the
+  // 'not a certification' disclaimer is said once, in the non-goals list.
+  it('labels the line Guided path with its state, without repeating the disclaimer', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const card = screen.getByRole('heading', { name: 'Where you are' }).closest('section') as HTMLElement;
+    const line = within(card).getByText('Guided path').parentElement as HTMLElement;
+    expect(line).toHaveTextContent('Guided path◐In progress');
+    expect(card).not.toHaveTextContent(/certification|completed/i);
+  });
+
+  it('says Completed once the server marks the guided path complete', async () => {
+    state.guidedComplete = true;
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const card = screen.getByRole('heading', { name: 'Where you are' }).closest('section') as HTMLElement;
+    expect(within(card).getByText('Guided path').parentElement).toHaveTextContent('Guided path✓Completed');
+  });
+
   it('shows no written-piece line on a path without any', async () => {
     state.noArtifacts = true;
     state.enrollments = [enrolled('fde')];
@@ -271,6 +318,9 @@ describe('the path page', () => {
     state.enrollmentsRead = 'loading';
     await overview('fde');
     expect(screen.queryByRole('button', { name: 'Start this path' })).toBeNull();
+    // The stacked hero keeps its action row meanwhile, so the page below does
+    // not move down when Start or Continue arrives.
+    expect(document.querySelector('.lp-head > .lp-head__actions')).toHaveAttribute('aria-busy', 'true');
   });
 
   it('a double click on Start sends one enrollment', async () => {
@@ -280,11 +330,86 @@ describe('the path page', () => {
     await waitFor(() => expect(state.changes).toHaveLength(1));
   });
 
+  // UX audit learn-10: the hero stacks in every state, with one action row
+  // under the inventory and one filled primary in it.
+  it('stacks one action row under the hero, with one filled primary and Pause beside it', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const header = document.querySelector('.lp-head') as HTMLElement;
+    const actions = header.lastElementChild as HTMLElement;
+    expect(actions).toHaveClass('lp-head__actions');
+    expect(header.querySelector('.lp-head__text')!.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(actions.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(within(actions).getByRole('button', { name: 'Continue where you left off' })).toHaveClass('ss-swim-cta');
+    expect(within(actions).getByRole('button', { name: 'Pause' })).not.toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.lp-page .ss-swim-cta')).toHaveLength(1);
+  });
+
+  it('says what the four kinds of activity are for under the Modules heading, not in the hero', async () => {
+    await overview('fde');
+    const note = screen.getByText(/^Lessons explain the idea/);
+    expect(note.closest('header')).toBeNull();
+    expect(note.closest('section')).toBe(screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section'));
+  });
+
+  it('offers a guest Sign in to start as the one primary, and nothing to press on a closed path', async () => {
+    state.guest = true;
+    await overview('fde');
+    const signIn = within(document.querySelector('.lp-head__actions') as HTMLElement).getByRole('button', { name: 'Sign in to start' });
+    expect(signIn).toHaveClass('ss-swim-cta');
+    fireEvent.click(signIn);
+    expect(state.signIn).toHaveBeenCalledWith({ returnTo: '/learn/forward-deployed-engineer/path' });
+    expect(screen.queryByText(/Sign in to record graded work/)).toBeNull();
+  });
+
+  it('draws no empty action row for a guest on a closed path', async () => {
+    state.guest = true;
+    state.availability = 'disabled';
+    await overview('fde');
+    expect(screen.getByText(/not open yet on this deployment/)).toBeInTheDocument();
+    expect(document.querySelector('.lp-head__actions')).toBeNull();
+  });
+
+  // UX audit learn-11: the evidence board follows the modules, closed, and
+  // the delivery loop stays above them.
+  it('puts the delivery loop above the modules and the closed evidence board below them', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const modules = screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
+    const loop = screen.getByRole('region', { name: 'The delivery loop' });
+    const board = screen.getByRole('region', { name: 'Competency evidence' });
+    expect(loop.compareDocumentPosition(modules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(modules.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect((board.querySelector('details') as HTMLDetailsElement).open).toBe(false);
+  });
+
+  // UX audit learn-12: the kind column says 'Read' once, a row says nothing
+  // until a state is recorded, and the hub's rows are one line.
+  it('drops the kind prefix the row already shows and draws a state only once there is one', async () => {
+    state.readPrefix = true;
+    state.secondModule = true;
+    state.passedActivity = 'fde-m02-l1-read';
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const modules = screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
+    const first = within(modules).getByRole('link', { name: /fde first lesson/i });
+    expect(first.querySelector('.lp-activity__kind')).toHaveTextContent('Read');
+    expect(first.querySelector('.lp-activity__title')).toHaveTextContent(/^Fde first lesson$/);
+    expect(first).not.toHaveTextContent('Not started');
+    expect(first.querySelector('.lp-activity__state')).toBeNull();
+    expect(first).toHaveClass('lp-activity--compact');
+    expect(first.querySelector('.lp-activity__summary')).toBeNull();
+    const passed = within(modules).getByRole('link', { name: /fde second lesson/ });
+    expect(passed.querySelector('.lp-activity__state [aria-hidden="true"]')).toHaveTextContent('✓');
+    expect(within(passed).getByText('Verified pass')).toHaveClass('ss-sr-only');
+  });
+
   it('after Premium lapses, the first module stays open', async () => {
     state.tier = 'free';
     state.enrollments = [enrolled('fde')];
     await overview('fde');
-    expect(screen.getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
+    const modules = screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
+    expect(within(modules).getByRole('link', { name: /fde first lesson/ })).toBeInTheDocument();
     expect(state.sheet).not.toHaveBeenCalled();
   });
 });
@@ -300,14 +425,14 @@ describe('the module page status', () => {
     state.secondModule = true;
     state.enrollments = [enrolled('fde')];
     await modulePage('fde-m02');
-    expect(await screen.findByText('Not started', { selector: '.lp-module__meta' })).toBeInTheDocument();
+    expect(await screen.findByText('Not started', { selector: '.lp-head__status' })).toBeInTheDocument();
   });
   it('says In progress once an activity of the module has evidence', async () => {
     state.secondModule = true;
     state.passedActivity = 'fde-m02-l1-read';
     state.enrollments = [enrolled('fde')];
     await modulePage('fde-m02');
-    expect(await screen.findByText('In progress', { selector: '.lp-module__meta' })).toBeInTheDocument();
+    expect(await screen.findByText('In progress', { selector: '.lp-head__status' })).toBeInTheDocument();
   });
   it('claims no missing enrollment while the list loads', async () => {
     state.enrollmentsRead = 'loading';
@@ -336,10 +461,34 @@ describe('the module page status', () => {
     expect(screen.queryByRole('link', { name: /fde first lesson/ })).toBeNull();
     expect(document.querySelector('.lp-workspace')).toBeNull();
   });
+  it('keeps each row\'s summary on the module page and drops the kind prefix there too', async () => {
+    state.readPrefix = true;
+    state.enrollments = [enrolled('fde')];
+    await modulePage('fde-m01');
+    const row = await screen.findByRole('link', { name: /fde first lesson/i });
+    expect(row).not.toHaveClass('lp-activity--compact');
+    expect(row.querySelector('.lp-activity__title')).toHaveTextContent(/^Fde first lesson$/);
+    expect(row.querySelector('.lp-activity__summary')).toBeInTheDocument();
+  });
+  it('after Premium lapses, a locked module\'s primary asks for Premium instead of opening the activity', async () => {
+    state.tier = 'free';
+    state.secondModule = true;
+    state.enrollments = [enrolled('fde')];
+    await modulePage('fde-m02');
+    const actions = await waitFor(() => document.querySelector('.lp-head__actions') as HTMLElement);
+    expect(within(actions).getByText('Premium')).toBeInTheDocument();
+    fireEvent.click(within(actions).getByRole('button', { name: 'Start module' }));
+    expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path-activity', ref: 'fde:fde-m02-l1-read' });
+  });
+  it('offers no primary to a learner who has not enrolled', async () => {
+    await modulePage('fde-m01');
+    await screen.findByRole('heading', { level: 1, name: 'Module one' });
+    expect(document.querySelector('.lp-head__actions')).toBeNull();
+  });
   it('says Not started to a learner who has not enrolled', async () => {
     state.secondModule = true;
     await modulePage('fde-m02');
-    expect(await screen.findByText('Not started', { selector: '.lp-module__meta' })).toBeInTheDocument();
+    expect(await screen.findByText('Not started', { selector: '.lp-head__status' })).toBeInTheDocument();
   });
 });
 
@@ -356,6 +505,8 @@ describe('the interview-prep shelf', () => {
     expect(within(shelf).getByText('Optional')).toBeInTheDocument();
     expect(within(shelf).getAllByRole('link', { name: /Interview lesson/ })[0]).toBeInTheDocument();
     expect(within(modulesSection()).queryByText('Learning round')).toBeNull();
+    // The module's Premium mark and its minutes read as two words, not one.
+    expect(shelf.querySelector('.lp-module__meta')!.textContent).toBe('Premium 10 min');
     expect(screen.queryByRole('heading', { name: 'Optional: placement and bridges' })).toBeNull();
   });
 
@@ -398,6 +549,20 @@ describe('the Learn path shelf', () => {
       return <PathShelf pathIds={['fde']} />;
     });
     expect(screen.queryByText('Premium')).toBeNull();
+  });
+
+  // UX audit learn-01: the section switcher names the section, so the card
+  // says what it is and keeps the path's name in its link's name only.
+  it('titles the card by what it is and names the path only in its link', async () => {
+    state.tier = 'free';
+    await mount('/r', '/r', async () => {
+      const { default: PathShelf } = await import('../src/components/paths/PathShelf');
+      return <PathShelf pathIds={['fde']} />;
+    });
+    const heading = await screen.findByRole('heading', { level: 3 });
+    expect(heading.textContent).toMatch(/^Guided path( outline)?$/);
+    expect(within(heading).getByRole('link')).toHaveAccessibleName(`${heading.textContent}: Forward Deployed Engineer`);
+    expect(screen.queryByText('Role')).toBeNull();
   });
 });
 

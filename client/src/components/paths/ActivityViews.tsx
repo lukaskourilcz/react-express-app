@@ -32,7 +32,7 @@ import { SwimCta } from '../landing/LandingKit';
 
 /* ── shared bits ───────────────────────────────────────────────────────── */
 
-const STATE_GLYPH: Record<EvidenceState, string> = {
+export const STATE_GLYPH: Record<EvidenceState, string> = {
   not_started: '○',
   in_progress: '◐',
   verified_pass: '✓',

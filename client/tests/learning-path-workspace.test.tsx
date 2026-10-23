@@ -53,6 +53,7 @@ const calls = vi.hoisted(() => ({
   changedOnRenewal: false,
   scenario: undefined as string | undefined,
   fixtureNote: undefined as string | undefined,
+  progress: undefined as undefined | { modules: { moduleId: string; completed: boolean; activities: { activityId: string; state: string }[] }[] },
 }));
 vi.mock('../src/lib/xp', async importOriginal => ({ ...await importOriginal<typeof import('../src/lib/xp')>(), announceVerifiedQuestXp: vi.fn(), syncXpWithServer: vi.fn(async () => {}) }));
 
@@ -69,12 +70,11 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const catalog = { isLoading: false, isError: false, data: { paths: [{ manifest, availability: 'available', inventory: {} }], versions: {} }, refetch: () => {} };
   const enrollments = { data: { enrollments: [{ enrollmentId: ENROLLMENT, pathId: 'fde', curriculumVersion: 1, status: 'active', baseTrackAtEnrollment: null, startedAt: '', updatedAt: '' }] } };
-  const progress = { data: undefined };
   return {
     ...actual,
     usePathCatalog: () => catalog,
     useEnrollments: () => enrollments,
-    usePathProgress: () => progress,
+    usePathProgress: () => ({ data: calls.progress }),
     savePathDraft: vi.fn(async (input: { activityId: string; expectedRevision: number; content: Record<string, unknown> }) => {
       calls.drafts.push({ expected: input.expectedRevision, code: input.content.code, activityId: input.activityId });
       calls.inFlight += 1;
@@ -154,6 +154,7 @@ beforeEach(() => {
   calls.submitDelay = 0;
   calls.scenario = undefined;
   calls.fixtureNote = undefined;
+  calls.progress = undefined;
   Object.defineProperty(window.navigator, 'onLine', { value: true, configurable: true });
 });
 
@@ -652,13 +653,84 @@ describe('the content shapes of #497', () => {
   it('labels an optional module Optional in its header, and a loop module In progress', async () => {
     await mount(null, 'fde-v1-x01');
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Placement' })).toBeInTheDocument());
-    expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('Optional');
+    expect(document.querySelector('.lp-head__kicker-row .lp-head__status')?.textContent).toBe('Optional');
   });
 
   it('labels a loop module by its evidence, never Optional: Not started before any (B14, #510)', async () => {
     await mount(null);
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'M01' })).toBeInTheDocument());
-    expect(document.querySelector('.lp-head__actions .lp-module__meta')?.textContent).toBe('Not started');
+    expect(document.querySelector('.lp-head__kicker-row .lp-head__status')?.textContent).toBe('Not started');
+  });
+});
+
+// UX audit learn-13: the module page's one primary opens the first activity
+// that is neither passed nor self-reviewed, and its row carries the accent edge.
+describe('the module page primary', () => {
+  const recorded = (states: Record<string, string>) => {
+    calls.progress = { modules: [{ moduleId: 'fde-v1-m01', completed: false, activities: Object.entries(states).map(([activityId, state]) => ({ activityId, state })) }] };
+  };
+  const cta = () => document.querySelector('.lp-head__actions .ss-swim-cta') as HTMLButtonElement | null;
+
+  it('waits for recorded progress, holding the row, before it names a target', async () => {
+    await mount(null);
+    await screen.findByRole('heading', { level: 1, name: 'M01' });
+    // Without progress a learner part-way through would read 'Start module'
+    // aimed at the first row; the empty row keeps its place instead.
+    expect(cta()).toBeNull();
+    expect(document.querySelector('.lp-head__actions')).toHaveAttribute('aria-busy', 'true');
+    expect(document.querySelector('.lp-activity--next')).toBeNull();
+  });
+
+  it('says Start module before anything is recorded, marks the first row and opens it', async () => {
+    recorded({});
+    await mount(null);
+    await waitFor(() => expect(cta()).not.toBeNull());
+    expect(document.querySelector('.lp-head__actions')).not.toHaveAttribute('aria-busy');
+    expect(cta()).not.toHaveAttribute('aria-describedby');
+    expect(cta()).toHaveAccessibleName('Start module');
+    expect(document.querySelectorAll('.lp-page .ss-swim-cta')).toHaveLength(1);
+    const next = document.querySelector('.lp-activity--next') as HTMLElement;
+    expect(next).toHaveTextContent('The check');
+    expect(document.querySelectorAll('.lp-activity--next')).toHaveLength(1);
+    await act(async () => { fireEvent.click(cta()!); });
+    await waitFor(() => expect(calls.start).toEqual([C]));
+    // The open activity carries its own primary; the header's goes.
+    expect(cta()).toBeNull();
+  });
+
+  it('continues at the first activity not yet passed or self-reviewed', async () => {
+    recorded({ [C]: 'verified_pass', [A]: 'needs_revision' });
+    await mount(null);
+    await waitFor(() => expect(cta()).toHaveAccessibleName('Continue: Activity A'));
+    expect(document.querySelector('.lp-activity--next')).toHaveTextContent('Activity A');
+    expect(document.querySelector('.lp-head__status')).toHaveTextContent('In progress');
+  });
+
+  it('cuts a long next title at 32 characters', async () => {
+    const activity = manifest.modules[0].activities[2];
+    const title = activity.title;
+    activity.title = 'Write the incident handoff for the on-call engineer';
+    try {
+      recorded({ [C]: 'verified_pass', [A]: 'self_reviewed' });
+      await mount(null);
+      await waitFor(() => expect(cta()).not.toBeNull());
+      const label = cta()!.textContent!.replace(/^Continue: /, '');
+      expect(label).toBe('Write the incident handoff for…');
+      expect(label.length).toBeLessThanOrEqual(32);
+      // The whole title is read from the marked row it describes.
+      expect(cta()).toHaveAccessibleDescription('Write the incident handoff for the on-call engineer');
+    } finally {
+      activity.title = title;
+    }
+  });
+
+  it('offers no primary once every activity is passed or self-reviewed', async () => {
+    recorded({ [C]: 'verified_pass', [A]: 'verified_pass', [B]: 'self_reviewed' });
+    await mount(null);
+    await screen.findByRole('heading', { level: 1, name: 'M01' });
+    expect(cta()).toBeNull();
+    expect(document.querySelector('.lp-head__actions')).toBeNull();
+    expect(document.querySelector('.lp-activity--next')).toBeNull();
   });
 });
 

@@ -5,13 +5,21 @@
 // selection on focus is ignored), and Enter, Space or a click open the focused
 // section through the item's onClick. The hint that says so is each item's
 // description, which screen readers read with the item.
+//
+// Under 640px the three sections are a vertical list of full-width 44px rows,
+// the name on the left and the percent on the right (UX audit learn-20), so a
+// phone shows all three without scrolling. Each item's name is its
+// accessible label ("Web Developer · 8%"); the visible name and percent are
+// drawn as two parts so the list can set them apart. Up and Down move along
+// the list as Left and Right do.
 
-import { useEffect, useRef, type FocusEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Button } from '@astryxdesign/core/Button';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
+import { SwimCta } from '../landing/LandingKit';
 import { learnText, type LearnKey } from '../../i18n/translations.learn';
 import type { LearnSectionId } from '../../../../shared/learn-sections';
 
@@ -69,9 +77,21 @@ export function SectionSwitcher({ value, items, onActivate }: {
     if (item) keepInView(event.currentTarget, item);
   };
 
+  // The control moves with Left and Right only; stacked on a phone, Up and
+  // Down are the arrows a list answers to. Focus moves, nothing opens.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const radios = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]:not([aria-disabled="true"])')];
+    const at = radios.findIndex((radio) => radio === document.activeElement);
+    if (at < 0) return;
+    event.preventDefault();
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    radios[(at + step + radios.length) % radios.length].focus();
+  };
+
   return (
     <div className="rm-section-switcher">
-      <div className="rm-section-switcher__scroll" ref={scrollerRef} onFocus={onFocus}>
+      <div className="rm-section-switcher__scroll" ref={scrollerRef} onFocus={onFocus} onKeyDown={onKeyDown}>
         <SegmentedControl
           value={value}
           onChange={browseOnly}
@@ -83,6 +103,18 @@ export function SectionSwitcher({ value, items, onActivate }: {
               key={id}
               value={id}
               label={percent === null ? name : learnText('learn.switcher.item', { name, percent })}
+              isLabelHidden
+              icon={(
+                <span className="rm-switcher-item">
+                  <span className="rm-switcher-item__name">{name}</span>
+                  {percent !== null && (
+                    <>
+                      <span className="rm-switcher-item__sep">·</span>
+                      <span className="rm-switcher-item__percent">{percent}%</span>
+                    </>
+                  )}
+                </span>
+              )}
               aria-describedby="learn-switcher-hint"
               onClick={() => {
                 if (id !== value) onActivate(id);
@@ -99,13 +131,16 @@ export function SectionSwitcher({ value, items, onActivate }: {
 export type JoinState = { status: 'saving' | 'saved' | 'error'; step?: 'save' | 'enroll' };
 
 /**
- * The section's one-line purpose and, for a section the learner has not
- * joined, its single action. In order: nothing for Web Developer or while the
- * session loads (the space is kept); sign in for a visitor; "Choose your plan"
- * for an account with no saved plan, since a join would save a plan from the
- * local track and hide topics open today; nothing for a member; otherwise the
- * join. A failed join replaces the button with its error and one Try again.
- * Focus follows each of those swaps (see the effect below).
+ * The section's one supporting line and, for a section the learner has not
+ * joined, its single action. The switcher above is the one place the section
+ * is named (UX audit learn-01), so neither the line nor the action repeats
+ * it. In order: nothing for Web Developer or while the session loads (the
+ * space is kept); sign in for a visitor; "Choose your plan" for an account
+ * with no saved plan, since a join would save a plan from the local track and
+ * hide topics open today; nothing for a member; otherwise the join. A failed
+ * join replaces the button with its error and one Try again. Focus follows
+ * each of those swaps (see the effect below). A visitor's device-only note is
+ * the small status under the line and the action, in every section.
  */
 export function SectionHeader({
   section,
@@ -122,6 +157,7 @@ export function SectionHeader({
   fde,
   premiumLabel,
   retryLabel,
+  deviceNote,
 }: {
   section: LearnSectionId;
   name: string;
@@ -137,6 +173,8 @@ export function SectionHeader({
   fde?: { entryLoading: boolean; pathOpen: boolean; barred: boolean };
   premiumLabel: string;
   retryLabel: string;
+  /** What a visitor's progress does without an account; shown signed out. */
+  deviceNote?: string;
 }) {
   const saving = join?.status === 'saving';
   const failed = join?.status === 'error';
@@ -161,12 +199,13 @@ export function SectionHeader({
 
   let action: ReactNode = null;
   let note: ReactNode = null;
+  if (!authLoading && !signedIn) note = deviceNote ?? null;
   if (section === 'web-developer') {
     action = null;
   } else if (authLoading) {
     action = <span className="rm-section-action__slot" aria-hidden="true" />;
   } else if (!signedIn) {
-    action = <Button variant="secondary" label={learnText('learn.join.signIn', { name })} onClick={onSignIn} />;
+    action = <Button variant="secondary" label={learnText('learn.join.signIn')} onClick={onSignIn} />;
   } else if (!hasPlan) {
     action = <Button variant="secondary" as={Link} href={CHOOSE_PLAN_HREF} label={learnText('learn.join.choosePlan')} />;
     note = learnText('learn.join.noPlan');
@@ -174,17 +213,17 @@ export function SectionHeader({
     if (section === 'forward-deployed-engineer' && fde?.entryLoading) {
       action = <Skeleton width={220} height={44} radius="rounded" />;
     } else {
-      const labelKey: LearnKey = section === 'software-engineer'
-        ? 'learn.join.softwareEngineer'
-        : fde?.pathOpen ? 'learn.join.fdeStart' : 'learn.join.fdeAdd';
+      const labelKey: LearnKey = section === 'forward-deployed-engineer' && fde?.pathOpen ? 'learn.join.fdeStart' : 'learn.join.add';
       const barred = section === 'forward-deployed-engineer' && !!fde?.pathOpen && fde.barred;
+      // The join is the screen's one filled primary, the shared SwimCta md;
+      // the map's own actions under it turn secondary (Roadmap's
+      // `headerJoins`). While it saves it stays focusable and says so.
       action = (
         <>
-          <Button
-            variant="primary"
+          <SwimCta
             label={saving ? learnText('learn.join.saving') : learnText(labelKey)}
-            isLoading={saving}
-            isDisabled={!online}
+            unavailable={saving}
+            disabled={!online}
             onClick={() => {
               if (!saving) onJoin();
             }}

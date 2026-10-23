@@ -1,0 +1,59 @@
+/* The /roadmap map (UX audit learn-17). Each stage is one row: a 180px label
+   column (number, name, and the connector down to the next stage) and its
+   topic cards on the right in columns of at least 160px, so a stage with one
+   topic is one card tall. The map sizes by its own width (it sits inside a
+   card), and below 520px the label sits above its cards. */
+.rm-map { width: 100%; container-type: inline-size; }
+.rm-map__stages { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.rm-stage {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  column-gap: 16px;
+  align-items: start;
+}
+.rm-stage__label {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 10px;
+}
+.rm-stage__dot {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--brand-accent);
+  color: var(--brand-on-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.rm-stage__title { font-size: 0.875rem; font-weight: 800; line-height: 22px; letter-spacing: 0.3px; }
+/* The connector: from under the dot to the next stage's dot, through the gap. */
+.rm-stage:not(:last-child) > .rm-stage__label::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 40px;
+  bottom: -18px;
+  width: 2px;
+  border-radius: 1px;
+  background-color: var(--color-border);
+}
+.rm-stage__topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+@container (max-width: 519px) {
+  .rm-stage { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+  .rm-stage__label { padding-top: 0; }
+  .rm-stage:not(:last-child) > .rm-stage__label::after { display: none; }
+  /* 176px cards keep each of the three part cells at least 44px wide
+     (verification round 1: 140px cards made them 40px at 390), so a phone
+     shows one card a row and a wider narrow map two. */
+  .rm-stage__topics { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
+}

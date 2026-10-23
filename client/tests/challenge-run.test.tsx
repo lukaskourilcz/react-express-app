@@ -624,12 +624,13 @@ describe('focus', () => {
   it('goes to each new question, from Start and from Next', async () => {
     await mount();
     await start();
-    expect(document.activeElement?.id).toBe('challenge-question');
+    // Focus moves in an effect after the question paints; wait for it.
+    await waitFor(() => expect(document.activeElement?.id).toBe('challenge-question'));
     expect(document.activeElement).toHaveTextContent('Batch 1 question 1?');
     await answer('right');
     await next();
+    await waitFor(() => expect(document.activeElement).toHaveTextContent('Batch 1 question 2?'));
     expect(document.activeElement?.id).toBe('challenge-question');
-    expect(document.activeElement).toHaveTextContent('Batch 1 question 2?');
   });
 
   // Supabase hands a new user object on a token refresh or a return to the
