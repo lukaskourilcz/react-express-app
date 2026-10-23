@@ -30,13 +30,14 @@ export async function handle<Name>(req: VercelRequest, res: VercelResponse, db: 
     // Read with withTimeout(db.from(...)...); answer a db error with
     // jsonError(res, 500, 'db_error', '...').
     return res.json({ ok: true });
-  } catch {
-    return jsonError(res, 500, 'internal_error', 'Internal error');
+  } catch (err) {
+    // A timed-out read is 503 upstream_timeout, anything else 500.
+    return caughtError(res, err);
   }
 }
 ```
 
-Import `enforceClassRateLimit` from `../../lib/rate-limit` when the op takes its own bucket; `jsonError`, `requireAuthSub` and `withTimeout` already come from `../../lib/http`.
+Import `enforceClassRateLimit` from `../../lib/rate-limit` when the op takes its own bucket; `jsonError`, `requireAuthSub` and `withTimeout` already come from `../../lib/http`. `caughtError` is the file's own helper, which answers a `ServiceUnavailableError` (the `UpstreamTimeoutError` from `withTimeout`) with 503 and its code; in another handler, answer that error the same way or rethrow it to `withRequestContext`.
 
 ## 2. The rate-limit entry
 
