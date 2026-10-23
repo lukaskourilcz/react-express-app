@@ -1138,7 +1138,9 @@ Premium opens through a manual grant or a voucher.
   `is_premium` call, only when the content is Premium), and `assertOpen`
   throws `PremiumRequiredError` for locked content; `refuseLocked` is the
   handler form. A tier the database cannot read answers 503
-  `entitlement_unavailable`. The call sites are the Learn level, part-test and
+  `entitlement_unavailable`, and so does a cleared-content read that fails
+  (the `cleared` callback throws), so a lapsed learner is never shown the
+  upgrade sheet for work they passed. The call sites are the Learn level, part-test and
   checkpoint seals and their answers, `coding-task`, `coding-submit`,
   `coding-reveal`, evolving stage two and up, `learning-path-start` and
   `learning-path-submit` in `api/quiz/roadmap.ts`, and
@@ -1575,7 +1577,8 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   Offline or on a 5xx, supabase-js keeps the session, so `lib/auth.tsx` removes
   the stored session and its code verifier itself, forgets the account's data
   and signs the page out. Signing out everywhere needs the server and reports a
-  failure. `clearAccountData` writes any draft still waiting
+  failure. `clearAccountData` empties the query cache before the next
+  account's first render (some keys carry no account id), writes any draft still waiting
   (`beforeAccountChange`), then moves an account epoch (`accountEpoch`), and
   work that started before it (a progress sync, an XP sync, a level
   completion, a Challenge reward) writes and announces nothing.
@@ -1615,6 +1618,13 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   graded; only without Upstash does an instance's memory hold it. A quiz
   submit's own claim (`claim_quiz_submission`) answers the same 503 when the
   database cannot take it.
+- **Auth outages.** `requireAuth`, the sign-in report and the admin gate
+  answer 503 `auth_unavailable` when Supabase Auth drops the connection
+  (supabase-js `AuthRetryableFetchError`, status 0), throttles or sends an
+  answer it cannot read, never 401 or 403, so a signed-in learner is not told
+  their session ended. `lib/auth.ts` verifies a token at most once per request
+  (`tryAuthOnce`), and admin writes log the admin account that made them
+  (`by`).
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which
@@ -1717,7 +1727,11 @@ seeds a row in every such table.
 - **Sentry** stays under necessary because it stores nothing in the browser
   and sends no personal data: no cookie, no storage (`linkPreviousTrace`
   pinned to `in-memory`), `sendDefaultPii: false`, no Session Replay, no
-  `setUser`. Adding any of those moves it under analytics consent.
+  `setUser`. Its scrub hooks (in the lazy `client/src/lib/sentry-sdk.ts`)
+  remove query strings, fragments, e-mail addresses, tokens, request data and
+  the user from every error, breadcrumb and trace. Adding any of those moves
+  it under analytics consent. PostHog sends each event as it is captured, so
+  nothing batched before a withdrawal leaves after it.
 - **The privacy policy** (`PRIVACY` in `client/src/components/LegalPages.tsx`,
   keys `legal.privacy.*` in `client/src/i18n/translations.privacy.ts`, which
   only the legal pages' chunk imports, so the policy stays out of the shell's
