@@ -77,6 +77,10 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
     stepped.current = false;
     questionRef.current?.focus();
   }, [stepIndex]);
+  // The verdict replaces the questions and the Submit button with them, so
+  // focus goes to the verdict, as on the code workbench.
+  const verdictRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
 
   const answered = useMemo(() => answers.filter((one) => one !== null).length, [answers]);
   const drillAnswer = useMemo((): DesignAnswer | null => {
@@ -168,7 +172,7 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
         <section className="cd-pane">
           <span className="cd-visually-hidden" role="status" aria-live="polite">{label}</span>
           {header}
-          <section className={`cd-verdict cd-verdict--${verdict.verdict}`}>
+          <section className={`cd-verdict cd-verdict--${verdict.verdict}`} ref={verdictRef} tabIndex={-1}>
             <h3 className="cd-verdict__title">
               <span>{label}</span>
               {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}

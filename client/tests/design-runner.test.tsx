@@ -215,3 +215,13 @@ it('moves focus to the question that opens on Next and Previous', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Previous question' }));
   expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: 'What are we building' }));
 });
+
+// The verdict replaced the questions and the Submit button with them, and
+// keyboard focus fell to the page.
+it('moves focus to the verdict when it arrives', async () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockResolvedValue(verdict({ design: [{ correct: true, given: 0 }, { correct: false, given: 1 }, { correct: false, given: 0 }] }));
+  mount();
+  const heading = await answerAndSubmit();
+  expect(document.activeElement).toBe(heading.closest('.cd-verdict'));
+});
