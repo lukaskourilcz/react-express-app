@@ -544,11 +544,13 @@ function Shop() {
     }
   });
 
+  // A refused Wear or Take it off used to say nothing: the button came back
+  // and the crown stayed where it was.
   const wearCrown = (op: 'equip' | 'unequip') => spend(async () => {
     try {
       await cosmetic.mutateAsync({ op });
-    } catch {
-      // The wallet re-read says what the crown is now; nothing else to say.
+    } catch (error) {
+      setToast({ msg: friendlyError(error), ok: false });
     }
   });
 

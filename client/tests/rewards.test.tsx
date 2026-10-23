@@ -285,6 +285,17 @@ describe('the Rewards screen', () => {
     await waitFor(() => expect(buy).toBeEnabled());
   });
 
+  it('says so when wearing the crown fails', async () => {
+    signIn();
+    routes({ wallet: wallet({ cosmetics: [{ id: 'crown', equipped: false }] }) });
+    server.use(http.post('*/api/user/*', () => HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 })));
+    await mountShop();
+    const wear = await screen.findByRole('button', { name: 'Wear it' });
+    await waitFor(() => expect(wear).toBeEnabled());
+    fireEvent.click(wear);
+    expect(await screen.findByText('Server error. Try again in a moment.')).toBeInTheDocument();
+  });
+
   it('offers a retry when the coins cannot load', async () => {
     signIn();
     routes({ wallet: { error: { code: 'db_error' } }, walletStatus: 500 });
