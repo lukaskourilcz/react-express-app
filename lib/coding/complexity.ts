@@ -29,6 +29,14 @@ const targetCost = (value: string): Cost | null => {
   const power = value.match(/^O\(n\^(\d+)\)$/);
   return power ? { power: Number(power[1]), log: 0 } : null;
 };
+/** Node visits one assessment may spend outside the cost walk: the deferred-
+ * work check and the binding passes run again for every call of a helper, so
+ * a helper called a thousand times was inspected a thousand times with no
+ * shared limit. The authored solutions use at most a few thousand. */
+const ANALYSIS_STEPS = 150_000;
+type AnalysisBudget = { left: number };
+const ANALYSIS_LIMIT_MESSAGE = 'The analysis limit was reached. Review the code manually.';
+
 const scanMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'includes', 'indexOf', 'lastIndexOf', 'slice', 'split', 'join', 'reverse', 'toReversed', 'flat', 'flatMap', 'concat', 'replace', 'replaceAll', 'toLowerCase', 'toUpperCase', 'trim', 'substring', 'substr', 'shift', 'unshift', 'splice']);
 const rangeMethods = new Set(['slice', 'substring', 'substr']);
 const callbackMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'flatMap', 'sort', 'toSorted']);
@@ -39,7 +47,7 @@ const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delet
  * or mistaking map/Promise callbacks for functions returned to the caller.
  * Unresolved dynamic factories still require manual review; this is not a
  * general interprocedural type or lifetime analysis. */
-function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
+function returnsDeferredWork(fn: ts.FunctionLikeDeclaration, budget: AnalysisBudget): boolean {
   if (!fn.body) return false;
   const bindings = new Map<string, ts.Node[]>();
   const aliases = new Map<string, Set<string>>();
@@ -66,7 +74,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
     }
   };
   const collect = (node: ts.Node): void => {
-    if (++visited > 12_000) { limited = true; return; }
+    if (++visited > 12_000 || --budget.left < 0) { limited = true; return; }
     if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && node.name) bind(node.name.text, node);
     if (callable(node)) return;
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) bind(node.name.text, node.initializer);
@@ -90,7 +98,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
     const pending = [owner];
     const seen = new Set<string>();
     while (pending.length) {
-      if (++visited > 12_000) { limited = true; break; }
+      if (++visited > 12_000 || --budget.left < 0) { limited = true; break; }
       const name = pending.pop()!;
       if (seen.has(name)) continue;
       seen.add(name);
@@ -99,7 +107,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
     }
   }
   const deferred = (node: ts.Node, seen = new Set<ts.Node>()): boolean => {
-    if (++visited > 12_000) return true;
+    if (++visited > 12_000 || --budget.left < 0) return true;
     if (seen.has(node)) return false;
     // Reachability has no per-path type state: visit each value node once,
     // rather than copying a growing Set for a long chain of aliases.
@@ -131,7 +139,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
   if (!ts.isBlock(fn.body)) return limited || deferred(fn.body);
   let found = limited;
   const returns = (node: ts.Node): void => {
-    if (++visited > 12_000) { found = true; return; }
+    if (++visited > 12_000 || --budget.left < 0) { found = true; return; }
     if (callable(node)) return;
     if (ts.isReturnStatement(node) && node.expression && deferred(node.expression)) found = true;
     if (!found) ts.forEachChild(node, returns);
@@ -190,8 +198,13 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   }
   const evidence = new Set<string>();
   let visited = 0;
+  const budget: AnalysisBudget = { left: ANALYSIS_STEPS };
+  // Whether a function returns deferred work depends on its source alone.
+  const deferredWork = new Map<ts.FunctionLikeDeclaration, boolean>();
   const inspectFunction = (fn: ts.FunctionLikeDeclaration, stack: Set<string>, inherited: Set<string> = new Set(), inputParameters?: Set<string>): Cost => {
-    if (returnsDeferredWork(fn)) {
+    let deferred = deferredWork.get(fn);
+    if (deferred === undefined) deferredWork.set(fn, deferred = returnsDeferredWork(fn, budget));
+    if (deferred) {
       uncertainty = 'Construction and the returned callable workload need separate complexity scopes.';
       return constant;
     }
@@ -242,6 +255,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     for (const name of testedStrings.get(fn) ?? []) strings.add(name);
     const regexes = new Map<string, string>();
     const collect = (node: ts.Node) => {
+      if (--budget.left < 0) return;
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.type?.kind === ts.SyntaxKind.StringKeyword) strings.add(node.name.text);
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
         const kind = collectionKind(node.initializer);
@@ -261,6 +275,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     // A loop index can bound a nested scan (for j < i).
     if (fn.body) {
       const indices = (node: ts.Node) => {
+        if (--budget.left < 0) return;
         if (ts.isForStatement(node) && node.condition && inputNames(node.condition.getText(file), bounds) && node.initializer && ts.isVariableDeclarationList(node.initializer)) {
           for (const declaration of node.initializer.declarations) if (ts.isIdentifier(declaration.name)) bounds.add(declaration.name.text);
         }
@@ -271,7 +286,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     const inputBound = (node: ts.Node): boolean => inputNames(node.getText(file), bounds);
     const walk = (node: ts.Node): Cost => {
       visited += 1;
-      if (visited > 12_000) { uncertainty = 'The analysis limit was reached. Review the code manually.'; return constant; }
+      if (visited > 12_000 || budget.left < 0) { uncertainty = ANALYSIS_LIMIT_MESSAGE; return constant; }
       if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && strings.has(node.left.text) && [ts.SyntaxKind.PlusEqualsToken, ts.SyntaxKind.EqualsToken].includes(node.operatorToken.kind)) uncertainty = 'Growing immutable strings need a manual review of copying costs.';
       if (ts.isTemplateExpression(node) && node.templateSpans.some(span => collectionKind(span.expression) !== 'fixed')) {
         uncertainty = 'Input-dependent string construction needs a manual review of output costs.';
@@ -415,6 +430,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   };
   let cost = constant;
   for (const name of entries) cost = max(cost, inspectFunction(functions.get(name)!, new Set([name])));
+  if (budget.left < 0) return unknown(ANALYSIS_LIMIT_MESSAGE);
   if (uncertainty) return unknown(uncertainty);
   const time = label(cost);
   const target = guidance.targetTime ? targetCost(guidance.targetTime) : null;

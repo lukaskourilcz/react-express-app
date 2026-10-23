@@ -108,6 +108,16 @@ export function complexityContracts() {
   assert.doesNotThrow(() => check(deeplyNested), 'an advisory parser failure cannot replace the grader verdict');
   assert.equal(check(deeplyNested).assessment, 'unknown');
   assert.equal(check('const solve = xs => { let out = ""; for (let i=0;i<xs.length;i++) out+=xs[i]; return out; };').assessment, 'unknown');
+  // A helper is inspected again at every call, so one helper called a
+  // thousand times was a thousand full inspections: 13 kB held a request for
+  // seconds. One shared budget covers every pass of one assessment.
+  const bindings = Array.from({ length: 500 }, (_, i) => `b${i}=a`).join(',');
+  const repeatedHelper = `function h(a){const z=()=>{const ${bindings};${'for(let i=0;q<q;);'.repeat(200)}};return 1;}`
+    + `function solve(xs){${'h(xs);'.repeat(1000)}return 1;}`;
+  const limited = check(repeatedHelper);
+  assert.equal(limited.assessment, 'unknown', 'a repeatedly inspected helper stops at the shared analysis budget');
+  assert.equal(limited.explanation, 'The analysis limit was reached. Review the code manually.');
+  assert.equal(codingPassXp(limited), 25, 'an exhausted analysis keeps the base reward');
   assert.equal(check('const solve = xs => /^(a+)+$/.test(xs);').assessment, 'unknown');
   assert.equal(check('const cache = mystery(); const solve = xs => cache[xs];').assessment, 'unknown');
   for (const code of [
