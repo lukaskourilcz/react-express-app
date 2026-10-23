@@ -71,6 +71,8 @@ const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
 const seen: Seen[] = [];
+/** While true, the one-time quiz claim fails as an unreachable database would. */
+let claimFails = false;
 /** Token checks Supabase Auth answered, so a test can count a request's. */
 let authChecks = 0;
 const SLOW_REPORT = 'stand-in: answer after the timeout';
@@ -145,6 +147,7 @@ async function startStandIns() {
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname)?.[1];
     if (rpc) {
+      if (rpc === 'claim_quiz_submission' && claimFails) return send(500, { code: '08006', message: 'stand-in: connection failure' });
       if (rpc === 'allocate_shark_name') return send(200, { handle: 'sleepySharkie17', ordinal: '17', base: 'sleepySharkie' });
       if (rpc === 'save_completed_challenge_score') return send(200, { id: 'score-17', name: 'sleepySharkie17', score: (body as Row).p_score, selected_topics: (body as Row).p_topics, all_topics: (body as Row).p_all_topics, created_at: new Date().toISOString() });
       // The Premium check: account A is Premium, so every coding task opens.
@@ -532,6 +535,18 @@ async function main() {
     assert.equal(refusedToken.statusCode, 401, 'a token Supabase refuses is still 401');
     assert.equal(errorCode(refusedToken), 'unauthorized');
     console.log('PASS verified caller: Today\'s due list and a review keep 503 when Supabase Auth is down, and 401 for a refused token');
+
+    // ── a quiz submit whose one-time claim cannot be taken ───────────────
+    claimFails = true;
+    try {
+      const sessionId = tokens.encodeSession([{ questionId: 'q-claim-1', correctAnswer: 0 }], { subject: 'webdev' });
+      const unclaimed = await call(submit as Handler, { method: 'POST', account: A, body: { sessionId, answers: { 'q-claim-1': 0 } } });
+      assert.equal(unclaimed.statusCode, 503, `a submit is not graded without its claim, and says to retry (${JSON.stringify(unclaimed.body)})`);
+      assert.equal(errorCode(unclaimed), 'claim_unavailable');
+    } finally {
+      claimFails = false;
+    }
+    console.log('PASS verified caller: a quiz submit whose one-time claim fails answers 503');
 
     // ── question reports ─────────────────────────────────────────────────
     seen.length = 0;

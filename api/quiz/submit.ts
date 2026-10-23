@@ -70,7 +70,10 @@ async function claimSubmission(input: {
   );
   if (result.error) {
     if (isRpcMissing(result.error)) return 'unavailable';
-    throw new Error('quiz_submission_claim_failed');
+    // The claim is what makes grading one-time, so without it nothing is
+    // graded: the database being unreachable is a 503 to retry, not a 500.
+    logEvent({ status: 503, reason: 'claim_failed', error: result.error.message });
+    throw new ServiceUnavailableError('claim_unavailable', 'This could not be checked right now. Try again in a minute.');
   }
   return result.data === 'claimed' || result.data === 'replay' || result.data === 'conflict'
     ? result.data
