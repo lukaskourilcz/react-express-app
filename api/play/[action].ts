@@ -263,34 +263,35 @@ async function create(req: VercelRequest, res: VercelResponse) {
     };
   });
 
+  const insertRoom = (code: string) => withTimeout(
+    supabase!
+      .from('matches')
+      .insert({
+        code,
+        mode,
+        subject: scope.subject,
+        host_id: hostSub,
+        host_name: hostName,
+        status: 'lobby',
+        questions: matchQuestions,
+        current_index: 0,
+        question_duration_s: durationS,
+        last_heartbeat_at: new Date().toISOString(),
+      })
+      .select('id, code, mode, host_id, host_name, status')
+      .single(),
+  );
+
   let code = generateMatchCode();
   try {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const { data: clash } = await withTimeout(
-        supabase!.from('matches').select('id').eq('code', code).maybeSingle(),
-      );
-      if (!clash) break;
+    // The unique key on matches.code decides a clash, so two hosts drawing
+    // the same code at once cannot both pass a read first and then fail the
+    // insert with a 500. A clash draws a new code and tries again.
+    let { data, error } = await insertRoom(code);
+    for (let attempt = 1; attempt < 5 && error?.code === '23505'; attempt++) {
       code = generateMatchCode();
+      ({ data, error } = await insertRoom(code));
     }
-
-    const { data, error } = await withTimeout(
-      supabase!
-        .from('matches')
-        .insert({
-          code,
-          mode,
-          subject: scope.subject,
-          host_id: hostSub,
-          host_name: hostName,
-          status: 'lobby',
-          questions: matchQuestions,
-          current_index: 0,
-          question_duration_s: durationS,
-          last_heartbeat_at: new Date().toISOString(),
-        })
-        .select('id, code, mode, host_id, host_name, status')
-        .single(),
-    );
 
     if (error || !data) {
       logEvent('play/create', { status: 500, error: error?.message });

@@ -576,6 +576,17 @@ async function main() {
       assert.equal((await call('three', 'POST', 'heartbeat', { code })).statusCode, 200, 'the room is still there');
     }
 
+    // 10. Two hosts drawing the same room code at once: the unique key refuses
+    //     the second insert, and that host gets a room under a new code
+    //     instead of a 500.
+    {
+      faults.push({ method: 'POST', path: '/rest/v1/matches', status: 409, body: { code: '23505', details: 'Key (code)=(TAKEN1) already exists.', hint: null, message: 'duplicate key value violates unique constraint "matches_code_key"' } });
+      const created = await call('three', 'POST', 'create', { mode: 'multiplayer', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(created.statusCode, 200, `a code clash draws a new code (${JSON.stringify(created.body)})`);
+      assert.equal(faults.length, 0, 'the clash happened');
+      assert.equal(room(created.body.code).host_id, USERS.three.id, 'the room is stored under the code it answered');
+    }
+
     // 5. The Play switch turns every action off, rooms already open included.
     {
       const code = await open('multiplayer', ['one']);
