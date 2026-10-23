@@ -166,3 +166,12 @@ it('does not tell a signed-in learner to sign in after an accepted order', async
   expect(screen.getByRole('link', { name: 'Back to the list' })).toBeVisible();
   expect(screen.queryByText('Checked, not recorded: sign in to keep passes.')).toBeNull();
 });
+
+// A puzzle line is a flex item that would not shrink below its longest line,
+// so a 49-character line pushed the page sideways at 360 px and 200 % text.
+it('lets a long puzzle line scroll inside its own box instead of widening the page', () => {
+  mountPuzzle();
+  for (const code of document.querySelectorAll<HTMLElement>('.cd-puzzle__line code')) {
+    expect(code).toHaveStyle({ minWidth: '0px' });
+  }
+});

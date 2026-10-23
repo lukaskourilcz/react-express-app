@@ -104,7 +104,11 @@ export function CodePuzzle({
               onKeyDown={(event) => onKeyDown(event, line.id)}
             >
               <span className="cd-puzzle__pos" aria-hidden>{index + 1}</span>
-              <code>{line.code}</code>
+              {/* A flex item will not shrink below its longest line, so a
+                  49-character line pushed the page sideways at 360 px; at
+                  min-width 0 the line scrolls inside its own box instead and
+                  keeps its indentation. */}
+              <code style={{ minWidth: 0 }}>{line.code}</code>
               <span className="cd-visually-hidden">
                 {t('coding.puzzle.position', { n: index + 1, total: lines.length })}
               </span>
