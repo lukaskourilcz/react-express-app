@@ -398,7 +398,10 @@ export async function retryQueued(supabase: SupabaseClient, userId: string, limi
     loadConnection(supabase, userId),
     withTimeout(supabase.from('github_commits').select('id,path,content,message,attempts').eq('user_id', userId).eq('status', 'queued').order('created_at', { ascending: true }).limit(limit)),
   ]);
-  if (!connection || rows.error) return { committed: 0, failed: 0, remaining: rows.data?.length ?? 0 };
+  // A queue the database would not read is not an empty queue: read as one,
+  // Sync told the learner nothing was waiting while their files were.
+  if (rows.error) throw new Error('db_error');
+  if (!connection) return { committed: 0, failed: 0, remaining: rows.data?.length ?? 0 };
   const queued = (rows.data ?? []) as QueuedRow[];
   const newest = new Map<string, QueuedRow>();
   for (const row of queued) newest.set(row.path, row);
@@ -416,5 +419,6 @@ export async function retryQueued(supabase: SupabaseClient, userId: string, limi
     else break; // still queued: the connection is broken or GitHub is down, stop hammering
   }
   const left = await withTimeout(supabase.from('github_commits').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'queued'));
+  if (left.error) throw new Error('db_error');
   return { committed, failed, remaining: left.count ?? 0 };
 }

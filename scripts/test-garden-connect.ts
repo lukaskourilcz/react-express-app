@@ -479,7 +479,16 @@ async function main() {
   dbError = false;
   assert.equal(unread?.status, 'failed', 'a failed connection read reports the garden write as failed');
 
-  // 18. A disconnect the database refused leaves the learner connected with
+  // 18. A queue the database would not read is an error on Sync and on the
+  //     card, never "nothing was waiting" while a file still waits.
+  failingTable = 'github_commits';
+  const unreadSync = await call('github-sync', accountF, 'POST');
+  const unreadCard = await call('github-connection', accountF, 'GET');
+  failingTable = null;
+  assert.equal(unreadSync.statusCode, 500, `a sync that could not read the queue is an error (${JSON.stringify(unreadSync.body)})`);
+  assert.equal(unreadCard.statusCode, 500, `a status that could not count the queue is an error (${JSON.stringify(unreadCard.body)})`);
+
+  // 19. A disconnect the database refused leaves the learner connected with
   //     their queue; one that went through removes both.
   table.get(accountE)!.status = 'broken';
   assert.equal((await pass('const answer = 5;'))?.status, 'queued');

@@ -46,7 +46,9 @@ async function readConnection(supabase: SupabaseClient, userId: string): Promise
 }
 
 async function queuedCount(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { count } = await withTimeout(supabase.from('github_commits').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'queued'));
+  const { count, error } = await withTimeout(supabase.from('github_commits').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'queued'));
+  // Unread is not "nothing waiting": the card would hide files still queued.
+  if (error) throw new Error('db_error');
   return count ?? 0;
 }
 
