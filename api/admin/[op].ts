@@ -11,6 +11,8 @@ import {
   bulkHideByImportance,
   KNOWN_CATEGORIES,
 } from '../../lib/questions-store';
+import { loadDeploymentQuestionBank } from '../../lib/question-bank-loader';
+import type { Question } from '../../lib/quiz-data';
 import { listReports, dismissReport, reportCounts } from '../../lib/reports-store';
 import { listAuthEvents } from '../../lib/auth-events-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
@@ -212,6 +214,26 @@ async function listQuestions(req: VercelRequest, res: VercelResponse) {
   });
 }
 
+const bankIds = new WeakMap<readonly Question[], ReadonlySet<string>>();
+
+/** Whether a save or delete may name this id: a custom question's own
+ * (`dev-…`) or one of the bank's. Any other id wrote an override row for a
+ * question that does not exist, which no listing shows and nothing removes. */
+async function knownQuestionId(id: string): Promise<boolean> {
+  if (id.startsWith('dev-')) return true;
+  const bank = await loadDeploymentQuestionBank();
+  let ids = bankIds.get(bank);
+  if (!ids) {
+    ids = new Set(bank.map((question) => question.id));
+    bankIds.set(bank, ids);
+  }
+  return ids.has(id);
+}
+
+function unknownQuestion(res: VercelResponse) {
+  return jsonError(res, 404, 'unknown_question', 'No question in the bank has this id');
+}
+
 async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -259,6 +281,7 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
   const explanation = typeof b.explanation === 'string' ? cutText(b.explanation, MAX_TEXT) : '';
   const introduction = typeof b.introduction === 'string' ? cutText(b.introduction, MAX_TEXT) : '';
   const id = boundedString(b.id, 64) ?? undefined;
+  if (id !== undefined && !(await knownQuestionId(id))) return unknownQuestion(res);
 
   const saved = await saveQuestion({
     id,
@@ -284,6 +307,7 @@ async function deleteQuestionOp(req: VercelRequest, res: VercelResponse) {
   const b = (req.body || {}) as { id?: unknown; deleted?: unknown };
   const id = boundedString(b.id, 64);
   if (!id) return jsonError(res, 400, 'bad_request', 'id is required');
+  if (!(await knownQuestionId(id))) return unknownQuestion(res);
   // `deleted: false` restores a soft-deleted base question; default is delete.
   const deleted = b.deleted === false ? false : true;
   await setQuestionDeleted(id, deleted);

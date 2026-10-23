@@ -475,6 +475,20 @@ async function main() {
     assert.equal(reads('/rest/v1/question_reports').filter((one) => one.method === 'DELETE').length, 1, 'a report id is dismissed');
     console.log('PASS verified caller: dismissing a report refuses an id that is not a UUID');
 
+    // A save or delete naming an id that is neither the bank's nor a custom
+    // question's wrote an override row no listing shows: refused with 404.
+    seen.length = 0;
+    for (const [op, body] of [
+      ['delete', { id: 'rm-js-no-such-question' }],
+      ['save', { ...question, id: 'rm-js-no-such-question' }],
+    ] as const) {
+      const refused = await admin(op, { method: 'POST', body });
+      assert.equal(refused.statusCode, 404, `op=${op} for an id the bank lacks is refused (${JSON.stringify(refused.body)})`);
+      assert.equal(errorCode(refused), 'unknown_question');
+    }
+    assert.deepEqual(reads('/rest/v1/question_edits'), [], 'and nothing is written');
+    console.log('PASS verified caller: an admin save or delete refuses an id that is not a question');
+
     // Every write the console makes leaves an audit line naming the admin.
     const realLog = console.log;
     const audit: string[] = [];
