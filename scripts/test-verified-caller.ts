@@ -431,6 +431,19 @@ async function main() {
     assert.equal(errorCode(slowSave), 'upstream_timeout');
     console.log('PASS verified caller: an admin op whose database call times out answers 503');
 
+    // An option the save cannot take is refused, never dropped: the correct
+    // index points into the list as sent, and dropping the first of these
+    // stored useRef as the answer to a question whose answer is useState.
+    seen.length = 0;
+    const shifted = await admin('save', { method: 'POST', body: { ...question, options: ['x'.repeat(2001), 'useState', 'useRef'], correctIndex: 1 } });
+    assert.equal(shifted.statusCode, 400, `a save with an option too long is refused (${JSON.stringify(shifted.body)})`);
+    assert.deepEqual(reads('/rest/v1/question_edits'), [], 'and nothing is written');
+    for (const options of [['useState', 7], ['useState', '']]) {
+      const refused = await admin('save', { method: 'POST', body: { ...question, options } });
+      assert.equal(refused.statusCode, 400, `a save with the options ${JSON.stringify(options)} is refused`);
+    }
+    console.log('PASS verified caller: an admin save refuses an invalid option instead of dropping it and moving the answer');
+
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
       ['stats', await user('stats', { account: A })],

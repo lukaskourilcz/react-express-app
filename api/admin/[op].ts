@@ -192,11 +192,15 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
   const question = boundedString(b.question, MAX_TEXT);
   if (!question) return jsonError(res, 400, 'bad_request', 'question is required');
 
-  const options = Array.isArray(b.options)
-    ? b.options.filter((o): o is string => typeof o === 'string' && o.length > 0 && o.length <= MAX_OPTION)
-    : [];
+  // Every option is checked, none dropped: `correctIndex` points into the list
+  // as sent, so leaving out one invalid option before the correct one would
+  // store a different option as the answer.
+  const options = Array.isArray(b.options) ? b.options : [];
   if (options.length < MIN_OPTIONS || options.length > MAX_OPTIONS) {
     return jsonError(res, 400, 'bad_request', `Provide ${MIN_OPTIONS}–${MAX_OPTIONS} non-empty options`);
+  }
+  if (!options.every((o): o is string => typeof o === 'string' && o.length > 0 && o.length <= MAX_OPTION)) {
+    return jsonError(res, 400, 'bad_request', `Every option must be text of 1–${MAX_OPTION} characters`);
   }
 
   const correctIndex =
