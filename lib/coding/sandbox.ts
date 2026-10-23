@@ -505,9 +505,15 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
   let driver: QuickJSHandle | null = null;
   // `dump` releases a promise handle itself, and learner code can throw a
   // promise. Releasing it a second time threw "Lifetime not alive", which
-  // came back as the run's error in place of what the code threw.
+  // came back as the run's error in place of what the code threw. A promise
+  // rejected with another promise trips the same double release inside
+  // `dump` itself (it releases the inner promise, then frees it again), so
+  // that error reads as an unreadable thrown value instead.
   const dumpError = (handle: QuickJSHandle): unknown => {
-    try { return vm.dump(handle); } finally { if (handle.alive) handle.dispose(); }
+    try { return vm.dump(handle); } catch (error) {
+      if ((error as Error | undefined)?.name === 'QuickJSUseAfterFree') return undefined;
+      throw error;
+    } finally { if (handle.alive) handle.dispose(); }
   };
   const readDriver = (name: string): unknown => {
     if (!driver) return undefined;

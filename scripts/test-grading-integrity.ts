@@ -68,6 +68,11 @@ const thrownPromise = await runInSandbox({ code: 'throw Promise.resolve(7);', ca
 const thrownObject = await runInSandbox({ code: 'throw {};', calls: ['1'], expectations: [1] });
 assert.notEqual(thrownObject.codeError, null);
 assert.equal(thrownPromise.codeError, thrownObject.codeError, 'a thrown promise reads like any other thrown object');
+// A promise rejected with another promise made `dump` free the inner one twice.
+for (const code of ['throw Promise.reject(Promise.resolve(7));', 'throw Promise.reject(new Promise(() => {}));']) {
+  const nested = await runInSandbox({ code, calls: ['1'], expectations: [1] });
+  assert.equal(nested.codeError, thrownObject.codeError, `${code} reads like any other thrown object`);
+}
 console.log('PASS integrity: a thrown promise is reported as the code\'s error');
 
 // Correct arithmetic can produce -0 (`-a - b` with both zero), and no check
