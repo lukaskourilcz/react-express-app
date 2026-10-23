@@ -50,8 +50,8 @@ New band files are English only (`EASY_BAND` doc comment in `lib/coding/catalog.
 `complexityGuidance` in `shared/coding-complexity.ts` reads the target from `prompt` only when the task has `tests` and its track is not `react` or `system-design`:
 
 - Write `Target: O(...)` followed by `time`, `calls`, `checks`, punctuation or the end of the prompt, for example `Target: O(n) time and O(1) extra space, where n is the number of items.` After the time target, an `O(...)` followed by `space` or `extra space` becomes the space target.
-- `inspectComplexity` in `lib/coding/complexity.ts` can compare only `O(1)`, `O(log n)`, `O(n)`, `O(n log n)`, `O(n²)` and `O(n^k)`. Any other target, such as `O(n*m)`, still shows, and the estimate reports unknown.
-- An estimate above the target pays `CODING_ABOVE_TARGET_XP` (15) instead of `CODING_PASS_XP` (25); correctness never depends on it.
+- `assessComplexity` in `lib/coding/complexity.ts` can compare only `O(1)`, `O(log n)`, `O(n)`, `O(n log n)`, `O(n²)` and `O(n^k)`. Any other target, such as `O(n*m)`, still shows, and the estimate reports unknown. The estimate also reports unknown when the code spends the analyser's shared step budget (`ANALYSIS_STEPS`) or cannot be parsed.
+- An estimate above the target pays `CODING_ABOVE_TARGET_XP` (15) instead of `CODING_PASS_XP` (25); an unknown estimate keeps the 25, and correctness never depends on it. `complexityContracts()` in `scripts/coding-complexity-contract.ts` pins these cases; when you change the analyser, compare every authored solution's report before and after.
 - Define what `n` counts in the brief. The coding wave recorded a missing input-size definition as a defect in the rows' `defects` arrays, for example `js-easy3-hide-banned` ("String domains and input-size/cost units were implicit.") and `ts-easy3-next-light` in `docs/audit/devshark-content-ledger.json`.
 
 ## Evolving stages
