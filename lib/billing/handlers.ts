@@ -480,7 +480,8 @@ export async function handleBillingCancel(req: VercelRequest, res: VercelRespons
     } catch (error) {
       return unavailable(res, error, 'cancel');
     }
-    for (const effect of effects) await sendCancellationEmail(config, effect, receivedAt);
+    // Each receipt may wait up to 4 s on the mail provider; send them together.
+    await Promise.all(effects.map((effect) => sendCancellationEmail(config, effect, receivedAt)));
     return res.json(receipt(action, email, receivedAt, config, effects));
   }
 
@@ -560,7 +561,7 @@ async function handleCancelLink(req: VercelRequest, res: VercelResponse, supabas
     await withTimeout(supabase.rpc('release_billing_cancel_request', { p_token_hash: hash })).catch(() => undefined);
     return unavailable(res, error, 'cancel');
   }
-  for (const effect of effects) await sendCancellationEmail(config, effect, request.requestedAt);
+  await Promise.all(effects.map((effect) => sendCancellationEmail(config, effect, request.requestedAt)));
   return res.json(receipt(request.action, request.email, request.requestedAt, config, effects));
 }
 
