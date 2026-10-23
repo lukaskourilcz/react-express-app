@@ -49,6 +49,8 @@ export function GithubSettingsPage() {
   const [phase, setPhase] = useState<Phase>({ kind: 'working' });
   const [opening, setOpening] = useState(false);
   const inFlight = useRef(false);
+  // `opening` renders a click too late to refuse the second one.
+  const openingRef = useRef(false);
 
   const installationId = params.get('installation_id');
   const state = params.get('state');
@@ -76,10 +78,13 @@ export function GithubSettingsPage() {
   // A new connection: GitHub installs or re-authorizes and returns here with
   // a fresh code.
   const connectAgain = useCallback(() => {
+    if (openingRef.current) return;
+    openingRef.current = true;
     setOpening(true);
     startGithubConnect()
       .then(({ url }) => window.location.assign(url))
       .catch((error: unknown) => {
+        openingRef.current = false;
         setOpening(false);
         setPhase({ kind: 'error', message: friendlyError(error), next: 'connect' });
       });

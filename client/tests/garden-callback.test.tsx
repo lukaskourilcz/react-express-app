@@ -6,11 +6,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { en } from '../src/i18n/translations';
 import GithubSettingsPage from '../src/components/coding/GithubSettingsPage';
 import { server } from './mocks/server';
+import { clearAccountData } from '../src/lib/accountData';
 
 const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false } }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ ...auth.value, signInWithGoogle: async () => undefined }) }));
@@ -53,14 +54,16 @@ function Where() {
   return <p data-testid="where">{location.pathname + location.hash}</p>;
 }
 
+let lastClient: QueryClient | null = null;
 const mount = (search: string) => act(async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  lastClient = client;
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/settings/github${search}`]}>
         <LanguageProvider>
           <Routes>
-            <Route path="/settings/github" element={<><GithubSettingsPage /><Where /></>} />
+            <Route path="/settings/github" element={<><GithubSettingsPage /><Where /><Link to="/learn">Leave</Link></>} />
             <Route path="*" element={<Where />} />
           </Routes>
         </LanguageProvider>
@@ -147,6 +150,22 @@ describe('GitHub garden callback', () => {
       { installationId: '555001', state: 'sealed-state', code: 'one-time-code' },
     ]);
     expect(starts).toEqual([]);
+  });
+
+  it('opens GitHub once for a double click on Connect again', async () => {
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, origin: original.origin, assign } });
+    try {
+      finishAnswers(refusal(500, 'internal_error', 'Could not handle the GitHub request'));
+      await mount(`${CALLBACK}&code=one-time-code`);
+      const again = await screen.findByRole('button', { name: en['github.connectAgain'] });
+      act(() => { again.click(); again.click(); });
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(starts).toEqual(['github-connect-start']);
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
   });
 
   it('sends a learner who changed the installation on GitHub back to the profile', async () => {
