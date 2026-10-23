@@ -84,3 +84,19 @@ it('says in the same line that work is not recorded yet while the path is a prev
   expect(await within(section).findByText('The diagnostic and first module are free; Premium opens the rest as it becomes available. Work is not recorded yet.')).toBeInTheDocument();
   expect(section.querySelectorAll('p')).toHaveLength(2);
 });
+
+// shell-public-09: the grid is a class, so a phone gets two tiles a row
+// (landingSections.css) instead of 820px of one-word cards.
+it('lays the topic picker out with the shared grid class, not an inline grid', () => {
+  renderHome();
+  const picker = screen.getByRole('region', { name: 'Pick a topic.' });
+  const grid = picker.querySelector('.ss-topic-grid') as HTMLElement;
+  expect(grid).not.toBeNull();
+  expect(grid.getAttribute('style')).toBeNull();
+  const tiles = within(grid).getAllByRole('button');
+  expect(tiles.length).toBeGreaterThanOrEqual(8);
+  // The selected tile says so by aria-pressed (and its border and tint); the
+  // tick is decoration and hides on a phone.
+  const selected = tiles.find((tile) => tile.getAttribute('aria-pressed') === 'true')!;
+  expect(selected.querySelector('.ss-topic-card__tick')).toHaveAttribute('aria-hidden', 'true');
+});

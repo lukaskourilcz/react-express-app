@@ -140,6 +140,22 @@
   .ss-compare-caption { font-size: var(--ss-type-label); }
 }
 
+/* ── Topic picker ──────────────────────────────────────────────────────────
+   Four across at 1280. Under 600px two tiles a row instead of one: seven
+   one-word cards and "And 10 more" stacked into 820px, a phone screen of
+   buttons before the preview they control (UX audit shell-public-09). The
+   tiles stay 56px tall, above the 44px target. The selected tile shows by its
+   accent border and tint (and aria-pressed); the tick hides so "TypeScript"
+   fits a 172px tile. !important because the card's padding is inline and the
+   Apple layer's is !important too. */
+.ss-topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+@media (max-width: 599px) {
+  .ss-topic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ss-topic-grid > button,
+  :root[data-design='apple'] .ss-topic-grid .ss-topic-card { min-height: 56px !important; padding: 12px !important; gap: 10px !important; }
+  .ss-topic-grid .ss-topic-card__tick { display: none; }
+}
+
 /* ── "Also in devShark" strip ─────────────────────────────────────────────
    Each tile is a <button> with no border or background, so without this ring
    a keyboard user could not see which one has focus (design audit P2.7). */

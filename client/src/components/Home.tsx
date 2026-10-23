@@ -104,7 +104,7 @@ function TopicCard({
       </span>
       {/* The tick sits on the selected card's accent tint, so it takes the
           derived on-tint accent rather than the plain one. */}
-      <span style={{ marginLeft: 'auto', fontSize: 'var(--ss-type-compact)', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
+      <span aria-hidden className="ss-topic-card__tick" style={{ marginLeft: 'auto', fontSize: 'var(--ss-type-compact)', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
     </button>
   );
 }
@@ -256,7 +256,7 @@ export default function Home() {
             {t('home.topicsTitle')}
           </h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
+        <div className="ss-topic-grid">
           {featured.map((topic) => (
             <TopicCard
               key={topic.id}
