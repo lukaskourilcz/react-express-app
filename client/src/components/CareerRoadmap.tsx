@@ -34,7 +34,7 @@ import { roadmapStructureQuery, useRoadmapStructure } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import { enrollmentsQuery, pathCatalogQuery } from '../lib/learningPaths';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
-import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useTrack, trackTopics, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { preferredLearningOf, saveLearningPreference } from '../lib/trackPref';
 import { eligibilityKeys, useInPlan, useLearnerSections } from '../lib/eligibility';
 import { useLocks } from '../lib/locks';
@@ -196,19 +196,19 @@ export default function CareerRoadmap() {
     return { section, pillars: grouped, figure };
   });
 
-  // Aggregate completion across the areas that belong to the chosen track.
+  // Aggregate completion across every topic of the chosen track, the stages
+  // the map below draws. The pillars name only the curated areas, so counting
+  // through them left Git and AI & LLMs, which every track holds, out of it.
   const overall = useMemo(() => {
     let passed = 0;
     let total = 0;
-    for (const pillar of pillars) {
-      for (const area of pillar.areas) {
-        if (!isTopicInTrack(track, area.topic)) continue;
-        total += levelsFor(area.topic);
-        passed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
-      }
+    for (const topic of trackTopics(track)) {
+      const count = levelsFor(topic);
+      total += count;
+      passed += Math.min(passedLevelCount(progress, topic), count);
     }
     return { passed, total, pct: pct(passed, total) };
-  }, [progress, structure, track, pillars]);
+  }, [progress, structure, track]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const info = levelForXp(totalXp);
   const rankKeys = rankLabelKeyFor(info.rank, track);

@@ -227,6 +227,14 @@ describe('the plan', () => {
     expect(await screen.findByText('Saved: Frontend')).toBeInTheDocument();
   });
 
+  // The headline counted only the curated pillar areas, so Git, which every
+  // track holds and the map draws, was left out: 0 / 37 instead of 0 / 52.
+  it('counts every topic of the chosen track in the /roadmap headline', async () => {
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    expect(await screen.findByText('0 / 52 learning-path levels passed on the Fullstack track')).toBeInTheDocument();
+  });
+
   it('only changes the view for a visitor', async () => {
     answer();
     await mountAt('/roadmap', <CareerRoadmap />);
