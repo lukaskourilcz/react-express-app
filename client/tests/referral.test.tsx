@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { ReferralInvite } from '../src/components/ReferralInvite';
 import { ReferralBinder } from '../src/components/ReferralBinder';
 import { captureReferralFromUrl, claimStoredReferral, storedReferral, type ReferralSummary } from '../src/lib/referral';
 import { DEFAULT_COIN_SETTINGS } from '../../shared/rewards';
+import { clearAccountData } from '../src/lib/accountData';
 import { server } from './mocks/server';
 
 // Invitations (#228). Invented fixtures only; the shapes are the real
@@ -95,6 +96,28 @@ describe('offering the kept code', () => {
     signIn();
     render(<ReferralBinder />, { wrapper });
     expect(await screen.findByText('Invitation accepted. Finish your first Learn level and you and your friend each get 100 coins.')).toBeInTheDocument();
+  });
+
+  it('stays quiet when the server accepts it after the account signed out', async () => {
+    keep('abcd2345');
+    let release = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let posted = false;
+    routes();
+    server.use(http.post('*/api/user/referral', async () => {
+      posted = true;
+      await held;
+      return HttpResponse.json({ status: 'recorded', coins: 100 });
+    }));
+    signIn();
+    const view = render(<ReferralBinder />, { wrapper });
+    await waitFor(() => expect(posted).toBe(true));
+    act(() => { clearAccountData(); });
+    signOut();
+    view.rerender(<ReferralBinder />);
+    act(() => release());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText(/Invitation accepted/)).toBeNull();
   });
 
   it('stays quiet when the account is too old to be invited', async () => {

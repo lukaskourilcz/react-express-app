@@ -10,6 +10,7 @@ import BrandFooter from '../src/components/BrandFooter';
 import { closeUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
 import type { EarnSummary, WalletResponse } from '../src/lib/rewards';
 import { DEFAULT_COIN_SETTINGS } from '../../shared/rewards';
+import { clearAccountData } from '../src/lib/accountData';
 import { server } from './mocks/server';
 
 // Invented fixtures only; the shapes are the real op=wallet and op=shop ones.
@@ -232,12 +233,175 @@ describe('the Rewards screen', () => {
     expect(screen.getByText('Streak milestones')).toBeInTheDocument();
   });
 
+  it('buys one streak protection for a double click on Buy', async () => {
+    signIn();
+    routes();
+    const bought: string[] = [];
+    server.use(http.post('*/api/user/protection', () => {
+      bought.push('protection');
+      return HttpResponse.json({ bought: true, remaining: 1, period: '2026-10' });
+    }));
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    fireEvent.click(buy);
+    expect(await screen.findByText('Bought. You have 1 this month.')).toBeInTheDocument();
+    expect(bought).toEqual(['protection']);
+  });
+
+  it('keeps Buy busy until the wallet is read again after a purchase', async () => {
+    signIn();
+    routes();
+    let bought = false;
+    let rereads = 0;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    server.use(
+      http.get('*/api/user/*', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('op') !== 'wallet') return undefined;
+        if (!bought) return HttpResponse.json(wallet());
+        rereads += 1;
+        await held;
+        return HttpResponse.json(wallet({ balance: 990 }));
+      }),
+      http.post('*/api/user/protection', () => {
+        bought = true;
+        return HttpResponse.json({ bought: true, remaining: 1, period: '2026-10' });
+      }),
+    );
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    await waitFor(() => expect(rereads).toBeGreaterThan(0));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // The purchase is through, but the balance on screen is still the old one.
+    expect(screen.getByText('1,240')).toBeInTheDocument();
+    expect(buy).toBeDisabled();
+    act(() => release());
+    expect(await screen.findByText('990')).toBeInTheDocument();
+    await waitFor(() => expect(buy).toBeEnabled());
+  });
+
+  it('says so when wearing the crown fails', async () => {
+    signIn();
+    routes({ wallet: wallet({ cosmetics: [{ id: 'crown', equipped: false }] }) });
+    server.use(http.post('*/api/user/*', () => HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 })));
+    await mountShop();
+    const wear = await screen.findByRole('button', { name: 'Wear it' });
+    await waitFor(() => expect(wear).toBeEnabled());
+    fireEvent.click(wear);
+    expect(await screen.findByText('Server error. Try again in a moment.')).toBeInTheDocument();
+  });
+
+  it('reports a refused purchase as an error', async () => {
+    signIn();
+    routes();
+    server.use(http.post('*/api/user/protection', () => HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 })));
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    const message = await screen.findByText('Server error. Try again in a moment.');
+    expect(message.closest('[role]')).toHaveAttribute('role', 'alert');
+  });
+
+  it('says nothing about a purchase that answers after the account signed out', async () => {
+    signIn();
+    routes();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let posted = false;
+    server.use(http.post('*/api/user/protection', async () => {
+      posted = true;
+      await held;
+      return HttpResponse.json({ bought: true, remaining: 1, period: '2026-10' });
+    }));
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    await waitFor(() => expect(posted).toBe(true));
+    act(() => { clearAccountData(); });
+    act(() => release());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText('Bought. You have 1 this month.')).toBeNull();
+  });
+
+  it('keeps the catalogue it has when a re-read of it fails, without saying it could not load', async () => {
+    signIn();
+    routes();
+    server.use(http.get('*/api/user/*', ({ request }) => (new URL(request.url).searchParams.get('op') === 'shop'
+      ? HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 })
+      : undefined)));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Read on an earlier visit, and stale now.
+    client.setQueryData(['rewards', 'shop'], shop, { updatedAt: Date.now() - 60 * 60_000 });
+    await act(async () => render(<Shop />, {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={[{ pathname: '/shop', key: 'stale-catalogue' }]}>
+            <LanguageProvider>{children}</LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      ),
+    }));
+    await waitFor(() => expect(client.getQueryState(['rewards', 'shop'])?.status).toBe('error'));
+    expect(screen.getByRole('heading', { name: 'Crown and streak protection' })).toBeInTheDocument();
+    expect(screen.queryByText('The shop could not load. Try again in a moment.')).toBeNull();
+  });
+
+  it('asks nobody to sign in for coins or an invite link while the session is still being restored', async () => {
+    auth.value = { user: null, isAuthenticated: false, isLoading: true };
+    routes();
+    await mountShop();
+    // The invite section draws from the public settings while signed out.
+    expect(await screen.findByRole('heading', { name: 'Invite a friend' })).toBeInTheDocument();
+    expect(screen.queryByText('Sign in to see your coins.')).toBeNull();
+    expect(screen.queryByText('Sign in to get your invite link.')).toBeNull();
+    expect(screen.getAllByRole('status').some((one) => one.textContent === 'Loading…')).toBe(true);
+  });
+
   it('offers a retry when the coins cannot load', async () => {
     signIn();
     routes({ wallet: { error: { code: 'db_error' } }, walletStatus: 500 });
     await mountShop();
     expect(await screen.findByText('Your coins could not load.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('draws a read that failed in the first-data hold as its error at once, without asking again', async () => {
+    signIn();
+    routes();
+    let reads = 0;
+    server.use(http.get('*/api/user/*', ({ request }) => {
+      if (new URL(request.url).searchParams.get('op') !== 'wallet') return undefined;
+      reads += 1;
+      return HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 });
+    }));
+    // The app's cache keeps a failed read for minutes (lib/queryClient.ts);
+    // the shared wrapper's gcTime 0 would drop it before the page mounts. A
+    // visit of its own, so the hold reads instead of finding an earlier
+    // test's wait (lib/routeData.ts keys it by the visit).
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await act(async () => render(<Shop />, {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={[{ pathname: '/shop', key: 'held-wallet-read' }]}>
+            <LanguageProvider>{children}</LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      ),
+    }));
+    expect(screen.getByText('Your coins could not load.')).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(reads).toBe(1);
+    expect(screen.getByText('Your coins could not load.')).toBeInTheDocument();
   });
 });
 

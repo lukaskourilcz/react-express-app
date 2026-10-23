@@ -118,7 +118,9 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
       withTimeout(supabase.from('cosmetic_entitlements').select('cosmetic_id,equipped').eq('user_id', userId)),
     ]);
     if (balance.error && isRpcMissing(balance.error)) return migrationRequired(res);
-    if (balance.error || entries.error) return jsonError(res, 500, 'db_error', 'Could not load your coins');
+    // A failed cosmetics read is not "owns nothing": the screen would offer
+    // the crown for sale again and take it off the avatar.
+    if (balance.error || entries.error || cosmetics.error) return jsonError(res, 500, 'db_error', 'Could not load your coins');
     res.setHeader('Cache-Control', 'private, no-store');
     return res.json({
       subject,
@@ -291,6 +293,7 @@ interface RequestedLine {
 function parseLines(raw: unknown): RequestedLine[] | null {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > 10) return null;
   const lines: RequestedLine[] = [];
+  const seen = new Set<string>();
   for (const entry of raw) {
     const row = (entry ?? {}) as Record<string, unknown>;
     if (!isMerchSku(row.sku)) return null;
@@ -300,6 +303,12 @@ function parseLines(raw: unknown): RequestedLine[] | null {
     if (item.variants.length > 0) {
       if (!item.variants.includes(variant)) return null;
     } else if (variant !== '') return null;
+    // One line per item and size: merch_order_items keys on (order, sku,
+    // variant), so a repeated line failed the insert with 23505 (a 500), and
+    // it would also step past the five-per-line cap.
+    const key = `${row.sku}|${variant}`;
+    if (seen.has(key)) return null;
+    seen.add(key);
     const quantity = Number(row.quantity);
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) return null;
     lines.push({ sku: row.sku, variant, quantity });
@@ -341,6 +350,8 @@ export async function handleOrders(
           withTimeout(supabase.from('path_reward_claims').select('order_id').eq('user_id', userId).in('order_id', ids)),
         ])
       : [{ data: [], error: null }, { data: [], error: null }];
+    // A failed read is not an order without items or a package.
+    if (items.error || claims.error) return jsonError(res, 500, 'db_error', 'Could not load your orders');
     const packages = new Set(((claims.data ?? []) as { order_id: string | null }[]).map((row) => String(row.order_id)));
     const byOrder = new Map<string, { sku: string; variant: string; quantity: number }[]>();
     for (const row of (items.data ?? []) as { order_id: string; sku: string; variant: string; quantity: number }[]) {
@@ -494,6 +505,11 @@ export async function handleCosmetic(req: VercelRequest, res: VercelResponse, su
 
   const body = (req.body || {}) as Record<string, unknown>;
   if (body.id !== 'crown') return jsonError(res, 400, 'bad_request', 'Unknown cosmetic');
+  // No op is a purchase; any op but equip or unequip is a mistake, and a
+  // misspelt "equip" must not spend the learner's coins.
+  if (body.op !== undefined && body.op !== 'equip' && body.op !== 'unequip') {
+    return jsonError(res, 400, 'bad_request', 'Unknown cosmetic operation');
+  }
   const subject = walletSubject(req);
   if (!subject) return jsonError(res, 400, 'bad_request', 'Unknown subject');
   const settings = await getGameSettings();
@@ -520,6 +536,18 @@ export async function handleCosmetic(req: VercelRequest, res: VercelResponse, su
   if (bought.error) {
     if (isRpcMissing(bought.error)) return migrationRequired(res);
     if (/insufficient_tokens/i.test(bought.error.message ?? '')) {
+      // Two purchases at once (two tabs or devices) both pass the routine's
+      // ownership check; the second waits on the wallet lock, then sees the
+      // balance the first one spent and raises. The crown was bought once,
+      // so say so instead of "not enough coins".
+      const owned = await withTimeout(
+        supabase.from('cosmetic_entitlements').select('cosmetic_id')
+          .eq('user_id', userId).eq('cosmetic_id', 'crown').maybeSingle(),
+      );
+      if (!owned.error && owned.data) {
+        res.setHeader('Cache-Control', 'private, no-store');
+        return res.json({ owned: true, alreadyOwned: true });
+      }
       return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough coins');
     }
     return jsonError(res, 500, 'db_error', 'Could not complete the purchase');
@@ -652,18 +680,37 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
   const signature = req.headers['x-payment-signature'];
   const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {});
   const expected = createHmac('sha256', secret).update(raw).digest('hex');
-  const given = typeof signature === 'string' ? signature : '';
-  const ok = given.length === expected.length
-    && timingSafeEqual(Buffer.from(given, 'utf8'), Buffer.from(expected, 'utf8'));
+  // Compared as bytes: a header of 64 non-ASCII characters has the length of
+  // the hex digest in characters but not in bytes, and timingSafeEqual throws
+  // on buffers of different lengths, which answered 500.
+  const given = Buffer.from(typeof signature === 'string' ? signature : '', 'utf8');
+  const wanted = Buffer.from(expected, 'utf8');
+  const ok = given.length === wanted.length && timingSafeEqual(given, wanted);
   if (!ok) {
     logEvent({ status: 401, kind: 'webhook_rejected' });
     return jsonError(res, 401, 'bad_signature', 'Signature did not verify');
   }
 
-  const event = (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}) as Record<string, unknown>;
+  // A signed body that is not a JSON object (text, `null`, an array) is a
+  // malformed event: 400, never the TypeError or SyntaxError a 500 would
+  // send back for the provider to retry forever.
+  let parsed: unknown = req.body ?? {};
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed || '{}');
+    } catch {
+      parsed = null;
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return jsonError(res, 400, 'bad_request', 'The event is not a JSON object');
+  }
+  const event = parsed as Record<string, unknown>;
   const orderId = typeof event.orderId === 'string' ? event.orderId : '';
-  const providerRef = typeof event.providerRef === 'string' ? event.providerRef.slice(0, 200) : '';
-  if (!/^[A-Za-z0-9_-]{16,64}$/.test(orderId) || providerRef.length === 0) {
+  // Cut by code points so an emoji is not split, and refuse U+0000, which a
+  // Postgres text column cannot hold.
+  const providerRef = typeof event.providerRef === 'string' ? Array.from(event.providerRef).slice(0, 200).join('') : '';
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(orderId) || providerRef.length === 0 || providerRef.includes('\u0000')) {
     return jsonError(res, 400, 'bad_request', 'The event names no order');
   }
 
@@ -698,6 +745,13 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     if (paid.error) {
       if (isRpcMissing(paid.error)) return migrationRequired(res);
       if (/unknown_order/i.test(paid.error.message ?? '')) return jsonError(res, 404, 'not_found', 'Unknown order');
+      // The provider reference is unique per provider: one already recorded
+      // on another order is a mismatch to look at, refused like the others
+      // rather than a 500.
+      if (paid.error.code === '23505') {
+        logEvent({ status: 409, kind: 'webhook_refused', reason: 'provider_ref_conflict' });
+        return jsonError(res, 409, 'provider_ref_conflict', 'The event does not match the order');
+      }
       return jsonError(res, 500, 'db_error', 'Could not record the payment');
     }
     logEvent({ status: 200, kind: 'webhook_paid', applied: paid.data === true });
@@ -788,6 +842,9 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
           withTimeout(supabase.from('path_reward_claims').select('order_id').in('order_id', ids)),
         ])
       : [{ data: [], error: null }, { data: [], error: null }];
+    // A failed claims read would drop every claimed package from the picking
+    // list, and a failed items read would list parcels with nothing in them.
+    if (items.error || claims.error) return jsonError(res, 500, 'db_error', 'Could not load the queue');
     // A package is an order a path claim points at, never a guess from its id.
     const packages = new Set(((claims.data ?? []) as { order_id: string | null }[]).map((row) => String(row.order_id)));
     const orders = rows

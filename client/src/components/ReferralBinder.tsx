@@ -7,25 +7,30 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AppToast } from './ui/AppToast';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { claimStoredReferral, storedReferral } from '../lib/referral';
 
 export function ReferralBinder() {
   const t = useT();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const queryClient = useQueryClient();
   const offeredFor = useRef<string | null>(null);
   const [accepted, setAccepted] = useState<number | null>(null);
 
+  // Keyed on the id: auth replaces the user object on every token refresh.
   useEffect(() => {
-    if (!user || offeredFor.current === user.id) return;
-    offeredFor.current = user.id;
+    if (!userId || offeredFor.current === userId) return;
+    offeredFor.current = userId;
     if (!storedReferral()) return;
+    const epoch = accountEpoch();
     void claimStoredReferral().then((result) => {
-      if (result?.status !== 'recorded') return;
+      // An answer after a sign-out belongs to the account that left.
+      if (result?.status !== 'recorded' || accountEpoch() !== epoch) return;
       setAccepted(result.coins);
       void queryClient.invalidateQueries({ queryKey: ['rewards'] });
     });
-  }, [user, queryClient]);
+  }, [userId, queryClient]);
 
   return (
     <AppToast

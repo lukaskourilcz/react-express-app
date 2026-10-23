@@ -445,6 +445,8 @@ export function validateAddress(value: unknown): { ok: true; address: ShippingAd
     const trimmed = candidate.trim();
     if (trimmed.length === 0) return required ? null : '';
     if (trimmed.length > MAX_ADDRESS_FIELD) return null;
+    // Postgres text cannot hold U+0000: the order insert answered 500.
+    if (trimmed.includes('\u0000')) return null;
     return trimmed;
   };
   const name = text('name', true);

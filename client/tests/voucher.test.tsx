@@ -11,6 +11,8 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import PremiumPage from '../src/components/PremiumPage';
 import { PrivacyPage, TermsPage } from '../src/components/LegalPages';
 import PlanLine from '../src/components/PlanLine';
+import PremiumVoucher from '../src/components/PremiumVoucher';
+import { clearAccountData } from '../src/lib/accountData';
 import UpgradeSheet from '../src/components/UpgradeSheet';
 import { closeUpgradeSheet } from '../src/lib/upgradeSheet';
 import { server } from './mocks/server';
@@ -86,6 +88,21 @@ function renderAt(path: string, node: ReactNode) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+/** The voucher section alone, re-renderable in place after the account changes. */
+function mountVoucher() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const entry = visit('/premium');
+  const tree = () => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[entry]}>
+        <LanguageProvider><PremiumVoucher billingClosed /></LanguageProvider>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const view = render(tree());
+  return { rerender: () => view.rerender(tree()) };
 }
 
 // Signed in, /premium holds its first render for the plan (lib/routeData.ts);
@@ -190,6 +207,63 @@ describe('/premium while checkout is off', () => {
     expect(field).toHaveValue('K7Q2-ABCD-1234');
     expect(field).not.toHaveAttribute('aria-invalid');
     expect(within(voucherSection()).getByRole('button', { name: 'Redeem voucher' })).toBeEnabled();
+  });
+
+  it('sends the code once when it is submitted twice at once', async () => {
+    signIn();
+    serve({ plans: [FREE, VOUCHER_PLAN] });
+    let answered = 0;
+    const sent = redeemAnswers(() => (answered++ === 0
+      ? HttpResponse.json({ status: 'redeemed', validUntil: THIS_YEAR_END })
+      : HttpResponse.json({ error: { code: 'voucher_already_redeemed', message: 'You already redeemed this voucher.' } }, { status: 409 })));
+    await mountAt('/premium', <PremiumPage />);
+    const field = await screen.findByRole('textbox', { name: /Voucher code/ });
+    fireEvent.change(field, { target: { value: 'K7Q2-ABCD-1234' } });
+    const form = field.closest('form')!;
+    act(() => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    expect(await within(voucherSection()).findByRole('heading', { level: 3, name: 'Premium is open' })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(sent).toEqual([{ code: 'K7Q2-ABCD-1234' }]);
+    expect(within(voucherSection()).getByRole('heading', { level: 3, name: 'Premium is open' })).toBeInTheDocument();
+  });
+
+  it('shows nothing of a redemption that answers after the account signed out', async () => {
+    signIn();
+    serve();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const sent = redeemAnswers(() => HttpResponse.json({ status: 'redeemed', validUntil: null }));
+    server.use(http.post('*/api/user/voucher', async ({ request }) => {
+      sent.push(await request.json());
+      await held;
+      return HttpResponse.json({ status: 'redeemed', validUntil: null });
+    }));
+    const view = mountVoucher();
+    await typeAndRedeem('K7Q2-ABCD-1234');
+    await waitFor(() => expect(sent).toHaveLength(1));
+    act(() => { clearAccountData(); });
+    auth.value = { user: null, isAuthenticated: false, isLoading: false };
+    view.rerender();
+    await act(async () => { release(); await held; });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByRole('heading', { name: 'Premium is open' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Sign in to redeem' })).toBeInTheDocument();
+  });
+
+  it('closes "Premium is open" and empties the field when the account changes', async () => {
+    signIn();
+    serve();
+    redeemAnswers(() => HttpResponse.json({ status: 'redeemed', validUntil: null }));
+    const view = mountVoucher();
+    await typeAndRedeem('K7Q2-ABCD-1234');
+    expect(await screen.findByRole('heading', { name: 'Premium is open' })).toBeInTheDocument();
+    auth.value = { user: { id: 'user-2' }, isAuthenticated: true, isLoading: false };
+    view.rerender();
+    expect(screen.queryByRole('heading', { name: 'Premium is open' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: /Voucher code/ })).toHaveValue('');
   });
 
   it('refuses an empty or impossible code without spending an attempt', async () => {

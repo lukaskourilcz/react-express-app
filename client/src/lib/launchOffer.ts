@@ -27,7 +27,19 @@ function useLaunchClock(): number {
     if (boundary === null) return;
     const delay = boundary - Date.now();
     const timer = setTimeout(() => setNow(Date.now()), Math.min(MAX_DELAY, Math.max(0, delay)));
-    return () => clearTimeout(timer);
+    // A sleeping computer or a background tab can hold the timer past the
+    // boundary, so a return to the tab reads the clock too. It redraws only
+    // when the window opened or closed in between.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const current = Date.now();
+      if (nextLaunchBoundary(current) !== boundary) setNow(current);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [now]);
   return now;
 }

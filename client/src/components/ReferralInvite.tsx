@@ -25,10 +25,13 @@ async function copyText(value: string): Promise<boolean> {
   }
 }
 
-export function ReferralInvite({ signedIn }: { signedIn: boolean }) {
+/** `restoring`: a stored session is still being restored; the section says
+ * loading instead of asking a learner who may be signed in to sign in. */
+export function ReferralInvite({ signedIn, restoring = false }: { signedIn: boolean; restoring?: boolean }) {
   const t = useT();
   const config = useGameConfig();
-  const referral = useReferral(signedIn);
+  // Rewards, the one page that shows this, holds its first render for the read.
+  const referral = useReferral(signedIn, { held: true });
   const [copy, setCopy] = useState<CopyState>('idle');
   const field = useRef<HTMLInputElement>(null);
   const headingId = useId();
@@ -43,6 +46,7 @@ export function ReferralInvite({ signedIn }: { signedIn: boolean }) {
   if (coins <= 0 || (data && !data.enabled)) return null;
 
   const link = data?.code ? inviteLink(data.code) : null;
+  const loading = restoring || (signedIn && referral.isPending);
   const credited = data?.credited ?? 0;
   const pending = data?.pending ?? 0;
 
@@ -59,7 +63,7 @@ export function ReferralInvite({ signedIn }: { signedIn: boolean }) {
   };
 
   return (
-    <section className="rw-section rw-invite" aria-labelledby={headingId} aria-busy={(signedIn && referral.isPending) || undefined}>
+    <section className="rw-section rw-invite" aria-labelledby={headingId} aria-busy={loading || undefined}>
       <Kicker as="h2" id={headingId}>{t('rewards.invite.title')}</Kicker>
       <p className="rw-muted">{t('rewards.invite.body', { n: coins, cap })}</p>
 
@@ -70,8 +74,8 @@ export function ReferralInvite({ signedIn }: { signedIn: boolean }) {
         </div>
       )}
 
-      {!signedIn && <p className="rw-muted">{t('rewards.invite.signedOut')}</p>}
-      {signedIn && referral.isPending && <p className="rw-muted" role="status">{t('common.loading')}</p>}
+      {!signedIn && !restoring && <p className="rw-muted">{t('rewards.invite.signedOut')}</p>}
+      {loading && <p className="rw-muted" role="status">{t('common.loading')}</p>}
       {signedIn && referral.isError && !data && (
         <div className="rw-inline-error" role="alert">
           <span>{t('rewards.invite.error')}</span>

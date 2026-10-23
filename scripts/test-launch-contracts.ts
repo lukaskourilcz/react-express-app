@@ -35,7 +35,7 @@ import {
 } from '../lib/quiz-tokens';
 import { addressKey, checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
-import { webhookDecision } from '../lib/rewards/handlers';
+import { handleCosmetic, handlePaymentWebhook, handleWallet, webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
 import roadmapHandler from '../api/quiz/roadmap';
@@ -109,7 +109,7 @@ import {
   MARKER_MAX,
   type ReviewRecord,
 } from '../shared/curation';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   CONCEPT_IDS,
   areContrastable,
@@ -1891,7 +1891,7 @@ async function voucherContracts() {
   assert.deepEqual(form({}), { ok: true, value: { note: 'For Pavel', premiumDays: null, maxRedemptions: 1, redeemableUntil: null, code: null } }, 'no days means no end; one use by default');
   assert.equal(form({ premiumDays: 30, maxRedemptions: 25, code: 'shark-camp-2026' }).ok, true);
   for (const bad of [{ note: '' }, { note: 'x'.repeat(501) }, { premiumDays: 0 }, { premiumDays: 1831 }, { premiumDays: '30' }, { maxRedemptions: 0 }, { maxRedemptions: 10001 },
-    { redeemableUntil: '2026-09-25' }, { redeemableUntil: '2040-01-01' }, { code: 'abc' }, { code: 'no_underscores' }]) {
+    { redeemableUntil: '2026-09-25' }, { redeemableUntil: '2040-01-01' }, { code: 'abc' }, { code: 'no_underscores' }, { note: 'For\u0000Pavel' }]) {
     assert.equal(form(bad).ok, false, `${JSON.stringify(bad)} is refused`);
   }
 
@@ -2062,6 +2062,12 @@ async function voucherContracts() {
     conflicts = 0;
     assert.equal((await admin('POST', { action: 'create', note: '' })).statusCode, 400);
     assert.equal((await admin('POST', { action: 'create', note: 'x', code: 'no' })).statusCode, 400);
+    // An end date a moment ahead passes this server's clock and fails the
+    // database's: the routine's raise is a bad request, not a server error.
+    const skewed = await admin('POST', { action: 'create', note: 'Skew', redeemableUntil: new Date(Date.now() + 60_000).toISOString() }, {
+      rpc: async () => ({ data: null, error: { code: 'P0001', message: 'premium_voucher_in_past' } }),
+    });
+    assert.equal(skewed.statusCode, 400, 'a voucher end date the database finds past answers 400');
 
     const list = await admin('GET');
     assert.equal(list.statusCode, 200);
@@ -5310,6 +5316,11 @@ async function main() {
     assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country }).ok, false, `${country} is not an ISO 3166-1 code`);
   }
   assert.equal(validateAddress({ name: 'x'.repeat(200), line1: 'B', city: 'C', postalCode: 'D', country: 'CZ' }).ok, false);
+  // Postgres text refuses U+0000, so a field holding it made the order a 500.
+  for (const field of ['name', 'line1', 'line2', 'city', 'postalCode']) {
+    const nul = validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'CZ', [field]: 'X\u0000Y' });
+    assert.deepEqual(nul, { ok: false, field }, `U+0000 in ${field} is refused`);
+  }
 
   // Tokens follow verified XP only, and the rate is the documented one.
   assert.equal(tokensForVerifiedXp(100), 10);
@@ -6013,6 +6024,143 @@ async function main() {
     assert.deepEqual(webhookDecision({ type: 'payment.refunded' }, paid), { action: 'cancel' }, 'a refund may cancel a paid order');
     assert.deepEqual(webhookDecision({ type: 'payment.refunded' }, { ...paid, state: 'shipped' }), { action: 'ignore', reason: 'stale' });
     assert.deepEqual(webhookDecision({ type: 'something.else' }, awaiting), { action: 'ignore', reason: 'unhandled' });
+  }
+
+  // ── the payment webhook itself, against a stand-in database ─────────────
+  {
+    const realEnv = { secret: process.env.PAYMENT_WEBHOOK_SECRET, provider: process.env.PAYMENT_PROVIDER };
+    process.env.PAYMENT_WEBHOOK_SECRET = 'contract-webhook-secret';
+    process.env.PAYMENT_PROVIDER = 'contract-pay';
+    const touched: string[] = [];
+    let orderRow: Record<string, unknown> | null = null;
+    let paidAnswer: { data: unknown; error: { code?: string; message?: string } | null } = { data: true, error: null };
+    const db = {
+      from: (table: string) => {
+        touched.push(`from:${table}`);
+        const link = { select: () => link, eq: () => link, maybeSingle: async () => ({ data: orderRow, error: null }) };
+        return link;
+      },
+      rpc: async (fn: string) => { touched.push(`rpc:${fn}`); return fn === 'mark_merch_order_paid' ? paidAnswer : { data: true, error: null }; },
+    };
+    const deliver = async (body: unknown, signature: string) => {
+      const res = mockResponse();
+      await handlePaymentWebhook({ method: 'POST', headers: { 'x-payment-signature': signature }, query: {}, body } as never, res as never, db as never);
+      return res;
+    };
+    try {
+      // 64 characters, as long as the hex digest, but 128 bytes: the
+      // constant-time comparison threw on the unequal buffers.
+      const wide = await deliver({ type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'ref' }, 'é'.repeat(64));
+      assert.equal(wide.statusCode, 401, 'a signature with the digest length in characters but not in bytes is refused, not a 500');
+      assert.deepEqual(touched, [], 'and nothing is read');
+      // A body the provider signed but that is not a JSON object is a bad
+      // event (400), not a parse error answered 500 and retried forever.
+      const sign = (raw: string) => createHmac('sha256', 'contract-webhook-secret').update(raw).digest('hex');
+      for (const raw of ['not json', 'null', '[1]', '7']) {
+        const res = await deliver(raw, sign(raw));
+        assert.equal(res.statusCode, 400, `a signed body of ${raw} answers 400`);
+      }
+      const nul = { type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'ref\u0000' };
+      assert.equal((await deliver(nul, sign(JSON.stringify(nul)))).statusCode, 400, 'a provider reference with U+0000 is refused before Postgres sees it');
+      assert.deepEqual(touched, [], 'none of them reads the order');
+      // A provider reference already recorded on another order trips the
+      // unique index (23505): refused with 409 like any mismatch, not a 500.
+      orderRow = { state: 'awaiting_payment', total_minor: 2490, currency: 'EUR' };
+      paidAnswer = { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "merch_orders_provider_ref_idx"' } };
+      const reused = { type: 'payment.succeeded', orderId: 'order-0123456789abcdef', providerRef: 'pi_reused', amountMinor: 2490, currency: 'EUR' };
+      const conflict = await deliver(reused, sign(JSON.stringify(reused)));
+      assert.equal(conflict.statusCode, 409, 'a reused provider reference is a refusal, not a 500');
+      assert.equal((conflict.body as { error: { code: string } }).error.code, 'provider_ref_conflict');
+      paidAnswer = { data: true, error: null };
+      const paidNow = await deliver(reused, sign(JSON.stringify(reused)));
+      assert.deepEqual([paidNow.statusCode, paidNow.body], [200, { applied: true }], 'a matching event marks the order paid');
+    } finally {
+      if (realEnv.secret === undefined) delete process.env.PAYMENT_WEBHOOK_SECRET; else process.env.PAYMENT_WEBHOOK_SECRET = realEnv.secret;
+      if (realEnv.provider === undefined) delete process.env.PAYMENT_PROVIDER; else process.env.PAYMENT_PROVIDER = realEnv.provider;
+    }
+  }
+
+  // ── the wallet read, against a stand-in database ────────────────────────
+  {
+    const failing = new Set<string>();
+    const rows: Record<string, unknown> = {
+      token_balances: { balance: 1300 },
+      token_ledger: [],
+      cosmetic_entitlements: [{ cosmetic_id: 'crown', equipped: true }],
+    };
+    const db = {
+      rpc: async () => ({ data: null, error: null }),
+      from: (table: string) => {
+        const answer = () => (failing.has(table)
+          ? { data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }
+          : { data: rows[table] ?? null, error: null });
+        const link = {
+          select: () => link, eq: () => link, order: () => link, limit: () => link,
+          maybeSingle: async () => answer(),
+          then: <A>(resolve: (value: ReturnType<typeof answer>) => A) => resolve(answer()),
+        };
+        return link;
+      },
+    };
+    const read = async () => {
+      const res = mockResponse();
+      await handleWallet({ method: 'GET', headers: {}, query: { op: 'wallet', user_id: 'contract-wallet-reader' } } as never, res as never, db as never);
+      return res;
+    };
+    const ok = await read();
+    assert.equal(ok.statusCode, 200);
+    assert.deepEqual((ok.body as { cosmetics: unknown }).cosmetics, [{ id: 'crown', equipped: true }]);
+    // A cosmetics read that failed is not an account that owns nothing: the
+    // screen would offer the crown again and take it off the avatar.
+    failing.add('cosmetic_entitlements');
+    const broken = await read();
+    assert.equal(broken.statusCode, 500, 'a failed cosmetics read is an error, not an empty list');
+  }
+
+  // ── the crown: only no op buys it ───────────────────────────────────────
+  {
+    const called: string[] = [];
+    const db = { rpc: async (fn: string) => { called.push(fn); return { data: true, error: null }; } };
+    const post = async (body: Record<string, unknown>) => {
+      const res = mockResponse();
+      await handleCosmetic({ method: 'POST', headers: {}, query: { op: 'cosmetic', user_id: 'contract-crown' }, body: { ...body, user_id: 'contract-crown' } } as never, res as never, db as never);
+      return res;
+    };
+    const typo = await post({ id: 'crown', op: 'equipp' });
+    assert.equal(typo.statusCode, 400, 'a misspelt op is refused');
+    assert.deepEqual(called, [], 'and spends nothing');
+    assert.equal((await post({ id: 'crown', op: 'equip' })).statusCode, 200);
+    assert.deepEqual(called, ['equip_cosmetic']);
+    called.length = 0;
+    assert.deepEqual((await post({ id: 'crown' })).body, { owned: true, alreadyOwned: false }, 'no op buys the crown, as the browser asks');
+    assert.deepEqual(called, ['purchase_cosmetic']);
+  }
+
+  // ── the crown bought from two tabs at once ──────────────────────────────
+  {
+    // The second purchase waits on the wallet lock, then sees the balance the
+    // first one spent and raises insufficient_tokens. The crown is owned.
+    let owned: { cosmetic_id: string } | null = { cosmetic_id: 'crown' };
+    const db = {
+      rpc: async () => ({ data: null, error: { code: 'P0001', message: 'insufficient_tokens' } }),
+      from: (table: string) => {
+        assert.equal(table, 'cosmetic_entitlements');
+        const link = { select: () => link, eq: () => link, maybeSingle: async () => ({ data: owned, error: null }) };
+        return link;
+      },
+    };
+    const post = async () => {
+      const res = mockResponse();
+      await handleCosmetic({ method: 'POST', headers: {}, query: { op: 'cosmetic', user_id: 'contract-crown-race' }, body: { id: 'crown', user_id: 'contract-crown-race' } } as never, res as never, db as never);
+      return res;
+    };
+    const raced = await post();
+    assert.equal(raced.statusCode, 200, 'a purchase that lost the race to the same account is not "not enough coins"');
+    assert.deepEqual(raced.body, { owned: true, alreadyOwned: true });
+    owned = null;
+    const poor = await post();
+    assert.equal(poor.statusCode, 409, 'a wallet that cannot pay and owns nothing still answers insufficient_tokens');
+    assert.equal((poor.body as { error: { code: string } }).error.code, 'insufficient_tokens');
   }
 
   // ── lesson figures (#183) ───────────────────────────────────────────────

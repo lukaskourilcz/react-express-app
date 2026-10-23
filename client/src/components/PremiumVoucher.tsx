@@ -29,6 +29,7 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
+import { accountEpoch } from '../lib/accountData';
 import { openSignIn } from '../lib/signInDialog';
 import { entitlementKeys } from '../lib/entitlement';
 import {
@@ -76,6 +77,23 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
   const [code, setCode] = useState(() => voucherFromSearch(location.search) ?? readVoucherPrefill() ?? '');
   const [step, setStep] = useState<Step>({ kind: 'form' });
   const [busy, setBusy] = useState(false);
+  // Set at the press: `busy` lands a render later, so Enter and a click
+  // together sent the code twice, and the second answer ("already redeemed")
+  // replaced the first one's "Premium is open".
+  const redeeming = useRef(false);
+  // What one account typed or opened is not the next one's: a sign-out, or a
+  // different account signing in, empties the field and closes "Premium is
+  // open". Signing in from signed out keeps the code (the way back from a
+  // voucher link).
+  const accountId = user?.id ?? null;
+  const [shownFor, setShownFor] = useState(accountId);
+  if (shownFor !== accountId) {
+    setShownFor(accountId);
+    if (shownFor !== null) {
+      setCode('');
+      setStep({ kind: 'form' });
+    }
+  }
   const input = useRef<HTMLInputElement | null>(null);
   const doneHeading = useRef<HTMLHeadingElement>(null);
   const section = useRef<HTMLElement>(null);
@@ -125,27 +143,34 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (redeeming.current) return;
     if (code.trim() === '' || !voucherLooksValid(code)) {
       setStep({ kind: 'form', refusal: code.trim() === '' ? 'empty' : 'invalid' });
       input.current?.focus();
       return;
     }
+    redeeming.current = true;
     setBusy(true);
     setStep({ kind: 'form' });
+    const epoch = accountEpoch();
     try {
       const result = await redeemVoucher(code);
+      // Signed out while the code was checked: the answer is the account
+      // that left's, not news for whoever is here now.
+      if (accountEpoch() !== epoch) return;
       setCode('');
       setStep({ kind: 'done', validUntil: result.validUntil });
       // The plan changed on the server: every screen that reads it (this
       // page's "Your plan", the locks, the Profile) refetches now.
       void queryClient.invalidateQueries({ queryKey: user ? entitlementKeys.user(user.id) : entitlementKeys.all });
     } catch (error) {
+      if (accountEpoch() !== epoch) return;
       const refused = voucherRefusal(error);
       setStep({ kind: 'form', refusal: refused });
       // The code itself was the problem: back to the field to correct it.
       if (FIELD_REFUSALS[refused]) input.current?.focus();
     } finally {
+      redeeming.current = false;
       setBusy(false);
     }
   };
