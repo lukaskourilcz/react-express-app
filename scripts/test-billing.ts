@@ -521,9 +521,14 @@ export class FakeStripe {
           sub.status = 'canceled'; sub.canceled_at = nowSeconds(); sub.ended_at = nowSeconds();
           return structuredClone(sub);
         },
-        list: async (params: { customer: string }) => {
+        list: async (params: { customer: string; limit?: number; starting_after?: string }) => {
           this.call('subscriptions.list');
-          return { object: 'list', data: [...this.subs.values()].filter((s) => s.customer === params.customer).map((s) => structuredClone(s)), has_more: false };
+          // Pages the way Stripe does: `limit` per page (10 by default),
+          // continued after `starting_after`.
+          const all = [...this.subs.values()].filter((s) => s.customer === params.customer);
+          const from = params.starting_after ? all.findIndex((s) => s.id === params.starting_after) + 1 : 0;
+          const page = all.slice(from, from + (params.limit ?? 10));
+          return { object: 'list', data: page.map((s) => structuredClone(s)), has_more: from + page.length < all.length };
         },
       },
       invoices: {
@@ -1287,6 +1292,25 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const refused = await checkout(early.token, { plan: 'annual' });
     assert.equal(refused.statusCode, 409, 'a subscription Stripe already has blocks checkout');
     assert.equal(stripe.createdSessions.length, sessions);
+  });
+
+  await check('a live subscription behind many abandoned attempts still blocks checkout and ends with the account', async () => {
+    const a = await account('Crowded');
+    await supabase.rpc('link_billing_customer', { p_user_id: a.userId, p_provider_customer_id: a.ids.cus });
+    // 120 abandoned attempts listed before the live one: more than one page.
+    const live = stripe.subs.get(a.ids.sub);
+    stripe.subs.delete(a.ids.sub);
+    for (let i = 0; i < 120; i += 1) {
+      stripe.subs.set(`sub_CrowdedExpired${i}`, { ...structuredClone(live), id: `sub_CrowdedExpired${i}`, status: 'incomplete_expired' });
+    }
+    stripe.subs.set(a.ids.sub, live);
+    const sessions = stripe.createdSessions.length;
+    const refused = await checkout(a.token, { plan: 'monthly' });
+    assert.equal(refused.statusCode, 409, 'the live subscription past the first page blocks a second checkout');
+    assert.equal(stripe.createdSessions.length, sessions);
+    const { ended } = await lib.cancelForDeletedAccount({ stripe: stripe.api(), supabase } as never, lib.billingConfig(), a.ids.cus);
+    assert.equal(ended, 1, 'account deletion ends the live subscription past the first page');
+    assert.equal(stripe.subs.get(a.ids.sub).status, 'canceled');
   });
 
   await check('only the newest Checkout Session can be paid, and one paid a moment ago blocks another', async () => {

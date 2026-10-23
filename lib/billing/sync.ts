@@ -484,13 +484,34 @@ export async function applyCheckoutSession(
   return { status: 'complete', sync: await syncSubscription(deps, subscriptionId, { userHint: userId }) };
 }
 
+/** Every subscription of one customer, in every state, page by page. With
+ * `status: 'all'` Stripe lists ended ones too, newest first, so a customer
+ * with many abandoned attempts (`incomplete_expired`) could push a live
+ * subscription past one page, and the second-checkout guard, the cancel page
+ * and account deletion would not see it. */
+export async function allSubscriptionsOf(deps: BillingDeps, customerId: string): Promise<Stripe.Subscription[]> {
+  const subs: Stripe.Subscription[] = [];
+  let startingAfter: string | undefined;
+  // Ten pages of 100 is far beyond any real customer; the cap only bounds a
+  // runaway list.
+  for (let page = 0; page < 10; page += 1) {
+    const list = await deps.stripe.subscriptions.list({
+      customer: customerId, status: 'all', limit: 100, ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+    subs.push(...list.data);
+    if (!list.has_more || list.data.length === 0) break;
+    startingAfter = list.data[list.data.length - 1].id;
+  }
+  return subs;
+}
+
 /** The customer's devShark subscriptions that can still charge, as Stripe has
  * them right now, before any webhook about them arrived. A customer Stripe no
  * longer has holds none. */
 export async function liveDevsharkSubscriptions(deps: BillingDeps, customerId: string): Promise<Stripe.Subscription[]> {
   try {
-    const subs = await deps.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
-    return subs.data.filter((sub) => LIVE_SUBSCRIPTION_STATUSES.has(sub.status) && isDevsharkSubscription(sub));
+    const subs = await allSubscriptionsOf(deps, customerId);
+    return subs.filter((sub) => LIVE_SUBSCRIPTION_STATUSES.has(sub.status) && isDevsharkSubscription(sub));
   } catch (error) {
     if (stripeErrorCode(error).code === 'resource_missing') return [];
     throw error;

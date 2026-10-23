@@ -20,6 +20,7 @@ import type Stripe from 'stripe';
 import { isRpcMissing, logEvent, withTimeout } from '../http';
 import type { BillingConfig } from './config';
 import {
+  allSubscriptionsOf,
   BillingMigrationError,
   BillingPermanentError,
   customerOwner,
@@ -188,10 +189,9 @@ export async function cancelByEmail(
   for (const list of found) for (const customer of list.data) customers.set(customer.id, customer);
   const effects: CancelEffect[] = [];
   const all = [...customers.values()];
-  const subsOf = await Promise.all(all.map((customer) =>
-    deps.stripe.subscriptions.list({ customer: customer.id, status: 'all', limit: 20 })));
+  const subsOf = await Promise.all(all.map((customer) => allSubscriptionsOf(deps, customer.id)));
   for (const [index, customer] of all.entries()) {
-    for (const sub of subsOf[index].data) {
+    for (const sub of subsOf[index]) {
       if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status) || !isOurs(sub, config)) continue;
       effects.push(
         action === 'withdraw'
@@ -215,9 +215,9 @@ export async function cancelForDeletedAccount(
   customerId: string,
 ): Promise<{ ended: number; expired: number }> {
   const { expired } = await expireOpenCheckouts(deps, customerId);
-  const subs = await deps.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
+  const subs = await allSubscriptionsOf(deps, customerId);
   let ended = 0;
-  for (const sub of subs.data) {
+  for (const sub of subs) {
     if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status) || !isOurs(sub, config)) continue;
     try {
       await deps.stripe.subscriptions.cancel(sub.id, { invoice_now: false, prorate: false });
