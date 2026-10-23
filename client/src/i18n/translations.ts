@@ -646,7 +646,6 @@ export const en = {
   'play.title': 'Play live',
   'play.kicker': 'Play live',
   'play.heading': 'Race or teach live',
-  'play.heading': 'Race or teach live',
   'play.modeFfaBlurb': 'Everyone races to answer.',
   'play.modeClassroomBlurb': 'Host advances each question and sees the live answer distribution.',
   'play.scoringTitle': 'HOW SCORING WORKS',
