@@ -203,3 +203,15 @@ it('reports no verdict for an attempt that was left before it arrived', async ()
   expect(onVerdict).not.toHaveBeenCalled();
   expect(screen.queryByRole('heading', { level: 3, name: /^Passed/ })).toBeNull();
 });
+
+// Each question is a keyed block, so the Next and Previous buttons were
+// replaced as they were pressed and keyboard focus fell to the page.
+it('moves focus to the question that opens on Next and Previous', () => {
+  mount();
+  expect(document.activeElement).toBe(document.body);
+  fireEvent.click(screen.getByRole('radio', { name: 'Reads dominate' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: 'What we store' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Previous question' }));
+  expect(document.activeElement).toBe(screen.getByRole('heading', { level: 3, name: 'What are we building' }));
+});

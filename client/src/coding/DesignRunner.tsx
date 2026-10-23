@@ -63,6 +63,20 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
     live.current = true;
     return () => { live.current = false; };
   }, []);
+  // Each question is its own keyed block, so Next and Previous are replaced
+  // as they are pressed and focus fell to the page. It goes to the question
+  // that opened instead, as in a skill check.
+  const questionRef = useRef<HTMLHeadingElement>(null);
+  const stepped = useRef(false);
+  const goToStep = (to: number) => {
+    stepped.current = true;
+    setStepIndex(Math.max(0, Math.min(steps.length - 1, to)));
+  };
+  useEffect(() => {
+    if (!stepped.current) return;
+    stepped.current = false;
+    questionRef.current?.focus();
+  }, [stepIndex]);
 
   const answered = useMemo(() => answers.filter((one) => one !== null).length, [answers]);
   const drillAnswer = useMemo((): DesignAnswer | null => {
@@ -236,7 +250,7 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
 
         {design && current && (
           <div className="cd-design__step" key={current.key}>
-            <h3 id={`${baseId}-q`} style={{ margin: 0 }}>{current.title}</h3>
+            <h3 id={`${baseId}-q`} ref={questionRef} tabIndex={-1} style={{ margin: 0 }}>{current.title}</h3>
             <p className="cd-design__brief">{current.prompt}</p>
             <RadioCardGroup value={answers[stepIndex] === null ? null : String(answers[stepIndex])} onChange={(value) => setAnswers((prev) => prev.map((one, i) => (i === stepIndex ? Number(value) : one)))} labelledBy={`${baseId}-q`}>
               {current.options.map((option, index) => (
@@ -244,9 +258,9 @@ function DesignAttempt({ task, session, locked, signedIn, mode, onVerdict, onRet
               ))}
             </RadioCardGroup>
             <div className="cd-design__nav">
-              <Button variant="secondary" onClick={() => setStepIndex((i) => Math.max(0, i - 1))} isDisabled={stepIndex === 0} label={t('coding.design.previous')} />
+              <Button variant="secondary" onClick={() => goToStep(stepIndex - 1)} isDisabled={stepIndex === 0} label={t('coding.design.previous')} />
               {stepIndex < steps.length - 1
-                ? <Button variant="primary" onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))} isDisabled={answers[stepIndex] === null} label={t('coding.design.next')} />
+                ? <Button variant="primary" onClick={() => goToStep(stepIndex + 1)} isDisabled={answers[stepIndex] === null} label={t('coding.design.next')} />
                 : <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || sessionUsed || answered < steps.length} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />}
             </div>
           </div>
