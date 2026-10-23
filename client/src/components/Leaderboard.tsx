@@ -301,7 +301,7 @@ function Leaderboard() {
   }
 
   return (
-    <div className="de-page lb">
+    <div className="lb">
       <header className="lb-head">
         <Heading level={1} type="display-3">
           {t('leaderboard.title')}
