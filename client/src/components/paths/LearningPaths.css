@@ -162,10 +162,12 @@
 }
 a.lp-activity:hover { border-color: var(--color-border-strong); }
 a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+/* The kind column is 4.5rem (UX audit learn-12): 'Check' and 'Write' fit,
+   and the title no longer sits 64px away from 'Read'. */
 .lp-activity__kind {
   flex: 0 1 auto;
   width: auto;
-  min-width: 5.5rem;
+  min-width: 4.5rem;
   font-size: 0.78rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -174,6 +176,16 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-activity__title { flex: 1 1 200px; min-width: 0; font-weight: 600; }
 .lp-activity__summary { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; margin: 0; font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.5; }
 .lp-activity__minutes { flex: 0 1 auto; min-width: 0; font-size: 0.85rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+/* A recorded state is one glyph beside the minutes; the words are for a
+   screen reader, and the glyph's shape, not its colour, tells them apart. */
+.lp-activity__state { flex: none; display: inline-flex; justify-content: center; min-width: 1.25rem; font-size: 0.95rem; line-height: 1; color: var(--color-text-secondary); }
+.lp-activity__state--verified_pass { color: var(--ss-success-strong); font-weight: 700; }
+/* On the hub a row is one 48px line: kind · title · minutes. */
+.lp-activity--compact { flex-wrap: nowrap; min-height: 48px; padding-block: 8px; }
+.lp-activity--compact .lp-activity__title { flex: 1 1 auto; overflow-wrap: anywhere; }
+@media (max-width: 30rem) {
+  .lp-activity--compact { flex-wrap: wrap; }
+}
 
 /* The profile card can carry long goal names and every joined section's full
  * name. Keep both the current choice and saved answers inside the card at every

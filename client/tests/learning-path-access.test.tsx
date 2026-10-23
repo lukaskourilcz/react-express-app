@@ -24,7 +24,7 @@ const pathManifest = (id: 'fde') => ({
     activities: [{ ...lesson('fde-diagnostic-check', 'Diagnostic check'), kind: 'check', purpose: 'diagnostic' }], requires: [], estimatedMinutes: 10,
   }] : []), {
     id: `${id}-m01`, title: 'Module one', outcomes: [], competencies: [], dependsOn: [], lessons: [],
-    activities: [{ ...lesson(`${id}-m01-l1-read`, `${id} first lesson`), competencies: ['integration'] }], requires: [], estimatedMinutes: 10,
+    activities: [{ ...lesson(`${id}-m01-l1-read`, `${state.readPrefix ? 'Read: ' : ''}${id} first lesson`), competencies: ['integration'] }], requires: [], estimatedMinutes: 10,
   }, ...(state.secondModule ? [{ id: `${id}-m02`, title: 'Module two', outcomes: [], competencies: [], dependsOn: [], lessons: [], activities: [lesson(`${id}-m02-l1-read`, `${id} second lesson`)], requires: [], estimatedMinutes: 10 }] : []), ...(id === 'fde' && state.shelf ? [{
     id: 'fde-ip01', title: 'Learning round', optional: true, shelf: 'interview-prep', outcomes: [], competencies: [], dependsOn: [], lessons: [],
     activities: [lesson('fde-ip01-l1', 'Interview lesson')], requires: [], estimatedMinutes: 10,
@@ -54,6 +54,7 @@ const state = vi.hoisted(() => ({
   sheet: vi.fn(),
   signIn: vi.fn(),
   guest: false,
+  readPrefix: false,
 }));
 
 vi.mock('../src/lib/auth', () => ({
@@ -163,6 +164,7 @@ beforeEach(() => {
   state.sheet.mockReset();
   state.signIn.mockReset();
   state.guest = false;
+  state.readPrefix = false;
   server.use(http.get('*/api/user/learning-path-reward', () => HttpResponse.json({ eligible: false, claimed: false, orderId: null })));
 });
 
@@ -343,6 +345,27 @@ describe('the path page', () => {
     expect((board.querySelector('details') as HTMLDetailsElement).open).toBe(false);
   });
 
+  // UX audit learn-12: the kind column says 'Read' once, a row says nothing
+  // until a state is recorded, and the hub's rows are one line.
+  it('drops the kind prefix the row already shows and draws a state only once there is one', async () => {
+    state.readPrefix = true;
+    state.secondModule = true;
+    state.passedActivity = 'fde-m02-l1-read';
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const modules = screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section') as HTMLElement;
+    const first = within(modules).getByRole('link', { name: /fde first lesson/i });
+    expect(first.querySelector('.lp-activity__kind')).toHaveTextContent('Read');
+    expect(first.querySelector('.lp-activity__title')).toHaveTextContent(/^Fde first lesson$/);
+    expect(first).not.toHaveTextContent('Not started');
+    expect(first.querySelector('.lp-activity__state')).toBeNull();
+    expect(first).toHaveClass('lp-activity--compact');
+    expect(first.querySelector('.lp-activity__summary')).toBeNull();
+    const passed = within(modules).getByRole('link', { name: /fde second lesson/ });
+    expect(passed.querySelector('.lp-activity__state [aria-hidden="true"]')).toHaveTextContent('✓');
+    expect(within(passed).getByText('Verified pass')).toHaveClass('ss-sr-only');
+  });
+
   it('after Premium lapses, the first module stays open', async () => {
     state.tier = 'free';
     state.enrollments = [enrolled('fde')];
@@ -399,6 +422,15 @@ describe('the module page status', () => {
     expect(screen.getByRole('link', { name: 'Resume' })).toHaveAttribute('href', '/learn/forward-deployed-engineer/path');
     expect(screen.queryByRole('link', { name: /fde first lesson/ })).toBeNull();
     expect(document.querySelector('.lp-workspace')).toBeNull();
+  });
+  it('keeps each row\'s summary on the module page and drops the kind prefix there too', async () => {
+    state.readPrefix = true;
+    state.enrollments = [enrolled('fde')];
+    await modulePage('fde-m01');
+    const row = await screen.findByRole('link', { name: /fde first lesson/i });
+    expect(row).not.toHaveClass('lp-activity--compact');
+    expect(row.querySelector('.lp-activity__title')).toHaveTextContent(/^Fde first lesson$/);
+    expect(row.querySelector('.lp-activity__summary')).toBeInTheDocument();
   });
   it('says Not started to a learner who has not enrolled', async () => {
     state.secondModule = true;

@@ -109,6 +109,28 @@ function statesOf(progress: PathProgressResponse | undefined): Map<string, Evide
   return map;
 }
 
+/**
+ * An activity's title without the kind its row already shows (UX audit
+ * learn-12). Reviewed content titles a lesson 'Read: baseline and scope', and
+ * the row's kind column says 'Read' beside it; the prefix is dropped here, at
+ * render time, and the content stays as reviewed.
+ */
+function titleWithoutKind(title: string, kindLabel: string): string {
+  const prefix = `${kindLabel.toLowerCase()}:`;
+  if (!title.toLowerCase().startsWith(prefix)) return title;
+  const rest = title.slice(prefix.length).trimStart();
+  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : title;
+}
+
+// The same glyphs as StateBadge (ActivityViews.tsx), for a row that shows a
+// state as one glyph beside its minutes with the words for a screen reader.
+const ROW_STATE_GLYPH: Record<Exclude<EvidenceState, 'not_started'>, string> = {
+  in_progress: '◐',
+  verified_pass: '✓',
+  self_reviewed: '✎',
+  needs_revision: '↻',
+};
+
 function ActivityRow({
   pathId,
   moduleId,
@@ -116,6 +138,7 @@ function ActivityRow({
   state,
   interactive,
   locked = false,
+  compact = false,
 }: {
   pathId: LearningPathId;
   locked?: boolean;
@@ -123,22 +146,33 @@ function ActivityRow({
   activity: ActivitySummary;
   state: EvidenceState;
   interactive: boolean;
+  /** One 48px line (kind · title · minutes), without the summary: the hub. */
+  compact?: boolean;
 }) {
   const t = useT();
+  const kind = t(`paths.kind.${activity.kind}` as never);
+  const className = compact ? 'lp-activity lp-activity--compact' : 'lp-activity';
   const body = (
     <>
-      <span className="lp-activity__kind">{t(`paths.kind.${activity.kind}` as never)}</span>
-      <span className="lp-activity__title">{activity.title}</span>
+      <span className="lp-activity__kind">{kind}</span>
+      <span className="lp-activity__title">{titleWithoutKind(activity.title, kind)}</span>
       <span className="lp-activity__minutes">{t('paths.minutes', { minutes: activity.estimatedMinutes })}</span>
-      <StateBadge state={state} />
+      {/* 'Not started' is every row's default and goes unsaid; any other
+          state is a glyph beside the minutes, its words read aloud. */}
+      {state !== 'not_started' && (
+        <span className={`lp-activity__state lp-activity__state--${state}`}>
+          <span aria-hidden="true">{ROW_STATE_GLYPH[state]}</span>
+          <span className="ss-sr-only">{t(`paths.state.${state}` as never)}</span>
+        </span>
+      )}
       {locked && <span className="ss-premium-label">{t('premium.badge')}</span>}
-      <p className="lp-activity__summary">{activity.summary}</p>
+      {!compact && <p className="lp-activity__summary">{activity.summary}</p>}
     </>
   );
-  if (!interactive) return <li className="lp-activity">{body}</li>;
+  if (!interactive) return <li className={className}>{body}</li>;
   return (
     <li>
-      <Link className="lp-activity" to={activityHref(pathId, moduleId, activity.id)} onClick={event => { if (locked) { event.preventDefault(); openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${activity.id}` }); } }}>
+      <Link className={className} to={activityHref(pathId, moduleId, activity.id)} onClick={event => { if (locked) { event.preventDefault(); openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${activity.id}` }); } }}>
         {body}
       </Link>
     </li>
@@ -200,6 +234,7 @@ function ModuleCard({
             locked={activityLock(activity.id, states.get(activity.id) ?? 'not_started')}
             state={states.get(activity.id) ?? 'not_started'}
             interactive={interactive}
+            compact
           />
         ))}
       </ul>
