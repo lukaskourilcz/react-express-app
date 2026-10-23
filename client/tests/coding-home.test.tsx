@@ -171,3 +171,26 @@ it('keeps one SwimCta and labels each row Start, Continue or Review by its progr
   // A Premium account sees no Premium rule anywhere on the page.
   expect(screen.queryByText(/come with the free plan/)).toBeNull();
 });
+
+// UX audit coding-09: a long list is not a scroll box inside the page. It
+// shows five rows and a button for the rest, which moves focus to row six.
+it('folds a long project list to five rows and opens the rest in place', () => {
+  state.progress = { data: passedDigitSum, isLoading: false, isError: false, refetch: () => {} };
+  mount();
+  const section = screen.getByRole('region', { name: 'Evolving challenges' });
+  const projects = listedChallenges({});
+  expect(projects.length).toBeGreaterThan(5);
+  expect(within(section).getAllByRole('article')).toHaveLength(5);
+  expect(section.querySelector('[tabindex="0"]')).toBeNull();
+  const more = within(section).getByRole('button', { name: `Show all ${projects.length} challenges` });
+  expect(more).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(more);
+  const rows = within(section).getAllByRole('article');
+  expect(rows).toHaveLength(projects.length);
+  expect(rows[5]).toHaveFocus();
+  expect(rows[5]).toHaveAccessibleName(projects[5].title);
+  const fewer = within(section).getByRole('button', { name: 'Show fewer' });
+  expect(fewer).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(fewer);
+  expect(within(section).getAllByRole('article')).toHaveLength(5);
+});

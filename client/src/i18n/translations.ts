@@ -46,6 +46,8 @@ export const en = {
   'coding.evolving.progress': '{n} of {total} stages completed',
   'coding.evolving.start': 'Start',
   'coding.evolving.review': 'Review',
+  'coding.evolving.showAll': 'Show all {n} challenges',
+  'coding.evolving.showFewer': 'Show fewer',
   'coding.lock.evolving': 'Complete the previous stages while signed in to unlock this stage.',
   'collection.subtitle': 'Coding challenges you saved from their pages.',
   'collection.questions': 'Shark Cards',

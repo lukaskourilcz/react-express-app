@@ -65,8 +65,10 @@
 .cd-projects { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr); gap: 32px; align-items: start; }
 .cd-projects__intro .cd-lead { margin-top: 14px; line-height: 1.7; }
 .cd-project-list { min-width: 0; border-top: 1px solid var(--ss-card-line); }
-.cd-project-list--scroll { max-height: var(--cd-project-list-height, 460px); overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior-y: contain; }
-.cd-project-list--scroll:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 3px; }
+.cd-projects__body { min-width: 0; display: grid; justify-items: start; gap: 8px; }
+.cd-projects__body > .cd-project-list { justify-self: stretch; }
+/* The first row "Show all" reveals takes focus: it shows where the list went on. */
+.cd-project:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: -3px; }
 .cd-project { display: grid; grid-template-columns: 26px minmax(0, 1fr) minmax(110px, .65fr) auto; align-items: center; gap: 16px; padding: 22px 8px; border-bottom: 1px solid var(--ss-card-line); }
 .cd-project__number { color: var(--color-text-secondary); font: .8rem var(--cd-mono); }
 .cd-project__name { min-width: 0; }

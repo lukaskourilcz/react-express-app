@@ -1,7 +1,7 @@
 // The Coding section: home, one track and one task. The review queue is
 // retired (a pass is permanent); /coding/review only redirects home.
 // devShark-only routes; the App gates them like /roadmap and /typing.
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -67,6 +67,8 @@ const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
 const SECTION_INDEX = CODING_INDEX.filter((task) => isCodingSectionTrack(task.track) && !evolvingStage(task.id));
 const INDEX_BY_ID = new Map(CODING_INDEX.map((task) => [task.id, task]));
 const TIERS: readonly CodingTier[] = [1, 2, 3, 4, 5];
+/** How many project or path rows a list shows before "Show all". */
+const LIST_FOLD = 5;
 
 /** The difficulty a track list is filtered to. `?difficulty=` is the filter;
  * an older `?tier=` link still lands on the label its tier projects to. */
@@ -263,23 +265,23 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
   const listRef = useRef<HTMLDivElement>(null);
   const fullstack = category === 'fullstack';
   const challenges = useMemo(() => listedChallenges({ category, track }), [category, track]);
-  const scrollable = challenges.length > 5;
   const titleId = `${track ? `${track}-paths` : category ?? 'evolving'}-title`;
+  const listId = `${titleId}-list`;
+  // A long list shows its first five rows and a button for the rest, in
+  // place of a scroll box inside the page (UX audit coding-09). The open list
+  // is remembered by its id, so another track's list starts folded.
+  const foldable = challenges.length > LIST_FOLD;
+  const [openList, setOpenList] = useState<string | null>(null);
+  const showAll = !foldable || openList === listId;
+  // Opening the rest moves focus to the first row that was hidden.
+  const focusFirstHidden = useRef(false);
+  useEffect(() => {
+    if (!focusFirstHidden.current || !showAll) return;
+    focusFirstHidden.current = false;
+    (listRef.current?.children[LIST_FOLD] as HTMLElement | undefined)?.focus();
+  }, [showAll]);
   const titleKey = track ? 'coding.evolving.paths' : category === 'fullstack' ? 'coding.evolving.fullstack' : category === 'debugging' ? 'coding.evolving.debugging' : 'coding.evolving.title';
   const bodyKey = track ? 'coding.evolving.pathsBody' : category === 'fullstack' ? 'coding.evolving.fullstackBody' : category === 'debugging' ? 'coding.evolving.debuggingBody' : 'coding.evolving.body';
-  // Before paint: measured after it, the list first drew at the fallback height
-  // and then jumped to five rows.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list || !scrollable) return;
-    const rows = Array.from(list.children).slice(0, 5);
-    // Measure actual rows so long text, zoom and narrow layouts still show five.
-    const sizeList = () => list.style.setProperty('--cd-project-list-height', `${rows.reduce((height, row) => height + row.getBoundingClientRect().height, 0) + 1}px`);
-    sizeList();
-    const observer = new ResizeObserver(sizeList);
-    rows.forEach(row => observer.observe(row));
-    return () => observer.disconnect();
-  }, [scrollable, category, track]);
   if (challenges.length === 0) return null;
   // On a free account the stages after the opening ones read "Premium". The
   // rule is said once, in the intro; each row keeps only its badge.
@@ -291,18 +293,19 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
     <p className="cd-lead">{t(bodyKey)}{(bodyKey === 'coding.evolving.body' || bodyKey === 'coding.evolving.pathsBody') && !authLoading && !isAuthenticated && <> {t('coding.evolving.signIn')}</>}</p>
     {anyLocked && <PremiumRuleNote challenges={challenges} />}
     </div>
-    <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
+    <div className="cd-projects__body">
+    <div ref={listRef} id={listId} className="cd-project-list">{(showAll ? challenges : challenges.slice(0, LIST_FOLD)).map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
       const laterLocked = laterLockedIn(challenge);
       // The verb says where the learner stands: nothing done, part done, all done.
       const actionKey = completed === challenge.stages.length ? 'coding.evolving.review' : completed > 0 ? 'coding.continue' : 'coding.evolving.start';
-      return <article key={challenge.id} className="cd-project">
+      return <article key={challenge.id} className="cd-project" tabIndex={index >= LIST_FOLD ? -1 : undefined} aria-labelledby={`${challenge.id}-name`}>
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
         {/* On a section's own page every path is that section's, so the line would only repeat the heading. */}
         {!track && <p className="cd-project__track">{fullstack ? 'JavaScript · TypeScript · React · API' : category === 'debugging' ? `${t(`coding.track.${challenge.track}` as never)} · ${t('coding.format.debug')}` : t(`coding.track.${challenge.track}` as never)}</p>}
-        <h3>{challenge.title}</h3>
+        <h3 id={`${challenge.id}-name`}>{challenge.title}</h3>
         </div>
         <div className="cd-project__progress">
           <div className="cd-stage-meter" aria-hidden>{challenge.stages.map(id => <span key={id} data-complete={evolvingPassed(id, passed)} />)}</div>
@@ -312,6 +315,20 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
         <FadeFinCta label={t(actionKey)} finLeft="62%" finSize={26} accent="var(--brand-accent)" onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
     })}</div>
+    {foldable && (
+      <Button
+        variant="ghost"
+        className="cd-projects__more"
+        aria-expanded={showAll}
+        aria-controls={listId}
+        label={showAll ? t('coding.evolving.showFewer') : t('coding.evolving.showAll', { n: challenges.length })}
+        onClick={() => {
+          focusFirstHidden.current = !showAll;
+          setOpenList(showAll ? null : listId);
+        }}
+      />
+    )}
+    </div>
   </section>;
 }
 
