@@ -315,10 +315,13 @@ interface ConnectionRow {
   status: 'pending_repo' | 'active' | 'broken';
 }
 
+/** The learner's connection, or null when there is none. A failed read
+ * throws: read as "none", it told a connected learner to connect GitHub and
+ * dropped the pass from the garden without queueing it. */
 async function loadConnection(supabase: SupabaseClient, userId: string): Promise<ConnectionRow | null> {
   const { data, error } = await withTimeout(supabase.from('github_connections').select('user_id,installation_id,account_login,account_id,repo_full_name,default_branch,status').eq('user_id', userId).maybeSingle());
-  if (error || !data) return null;
-  return data as ConnectionRow;
+  if (error) throw new Error('db_error');
+  return (data as ConnectionRow | null) ?? null;
 }
 
 const authorFor = (connection: ConnectionRow) => ({

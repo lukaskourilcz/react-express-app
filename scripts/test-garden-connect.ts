@@ -471,6 +471,13 @@ async function main() {
   assert.equal(puts.filter((key) => key === queuedFile).length, 1, 'a retry writes one commit per file, not one per queued copy');
   assert.equal(retried.remaining, 0, 'the older copy is not left waiting');
 
+  // 17. A connection the database could not read is a failed garden write,
+  //     never "not connected", which would ask a connected learner to connect.
+  dbError = true;
+  const unread = await pass('const answer = 4;');
+  dbError = false;
+  assert.equal(unread?.status, 'failed', 'a failed connection read reports the garden write as failed');
+
   console.log('GitHub garden connect passed: the code is required and exchanged once, only the installation\'s own GitHub account can connect it, an organisation installation is refused, no user token is kept, one installation belongs to one devShark account, and connect and sync limits are each learner\'s own.');
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
