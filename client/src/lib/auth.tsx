@@ -225,7 +225,11 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     // that before this effect ran; a client loaded on demand can attach this
     // listener first, and the order keeps the restore out of the log.
     let initialized = false;
+    // Whether supabase-js has said anything yet: after that its events, not
+    // a session read that missed the boot deadline, say who is here.
+    let heard = false;
     const unsubscribe = onSupabaseAuthStateChange((event, session) => {
+      heard = true;
       if (session?.user) signedIn(session.user.id);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -266,7 +270,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
         setUser(session?.user ?? null);
       })
       .catch(() => {
-        setUser(null);
+        if (!heard) setUser(null);
       })
       .finally(() => setIsLoading(false));
 

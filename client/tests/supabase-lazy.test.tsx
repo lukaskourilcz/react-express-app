@@ -260,6 +260,28 @@ describe('a returning visitor with a stored session', () => {
     expect(sb.imports).toBe(1);
   });
 
+  it('keeps the account supabase-js announced when the session read misses its deadline', async () => {
+    // supabase-js says the session is here, but getSession waits on its lock
+    // (another tab holding it): the boot deadline must not sign the page out.
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const original = sb.createClient.getMockImplementation()!;
+    sb.createClient.mockImplementationOnce((url: string, key: string) => {
+      const client = original(url, key);
+      client.auth.getSession.mockImplementation(() => new Promise(() => {}));
+      return client;
+    });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await mountAuth();
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored');
+      await act(async () => { await vi.advanceTimersByTimeAsync(8_001); });
+      expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('restores the user when the client loaded before the provider mounted', async () => {
     localStorage.setItem(KEY, JSON.stringify(STORED));
     const reports = recordSignInReports();
