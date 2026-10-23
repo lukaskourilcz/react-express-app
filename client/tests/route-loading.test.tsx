@@ -118,6 +118,27 @@ describe('intent preloading', () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 
+  it('loads nothing on intent for a visitor who asked the browser to save data', () => {
+    vi.useFakeTimers();
+    const load = vi.fn(async () => ({}));
+    routeChunk((path) => path === '/intent-save-data', load);
+    uninstall = installIntentPreloading();
+    Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true });
+    try {
+      const anchor = link('/intent-save-data');
+      anchor.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      anchor.dispatchEvent(new Event('touchstart', { bubbles: true }));
+      anchor.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      const over = new Event('pointerover', { bubbles: true });
+      Object.defineProperty(over, 'pointerType', { value: 'mouse' });
+      anchor.dispatchEvent(over);
+      vi.advanceTimersByTime(100);
+      expect(load).not.toHaveBeenCalled();
+    } finally {
+      delete (navigator as { connection?: unknown }).connection;
+    }
+  });
+
   it('reads a chrome button’s data-route, and ignores new tabs, other sites and the current page', () => {
     const button = vi.fn(async () => ({}));
     const elsewhere = vi.fn(async () => ({}));
