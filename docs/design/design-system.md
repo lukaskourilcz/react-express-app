@@ -64,7 +64,7 @@ Two tokens, and one floor in `client/src/styles/app-shell.css`:
 | Size | Token | Height | Used for |
 |---|---|---|---|
 | Default | `--ss-control-height` | 44px | Every page action and form control, on every pointer: `.astryx-button`, `.astryx-segmented-control-item`, `.astryx-text-input` and its input. |
-| Compact | `--ss-control-height-compact` | 36px | Only controls inside an element with class `ss-compact` (a component's own toolbar, such as the coding action bar), on a fine pointer, each with a 44px hit area drawn by `::before`. On a coarse pointer they stay 44px. |
+| Compact | `--ss-control-height-compact` | 36px | Only controls inside an element with class `ss-compact` (a component's own toolbar, such as the coding editor's Format and Reset), on a fine pointer, each with a 44px hit area drawn by `::before`. On a coarse pointer they stay 44px. |
 
 The floor is a `min-height`/`min-width` with `!important`, because Astryx's StyleX rules cannot be reached by a class selector otherwise; it is the only place that does this. Do not size buttons page by page, and do not pass `size="sm"` to make a page action smaller: the floor lifts it anyway. The footer's appearance and sound toggles are the compact size, as pills, with the same hit area.
 
@@ -77,6 +77,22 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 **Card actions.** Every action in a card is the default size (no `size="sm"`), so a card's primary is never smaller than its secondaries: the Profile's GitHub, sharkname, path and account cards all stand at 44px. Only an in-row utility (a Retry inside a banner, a Remove on a list row) stays small.
 
 **Form controls with a label.** A control group (`ToggleButtonGroup`, `SegmentedControl`, a `select`) takes its label above it, never as a suffix after it, and the default size, so one form has one control height. Two short groups may sit side by side from 900px (the question count and time limit on `/play`). Icon-only buttons are 44×44 with a 20px glyph (the header's Leaderboard, Premium and Coins; a dialog's close keeps its 16px glyph in a 44px button). Icons that sit side by side share one drawing language: the header's three are stroke icons in the text colour (`TrophyIcon`, the Premium diamond, `CoinsIcon` from `components/ui/icons.tsx`); the filled accent `CoinIcon` stays for the Coins page's balance, where it is large enough to read as a coin.
+
+## Coding frame
+
+One frame for every place a coding task opens (UX audit U3, #575): `/coding/<track>/<task>` (`CodingWorkbench`, `mode="section"`), a Learn level's coding phase (`mode="lesson"`, inside `LessonRunner`) and a path's code activity (`CodeActivity` in `ActivityViews.tsx`, `.cd-workbench--activity`). The Learn and path hosts put `ss-wide-page` on their root, so the route box is `--ss-width-wide` while the editor is mounted. The rules are in `client/src/coding/Coding.css`.
+
+| Token | Value | Used for |
+|---|---|---|
+| `--cd-frame-h` | `clamp(600px, calc(100dvh - 7rem - 48px), 900px)` | The frame's one row from 1024px: the page's header clearance and 48px under it are left out. Run and Submit sit at the pane's foot on every task. |
+| `--cd-brief-cap` | 120px | The brief's body under its two-line heading, about five lines of prompt. |
+| `--cd-editor-min` | 280px below 1024px, 200px from 1024px | The editor's floor at every call site (`Editor` without a `minHeight`). Stacked, the editor grows with the code from it; in the frame it takes what the brief and the action bar leave, and 200px is only what a 600px frame leaves. |
+
+- **Columns.** From 1024px `.cd-workbench__grid` is the learner's split (58% by default), a 12px separator column with 2px either side, and the rest. The separator is a 1px `--ss-card-line` that turns a 3px accent line on hover and keyboard focus. A path activity leaves the separator column empty. Below 1024px the panes stack.
+- **Code pane.** `BriefZone` (`client/src/coding/BriefZone.tsx`), then the editor (`Editor fill`), then the action row. The brief's heading is an eyebrow (where the task sits, 0.8rem/600 secondary) over the `h1` (1.35rem/700) with the difficulty beside it. The body is capped; a longer one scrolls inside as a focusable region named by the title, fades over its last 24px and gets a ghost "Show full brief" toggle, which lifts the cap to what the editor's floor leaves.
+- **Actions.** Run (Astryx secondary, `.ss-action`) and Submit (`SwimCta` md) lead the row with their words at every width. Format and Reset are the editor's own toolbar above the code: 36px icon buttons with tooltips in `.ss-compact`. From 1024px Hint, Solution and Skip are ghost buttons and Report the flag at the far right; below 1024px they are items of one 44×44 "More actions" Astryx `DropdownMenu`, whose items keep the reason an action is unavailable as their description. Waiting for a bigger screen, the pane is one warning note with "Use the editor here" inside it and no action row.
+- **Results pane.** Tabs in one order on every track: Results, Console, the track's tab (Types or Preview), Resources, then Solution and Approaches when they exist. A tab never shrinks; the strip scrolls with a 16px fade at its far edge, and below 600px Resources drops its count. React opens on Results, and Preview takes over after the first Run that renders; before it, Preview is one line and its frame takes no room. A count is said once: the tab's badge (Results and Types both read checks passed of checks), with the Types panel counting compiler errors and failing type checks apart ("1 compiler error · 4 of 5 type checks fail").
+- **Checks.** One divided list, not a card per check: hairline rows, a 3rem status column saying Pass, Fail or a dash in words and colour, the call in mono followed by "→ expected" and after a run "· got actual", the description as a quiet second line and one small `edge` tag. "Expected" is not printed; a screen reader hears it in place of the arrow.
 
 ## Layout and density
 
@@ -104,7 +120,7 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 - Choice: `RadioCardGroup`/`RadioCard` or `CheckCard`, not checkbox-emitting cards for radio jobs.
 - Feedback: shared semantic tokens plus text/icon, never color alone.
 - Empty/error/loading: one cause, one next action, stable layout.
-- Destructive confirmation: `BrandedConfirmDialog` (Astryx `AlertDialog`) with a product-specific title, body, cancel and confirm; the Astryx dialog owns focus and restoration. It runs the confirmed action once, even when a second press lands before it re-renders. Removing a friend and deleting an account ask through it. Reset in the coding workbench and in a path's code activity asks in an inline `role="alertdialog"` note under the action bar instead; keeping the code returns focus to Reset, and in a path activity a confirmed Reset does too.
+- Destructive confirmation: `BrandedConfirmDialog` (Astryx `AlertDialog`) with a product-specific title, body, cancel and confirm; the Astryx dialog owns focus and restoration. It runs the confirmed action once, even when a second press lands before it re-renders. Removing a friend and deleting an account ask through it. Reset in the coding workbench and in a path's code activity asks in an inline `role="alertdialog"` note in the row under the coding frame instead; keeping the code returns focus to Reset, and in a path activity a confirmed Reset does too.
 
 ## Motion
 

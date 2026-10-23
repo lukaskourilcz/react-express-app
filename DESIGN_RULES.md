@@ -293,11 +293,21 @@ coming back. The tokens and the map are in
   pill: `.ss-action`, or any button in `.ss-info-actions` /
   `.ss-auth__actions`. The primary is never the smallest control in its row.
 - **One filled primary per screen**, and it is `SwimCta` md (44px). Other
-  actions are Astryx secondary or ghost. `SwimCta` sm is never shorter than
-  44px either: in the coding workbench it takes the page-action type, so
-  Submit matches Run beside it. A second task's button turns
+  actions are Astryx secondary or ghost. The coding workbench's Submit is
+  `SwimCta` md beside Run in the page-action type; nothing in the workbench
+  uses `SwimCta` sm. A second task's button turns
   primary only once its own input is complete (Join on `/play` with a whole
   code).
+- **One coding frame wherever a task opens** (UX audit U3, #575). `/coding`,
+  a Learn level's coding phase and a path's code activity share the
+  workbench frame: from 1024px one row of `--cd-frame-h`, a code pane of
+  `BriefZone` (the prompt capped at `--cd-brief-cap`, with "Show full
+  brief"), the editor filling the rest from `--cd-editor-min`, and one 44px
+  action row at its foot, beside a results pane that scrolls inside. Run and
+  Submit keep their words at every width; Format and Reset live in the
+  editor's own `.ss-compact` toolbar, and below 1024px Hint, Solution, Skip
+  and Report fold into one "More actions" menu. Never give a task's brief,
+  editor or actions a height or width of their own.
 - **Card actions are the default size.** No `size="sm"` on a card's actions;
   a Retry inside a banner or a Remove on a list row is the only small
   button.
