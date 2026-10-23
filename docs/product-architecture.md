@@ -303,6 +303,8 @@ transactional counter (`supabase/supabase-schema-063.sql`): a generated name
 is the camelCase base plus that number, the number survives a rename and is
 never reused, the API sends it as a string, and a preview roll allocates
 nothing. The Friends tab says what friends add you by and links to the card.
+Remove asks first ("Remove <name>?"), because it ends the friendship on both
+sides and only a new request undoes it.
 
 What friends see is two switches on `user_handles`, both off by default, set
 through `op=identity` (GET/PUT, signed in, PUT on the per-account write
@@ -435,8 +437,9 @@ learner sees a timeout whose message names the type check. Submit sends the
 code at once, and the browser's own run (its type check has 8 s once the
 compiler is loaded) is a preview the server's run replaces. The same thread
 transpiles the TypeScript, so code nested too deeply for the compiler is an
-`error` verdict, not an HTTP 500. System-design answers are graded against a
-key sealed in the coding session.
+`error` verdict, not an HTTP 500. React code that nests too deeply for its
+compiler fails the same way, before any sandbox starts. System-design answers
+are graded against a key sealed in the coding session.
 
 A coding session seals the exact task and grader version (hidden checks,
 puzzle material and efficiency guidance). Submit refuses a stale or
@@ -499,7 +502,10 @@ above the task's authored time-complexity target. Unknown complexity pays the
 base and shows no complexity row. The analysis withholds an estimate for
 returned closures, callable aliases, methods and accessors, callable
 containers, input-dependent templates and string additions whose output work
-it cannot resolve. Dynamic value flow still needs manual review; the check is
+it cannot resolve. One analysis spends at most 150,000 node visits outside
+the cost walk (`ANALYSIS_STEPS` in `lib/coding/complexity.ts`), shared by
+every call of a helper; past that it reports no estimate ("The analysis limit
+was reached"). Dynamic value flow still needs manual review; the check is
 bounded, not a general type analysis.
 
 **System design** returns, for a failed or partly right submission, only
@@ -581,7 +587,11 @@ URL fragment; that tab removes the fragment and submits the session in the
 request body. The server checks the owner, task binding, expiry and open
 attempt on access, Submit and reveal. A read-only attempt-status request
 checks completion when Learn regains focus. Missing coding passes leave the
-attempt open, recording no failure, XP or streak; a reveal still ends it.
+attempt open, recording no failure, XP or streak; a reveal still ends it. The
+coding routines check the attempt again under its row lock, so a verdict or a
+reveal for an attempt that ended mid-request (completed in another tab, or
+past its two hours) answers 409 `invalid_session` and records nothing, as
+does completing an expired attempt.
 `supabase/supabase-schema-062.sql` enforces the same rule under the parent
 row lock. A coding task issued inside a Learn level follows that level's
 access tier.
@@ -614,9 +624,14 @@ until the learner takes it or the account confirms a save. A save sends that
 time as `base`, and `save_coding_draft_v2` writes only while the account draft
 still has it: otherwise the server answers 409 `draft_conflict` with the
 stored time (never its code), and the page asks whether to save this code
-over it or open the other draft, keeping this device's code either way. An
-evolving stage's Submit writes the stage draft through the same routine,
-forced, and returns its time.
+over it or open the other draft, keeping this device's code either way. When
+other saves keep creating the same first draft beside it, the routine gives
+up after three tries, writes nothing, and the server answers 503 `draft_busy`
+with Retry-After. A draft save, or a signed-in evolving stage's Submit, whose
+code holds U+0000 (which Postgres text cannot store) answers 400. A task whose
+account draft cannot be read answers 500 instead of opening as if it had
+none. An evolving stage's Submit writes the stage draft through the same
+routine, forced, and returns its time.
 
 A sign-out the learner chooses (Log out, here or in another tab, or deleting
 the account) forgets the drafts with the rest of the account's data. A
@@ -624,7 +639,11 @@ session that ends on its own (an expired or revoked refresh, a password
 changed elsewhere) keeps the drafts under the account's id and out of sight,
 says "You were signed out — sign in to keep your code", and gives them back
 when the same account signs in and opens a coding task. Another account
-signing in deletes them unread (`client/src/lib/accountData.ts`).
+signing in deletes them unread (`client/src/lib/accountData.ts`). A task open
+at the sign-out reads itself again, so the account's code leaves the editor.
+Code typed a moment before and still waiting is written first
+(`beforeAccountChange`), and work begun for the account that left (a draft
+read, a brief refresh) checks `accountEpoch` and opens nothing.
 
 ### Evolving projects and short paths
 
