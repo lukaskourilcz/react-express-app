@@ -75,7 +75,7 @@ export function AnswerOptionList({ options, value, onChange, onActivate, labelle
               {markText && (
                 <span className="ss-answer-option__mark">
                   <span aria-hidden>{mark === 'correct' ? '✓' : '✕'}</span>
-                  {markText}
+                  <span className="ss-answer-option__mark-text">{markText}</span>
                 </span>
               )}
             </span>

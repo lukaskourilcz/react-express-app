@@ -334,8 +334,10 @@ their props), never drawn again by hand.
   wraps or not, for the same reason.
 - **One answer list.** `AnswerOptionList`: 48px rows 8px apart, a 26px
   number chip, the brand accent for the selection (never a track colour), no
-  border or radius of a runner's own. A graded row says what it is in text
-  and glyph as well as colour: "✓ Correct answer" and "✕ Your pick".
+  border or radius of a runner's own. A graded row says what it is in a
+  glyph as well as colour, a ✓ or ✕ in a 20px slot every row keeps at its
+  end, graded or not, so grading never rewraps a row; "Correct answer" and
+  "Your pick" are in the row's accessible name.
 - **One action row.** `QuestionActions` sits 16px under the panel: the
   secondaries on the left, the one primary (`SwimCta` md) on the right. On a
   phone the primary is the last row at full width and the secondaries share

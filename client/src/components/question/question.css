@@ -142,7 +142,7 @@
 }
 /* A graded list is disabled, but its marks are the answer: full strength. */
 .ss-answer-list .ss-answer-option.ss-radio-card:is([data-tone='success'], [data-tone='error']):disabled { opacity: 1; }
-.ss-answer-option__row { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
+.ss-answer-option__row { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; padding-inline-end: 20px; }
 .ss-answer-option__key {
   display: grid;
   place-items: center;
@@ -158,13 +158,31 @@
 .ss-answer-option[data-selected='true'] .ss-answer-option__key { background: var(--brand-accent); color: var(--brand-on-accent); }
 .ss-answer-option__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: 400; }
 .ss-answer-option[data-selected='true'] .ss-answer-option__text { font-weight: 600; }
+/* A graded row never changes height. With the words beside the text,
+   "mutable by the component ✕ Your pick" went to two lines on a 320px phone
+   row, and so did a 44–62 character answer (a quarter of the bank) on the
+   590px desktop row, pushing the rows under it down at the moment of grading.
+   Every row keeps a 20px slot at its end (the row's padding-inline-end),
+   graded or not, and a graded row draws only its glyph there, ✓ or ✕ in the
+   status colour; the words stay in the row's accessible name, and the verdict
+   under the list says in words whether the pick was right. */
 .ss-answer-option__mark {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--ss-type-meta);
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1;
+}
+.ss-answer-option__mark-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .ss-answer-option[data-tone='success'] .ss-answer-option__mark { color: var(--ss-success-strong); }
 /* A wrong pick says so in its chip too, not only in its row: the selection

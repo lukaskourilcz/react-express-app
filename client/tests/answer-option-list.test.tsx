@@ -66,6 +66,16 @@ describe('AnswerOptionList', () => {
     expect(radios.every((radio) => radio.hasAttribute('disabled'))).toBe(true);
   });
 
+  it('keeps a graded row its height: a reserved end slot draws the glyph, the words go to the name', () => {
+    renderList({ value: 0, grade: { correct: 1, picked: 0 }, disabled: true });
+    expect(screen.getByText('Your pick')).toHaveClass('ss-answer-option__mark-text');
+    expect(screen.getByText('Correct answer')).toHaveClass('ss-answer-option__mark-text');
+    // Every row, graded or not, keeps the slot, so its text wraps the same way before and after grading.
+    expect(css).toMatch(/\.ss-answer-option__row \{[^}]*position: relative;[^}]*padding-inline-end: 20px; \}/);
+    expect(css).toMatch(/\.ss-answer-option__mark \{\s*position: absolute;\s*inset-inline-end: 0;/);
+    expect(css).toMatch(/\.ss-answer-option__mark-text \{[^}]*clip-path: inset\(50%\)/);
+  });
+
   it('marks only the right answer when the pick was right, or when nothing was picked', () => {
     const { unmount } = renderList({ value: 1, grade: { correct: 1, picked: 1 }, disabled: true });
     expect(screen.queryByText('Your pick')).toBeNull();
