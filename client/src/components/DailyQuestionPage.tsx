@@ -34,7 +34,7 @@ import { CategoryTag } from './ui/CategoryTag';
 import { AnswerOptionList, QuestionActions, QuestionFeedback, QuestionShell } from './question';
 import { questionText } from '../i18n/translations.question';
 import { SaveSharkCard } from './SaveSharkCard';
-import BrandCase from './BrandCase';
+import { DailyHeader } from './DailyStaticArticle';
 import './DailyQuestion.css';
 
 const longDate = (iso: string) =>
@@ -65,12 +65,7 @@ export default function DailyQuestionPage() {
 
   return (
     <article className="ss-info-page ss-daily" aria-busy={query.isFetching || undefined}>
-      <header className="ss-info-page__header">
-        <span className="ss-info-page__kicker"><BrandCase text={t('daily.kicker')} /></span>
-        <h1>{track ? t('daily.title', { track: trackName }) : t('daily.titlePlain')}</h1>
-        {valid && <p className="ss-daily__date"><time dateTime={shownDate}>{longDate(shownDate)}</time></p>}
-        <p>{t('daily.lead')}</p>
-      </header>
+      <DailyHeader t={t} track={track ? trackName : undefined} date={valid ? shownDate : undefined} dateLabel={valid ? longDate(shownDate) : undefined} />
 
       {availability !== 'open' ? (
         <Unavailable problem={availability === 'not-yet' ? 'not-yet' : 'before-start'} date={valid ? date : null} />
@@ -210,6 +205,8 @@ function DailyQuestion({ data, onReload, focusQuestion }: { data: QotdResponse; 
               secondary={<Button variant="secondary" label={t('daily.share')} onClick={() => void onShare()} />}
               primary={{ label: t('daily.practice', { track: trackName }), onClick: () => navigate(`/quiz?category=${encodeURIComponent(track)}`) }}
             />
+            {/* Takes no space until it has something to say (questions-11):
+                empty, it kept a 1.4em line and two gaps under the actions. */}
             <p className="ss-daily__status" role="status">
               {share === 'shared' ? t('daily.shared') : share === 'copied' ? t('daily.copied') : share === 'failed' ? t('daily.copyFailed', { url }) : ''}
             </p>
@@ -247,7 +244,6 @@ function DailyQuestion({ data, onReload, focusQuestion }: { data: QotdResponse; 
           {/* Shark Cards (owner decision 12): signed in, the question can be
               kept with the answer and explanation checked here. */}
           <SaveSharkCard question={question} correctIndex={result.correctAnswer} explanation={result.explanation ?? ''} />
-          <p className="ss-daily__note">{t('daily.practiceNote')}</p>
         </QuestionFeedback>
       )}
     </QuestionShell>

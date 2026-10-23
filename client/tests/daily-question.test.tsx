@@ -77,7 +77,13 @@ describe('/daily', () => {
       }),
     );
     renderAt('/daily');
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`${trackName(today)} question of the day`);
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1).toHaveTextContent(`${trackName(today)} question of the day`);
+    // The day is the kicker over the h1; no separate date line (questions-11).
+    const day = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${today}T12:00:00Z`));
+    expect(h1.previousElementSibling).toHaveTextContent(day);
+    expect(h1.previousElementSibling!.querySelector('time')).toHaveAttribute('datetime', today);
+    expect(screen.getAllByText(day)).toHaveLength(1);
     const options = await screen.findAllByRole('radio');
     expect(options).toHaveLength(4);
     expect(asked).toEqual(['?qotd=today']);
@@ -91,7 +97,10 @@ describe('/daily', () => {
     expect(screen.getByRole('radio', { name: '"object", Correct answer' })).toBeDisabled();
     // The one primary after the check, in the shared action row (UX audit U2).
     expect(screen.getByRole('button', { name: `Practice ${trackName(today)} questions` })).toHaveClass('ss-swim-cta');
-    expect(screen.getByText(/nothing is recorded/)).toBeInTheDocument();
+    // Said once, in the lead (questions-11): no practice note repeats it.
+    expect(screen.getByText(/nothing is recorded/)).toHaveTextContent('One question a day from a different track. No account needed; nothing is recorded.');
+    // The share status takes no line until it has something to say.
+    expect(document.querySelector('.ss-daily__status')).toBeEmptyDOMElement();
 
     fireEvent.click(screen.getByRole('button', { name: 'Share this question' }));
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/daily/${today}`));
