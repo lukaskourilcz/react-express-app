@@ -39,10 +39,41 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 | Numeric score | Tabular or stable-width numerals where possible. |
 | Code | Monospace, labelled language, horizontal scroll. |
 
+## Page widths
+
+Four tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573). The route shell in `client/src/App.tsx` picks one route width per route from the one map in `client/src/components/ui/pageWidth.ts` (`routePageWidth`) and caps the page column with it. A page never sets its own page `max-width`: it fills the column and sizes only what sits inside it.
+
+| Token | Width | Used by |
+|---|---|---|
+| `--ss-width-task` | 640px | The task column inside a page: question screens, and the auth (`.ss-auth-page`), billing (`.ss-billing-card`) and checkout (`.ss-checkout-card`) cards. Never a route width. |
+| `--ss-width-narrow` | 800px | The route default: every route not listed below, including all `Page` screens (404, auth, `/premium` and its steps, `/privacy`, `/terms`, `/classroom`), `/shop`, `/collection`, `/leaderboard`, Learn and the question screens. |
+| `--ss-width-standard` | 1000px | Two-column pages: home (`/`), `/profile`, `/play` and `/play/:code`. |
+| `--ss-width-wide` | 1200px | Operational screens: `/coding` and `/coding/*`, and a Learn or FDE coding phase while its editor is mounted. |
+| `--ss-width-chrome` | 1168px | The floating header and the footer. Both keep this box on every route, so neither moves when the route width changes. |
+
+`/dev` is uncapped. A part that needs more room while it is mounted calls `usePageWidthRequest('wide')` (same module); the shell takes the widest request until the part unmounts or passes `null`. A request never narrows a route. To give a new route a width, add it to `routePageWidth` and its test (`client/tests/page-width.test.tsx`); do not write a `max-width` on the page.
+
+The shared `Page` layout (`PublicInfoPages.tsx`, `.ss-info-page`) fills the column, so every `Page` h1 starts at the same x. Its kicker line is always drawn (empty and `aria-hidden` when a page passes no kicker), so the h1 also sits at one y.
+
+## Control heights
+
+Two tokens, and one floor in `client/src/styles/app-shell.css`:
+
+| Size | Token | Height | Used for |
+|---|---|---|---|
+| Default | `--ss-control-height` | 44px | Every page action and form control, on every pointer: `.astryx-button`, `.astryx-segmented-control-item`, `.astryx-text-input` and its input. |
+| Compact | `--ss-control-height-compact` | 36px | Only controls inside an element with class `ss-compact` (a component's own toolbar: the coding action bar, a runner's icon row), on a fine pointer, each with a 44px hit area drawn by `::before`. On a coarse pointer they stay 44px. |
+
+The floor is a `min-height`/`min-width` with `!important`, because Astryx's StyleX rules cannot be reached by a class selector otherwise; it is the only place that does this. Do not size buttons page by page, and do not pass `size="sm"` to make a page action smaller: the floor lifts it anyway. The footer's appearance and sound toggles are the compact size, as pills, with the same hit area.
+
+**Page actions.** A page action is 44px with 20px inline padding and 16px/600 text on a pill. `.ss-action` applies that type through Astryx's own variables (`--spacing-3`, `--text-label-size`, `--font-weight-medium`). Every button in `.ss-info-actions` and `.ss-auth__actions` gets it without a class; elsewhere pass `className="ss-action"`. A small in-row utility, such as a Retry inside a note, does not take it.
+
+**One primary per screen.** `SwimCta` (md, 44px) is the single filled primary on a screen; every other action is an Astryx secondary or ghost at 44px. Icon-only buttons are 44×44 with a 20px glyph (the header's Leaderboard, Premium and Coins; a dialog's close keeps its 16px glyph in a 44px button).
+
 ## Layout and density
 
 - Mobile gutter: 16px; tablet: 24px; desktop: 24–32px.
-- Narrow task width: ~560–800px; standard content: 1000px; wide/operational: 1200px.
+- Page widths: the four tokens above, one per route, chosen by the shell.
 - Page sections: 32–64px according to public vs operational context.
 - Preserve fixed header, internal main scroll, persistent waterline, and at least 44px bottom-ocean clearance.
 - Quiz answers remain in a stable region; long question/answer content scrolls without moving actions unpredictably.

@@ -204,8 +204,10 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   with the shell, and the lazy account widget with its 56px placeholder is for
   a session. On a desktop that widget sits in `.ss-account-slot`, as wide as
   the widget can grow, so the centred nav stands still when it arrives. The
-  footer renders inside the route `Suspense`, after the keyed box, so it
-  arrives with the first page instead of sitting under the first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
+  footer renders inside the route `Suspense`, after the page column that
+  holds the keyed box, so it arrives with the first page instead of sitting
+  under the first-load loader. It keeps its own box (`--ss-width-chrome`,
+  the header's 1168px), never the route width. `tests/browser/first-load.spec.ts` holds the page's code
   back and fails when the header, `<main>` or the footer moves.
 - A shell part that fails keeps the shell too. A lazy part outside the route
   boundary (the account widget, the upgrade sheet, the sign-in dialog) is a `lazyShellPart` inside
@@ -251,3 +253,40 @@ container's themed thumb, then hides it after 1.1 seconds idle. WebKit thumbs
 are 4px; Firefox uses its native thin width. Scrolling and keyboard navigation
 also reveal the thumb; forced-colors mode keeps it visible. Do not add
 per-component scrollbar rules.
+
+## 10. One button scale, one page width per route
+
+The UX audit of 23 October 2026 (U1, #573) found 28, 32, 36, 41 and 44px
+buttons on one mouse and 21 different page max-widths. These rules stop that
+coming back. The tokens and the map are in
+[the design system](docs/design/design-system.md#page-widths).
+
+- **The shell picks the page width.** One route width per route, from
+  `routePageWidth` in `client/src/components/ui/pageWidth.ts`: 1000px
+  (`--ss-width-standard`) for home, `/profile` and `/play`; 1200px
+  (`--ss-width-wide`) for `/coding/*`; 800px (`--ss-width-narrow`) for every
+  other route; `/dev` uncapped. A page never sets its own page `max-width`. A
+  part that needs the wide page while mounted (a Learn or FDE coding phase)
+  calls `usePageWidthRequest('wide')`. A new route goes into the map and its
+  test, not into a stylesheet.
+- **Task cards are 640px.** Auth, billing and checkout cards, and the question
+  column, use `--ss-width-task` inside the 800px column. Do not add another
+  card width.
+- **The chrome does not move.** The header and the footer share
+  `--ss-width-chrome` (1168px) on every route.
+- **Every control is 44px on every pointer.** `--ss-control-height` is the
+  floor for Astryx buttons, segmented items and text fields, set once in
+  `app-shell.css`. Only controls inside `.ss-compact` (a component's own
+  toolbar) are `--ss-control-height-compact` (36px) on a fine pointer, and
+  each keeps a 44px hit area. Never size a button page by page.
+- **Page actions share one type.** 44px, 20px inline padding, 16px/600 text,
+  pill: `.ss-action`, or any button in `.ss-info-actions` /
+  `.ss-auth__actions`. The primary is never the smallest control in its row.
+- **One filled primary per screen**, and it is `SwimCta` md (44px). Other
+  actions are Astryx secondary or ghost.
+- **Icon buttons are 44×44** with a 20px glyph and keep their tooltip and
+  `aria-label`. A dialog's close button is the Astryx one, which the floor
+  makes 44px.
+- **Every `Page` h1 sits at one x and one y.** The `Page` layout fills the
+  column and always draws its kicker line.
+- **Say each fact once per screen**, and the sign-in verb is "Sign in".
