@@ -85,6 +85,9 @@ const RETIRED_REPORTED = 'rm-js-21';
 let claimFails = false;
 /** Token checks Supabase Auth answered, so a test can count a request's. */
 let authChecks = 0;
+/** How a read of the auth event log answers: normally, failing, or as a
+ * table the migration has not created yet. */
+let authEventsRead: 'ok' | 'down' | 'missing' = 'ok';
 const SLOW_REPORT = 'stand-in: answer after the timeout';
 // A topic board asked with this minimum answers after the timeout too.
 const SLOW_BOARD_MIN_ATTEMPTS = 97;
@@ -162,6 +165,8 @@ async function startStandIns() {
       setTimeout(() => send(200, []), 5_500);
       return;
     }
+    if (url.pathname === '/rest/v1/auth_events' && req.method === 'GET' && authEventsRead === 'down') return send(500, { code: '08006', message: 'stand-in: connection failure' });
+    if (url.pathname === '/rest/v1/auth_events' && req.method === 'GET' && authEventsRead === 'missing') return send(404, { code: 'PGRST205', message: "Could not find the table 'public.auth_events' in the schema cache" });
     const filters = Object.fromEntries([...url.searchParams.entries()].filter(([, value]) => value.startsWith('eq.')).map(([key, value]) => [key, value.slice(3)]));
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname)?.[1];
@@ -721,6 +726,15 @@ async function main() {
       { user_id: EMAIL.id, email: EMAIL.email, provider: 'email' },
       'a sign-in with a password is logged with its provider',
     );
+    // The /dev Logs tab: a log that could not be read is an error with Retry,
+    // not an empty log that looks like nobody signed in. Before the migration
+    // there is no log, and that stays empty.
+    const { listAuthEvents } = await import('../lib/auth-events-store');
+    authEventsRead = 'down';
+    await assert.rejects(listAuthEvents(), 'a failed read of the auth log is not an empty log');
+    authEventsRead = 'missing';
+    assert.deepEqual(await listAuthEvents(), [], 'no auth log table yet reads as no events');
+    authEventsRead = 'ok';
     seen.length = 0;
     const named = await user('leaderboard-visibility', { method: 'PUT', account: EMAIL, body: { visible: true } });
     assert.equal(named.statusCode, 200, JSON.stringify(named.body));

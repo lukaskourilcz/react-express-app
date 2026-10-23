@@ -74,18 +74,26 @@ export async function recordAuthEvent(input: {
   }
 }
 
-/** Most recent auth events, newest first. Returns [] if unavailable. */
+/** The table is not there yet (the migration that adds it has not run). */
+function tableMissing(error: { code?: string; message?: string }): boolean {
+  if (error.code === 'PGRST205' || error.code === '42P01') return true;
+  return /could not find the table|relation .* does not exist/i.test(error.message ?? '');
+}
+
+/** Most recent auth events, newest first. [] when there is no log to read: no
+ * Supabase configured, or the table not created yet. A read that fails or
+ * times out throws, so the /dev Logs tab shows an error with Retry instead of
+ * an empty log that looks like nobody signed in. */
 export async function listAuthEvents(limit = 200): Promise<AuthEventRow[]> {
   if (!supabase) return [];
   const capped = Math.min(Math.max(Math.round(limit) || 0, 1), 500);
-  try {
-    const { data, error } = await withTimeout(
-      supabase.from(TABLE).select('*').order('created_at', { ascending: false }).limit(capped),
-      5000,
-    );
-    if (error || !data) return [];
-    return data as AuthEventRow[];
-  } catch {
-    return [];
+  const { data, error } = await withTimeout(
+    supabase.from(TABLE).select('*').order('created_at', { ascending: false }).limit(capped),
+    5000,
+  );
+  if (error) {
+    if (tableMissing(error)) return [];
+    throw new Error(`auth_events read failed: ${error.code ?? 'unknown'}`);
   }
+  return (data ?? []) as AuthEventRow[];
 }
