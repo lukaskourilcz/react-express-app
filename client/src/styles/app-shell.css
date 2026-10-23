@@ -351,7 +351,9 @@
 .ss-brand-footer .ss-footer-link:hover { color: var(--brand-accent); }
 .ss-brand-footer .ss-footer-link:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 3px; }
 .ss-brand-footer__social a { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
-.ss-footer-settings { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+/* 8px apart, so the toggles' 44px hit areas (4px past each edge on a mouse)
+   meet without overlapping. */
+.ss-footer-settings { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 /* The footer's appearance and sound toggles are compact utility controls
    (UX audit shell-public-03): pills like every other button, 36px with a
    44px hit area on a mouse (the .ss-compact hit-area rule), 44px on a coarse
@@ -707,10 +709,9 @@
     min-width: 44px;
   }
   /* The Learn map's Skill check (36px), the career roadmap's part pills (31px)
-     and path links (28px), and Play's category chips (34px). */
+     and path links (28px). */
   .rm-skillcheck-cta,
-  .rm-part-pill,
-  .play-category-chip {
+  .rm-part-pill {
     min-height: 44px;
   }
   .lp-module__title a {
