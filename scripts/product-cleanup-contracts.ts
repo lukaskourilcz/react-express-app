@@ -310,6 +310,15 @@ async function sharkCardContracts() {
     assert.equal(calls[0].op, 'delete');
     assert.deepEqual(calls[0].filters, [['user_id', owner], ['subject', 'webdev'], ['question_id', learnQuestion.id]]);
   }
+  // Deleting names a card id as saving does: one no card can have is refused
+  // before the database is asked.
+  for (const id of ['x'.repeat(65), 'a\u0000b']) {
+    const { db, calls } = flashcardsDatabase([]);
+    const res = mockResponse();
+    await handleFlashcards(call('DELETE', owner, {}, { question_id: id }), res as never, db);
+    assert.equal(res.statusCode, 400, `a delete for ${JSON.stringify(id.slice(0, 8))} is refused (${JSON.stringify(res.body)})`);
+    assert.equal(calls.length, 0, 'and nothing is deleted');
+  }
   // Postgres text cannot hold U+0000: a card carrying one is refused before
   // the write, which would otherwise fail and answer 500.
   for (const field of ['question', 'correct_answer', 'explanation'] as const) {

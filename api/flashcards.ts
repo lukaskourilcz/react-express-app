@@ -92,11 +92,12 @@ export async function handleFlashcards(req: VercelRequest, res: VercelResponse, 
     }
 
     if (req.method === 'DELETE') {
+      // Bounded as a saved card's id is, so an id no card can have is refused
+      // here rather than sent to the database.
       const qid =
-        (typeof req.query.question_id === 'string' && req.query.question_id) ||
-        (typeof (req.body as { question_id?: unknown })?.question_id === 'string' &&
-          (req.body as { question_id: string }).question_id);
-      if (!qid) return jsonError(res, 400, 'bad_request', 'question_id is required');
+        str(req.query.question_id, MAX.id) ??
+        str((req.body as { question_id?: unknown } | undefined)?.question_id, MAX.id);
+      if (!qid || qid.includes('\u0000')) return jsonError(res, 400, 'bad_request', 'question_id is required');
       const { error } = await withTimeout(
         db.from('flashcards').delete().eq('user_id', userId).eq('subject', subject).eq('question_id', qid),
       );
