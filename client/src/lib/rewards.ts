@@ -172,27 +172,31 @@ export function useCosmeticMutation() {
 }
 
 /** Buying a protection changes the wallet and the streak budget, so both are
- * refetched — the profile's shield reads the second one. */
+ * refetched — the profile's shield reads the second one. The purchase stays
+ * pending until the re-reads land, as the crown's does: settled earlier, Buy
+ * came back beside the balance from before the purchase. */
 export function useProtectionMutation() {
   const queryClient = useQueryClient();
   return useMutation<{ bought: boolean; remaining: number; period: string }, Error, void>({
     mutationFn: () => buyStreakProtection(),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() });
-      void queryClient.invalidateQueries({ queryKey: ['streak-protection'] });
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() }),
+      queryClient.invalidateQueries({ queryKey: ['streak-protection'] }),
+    ]),
   });
 }
 
+/** A redemption changes the orders, the wallet and the stock; it stays
+ * pending until all three are read again. */
 export function useOrderMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: PlaceOrderInput) => placeOrder(input),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: rewardKeys.orders() });
-      void queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() });
-      void queryClient.invalidateQueries({ queryKey: rewardKeys.shop() });
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: rewardKeys.orders() }),
+      queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() }),
+      queryClient.invalidateQueries({ queryKey: rewardKeys.shop() }),
+    ]),
   });
 }
 

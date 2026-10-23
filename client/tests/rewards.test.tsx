@@ -250,6 +250,41 @@ describe('the Rewards screen', () => {
     expect(bought).toEqual(['protection']);
   });
 
+  it('keeps Buy busy until the wallet is read again after a purchase', async () => {
+    signIn();
+    routes();
+    let bought = false;
+    let rereads = 0;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    server.use(
+      http.get('*/api/user/*', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('op') !== 'wallet') return undefined;
+        if (!bought) return HttpResponse.json(wallet());
+        rereads += 1;
+        await held;
+        return HttpResponse.json(wallet({ balance: 990 }));
+      }),
+      http.post('*/api/user/protection', () => {
+        bought = true;
+        return HttpResponse.json({ bought: true, remaining: 1, period: '2026-10' });
+      }),
+    );
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    await waitFor(() => expect(rereads).toBeGreaterThan(0));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // The purchase is through, but the balance on screen is still the old one.
+    expect(screen.getByText('1,240')).toBeInTheDocument();
+    expect(buy).toBeDisabled();
+    act(() => release());
+    expect(await screen.findByText('990')).toBeInTheDocument();
+    await waitFor(() => expect(buy).toBeEnabled());
+  });
+
   it('offers a retry when the coins cannot load', async () => {
     signIn();
     routes({ wallet: { error: { code: 'db_error' } }, walletStatus: 500 });
