@@ -203,6 +203,11 @@ describe('the Play page (social-account-12)', () => {
     fireEvent.click(within(fold).getByRole('button', { name: 'JavaScript' }));
     expect(summary).toHaveTextContent('Topics: 1 selected');
     expect(within(fold).getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+    // The row shows it opens: the select's chevron, drawn on its own element
+    // (a shorthand naming the missing --color-background dropped it).
+    const css = sheet.textContent ?? '';
+    expect(css).toMatch(/\.play-topics__summary::after \{[^}]*background: var\(--ss-select-arrow\)/);
+    expect(css).not.toContain('var(--color-background)');
     sheet.remove();
   });
 });

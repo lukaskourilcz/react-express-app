@@ -20,18 +20,34 @@
   display: flex;
   align-items: center;
   min-height: var(--ss-control-height);
-  padding: 0 2.75rem 0 12px;
+  gap: 12px;
+  padding: 0 1rem 0 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-element);
-  background: var(--color-background) var(--ss-select-arrow) no-repeat right 1rem center / 14px 14px;
   color: var(--color-text-primary);
   font-weight: 600;
   cursor: pointer;
   list-style: none;
 }
+/* The select's own chevron, turned up while the fold is open. Its own
+   element, because a background shorthand that names a missing token drops
+   the arrow with it. */
+.play-topics__summary::after {
+  content: '';
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  background: var(--ss-select-arrow) no-repeat center / 14px 14px;
+}
+.play-topics[open] > .play-topics__summary::after { transform: rotate(180deg); }
 .play-topics__summary::-webkit-details-marker { display: none; }
 .play-topics__summary:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 .play-topics[open] > .play-topics__summary { border-color: var(--color-border-strong, var(--color-border)); }
+@media (forced-colors: active) {
+  .play-topics__summary::after { background: none; border: solid CanvasText; border-width: 0 2px 2px 0; width: 8px; height: 8px; transform: rotate(45deg); }
+  .play-topics[open] > .play-topics__summary::after { transform: rotate(-135deg); }
+}
 .play-topics__body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
 
 /* The time limit is one select at the shared 44px height, as wide as its
