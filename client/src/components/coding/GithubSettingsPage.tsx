@@ -5,6 +5,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../../lib/auth';
 import { openSignIn } from '../../lib/signInDialog';
 import { ApiError, friendlyError } from '../../lib/api';
+import { useClearOnPageRestore } from '../../lib/pageRestore';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { codingKeys, finishGithubConnect, startGithubConnect } from '../../coding/api';
@@ -51,6 +52,12 @@ export function GithubSettingsPage() {
   const inFlight = useRef(false);
   // `opening` renders a click too late to refuse the second one.
   const openingRef = useRef(false);
+  // "Connect again" leaves for GitHub busy; Back restores this page from the
+  // browser's cache exactly so, after the round trip it waited for is over.
+  useClearOnPageRestore(useCallback((busy: boolean) => {
+    openingRef.current = busy;
+    setOpening(busy);
+  }, []));
 
   const installationId = params.get('installation_id');
   const state = params.get('state');

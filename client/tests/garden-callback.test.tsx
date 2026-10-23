@@ -168,6 +168,23 @@ describe('GitHub garden callback', () => {
     }
   });
 
+  it('offers Connect again once more when Back restores the page from the browser cache', async () => {
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, origin: original.origin, assign } });
+    try {
+      finishAnswers(refusal(500, 'internal_error', 'Could not handle the GitHub request'));
+      await mount(`${CALLBACK}&code=one-time-code`);
+      await act(async () => { (await screen.findByRole('button', { name: en['github.connectAgain'] })).click(); });
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('button', { name: en['github.connecting'] })).toBeDisabled();
+      act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+      expect(screen.getByRole('button', { name: en['github.connectAgain'] })).toBeEnabled();
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
   it('sends a learner who changed the installation on GitHub back to the profile', async () => {
     await mount('?installation_id=555001&setup_action=update&code=one-time-code');
     expect(await screen.findByText('/profile#github-garden')).toBeInTheDocument();
