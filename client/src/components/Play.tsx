@@ -1172,8 +1172,14 @@ function RunningQuestion({
   useEffect(() => {
     if (!isPresenter || !hostSub) return;
     let cancelled = false;
+    // One read at a time: on a slow connection a read outlasting the 1.5 s
+    // tick stacked up more, and an older answer landing last drew counts
+    // that had already gone up.
+    let inFlight = false;
     setBuckets([]);
     const load = () => {
+      if (inFlight) return;
+      inFlight = true;
       fetchDistribution(code, questionIdx, hostSub)
         .then((r) => {
           if (!cancelled) {
@@ -1183,6 +1189,9 @@ function RunningQuestion({
         })
         .catch(() => {
           if (!cancelled) setDistributionStale(true);
+        })
+        .finally(() => {
+          inFlight = false;
         });
     };
     load();

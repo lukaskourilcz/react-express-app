@@ -327,6 +327,20 @@ describe('the classroom presenter screen', () => {
     expect(screen.getByRole('button', { name: 'Reveal answer' })).toBeInTheDocument();
   });
 
+  it('keeps one answer count read in flight on a slow connection', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    presenting({ question_duration_s: 0 });
+    let release!: () => void;
+    api.fetchDistribution.mockImplementation(() => new Promise((done) => { release = () => done({ buckets: [] }); }));
+    await mount();
+    await screen.findByText('Pick one?');
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(api.fetchDistribution).toHaveBeenCalledTimes(1);
+    await act(async () => { release(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_600); });
+    expect(api.fetchDistribution).toHaveBeenCalledTimes(2);
+  });
+
   it('never gives a player the key or the button', async () => {
     const match = running({ mode: 'classroom', questions: QUESTIONS });
     api.joinMatch.mockResolvedValue(match);
