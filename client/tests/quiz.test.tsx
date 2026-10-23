@@ -34,6 +34,11 @@ import PendingQuizResults from '../src/components/PendingQuizResults';
 import Leaderboard from '../src/components/Leaderboard';
 import { onXpToast } from '../src/lib/xp';
 
+// jsdom has no modal dialogs; leaving a quiz confirms in one.
+const dialogProto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
+dialogProto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
+dialogProto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
+
 const LEARNER = { id: 'user-quiz-test-0001', email: 'learner@example.test', user_metadata: {} };
 const PROGRESS_KEY = 'devquiz:in-progress';
 const PENDING_KEY = 'devshark:pending-quiz-receipts:v2';
@@ -413,6 +418,30 @@ describe('submitting', () => {
     await screen.findByText('1 / 1');
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(submits).toBe(1);
+  });
+
+  it('keeps a quiz started after Exit when the left quiz’s submit answers late', async () => {
+    let answer: (() => void) | undefined;
+    server.use(http.post('*/api/quiz/submit', () => new Promise<Response>((resolve) => {
+      answer = () => resolve(HttpResponse.json(graded([Q('a')])));
+    })));
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    await waitFor(() => expect(answer).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /exit quiz/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave quiz' }));
+    server.use(http.get('*/api/quiz/questions', () => HttpResponse.json({ sessionId: sessionFor('second'), expiresAt: Date.now() + 3_600_000, questions: [Q('n')] })));
+    fireEvent.click(await screen.findByRole('button', { name: /start quiz/i }));
+    expect(await screen.findByText('Question n?')).toBeInTheDocument();
+    await questionOnScreen();
+    fireEvent.keyDown(document.body, { key: '2' });
+
+    await act(async () => { answer!(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(screen.getByText('Question n?')).toBeInTheDocument();
+    expect(screen.queryByText('1 / 1')).not.toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem(PROGRESS_KEY)!)).toMatchObject({ sessionId: sessionFor('second'), answers: { n: 1 } });
+    expect(screen.getByRole('button', { name: /submit quiz/i })).toBeEnabled();
   });
 
   it('says when advanced was asked of topics that have none', async () => {

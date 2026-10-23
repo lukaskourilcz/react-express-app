@@ -217,6 +217,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // render, and a second Enter or click in that gap sent the answer set
   // twice: the result was recorded, announced and counted twice.
   const submittingRef = useRef(false);
+  // Which quiz is on screen, moved by every start and by leaving one. A submit
+  // answered after the learner left its quiz (Exit during a slow submit, then
+  // a new quiz) drew its result over the new screen and cleared the new quiz's
+  // saved progress. Its result is still recorded to the account.
+  const screenRef = useRef(0);
+  const leaveScreen = useCallback(() => {
+    screenRef.current += 1;
+    submittingRef.current = false;
+    setSubmitting(false);
+  }, []);
 
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   // The saved plan, used only to say whether this topic is part of it.
@@ -334,6 +344,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       fetchAbortRef.current?.abort();
       const controller = new AbortController();
       fetchAbortRef.current = controller;
+      leaveScreen();
 
       setLastStart({ mode: 'standard', count, difficulty, categories });
       setStop(null);
@@ -377,10 +388,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setState('error');
       }
     },
-    [t],
+    [leaveScreen, t],
   );
 
   const startDailyChallenge = useCallback(async () => {
+    leaveScreen();
     setLastStart({ mode: 'daily' });
     setStop(null);
     setState('loading');
@@ -414,12 +426,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setError(friendlyError(err));
       setState('error');
     }
-  }, [t]);
+  }, [leaveScreen, t]);
 
   const startPersonalizedReview = useCallback(async () => {
     fetchAbortRef.current?.abort();
     const controller = new AbortController();
     fetchAbortRef.current = controller;
+    leaveScreen();
     setLastStart({ mode: 'review' });
     setStop(null);
     setState('loading');
@@ -460,7 +473,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setError(friendlyError(error));
       setState('error');
     }
-  }, [config.quiz.maxCount, t, visibleCategoryOptions]);
+  }, [config.quiz.maxCount, leaveScreen, t, visibleCategoryOptions]);
 
   // Retry after an error, and "New quiz, same settings" after an expired
   // one, repeat how the last quiz was started: a failed daily retries the
@@ -570,6 +583,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const handleSubmit = useCallback(async () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    const screen = screenRef.current;
     setSubmitting(true);
     setAnswersLocked(true);
     setError(null);
@@ -585,10 +599,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           hinted: hintedIds,
         }),
       });
-      setResult(data);
-      setState('submitted');
-      clearProgress();
-      playComplete();
+      const onScreen = screen === screenRef.current;
+      const say = (message: string) => { if (onScreen) setSnack(message); };
+      if (onScreen) {
+        setResult(data);
+        setState('submitted');
+        clearProgress();
+        playComplete();
+      }
       // Bottom of the quiz funnel. Pairs with 'quiz_started' for conversion and
       // score-distribution analysis. No-op unless PostHog is configured.
       capture('quiz_submitted', {
@@ -606,7 +624,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           // Nothing to record. A daily fetched signed out is practice; with
           // every question retired there was nothing to grade, and the
           // result screen already says why.
-          if (data.totalQuestions > 0) setSnack(t(mode === 'daily' ? 'quiz.dailyPractice' : 'quiz.resultNotSaved'));
+          if (data.totalQuestions > 0) say(t(mode === 'daily' ? 'quiz.dailyPractice' : 'quiz.resultNotSaved'));
         } else {
           const pending: PendingReceipt = {
             userId: user.id,
@@ -634,9 +652,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             // say so. Anything else waits in the queue and is sent again.
             if (isReceiptRefused(writeError)) {
               dropPendingReceipt(attemptKey);
-              setSnack(t('quiz.resultNotSaved'));
+              say(t('quiz.resultNotSaved'));
             } else {
-              setSnack(t('quiz.streakWarning'));
+              say(t('quiz.streakWarning'));
             }
           }
         }
@@ -646,6 +664,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         awardQuestXp(data.questXp, 'quiz');
       }
     } catch (err) {
+      // The learner left this quiz: the screen is another one's now.
+      if (screen !== screenRef.current) return;
       // An hour past its start the session is gone, and an answer set that
       // was already graded cannot be graded again. Neither improves with
       // another submit, so the quiz stops and says what happened.
@@ -657,12 +677,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setError(friendlyError(err));
       }
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (screen === screenRef.current) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }, [answers, clearProgress, isAuthenticated, sessionId, user, t, questions, mode, hintedIds]);
 
   const handleRestart = () => {
+    leaveScreen();
     clearProgress();
     setState('ready');
     setQuestions([]);
