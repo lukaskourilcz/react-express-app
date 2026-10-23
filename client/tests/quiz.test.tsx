@@ -190,6 +190,17 @@ describe('focus', () => {
   });
 });
 
+describe('touch targets', () => {
+  it('gives the hint and report buttons beside the question 44px', async () => {
+    await startQuiz([Q('a', { introduction: 'Think about types.' })]);
+    for (const name of ['Show hint', 'Report this question']) {
+      const button = screen.getByRole('button', { name });
+      expect(button.style.width).toBe('44px');
+      expect(button.style.height).toBe('44px');
+    }
+  });
+});
+
 describe('a question retired while the quiz was open', () => {
   // The bookmark icon became Save as Shark Card (owner decision 12), which
   // needs an account, so the learner signs in here.

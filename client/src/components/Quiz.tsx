@@ -168,12 +168,14 @@ const ReportFlagIcon = () => (
 
 // Shared style for the small icon-only action buttons in the review list
 // (bookmark / report / hint) — a MUI-free stand-in for IconButton size="small".
+// 44px square, the touch target every button gets: at 40 the hint and report
+// buttons beside the question were under it.
 const iconBtnStyle = (color: string): React.CSSProperties => ({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: 40,
-  height: 40,
+  width: 44,
+  height: 44,
   padding: 0,
   margin: 0,
   border: 'none',
