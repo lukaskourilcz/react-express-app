@@ -20,6 +20,8 @@ vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
 const openSignIn = vi.hoisted(() => vi.fn());
 vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
 vi.mock('../src/lib/billing', () => ({ useBilling: () => ({ known: true, enabled: false, launchOffer: false }) }));
+const motion = vi.hoisted(() => ({ reduce: false }));
+vi.mock('../src/lib/motion', async (importOriginal) => ({ ...(await importOriginal<object>()), useReducedMotion: () => motion.reduce }));
 
 // The hero's sign-in link opens the sign-in dialog, where Google comes first
 // and an email and password follow. The dialog's Google button keeps the
@@ -139,4 +141,29 @@ it('moves focus to the sample verdict once an answer disables the options', () =
   fireEvent.click(option);
   expect(option).toBeDisabled();
   expect(within(sample.parentElement!).getByRole('status')).toHaveFocus();
+});
+
+// A topic card's fin school swims 140px across the card on hover; under
+// reduced motion it only fades in where it rests.
+it.each([
+  [false, true],
+  [true, false],
+])('keeps the topic card fins still under reduced motion (%s)', (reduce, swims) => {
+  server.use(settingsHandler, freeEntitlementHandler);
+  motion.reduce = reduce;
+  try {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+    const card = screen.getByRole('button', { name: 'Learn Next.js' });
+    fireEvent.mouseEnter(card);
+    const fins = [...card.querySelectorAll<HTMLElement>(':scope > span[aria-hidden]')].filter((span) => span.style.transform);
+    expect(fins.length).toBeGreaterThan(0);
+    for (const fin of fins) {
+      expect(fin.style.opacity).toBe('1');
+      expect(/translateX\((?!0px)/.test(fin.style.transform)).toBe(swims);
+      expect(fin.style.transform.includes('rotate')).toBe(swims);
+    }
+  } finally {
+    motion.reduce = false;
+  }
 });

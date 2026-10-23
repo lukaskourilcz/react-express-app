@@ -21,6 +21,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { openSignIn } from '../lib/signInDialog';
 import { useActiveSubject } from '../lib/subjects';
+import { useReducedMotion } from '../lib/motion';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
@@ -47,6 +48,10 @@ function TopicCard({
 }) {
   const [hover, setHover] = useState(false);
   const t = useT();
+  // Under reduced motion the school fades in where it rests instead of
+  // swimming 140px across the card (the CTAs in LandingKit do the same).
+  const reduce = useReducedMotion();
+  const swim = hover && !reduce;
   return (
     <button
       type="button"
@@ -76,7 +81,7 @@ function TopicCard({
       {topic.fins.map((f: FinSpec, i) => {
         // The V9 fin faces right: mirror it only when it travels left.
         const flip = f.dir;
-        const rock = f.rock && hover ? ` rotate(${f.dir * -4}deg)` : '';
+        const rock = f.rock && swim ? ` rotate(${f.dir * -4}deg)` : '';
         return (
           <span
             key={i}
@@ -84,8 +89,8 @@ function TopicCard({
             style={{
               position: 'absolute', left: f.left, bottom: Math.round(5 - f.size * 0.25) + 'px', lineHeight: 0,
               opacity: hover ? 1 : 0,
-              transform: `translateX(${hover ? f.dir * 140 : 0}px) scaleX(${flip})${rock}`,
-              transition: `transform ${f.dur}s ease-in-out ${f.delay}s, opacity 0.3s ease`,
+              transform: `translateX(${swim ? f.dir * 140 : 0}px) scaleX(${flip})${rock}`,
+              transition: reduce ? 'opacity 0.3s ease' : `transform ${f.dur}s ease-in-out ${f.delay}s, opacity 0.3s ease`,
               pointerEvents: 'none',
             }}
           >
