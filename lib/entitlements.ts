@@ -137,10 +137,19 @@ export function parseValidUntil(value: unknown, now = Date.now()): { ok: true; v
   return { ok: true, value: new Date(time).toISOString() };
 }
 
+/** A Supabase Auth account id, as supabase-js checks it before it asks Auth. */
+const AUTH_USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 /** Whether the account exists. An unconfigured admin API (local development)
  * cannot tell, and does not block the grant. The billing webhook asks the same
- * question before it mirrors a subscription (`lib/billing/sync.ts`). */
+ * question before it mirrors a subscription (`lib/billing/sync.ts`).
+ *
+ * An id that is not a lowercase UUID names no account. supabase-js throws for
+ * one before asking Auth, and the catch below, meant for an Auth that does not
+ * answer, read that as "exists": a mistyped id got a Premium grant nobody
+ * holds. */
 export async function accountExists(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  if (!AUTH_USER_ID.test(userId)) return false;
   try {
     const { data, error } = await withTimeout(supabase.auth.admin.getUserById(userId));
     if (error) return !/not.?found|invalid/i.test(error.message ?? '');

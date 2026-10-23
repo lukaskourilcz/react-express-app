@@ -1024,12 +1024,26 @@ async function tierContracts() {
     assert.equal((planDown.body as { error: { code: string } }).error.code, 'entitlement_unavailable');
     const grant = mockResponse();
     await handleAdminEntitlements(
-      { method: 'POST', headers: {}, query: {}, body: { action: 'grant', userId: 'contract-owner-account', validUntil: null, note: 'contract' } } as never,
+      { method: 'POST', headers: {}, query: {}, body: { action: 'grant', userId: '0c0ffee0-0000-4000-8000-00000000c039', validUntil: null, note: 'contract' } } as never,
       grant as never,
       before039 as never,
     );
     assert.equal(grant.statusCode, 503);
     assert.equal((grant.body as { error: { code: string } }).error.code, 'migration_required', 'the admin grant names the missing migration');
+    // A mistyped id is no account. supabase-js throws for an id that is not a
+    // UUID before it asks Auth; that must not read as "the account exists".
+    let granted = false;
+    const mistyped = mockResponse();
+    await handleAdminEntitlements(
+      { method: 'POST', headers: {}, query: {}, body: { action: 'grant', userId: '0c0ffee0-0000-4000-8000', validUntil: null, note: 'contract' } } as never,
+      mistyped as never,
+      {
+        rpc: async () => { granted = true; return { data: 'grant-id', error: null }; },
+        auth: { admin: { getUserById: async () => { throw new Error('@supabase/auth-js: Expected parameter to be UUID but is not'); } } },
+      } as never,
+    );
+    assert.equal(mistyped.statusCode, 404, `a grant to an id that is not an account is refused (${JSON.stringify(mistyped.body)})`);
+    assert.equal(granted, false, 'nothing is granted to a mistyped id');
     // The owner's view of one account: a plan that could not be read is not
     // shown as "not Premium".
     const grantRows: Record<string, unknown> = {
