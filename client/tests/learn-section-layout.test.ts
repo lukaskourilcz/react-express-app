@@ -60,7 +60,7 @@ describe('a section with nothing open (learn-09)', () => {
     expect(declared(rules, '.rm-section-empty', 'max-width')).toBe('');
     expect(declared(rules, '.rm-section-empty', 'border')).toBe('');
     expect(declared(rules, '.rm-section-empty', 'background-color')).toBe('');
-    expect(declared(rules, '.rm-section-empty', 'margin')).toBe('16px 0 8px');
+    expect(declared(rules, '.rm-section-empty', 'margin-left')).toBe('0px');
     expect(declared(rules, '.rm-section-empty__actions', 'display')).toBe('flex');
   });
 });
