@@ -22,13 +22,13 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import ErrorRetry from './ErrorRetry';
+import { PageHeader } from './ui/PageHeader';
 import { useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
 import { useAuth } from '../lib/auth';
@@ -302,19 +302,16 @@ function Leaderboard() {
 
   return (
     <div className="lb">
-      <header className="lb-head">
-        <Heading level={1} type="display-3">
-          {t('leaderboard.title')}
-        </Heading>
-        {/* What the board ranks is the page lead, so the controls sit right
-            on the table they filter (UX audit social-account-09). */}
-        <p className="lb-scope">{scope}</p>
+      {/* The shared operational header (social-account-11). What the board
+          ranks is the page lead, so the controls sit right on the table they
+          filter (UX audit social-account-09). */}
+      <PageHeader title={t('leaderboard.title')} lead={scope}>
         {windowUnavailable && tab === 'all' && (
-          <p className="lb-scope" role="status">
+          <p className="ss-page-header__lead" role="status">
             {t('leaderboard.windowUnavailable')}
           </p>
         )}
-      </header>
+      </PageHeader>
 
       <div className="lb-controls">
         <SegmentedControl

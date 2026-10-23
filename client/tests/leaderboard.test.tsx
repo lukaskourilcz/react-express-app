@@ -72,7 +72,7 @@ it('says what the board ranks under the h1 and puts the controls right on the ta
   expect(within(head).getByText(/Five answers put you on the board./)).toBeVisible();
   // One control row: the period control and nothing in between it and the board.
   const controls = document.querySelector('.lb-controls')!;
-  expect(controls.querySelector('.lb-scope')).toBeNull();
+  expect(controls.querySelector('.ss-page-header__lead')).toBeNull();
   expect(controls.nextElementSibling).toHaveClass('lb-board');
 });
 

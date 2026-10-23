@@ -306,6 +306,10 @@ coming back. The tokens and the map are in
 - **A secondary path is a row, not a card.** A short form that is not the
   page's task (the voucher with checkout on) is one row: its title on the
   left, the field and a secondary button beside it.
+- **One operational header.** An operational page's title is the shared
+  `PageHeader` (`components/ui/PageHeader.tsx`): optional `<Kicker>`, an ink
+  `h1` at `display-3`, one lead line, 8px apart. Do not hand-build an `h1`
+  with its own size, weight or gap.
 - **The scope sentence is the page lead.** An operational page says what it
   shows under the `h1`, and its controls sit right on what they filter.
 - **Icon buttons are 44×44** with a 20px glyph and keep their tooltip and

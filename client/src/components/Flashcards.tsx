@@ -13,8 +13,6 @@
 // a pack.
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heading } from '@astryxdesign/core/Heading';
-import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
@@ -33,7 +31,7 @@ import ErrorRetry from './ErrorRetry';
 import { AppToast } from './ui/AppToast';
 import { BookmarkIcon, BookIcon } from './ui/icons';
 import { StatePanel } from './ui/StatePanel';
-import { Kicker } from './landing/LandingKit';
+import { PageHeader } from './ui/PageHeader';
 import './DeepEndScreens.css';
 import './SharkCards.css';
 
@@ -184,11 +182,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   return (
     <div className="sc-deck">
       {!embedded && (
-        <header className="sc-deck__header">
-          <Kicker>{t('sharkCards.kicker')}</Kicker>
-          <Heading level={1}>{t('sharkCards.title')}</Heading>
-          <Text type="supporting" color="secondary">{t('sharkCards.lead')}</Text>
-        </header>
+        <PageHeader title={t('sharkCards.title')} lead={t('sharkCards.lead')} />
       )}
 
       <section className="sc-deck__body" aria-labelledby={positionId} onKeyDown={onDeckKey}>

@@ -16,7 +16,7 @@ import LoadingScreen from './LoadingScreen';
 // Static, not lazy: the Shark Cards tab is what /collection opens on, and a
 // lazy deck drew the page first, then a loader in its body, then the cards.
 import Flashcards from './Flashcards';
-import { Kicker } from './landing/LandingKit';
+import { PageHeader } from './ui/PageHeader';
 import '../coding/Coding.css';
 
 function SavedChallenges() {
@@ -75,11 +75,9 @@ export default function Collection() {
   // tab, and the nav calls it Shark Cards.
   const cards = selected === 'questions';
   return <div className="cd-page ss-pop">
-    <header>
-      <Kicker>{t(cards ? 'sharkCards.kicker' : 'collection.heading')}</Kicker>
-      <h1>{t(cards ? 'sharkCards.title' : 'collection.challengesTitle')}</h1>
-      <p className="cd-lead">{t(cards ? 'sharkCards.lead' : 'collection.subtitle')}</p>
-    </header>
+    {/* The shared operational header (social-account-11). No kicker: the
+        tabs under it already say which shelf is open (social-account-10). */}
+    <PageHeader title={t(cards ? 'sharkCards.title' : 'collection.challengesTitle')} lead={t(cards ? 'sharkCards.lead' : 'collection.subtitle')} />
     <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <Button key={tab} variant={selected === tab ? 'primary' : 'secondary'} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })} label={t(`collection.${tab}`)} />)}</nav>
     {selected === 'questions' ? <Flashcards embedded /> : <SavedChallenges />}
   </div>;

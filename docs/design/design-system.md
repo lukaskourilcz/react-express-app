@@ -98,7 +98,7 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 ## Shared component patterns
 
 - Editorial header: kicker, `h1`, concise supporting text, optional single action.
-- Operational header: `h1`, scope/status, compact actions. The scope sentence is the lead under the `h1`, and the one control row sits right on the table or list it filters (the Leaderboard: period control left, topic filter right, both 44px, then the board).
+- Operational header: `PageHeader` (`client/src/components/ui/PageHeader.tsx`): an optional `<Kicker>`, the route's one `h1` in ink at Astryx `display-3`, and one lead line (at most 68ch), 8px apart, on the column's left edge; a status line that belongs to the header goes in as its child. `/collection`, `/cards` and `/leaderboard` use it (UX audit social-account-11). Leave the kicker out when tabs or the title already say it. The scope sentence is the lead under the `h1`, and the one control row sits right on the table or list it filters (the Leaderboard: period control left, topic filter right, both 44px, then the board). A public page keeps the editorial `Page` header; a state with nothing else to show is a `StatePanel`, not a header.
 - Secondary path: a short form that is not the page's task (the voucher on `/premium` while checkout is on) is one row without a card: its `h2` on the left, the field (at most 320px) and a secondary button beside it, stacking below 600px. It keeps its card only while it is the page's way in.
 - Panel: `.ss-panel`; clickable lift only with `.ss-lift`; read-only raised card with `.ss-raised`.
 - Choice: `RadioCardGroup`/`RadioCard` or `CheckCard`, not checkbox-emitting cards for radio jobs.
