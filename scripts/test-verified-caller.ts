@@ -709,8 +709,10 @@ async function main() {
       'without a Google identity the boards get no name and no picture, and never the address',
     );
     seen.length = 0;
+    authChecks = 0;
     const deleted = await user('delete-account', { method: 'DELETE', account: EMAIL, body: { confirmation: 'DELETE' } });
     assert.equal(deleted.statusCode, 200, `an email account deletes like any other (${JSON.stringify(deleted.body)})`);
+    assert.equal(authChecks, 1, 'a deletion asks Supabase Auth once, for the rate limit and the deletion alike');
     assert.deepEqual(reads('/rest/v1/rpc/delete_user_data').map((one) => (one.body as Row).p_user_id), [EMAIL.id, EMAIL.id], 'its data is erased, before and after the identity');
     assert.equal(seen.filter((one) => one.method === 'DELETE' && one.path === `/auth/v1/admin/users/${EMAIL.id}`).length, 1, 'and its sign-in identity is deleted');
     console.log('PASS verified caller: an email and password account signs in, stays unnamed on boards, and deletes');

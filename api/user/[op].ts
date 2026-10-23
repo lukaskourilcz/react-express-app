@@ -12,7 +12,6 @@ import {
   withRequestContext,
   ServiceUnavailableError,
 } from '../../lib/http';
-import { requireAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
 import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
@@ -164,7 +163,9 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  const auth = await requireAuth(req);
+  // Verified once per request: the deletion rate limit already asked Auth.
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
   const body = (req.body || {}) as { confirmation?: unknown };
   if (body.confirmation !== 'DELETE') {
     return jsonError(res, 400, 'confirmation_required', 'Account deletion must be confirmed');
