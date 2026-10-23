@@ -163,6 +163,9 @@ describe('the cookie settings dialog', () => {
     const box = await openDialog();
     const save = within(box).getByRole('button', { name: 'Save choices' });
     const close = within(box).getByRole('button', { name: 'Close' });
+    // An Astryx button, so the shared floor makes it 44x44 on a mouse as well
+    // (UX audit shell-public-10; tests/touch-and-motion.test.ts).
+    expect(close).toHaveClass('astryx-button');
     save.focus();
     fireEvent.keyDown(save, { key: 'Tab' });
     expect(document.activeElement).toBe(close);

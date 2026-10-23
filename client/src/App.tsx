@@ -182,7 +182,7 @@ const MenuIcon = () => (
 // Premium: a cut gem, the one plan mark in the header. Decorative; the
 // button carries the word "Premium" as its accessible name and tooltip.
 const PremiumNavIcon = ({ member }: { member: boolean }) => (
-  <svg className={member ? 'ss-premium-nav-icon--member' : undefined} aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={member ? 'ss-premium-nav-icon--member' : undefined} aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 3h12l4 6-10 12L2 9z" />
     <path d="M2 9h20M12 21 8 9l2-6M12 21l4-12-2-6" />
   </svg>
@@ -590,21 +590,24 @@ function App() {
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
                   the drawer covers them there. */}
               {signedIn && (
-                <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 2 }}>
+                // 44×44 like every other page control, with 20px glyphs and
+                // 4px apart (UX audit shell-public-10): they were 28px ghost
+                // buttons 2px apart beside a 56px account widget.
+                <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 4 }}>
                   {showLeaderboardIcon && (
                     <AxIconButton
                       variant="ghost"
-                      size="sm"
+                      size="lg"
                       label={t('nav.leaderboard')}
                       tooltip={t('nav.leaderboard')}
                       onClick={() => navigate('/leaderboard')}
                       data-route="/leaderboard"
-                      icon={<TrophyIcon size={16} />}
+                      icon={<TrophyIcon size={20} />}
                     />
                   )}
                   <AxIconButton
                     variant="ghost"
-                    size="sm"
+                    size="lg"
                     label={t(membership.tier === 'premium' ? 'nav.premiumMember' : 'nav.premium')}
                     tooltip={t('nav.premium')}
                     onClick={() => navigate('/premium')}
@@ -613,12 +616,12 @@ function App() {
                   />
                   <AxIconButton
                     variant="ghost"
-                    size="sm"
+                    size="lg"
                     label={t('nav.shop')}
                     tooltip={t('nav.shop')}
                     onClick={() => navigate('/shop')}
                     data-route="/shop"
-                    icon={<CoinIcon size={16} />}
+                    icon={<CoinIcon size={20} />}
                   />
                 </span>
               )}
