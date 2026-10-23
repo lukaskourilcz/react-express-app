@@ -1,5 +1,6 @@
 // /premium, the plan table, the Terms and the privacy policy (#222).
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
@@ -204,6 +205,13 @@ describe('/premium', () => {
     const refund = screen.getByText('Can I withdraw and get my money back?').closest('details')!;
     expect(refund).toHaveTextContent('Yes, within 14 days of your first payment, once per account.');
     expect(refund).toHaveTextContent('After 14 days, or once the refund has been used, the same page cancels at the end of the paid period.');
+  });
+});
+
+describe('the /premium title', () => {
+  it('balances its two lines, so \'month\' never stands alone in the 800px column', () => {
+    const css = readFileSync(new URL('../src/components/PremiumPage.css', import.meta.url), 'utf8');
+    expect(css).toContain('.ss-info-page:has(> .ss-premium-page) .ss-info-page__header h1 { text-wrap: balance; }');
   });
 });
 

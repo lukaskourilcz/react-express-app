@@ -3,6 +3,9 @@
  * included list and the questions. Tokens only; the accent marks the price and
  * nothing else. */
 .ss-premium-page { display: flex; flex-direction: column; gap: clamp(1.75rem, 4vw, 2.5rem); }
+/* The price title balances its lines: in the 800px column 'Everything in
+   devShark for €4.99 a month' left 'month' alone on a second line. */
+.ss-info-page:has(> .ss-premium-page) .ss-info-page__header h1 { text-wrap: balance; }
 /* Every section h2 on /premium (Choose a plan, the plan table, Have a
    voucher? after the plans, Questions) is the shared .ss-section-title, the
    one public section-title size (UX audit money-08, shell-public-16): there
