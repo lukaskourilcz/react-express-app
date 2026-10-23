@@ -14,19 +14,12 @@
  * The fourth token, --ss-width-task (640px), is the column INSIDE a page
  * (questions, auth, billing and checkout cards), never a route width.
  */
-type RouteWidth = 'narrow' | 'standard' | 'wide';
-
-/** The one route-to-width map. /dev is the standalone admin console and has
- * no cap ('none'). Everything not listed is narrow. */
-function routePageWidth(pathname: string): RouteWidth | 'none' {
-  if (pathname.startsWith('/dev')) return 'none';
-  if (/^\/coding(\/|$)/.test(pathname)) return 'wide';
-  if (/^\/(profile|play(\/.*)?)?$/.test(pathname)) return 'standard';
-  return 'narrow';
-}
-
-/** The CSS max-width of a route's page: its width token, or none. */
+/** The one route-to-width map, as the CSS max-width of a route's page: its
+ * width token, or none for /dev (the standalone admin console). /coding/* is
+ * wide; home, /profile and /play(/*) are standard; everything else is
+ * narrow. One expression, as it ships in the initial load. */
 export function pageMaxWidth(pathname: string): string {
-  const width = routePageWidth(pathname);
-  return width === 'none' ? width : `var(--ss-width-${width})`;
+  return pathname.startsWith('/dev')
+    ? 'none'
+    : `var(--ss-width-${/^\/coding(\/|$)/.test(pathname) ? 'wide' : /^\/(profile|play(\/.*)?)?$/.test(pathname) ? 'standard' : 'narrow'})`;
 }
