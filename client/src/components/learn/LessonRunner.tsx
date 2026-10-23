@@ -6,10 +6,20 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button as AxButton } from '@astryxdesign/core/Button';
-import { IconButton } from '@astryxdesign/core/IconButton';
+import { Text } from '@astryxdesign/core/Text';
 import { Kicker } from '../landing/LandingKit';
 import { AppToast } from '../ui/AppToast';
-import { AnswerOptionList, QuestionHint } from '../question';
+import {
+  AnswerOptionList,
+  ExitIcon,
+  QuestionActions,
+  QuestionFeedback,
+  QuestionHeader,
+  QuestionHint,
+  QuestionIconButton,
+  QuestionShell,
+  ReportFlagIcon,
+} from '../question';
 import { useIsMobile } from '../../lib/useMediaQuery';
 import type { RoadmapPlayable, RoadmapQuestion, RoadmapAnswerResult } from '../../types/quiz';
 import type { LearnRepeatXp } from '../../../../shared/repeat-xp';
@@ -36,7 +46,7 @@ import { LessonFigures } from '../ui/LessonFigure';
 import { figuresFor } from '../../../../shared/lesson-figures';
 import { glossaryDomainFor } from '../../lib/glossaryDomain';
 import { RedFlagDialog } from '../RedFlagDialog';
-import { IconTile, CloseIcon, FlagIcon, TrophyIcon } from '../ui/icons';
+import { IconTile, CloseIcon, TrophyIcon } from '../ui/icons';
 import { lazyShellPart } from '../../lib/routeRecovery';
 import { ShellPartBoundary } from '../ShellPartBoundary';
 import ErrorRetry from '../ErrorRetry';
@@ -438,14 +448,10 @@ export function LessonRunner({
   // A revealed answer takes focus to its Continue (or Try again); a question
   // takes it to the question, where the number keys still answer.
   const questionRef = useRef<HTMLDivElement>(null);
-  const feedbackActionRef = useRef<HTMLButtonElement>(null);
   const showingQuestion = !finished && !restart && !showIntro && !codingPhase;
   useEffect(() => {
     if (showingQuestion) questionRef.current?.focus({ preventScroll: true });
   }, [showingQuestion, qIndex]);
-  useEffect(() => {
-    if (revealed || answerError) feedbackActionRef.current?.focus({ preventScroll: true });
-  }, [revealed, answerError]);
 
   if (restart) {
     return (
@@ -697,157 +703,105 @@ export function LessonRunner({
 
   const progressPct = ((qIndex + (revealed ? 1 : 0)) / total) * 100;
   const isRight = grade?.isCorrect === true;
+  const counter = t('roadmap.question', { current: qIndex + 1, total });
+  // After grading (or a failed send) the one primary is Continue, Finish, See
+  // the result or Try again. A key per state remounts the row, so focus moves
+  // to the new action each time.
+  const feedbackAction = answerError
+    ? {
+      label: t('roadmap.retry'),
+      onClick: () => { if (revealed) void advance(); else if (selected !== null) void choose(selected); },
+      disabled: grading || completing || (!revealed && selected === null),
+    }
+    : grade
+      ? {
+        label: outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish'),
+        onClick: () => void advance(),
+        disabled: completing,
+      }
+      : null;
 
   return (
-    // One-viewport lesson layout matching the Quiz card geometry: 560px
-    // column, content capped at ~80% height on sm+ and centred; question
-    // scrolls, answer options anchored toward the bottom in a stable position.
-    <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: isMobile ? 680 : 560, margin: '0 auto' }}>
-    <div style={{ flex: '1 1 auto', minHeight: 0, maxHeight: isMobile ? undefined : '80%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header: exit + (hearts for a level, progress bar for a checkpoint) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexShrink: 0 }}>
-        <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="md" label={t('roadmap.exit')} onClick={onExit} />
-        {isCheckpoint ? (
+    <>
+      {/* One question screen from the shared parts (UX audit U2, learn-02,
+          learn-03, questions-01): the 640px shell, the level in the h1, the
+          answers top-anchored under a question block of one height, the
+          verdict in normal flow under them and Continue in the action row.
+          Nothing is drawn over the answers, so the learner's own pick and the
+          right answer stay in sight beside the explanation. */}
+      <QuestionShell
+        ref={questionRef}
+        questionId="lesson-question"
+        header={
+          <QuestionHeader
+            title={`${isCheckpoint ? t('roadmap.checkpoint') : t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
+            progress={{ value: progressPct, label: counter }}
+            status={isCheckpoint
+              ? <Text type="supporting" color="secondary" weight="bold">{correctCount}/{total}</Text>
+              : <HeartMeter mistakes={mistakes} max={MAX_HEARTS} hit={heartHit} t={t} />}
+            meta={<Text type="supporting" color="secondary">{counter}</Text>}
+            tools={
+              <>
+                <QuestionIconButton label={t('flag.ariaLabel')} icon={<ReportFlagIcon />} onClick={() => setFlagOpen(true)} />
+                <QuestionIconButton label={t('roadmap.exit')} icon={<ExitIcon />} onClick={onExit} />
+              </>
+            }
+          />
+        }
+        question={
           <>
-            <div
-              role="progressbar"
-              aria-label={t('roadmap.question', { current: qIndex + 1, total })}
-              aria-valuenow={Math.round(progressPct)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: 'var(--color-background-muted)', overflow: 'hidden' }}
-            >
-              <div style={{ height: '100%', width: `${progressPct}%`, borderRadius: 6, backgroundColor: accent, transition: 'width 0.35s ease' }} />
-            </div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-              {correctCount}/{total}
-            </span>
+            {renderQuestion(question.question)}
+            {/* One control for the whole item: the question, every option and
+                the explanation. Beside the block rather than inside an option,
+                so it can never select an answer, and the same list for every
+                option, so it can never single one out. */}
+            <TermsBar
+              texts={[question.question, ...question.options, grade?.explanation]}
+              domain={glossaryDomainFor(playable.topic)}
+            />
           </>
-        ) : (
-          <>
-            <HeartMeter mistakes={mistakes} max={MAX_HEARTS} hit={heartHit} t={t} />
-            <div style={{ flex: 1 }} />
-          </>
+        }
+        actions={feedbackAction && (
+          <QuestionActions key={answerError ? 'retry' : 'next'} primary={feedbackAction} focusPrimary />
         )}
-        <IconButton
-          label={t('flag.ariaLabel')}
-          icon={<FlagIcon size={16} />}
-          variant="ghost"
-          size="md"
-          tooltip={t('flag.ariaLabel')}
-          onClick={() => setFlagOpen(true)}
+      >
+        {/* The shared answer list (UX audit questions-04): 48px rows, the
+            brand accent for the selection, and the graded marks in words. A
+            press grades at once, so onActivate answers; arrow keys only browse. */}
+        <AnswerOptionList
+          options={question.options}
+          value={selected}
+          onChange={setSelected}
+          onActivate={(index) => void choose(index)}
+          labelledBy="lesson-question"
+          disabled={revealed || grading}
+          grade={revealed && grade ? { correct: grade.correctAnswer, picked: selected } : null}
         />
-      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap', flexShrink: 0 }}>
-        <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
-          {`${isCheckpoint ? t('roadmap.checkpoint') : t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
-        </span>
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginLeft: 'auto' }}>
-          {t('roadmap.question', { current: qIndex + 1, total })}
-        </span>
-      </div>
+        {/* The keyboard hint keeps its line in every state (UX audit
+            questions-02): hiding the words after grading moves nothing. */}
+        <QuestionHint max={question.options.length} verb="answer" hidden={revealed || !!answerError} />
 
-      {/* Question — the only region that scrolls when long. */}
-      {/* Focused when a question opens (see above); not in the tab order, and
-          no ring, as for <main>: it is a place to read, not a control. */}
-      <div id="lesson-question" ref={questionRef} tabIndex={-1} style={{ fontWeight: 500, marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', outline: 'none' }}>
-        {renderQuestion(question.question)}
-        {/* One control for the whole item: the question, every option and the
-            explanation. Beside the block rather than inside an option, so it
-            can never select an answer, and the same list for every option, so
-            it can never single one out. */}
-        <TermsBar
-          texts={[question.question, ...question.options, grade?.explanation]}
-          domain={glossaryDomainFor(playable.topic)}
-        />
-      </div>
-
-      {/* The shared answer list (UX audit questions-04): 48px rows, the
-          brand accent for the selection, and the graded marks in words. A
-          press grades at once, so onActivate answers; arrow keys only browse. */}
-      <AnswerOptionList
-        options={question.options}
-        value={selected}
-        onChange={setSelected}
-        onActivate={(index) => void choose(index)}
-        labelledBy="lesson-question"
-        disabled={revealed || grading}
-        grade={revealed && grade ? { correct: grade.correctAnswer, picked: selected } : null}
-      />
-
-      {/* The keyboard hint keeps its line in every state (UX audit
-          questions-02): hiding the words after grading moves nothing. */}
-      <QuestionHint max={question.options.length} verb="answer" hidden={revealed || !!answerError} />
-
-      {/* Feedback OVERLAYS the answer options — a solid card floating over
-          the bottom of the lesson viewport, so the anchored options don't get
-          shoved around when the grade lands. Live region keeps AT informed. */}
-      {(revealed || answerError) && (
-        <div
-          aria-live="polite"
-          style={{
-            position: 'absolute',
-            left: isMobile ? 8 : 16,
-            right: isMobile ? 8 : 16,
-            bottom: isMobile ? 12 : 20,
-            zIndex: 5,
-          }}
-        >
-          <div
-            className="rm-feedback"
-            style={{
-              padding: 16,
-              borderRadius: 8,
-              borderLeft: `4px solid ${isRight ? 'var(--ss-success)' : 'var(--ss-error)'}`,
-              backgroundColor: 'var(--color-background-surface)',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
-              maxHeight: '48vh',
-              overflowY: 'auto',
-            }}
+        {/* The verdict, under the answers it explains. The Banner is a status
+            (or an alert for a failed send), so it is read out; focus goes to
+            Continue in the action row. */}
+        {answerError ? (
+          <QuestionFeedback status="error" title={answerError} autoFocus={false} />
+        ) : revealed && grade ? (
+          <QuestionFeedback
+            status={isRight ? 'success' : 'error'}
+            title={isRight ? t('roadmap.correct') : t('roadmap.incorrect')}
+            description={grade.explanation}
+            autoFocus={false}
           >
-            {answerError ? (
-              <>
-                <div role="alert" style={{ fontWeight: 700, color: 'var(--ss-error)' }}>{answerError}</div>
-                <button
-                  ref={feedbackActionRef}
-                  type="button"
-                  className="rm-accent-btn"
-                  onClick={() => revealed ? void advance() : selected !== null ? void choose(selected) : undefined}
-                  disabled={grading || completing || (!revealed && selected === null)}
-                  style={{ marginTop: 16, width: '100%', ...accentFill }}
-                >
-                  {t('roadmap.retry')}
-                </button>
-              </>
-            ) : grade ? (
-              <>
-                <div style={{ fontWeight: 800, color: isRight ? 'var(--ss-success)' : 'var(--ss-error)', marginBottom: 4 }}>
-                  {isRight ? t('roadmap.correct') : t('roadmap.incorrect')}
-                </div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                  {grade.explanation}
-                </div>
-                {/* Shark Cards (owner decision 12): a missed question can be
-                    kept with the answer and explanation graded here. */}
-                {!isRight && (
-                  <SaveSharkCard question={question} correctIndex={grade.correctAnswer} explanation={grade.explanation ?? ''} />
-                )}
-                <button
-                  ref={feedbackActionRef}
-                  type="button"
-                  className="rm-accent-btn"
-                  onClick={() => void advance()}
-                  disabled={completing}
-                  style={{ marginTop: 16, width: '100%', ...accentFill }}
-                >
-                  {outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      )}
+            {/* Shark Cards (owner decision 12): a missed question can be
+                kept with the answer and explanation graded here. */}
+            {!isRight && (
+              <SaveSharkCard question={question} correctIndex={grade.correctAnswer} explanation={grade.explanation ?? ''} />
+            )}
+          </QuestionFeedback>
+        ) : null}
+      </QuestionShell>
 
       <RedFlagDialog open={flagOpen} onClose={() => setFlagOpen(false)} onSubmit={submitFlag} />
       <AppToast
@@ -856,8 +810,7 @@ export function LessonRunner({
         message={t('flag.sent')}
         autoHideDuration={3000}
       />
-    </div>
-    </div>
+    </>
   );
 }
 
