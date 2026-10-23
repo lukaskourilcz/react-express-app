@@ -338,7 +338,9 @@ coming back. The tokens and the map are in
   only where Premium opens it), and Premium is said once per topic, on its
   tile and in the next-step card, whose button then says 'See Premium'
   rather than 'Continue'. An empty section sits on the column's left edge
-  with one row of next steps, not a centred card.
+  with one row of next steps, not a centred card. While the header offers
+  the join, the join is the one `SwimCta` and every action under it is a
+  secondary.
 - **A summary on request goes below what it sums up.** Evidence, counts and
   other recaps of a page's content follow that content as one closed
   disclosure (`.lp-disclosure`), not a long section before it. A row that is
