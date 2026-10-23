@@ -877,6 +877,21 @@ describe('focus mode', () => {
     expect(localStorage.getItem(PENDING)).toBeNull();
   });
 
+  it('rests the run keys while a dialog is open, so a digit or Enter in it acts on nothing behind it', async () => {
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('button', { name: 'Exit run' }));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.keyDown(dialog, { key: '1' });
+    fireEvent.keyDown(document.body, { key: '1' });
+    expect(screen.getByRole('radio', { name: 'right' })).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep playing' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    // Closed, the keys work again.
+    fireEvent.keyDown(document.body, { key: '1' });
+    expect(screen.getByRole('radio', { name: 'right' })).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('lets the learner report the question on screen', async () => {
     await mount();
     await start();

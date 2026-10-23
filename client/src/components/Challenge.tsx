@@ -754,11 +754,14 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
 
   /* ─── keyboard during play ──────────────────────────────────── */
 
+  // The run's keys rest while the leave or report dialog is open: a digit or
+  // Enter pressed in the dialog must not pick an answer or move on behind it.
+  const dialogOpen = leaveOpen || reportTarget !== null;
   useEffect(() => {
-    if (phase !== 'playing' || !current) return;
+    if (phase !== 'playing' || !current || dialogOpen) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
+      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"], [role="dialog"], [role="alertdialog"]')) return;
       if (lastResult) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -780,7 +783,7 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [phase, current, selected, lastResult, submitAnswer, onContinue, timeLeft]);
+  }, [phase, current, selected, lastResult, submitAnswer, onContinue, timeLeft, dialogOpen]);
 
   /* ─── render ────────────────────────────────────────────────── */
 
