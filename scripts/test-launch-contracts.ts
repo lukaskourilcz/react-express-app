@@ -35,7 +35,7 @@ import {
 } from '../lib/quiz-tokens';
 import { checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
-import { handlePaymentWebhook, handleWallet, webhookDecision } from '../lib/rewards/handlers';
+import { handleCosmetic, handlePaymentWebhook, handleWallet, webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
 import roadmapHandler from '../api/quiz/roadmap';
@@ -6015,6 +6015,25 @@ async function main() {
     failing.add('cosmetic_entitlements');
     const broken = await read();
     assert.equal(broken.statusCode, 500, 'a failed cosmetics read is an error, not an empty list');
+  }
+
+  // ── the crown: only no op buys it ───────────────────────────────────────
+  {
+    const called: string[] = [];
+    const db = { rpc: async (fn: string) => { called.push(fn); return { data: true, error: null }; } };
+    const post = async (body: Record<string, unknown>) => {
+      const res = mockResponse();
+      await handleCosmetic({ method: 'POST', headers: {}, query: { op: 'cosmetic', user_id: 'contract-crown' }, body: { ...body, user_id: 'contract-crown' } } as never, res as never, db as never);
+      return res;
+    };
+    const typo = await post({ id: 'crown', op: 'equipp' });
+    assert.equal(typo.statusCode, 400, 'a misspelt op is refused');
+    assert.deepEqual(called, [], 'and spends nothing');
+    assert.equal((await post({ id: 'crown', op: 'equip' })).statusCode, 200);
+    assert.deepEqual(called, ['equip_cosmetic']);
+    called.length = 0;
+    assert.deepEqual((await post({ id: 'crown' })).body, { owned: true, alreadyOwned: false }, 'no op buys the crown, as the browser asks');
+    assert.deepEqual(called, ['purchase_cosmetic']);
   }
 
   // ── lesson figures (#183) ───────────────────────────────────────────────

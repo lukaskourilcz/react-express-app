@@ -503,6 +503,11 @@ export async function handleCosmetic(req: VercelRequest, res: VercelResponse, su
 
   const body = (req.body || {}) as Record<string, unknown>;
   if (body.id !== 'crown') return jsonError(res, 400, 'bad_request', 'Unknown cosmetic');
+  // No op is a purchase; any op but equip or unequip is a mistake, and a
+  // misspelt "equip" must not spend the learner's coins.
+  if (body.op !== undefined && body.op !== 'equip' && body.op !== 'unequip') {
+    return jsonError(res, 400, 'bad_request', 'Unknown cosmetic operation');
+  }
   const subject = walletSubject(req);
   if (!subject) return jsonError(res, 400, 'bad_request', 'Unknown subject');
   const settings = await getGameSettings();
