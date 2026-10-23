@@ -692,6 +692,12 @@ describe('the verdict', () => {
     expect(screen.getByText('Press 1–2 to select')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('radio', { name: 'right' }));
     expect(screen.getByText('Press 1–2 to select · Enter to submit')).toBeInTheDocument();
+    // Graded, no key picks an answer: the line keeps its place, hidden.
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await screen.findByRole('button', { name: /Next question|See result/ });
+    const hint = document.querySelector('.ss-question-hint')!;
+    expect(hint).toHaveAttribute('data-hidden', 'true');
+    expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
 });
 

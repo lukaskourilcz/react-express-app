@@ -1068,11 +1068,14 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
           disabled={!!lastResult || timeUp}
           grade={grade}
         />
+        {/* Graded, the answers take no key, so the line keeps its height
+            but says nothing, as in the Learn runner; the focused verdict
+            goes on with Enter. */}
         <QuestionHint
           max={current.options.length}
           verb="select"
-          next={lastResult ? 'continue' : selected != null ? 'submit' : undefined}
-          hidden={!lastResult && timeUp}
+          next={selected != null ? 'submit' : undefined}
+          hidden={!!lastResult || timeUp}
         />
         {!lastResult && strikeWaiting && <Banner status="warning" title={t('challenge.strikeRetrying')} />}
         {lastResult && (
