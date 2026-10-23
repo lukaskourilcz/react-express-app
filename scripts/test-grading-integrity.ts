@@ -282,6 +282,20 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   assert.equal(outage.body?.graderUnavailable, true, 'the verdict says the grader could not run');
   assert.equal(db.attemptIds.length, before, 'a runner outage writes no verdict');
   console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
+
+  // React code nested past the compiler's recursion threw a RangeError on
+  // this side, before any VM, and was answered as a runner outage the learner
+  // could only retry. It is the learner's error, as in the TypeScript grader.
+  const deep = { statusCode: 200, body: null as null | { verdict?: string; codeError?: string | null; graderUnavailable?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit({
+    method: 'POST', headers: { 'x-forwarded-for': '203.0.113.73' }, query: {},
+    body: { session: encodeCodingSession({ taskId: reactTask.id, track: 'react', userId: null }), code: `export default function App() { return ${'('.repeat(9000)}null${')'.repeat(9000)}; }` },
+  } as never, deep as never, null);
+  assert.equal(deep.statusCode, 200, JSON.stringify(deep.body));
+  assert.equal(deep.body?.verdict, 'error');
+  assert.equal(deep.body?.graderUnavailable, undefined, 'over-deep code is not a grader outage');
+  assert.match(deep.body?.codeError ?? '', /nests too deeply/);
+  console.log('PASS integrity: React code nested too deeply for the compiler is an error verdict, not a runner outage');
 }
 
 // ── a checkpoint hands over nothing that passes its milestone ───────────

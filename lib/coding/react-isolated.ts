@@ -25,6 +25,11 @@ function runnerFailure(phase: string, cause?: unknown): Error {
   return error;
 }
 
+/** What a learner hears for code the compiler cannot convert because it
+ * nests too deeply. */
+export const NESTED_TOO_DEEPLY =
+  'The compiler could not turn this code into JavaScript: it nests too deeply. Flatten the most deeply nested functions, calls or blocks and submit again.';
+
 const deadline = (): ReactSuiteOutcome => ({
   cases: [],
   passed: 0,
@@ -44,6 +49,16 @@ export async function runIsolatedReactSuite(input: {
   suite: string;
   appSource: string;
 }): Promise<ReactSuiteOutcome> {
+  // The learner's code is converted here, before any VM is asked for. Code
+  // nested past what the compiler's recursion can follow is the learner's
+  // error, as in the TypeScript grader, not an outage to retry.
+  let compiledApp: string;
+  try {
+    compiledApp = compileReactLearner(input.appSource);
+  } catch (error) {
+    if (error instanceof RangeError) return { cases: [], passed: 0, failed: 1, total: 1, compileError: NESTED_TOO_DEEPLY, timedOut: false };
+    throw runnerFailure('Compile', error);
+  }
   const snapshotId = process.env.REACT_RUNNER_SNAPSHOT_ID;
   if (!snapshotId) throw runnerFailure('Configuration');
   const runner = await readFile(
@@ -51,7 +66,6 @@ export async function runIsolatedReactSuite(input: {
   ).catch((error) => { throw runnerFailure('Artifact', error); });
   const signal = AbortSignal.timeout(22_000);
   const nonce = randomBytes(24).toString('hex');
-  const compiledApp=compileReactLearner(input.appSource);
   const compiledFixtures={'./fetchStub':compileReactLearner(FETCH_STUB_SOURCE,false),'./localFetch':compileReactLearner(LOCAL_FETCH_SOURCE,false)};
   const credentials =
     process.env.VERCEL_TOKEN &&
