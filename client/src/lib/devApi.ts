@@ -117,13 +117,15 @@ export interface GameSettings {
   coins: CoinSettings;
 }
 
-/** Check a password against the server. Returns false on 401, throws on network errors. */
+/** Check admin access (the session, or a legacy password) against the
+ * server. False when it refuses the caller: 401 for a wrong password, 403 for
+ * an account without the admin role. Throws on network and server errors. */
 export async function verifyPassword(pw: string): Promise<boolean> {
   try {
     await adminFetch('settings', { password: pw });
     return true;
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) return false;
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return false;
     throw err;
   }
 }
