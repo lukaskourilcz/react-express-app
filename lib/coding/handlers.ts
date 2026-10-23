@@ -275,7 +275,8 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
           draft = typeof previous.data?.code === 'string' ? prepareEvolvingDraft(previous.data.code, stage.challenge, stage.index) : null;
         }
       }
-    } catch {
+    } catch (error) {
+      logEvent({ status: 500, kind: 'task_progress_unavailable', reason: error instanceof Error ? error.message : 'unknown' });
       return jsonError(res, 500, 'db_error', 'Could not load coding progress');
     }
   } else {
@@ -950,7 +951,8 @@ export async function handleCodingProgress(req: VercelRequest, res: VercelRespon
     res.setHeader('Cache-Control', 'private, no-store');
     const out: CodingProgressResponse = { tasks, due, javascriptLevelsCleared: cleared, passedByTrack };
     return res.json(out);
-  } catch {
+  } catch (error) {
+    logEvent({ status: 500, kind: 'progress_unavailable', reason: error instanceof Error ? error.message : 'unknown' });
     return jsonError(res, 500, 'db_error', 'Could not load coding progress');
   }
 }

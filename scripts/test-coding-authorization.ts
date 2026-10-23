@@ -146,8 +146,14 @@ async function main() {
       },
     };
     const out = response();
-    await handleCodingTask({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: 'js-double-numbers', user_id: 'account-a' } } as never, out as never, unreadable as never);
+    const logged: string[] = [];
+    const log = console.log;
+    console.log = (...args: unknown[]) => { logged.push(args.map(String).join(' ')); };
+    try {
+      await handleCodingTask({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: 'js-double-numbers', user_id: 'account-a' } } as never, out as never, unreadable as never);
+    } finally { console.log = log; }
     assert.deepEqual([out.statusCode, errorCode(out.body)], [500, 'db_error'], `an unreadable roadmap row is not read as no cleared levels (${JSON.stringify(out.body)})`);
+    assert.ok(logged.some((line) => line.includes('"kind":"task_progress_unavailable"')), 'the failed read is logged, not only answered');
   }
   const other = await open('account-b');
   assert.equal(other.draft, null);
