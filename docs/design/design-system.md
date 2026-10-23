@@ -80,7 +80,7 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 
 ## Coding frame
 
-One frame for every place a coding task opens (UX audit U3, #575): `/coding/<track>/<task>` (`CodingWorkbench`, `mode="section"`), a Learn level's coding phase (`mode="lesson"`, inside `LessonRunner`) and a path's code activity (`CodeActivity` in `ActivityViews.tsx`, `.cd-workbench--activity`). The Learn and path hosts put `ss-wide-page` on their root, so the route box is `--ss-width-wide` while the editor is mounted. The rules are in `client/src/coding/Coding.css`.
+One frame for every place a coding task opens (UX audit U3, #575): `/coding/<track>/<task>` (`CodingWorkbench`, `mode="section"`), a Learn level's coding phase (`mode="lesson"`, inside `LessonRunner`) and a path's code activity (`CodeActivity` in `ActivityViews.tsx`, `.cd-workbench--activity`). The Learn and path hosts put `ss-wide-page` on their root, so the route box is `--ss-width-wide` while the editor is mounted. On a path module only the frame uses that width: the module's head, its activity list and the open activity's heading stay in the centred `--ss-width-narrow` column, so opening an activity moves nothing above the editor. The rules are in `client/src/coding/Coding.css`.
 
 | Token | Value | Used for |
 |---|---|---|

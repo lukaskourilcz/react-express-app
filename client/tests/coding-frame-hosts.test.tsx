@@ -89,3 +89,8 @@ it('keeps a path code activity Submit focusable while it cannot submit, and a pr
   fireEvent.click(busy);
   expect(onSubmit).toHaveBeenCalledTimes(1);
 });
+
+it('keeps the module above an open code activity in the narrow column, so only the frame widens', () => {
+  const css = source('components/paths/LearningPaths.css');
+  expect(css).toContain('.lp-page:has(.ss-wide-page) > :not(.lp-workspace),\n.lp-workspace:has(> .ss-wide-page) > :not(.ss-wide-page) { width: 100%; max-width: var(--ss-width-narrow); margin-inline: auto; }');
+});
