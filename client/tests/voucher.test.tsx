@@ -1,6 +1,7 @@
 // Premium vouchers (migration 045): "Have a voucher?" on /premium, the upgrade
 // sheet while checkout is off, the plan line of a promo grant, and what the
 // Terms and the privacy policy say about them.
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -308,6 +309,12 @@ describe('/premium with checkout on', () => {
     renderAt('/premium', <PremiumPage />);
     await waitFor(() => expect(voucherSection()).toHaveClass('ss-premium-voucher--inline'));
     expect(voucherSection()).not.toHaveClass('ss-info-card');
+  });
+
+  it('centres the folded voucher\u2019s title on the 44px field row on a wide screen, and lets it stack below 600px (money-09)', () => {
+    const css = readFileSync(new URL('../src/components/PremiumPage.css', import.meta.url), 'utf8');
+    expect(css).toContain('.ss-premium-voucher--inline > .ss-premium-section-title { grid-column: 1; margin: 0; min-height: var(--ss-control-height); display: flex; align-items: center; }');
+    expect(css).toMatch(/@media \(max-width: 599px\) \{[^@]*\.ss-premium-voucher--inline > \.ss-premium-section-title \{ min-height: 0; \}/);
   });
 
   it('gives the folded voucher a secondary button, as the plans hold the primaries (money-09)', async () => {

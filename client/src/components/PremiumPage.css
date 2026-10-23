@@ -100,7 +100,8 @@
    about half the height of the card it was. The done and signed-out states
    use the same right-hand column. Below 600px everything stacks. */
 .ss-premium-voucher--inline { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 0.75rem 2rem; }
-.ss-premium-voucher--inline > .ss-premium-section-title { grid-column: 1; margin: 0; }
+/* The title is centred on the 44px field row, not set on its bottom edge. */
+.ss-premium-voucher--inline > .ss-premium-section-title { grid-column: 1; margin: 0; min-height: var(--ss-control-height); display: flex; align-items: center; }
 .ss-premium-voucher--inline > :not(.ss-premium-section-title) { grid-column: 2; }
 .ss-premium-voucher--inline .ss-premium-voucher__form { flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; max-width: none; margin-top: 0; }
 .ss-premium-voucher--inline .ss-premium-voucher__field { flex: 1 1 14rem; max-width: 320px; }
@@ -109,6 +110,7 @@
 .ss-premium-voucher--inline p { margin: 0; color: var(--color-text-secondary); line-height: 1.6; }
 @media (max-width: 599px) {
   .ss-premium-voucher--inline { grid-template-columns: minmax(0, 1fr); }
+  .ss-premium-voucher--inline > .ss-premium-section-title { min-height: 0; }
   .ss-premium-voucher--inline > :not(.ss-premium-section-title) { grid-column: 1; }
   .ss-premium-voucher--inline .ss-premium-voucher__form { flex-direction: column; align-items: stretch; }
   .ss-premium-voucher--inline .ss-premium-voucher__field { flex-basis: auto; max-width: none; }
