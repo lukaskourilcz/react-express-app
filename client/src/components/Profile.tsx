@@ -414,7 +414,10 @@ export function StreakCard({
         <VStack gap={2}>
           <SectionLabel>{t('profile.streaks')}</SectionLabel>
 
-          <Grid columns={{ minWidth: 240, max: 2 }} gap={2}>
+          {/* Side by side down to a 320px phone: each tile holds a figure
+              and a two-word label, so at 390 the pair takes one 96px row
+              instead of two (UX audit social-account-18). */}
+          <Grid columns={{ minWidth: 120, max: 2 }} gap={2}>
             <div role="group" aria-labelledby={currentLabelId} style={{ display: 'flex', width: '100%' }}>
               <Card variant="muted" padding={3} width="100%">
                 <VStack gap={0.5} align="center">

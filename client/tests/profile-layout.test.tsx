@@ -153,6 +153,15 @@ describe('the Profile on a phone (social-account-18)', () => {
     expect(css()).toContain('.de-career-head__xp{display:inline-flex;align-items:baseline;gap:6px;flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}');
   });
 
+  it('keeps the two streak tiles side by side on a phone', () => {
+    const profile = readFileSync(new URL('../src/components/Profile.tsx', import.meta.url), 'utf8');
+    expect(profile).toMatch(/<Grid columns=\{\{ minWidth: 120, max: 2 \}\} gap=\{2\}>\s*<div role="group" aria-labelledby=\{currentLabelId\}/);
+  });
+
+  it('runs the plan name and its summary on as one two-line text', () => {
+    expect(css()).toContain('.de-profile-identity .de-plan-line__body{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.de-profile-identity .de-plan-line__body>:nth-child(n){display:inline;white-space:normal}');
+  });
+
   it('stacks a role row status under the role name', () => {
     expect(css()).toContain('.de-role-text{display:flex;flex-direction:column;');
     const card = readFileSync(new URL('../src/components/paths/LearningPathsCard.tsx', import.meta.url), 'utf8');

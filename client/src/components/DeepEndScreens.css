@@ -106,4 +106,8 @@
 .de-profile-identity .de-plan-line__body>:nth-child(2)::before{content:'\00B7\00A0' / '';color:var(--color-text-secondary)}
 .de-profile-identity .de-plan-line__actions{grid-column:3;justify-self:end}
 .de-profile-identity .de-plan-line__loading{grid-column:2 / -1;min-height:44px}
-@media (max-width:600px){.de-profile-identity .de-plan-line{grid-template-columns:auto minmax(0,1fr)}.de-profile-identity .de-plan-line__body{flex-wrap:wrap}.de-profile-identity .de-plan-line__body>:nth-child(2){white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}.de-profile-identity .de-plan-line__body>:nth-child(2)::before{content:none}.de-profile-identity .de-plan-line__body,.de-profile-identity .de-plan-line__loading{grid-column:2}.de-profile-identity .de-plan-line__actions{grid-column:1 / -1;justify-self:start}}
+/* On a phone the plan name and its summary run on as one text of at most
+   two lines ('Free · HTML, CSS…'), so 'Free' does not sit alone on a line
+   (social-account-18). :nth-child(n) outranks the desktop rule that makes
+   the summary a block. */
+@media (max-width:600px){.de-profile-identity .de-plan-line{grid-template-columns:auto minmax(0,1fr)}.de-profile-identity .de-plan-line__body{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.de-profile-identity .de-plan-line__body>:nth-child(n){display:inline;white-space:normal}.de-profile-identity .de-plan-line__body>:nth-child(2)::before{content:'\0020\00B7\00A0' / ''}.de-profile-identity .de-plan-line__body,.de-profile-identity .de-plan-line__loading{grid-column:2}.de-profile-identity .de-plan-line__actions{grid-column:1 / -1;justify-self:start}}
