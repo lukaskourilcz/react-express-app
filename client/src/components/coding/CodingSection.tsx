@@ -185,13 +185,16 @@ const TaskRow = memo(function TaskRow({ task, status, premium = 'open', saved, o
 }) {
   const { t } = useLanguage();
   const locked = status === 'locked';
+  // One line (UX audit coding-06): the title, its level as quiet meta, any
+  // tag, then the status at the row's end; every row the same height.
+  const level = task.topic === 'dsa'
+    ? hasLearnLevel(task) ? `${t('category.dsa')} · ${t('coding.level', { n: task.level })}` : t('category.dsa')
+    : hasLearnLevel(task) ? t('coding.level', { n: task.level }) : null;
   const inner = (
     <>
-      <span className="cd-row__title">{task.title}</span>
-      <span className="cd-row__meta">
-        {task.topic === 'dsa'
-          ? <span>{hasLearnLevel(task) ? `${t('category.dsa')} · ${t('coding.level', { n: task.level })}` : t('category.dsa')}</span>
-          : hasLearnLevel(task) && <span>{t('coding.level', { n: task.level })}</span>}
+      <span className="cd-row__main">
+        <span className="cd-row__title">{task.title}</span>
+        {level && <span className="cd-row__meta"><span aria-hidden>·</span>{level}</span>}
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
         {isBarred(premium) && status !== 'premium' && <Badge variant="neutral" label={t('premium.badge')} />}
       </span>
