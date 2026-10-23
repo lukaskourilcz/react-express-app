@@ -99,6 +99,11 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // `busy` reaches this handler only after a render, so a double click or a
+  // held Enter created two vouchers and showed only the second code: the
+  // first opened Premium with a code nobody could read again. The ref holds
+  // from the first submit.
+  const busyRef = useRef(false);
   const ids = { days: useId(), daysLabel: useId(), daysHint: useId(), until: useId(), untilHint: useId(), untilError: useId() };
   const today = new Date();
   const last = new Date(today);
@@ -106,7 +111,7 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (busyRef.current) return;
     setFailure(null);
     const checked = voucherInput({ note, days, uses, until, code });
     if ('errors' in checked) {
@@ -114,6 +119,7 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
       return;
     }
     setErrors({});
+    busyRef.current = true;
     setBusy(true);
     try {
       const result = await createVoucher(checked.input);
@@ -129,6 +135,7 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
       else if (error instanceof ApiError && error.status === 400) setFailure(error.message);
       else setFailure(friendlyError(error));
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
