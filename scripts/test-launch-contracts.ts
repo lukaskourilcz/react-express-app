@@ -2005,6 +2005,12 @@ async function voucherContracts() {
     conflicts = 0;
     assert.equal((await admin('POST', { action: 'create', note: '' })).statusCode, 400);
     assert.equal((await admin('POST', { action: 'create', note: 'x', code: 'no' })).statusCode, 400);
+    // An end date a moment ahead passes this server's clock and fails the
+    // database's: the routine's raise is a bad request, not a server error.
+    const skewed = await admin('POST', { action: 'create', note: 'Skew', redeemableUntil: new Date(Date.now() + 60_000).toISOString() }, {
+      rpc: async () => ({ data: null, error: { code: 'P0001', message: 'premium_voucher_in_past' } }),
+    });
+    assert.equal(skewed.statusCode, 400, 'a voucher end date the database finds past answers 400');
 
     const list = await admin('GET');
     assert.equal(list.statusCode, 200);

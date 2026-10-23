@@ -224,6 +224,12 @@ export async function handleAdminVouchers(req: VercelRequest, res: VercelRespons
         }));
         if (created.error) {
           if (isRpcMissing(created.error)) return migrationRequired(res);
+          // The form checked the end date against this server's clock; the
+          // database checks it again against its own, and a date a moment
+          // ahead can pass the first and fail the second.
+          if (/premium_voucher_in_past/.test(created.error.message ?? '')) {
+            return jsonError(res, 400, 'bad_request', 'redeemableUntil must be a future date within five years, or empty');
+          }
           logEvent({ status: 500, kind: 'voucher_create', reason: 'db_error' });
           return jsonError(res, 500, 'db_error', 'Could not create the voucher');
         }
