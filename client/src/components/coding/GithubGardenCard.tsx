@@ -20,6 +20,7 @@ import { BrandedConfirmDialog, type ConfirmRequest } from '../ui/BrandedConfirmD
 const INSTALLATIONS_URL = 'https://github.com/settings/installations';
 
 type Toast = { message: string; severity: 'success' | 'error' } | null;
+type Action = 'connect' | 'repo' | 'sync' | 'disconnect';
 
 function Raised({ children }: { children: ReactNode }) {
   return (
@@ -40,7 +41,20 @@ export function GithubGardenCard() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const query = useGithubConnection(isAuthenticated);
-  const [busy, setBusy] = useState<'connect' | 'repo' | 'sync' | 'disconnect' | null>(null);
+  const [busy, setBusy] = useState<Action | null>(null);
+  // `busy` reaches the handlers a render later than a second click, so the
+  // ref is what refuses it: one connect, repository, sync or disconnect at a time.
+  const busyRef = useRef<Action | null>(null);
+  const begin = (action: Action): boolean => {
+    if (busyRef.current) return false;
+    busyRef.current = action;
+    setBusy(action);
+    return true;
+  };
+  const end = () => {
+    busyRef.current = null;
+    setBusy(null);
+  };
   const [repoChoice, setRepoChoice] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
@@ -59,31 +73,30 @@ export function GithubGardenCard() {
   const setConnection = (next: GithubConnectionResponse) => queryClient.setQueryData(codingKeys.github(), next);
 
   const connect = async () => {
-    setBusy('connect');
+    if (!begin('connect')) return;
     try {
       const { url } = await startGithubConnect();
       window.location.assign(url);
     } catch (error) {
       setToast({ message: friendlyError(error), severity: 'error' });
-      setBusy(null);
+      end();
     }
   };
 
   const chooseRepo = async () => {
-    if (!repoChoice) return;
-    setBusy('repo');
+    if (!repoChoice || !begin('repo')) return;
     try {
       setConnection(await chooseGithubRepo(repoChoice));
       setToast({ message: t('github.repoSaved', { repo: repoChoice }), severity: 'success' });
     } catch (error) {
       setToast({ message: friendlyError(error), severity: 'error' });
     } finally {
-      setBusy(null);
+      end();
     }
   };
 
   const sync = async () => {
-    setBusy('sync');
+    if (!begin('sync')) return;
     try {
       const result = await syncGithub();
       await queryClient.invalidateQueries({ queryKey: codingKeys.github() });
@@ -98,7 +111,7 @@ export function GithubGardenCard() {
     } catch (error) {
       setToast({ message: friendlyError(error), severity: 'error' });
     } finally {
-      setBusy(null);
+      end();
     }
   };
 
@@ -109,7 +122,7 @@ export function GithubGardenCard() {
       actionLabel: t('github.disconnect'),
       destructive: true,
       onConfirm: async () => {
-        setBusy('disconnect');
+        if (!begin('disconnect')) return;
         try {
           await disconnectGithub();
           await queryClient.invalidateQueries({ queryKey: codingKeys.github() });
@@ -117,7 +130,7 @@ export function GithubGardenCard() {
         } catch (error) {
           setToast({ message: friendlyError(error), severity: 'error' });
         } finally {
-          setBusy(null);
+          end();
         }
       },
     });

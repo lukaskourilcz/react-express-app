@@ -3,7 +3,7 @@
 // `available: false` until then, and the card renders nothing rather than a
 // "not enabled on this deployment" notice on every learner's profile.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { en } from '../src/i18n/translations';
 import { GithubGardenCard } from '../src/components/coding/GithubGardenCard';
 import { codingKeys } from '../src/coding/api';
+import { clearAccountData } from '../src/lib/accountData';
 import { server } from './mocks/server';
 
 const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false } }));
@@ -40,6 +41,20 @@ function mount() {
   return { ...view, client };
 }
 
+const ACTIVE = { ...NOT_CONNECTED, status: 'active', accountLogin: 'garden-owner', repoFullName: 'garden-owner/garden', defaultBranch: 'main', queued: 2 };
+const PENDING = { ...NOT_CONNECTED, status: 'pending_repo', accountLogin: 'garden-owner', repositories: [{ fullName: 'garden-owner/garden', defaultBranch: 'main', private: false, fork: false }] };
+
+/** Answers every POST op with `answer(op)` and records each op sent. */
+function posts(answer: (op: string) => Promise<Response> | Response) {
+  const sent: string[] = [];
+  server.use(http.post('*/api/user/*', ({ request }) => {
+    const op = new URL(request.url).searchParams.get('op') ?? '';
+    sent.push(op);
+    return answer(op);
+  }));
+  return sent;
+}
+
 describe('GitHub garden card', () => {
   it('renders nothing on a deployment without the GitHub App', async () => {
     answer(() => HttpResponse.json(UNAVAILABLE));
@@ -62,6 +77,17 @@ describe('GitHub garden card', () => {
     mount();
     expect(await screen.findByRole('button', { name: en['github.connect'] })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: en['github.title'] })).toBeInTheDocument();
+  });
+
+  it('sends one sync for a double click, before the busy state has rendered', async () => {
+    answer(() => HttpResponse.json(ACTIVE));
+    const sent = posts(async () => { await delay(50); return HttpResponse.json({ committed: 2, failed: 0, remaining: 0 }); });
+    mount();
+    const sync = await screen.findByRole('button', { name: en['github.syncNow'] });
+    act(() => { fireEvent.click(sync); fireEvent.click(sync); });
+    await waitFor(() => expect(sent).toEqual(['github-sync']));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(sent).toEqual(['github-sync']);
   });
 
   it('still says when the connection could not be read', async () => {
