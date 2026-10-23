@@ -320,6 +320,29 @@ describe('the Rewards screen', () => {
     expect(screen.queryByText('Bought. You have 1 this month.')).toBeNull();
   });
 
+  it('keeps the catalogue it has when a re-read of it fails, without saying it could not load', async () => {
+    signIn();
+    routes();
+    server.use(http.get('*/api/user/*', ({ request }) => (new URL(request.url).searchParams.get('op') === 'shop'
+      ? HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 })
+      : undefined)));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Read on an earlier visit, and stale now.
+    client.setQueryData(['rewards', 'shop'], shop, { updatedAt: Date.now() - 60 * 60_000 });
+    await act(async () => render(<Shop />, {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={[{ pathname: '/shop', key: 'stale-catalogue' }]}>
+            <LanguageProvider>{children}</LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      ),
+    }));
+    await waitFor(() => expect(client.getQueryState(['rewards', 'shop'])?.status).toBe('error'));
+    expect(screen.getByRole('heading', { name: 'Crown and streak protection' })).toBeInTheDocument();
+    expect(screen.queryByText('The shop could not load. Try again in a moment.')).toBeNull();
+  });
+
   it('offers a retry when the coins cannot load', async () => {
     signIn();
     routes({ wallet: { error: { code: 'db_error' } }, walletStatus: 500 });

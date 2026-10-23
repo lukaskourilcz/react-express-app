@@ -665,7 +665,9 @@ function Shop() {
       <ReferralInvite signedIn={isAuthenticated} />
 
       {shop.isLoading && <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>}
-      {shop.isError && (
+      {/* A failed background re-read keeps the catalogue it had: the crown and
+          streak protection above still show it, so no error goes with them. */}
+      {shop.isError && !shop.data && (
         <div className="rw-inline-error" role="alert">
           <span>{t('shop.loadError')}</span>
           <Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={() => void shop.refetch()} />
