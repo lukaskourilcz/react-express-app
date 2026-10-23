@@ -76,7 +76,7 @@ The floor is a `min-height`/`min-width` with `!important`, because Astryx's Styl
 
 **Card actions.** Every action in a card is the default size (no `size="sm"`), so a card's primary is never smaller than its secondaries: the Profile's GitHub, sharkname, path and account cards all stand at 44px. Only an in-row utility (a Retry inside a banner, a Remove on a list row) stays small.
 
-**Form controls with a label.** A control group (`ToggleButtonGroup`, `SegmentedControl`, a `select`) takes its label above it, never as a suffix after it, and the default size, so one form has one control height. Two short groups may sit side by side from 900px (the question count and time limit on `/play`). Icon-only buttons are 44×44 with a 20px glyph (the header's Leaderboard, Premium and Coins; a dialog's close keeps its 16px glyph in a 44px button).
+**Form controls with a label.** A control group (`ToggleButtonGroup`, `SegmentedControl`, a `select`) takes its label above it, never as a suffix after it, and the default size, so one form has one control height. Two short groups may sit side by side from 900px (the question count and time limit on `/play`). Icon-only buttons are 44×44 with a 20px glyph (the header's Leaderboard, Premium and Coins; a dialog's close keeps its 16px glyph in a 44px button). Icons that sit side by side share one drawing language: the header's three are stroke icons in the text colour (`TrophyIcon`, the Premium diamond, `CoinsIcon` from `components/ui/icons.tsx`); the filled accent `CoinIcon` stays for the Coins page's balance, where it is large enough to read as a coin.
 
 ## Layout and density
 

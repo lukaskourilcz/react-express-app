@@ -29,7 +29,7 @@ import { m, AnimatePresence, useReducedMotion } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
 import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
-import { CloseIcon, CoinIcon, TrophyIcon } from './components/ui/icons';
+import { CloseIcon, CoinsIcon, TrophyIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import SignInDialogHost from './components/auth/SignInDialogHost';
@@ -612,7 +612,7 @@ function App() {
                     tooltip={t('nav.shop')}
                     onClick={() => navigate('/shop')}
                     data-route="/shop"
-                    icon={<CoinIcon size={20} />}
+                    icon={<CoinsIcon />}
                   />
                 </span>
               )}

@@ -307,7 +307,9 @@ coming back. The tokens and the map are in
   shows under the `h1`, and its controls sit right on what they filter.
 - **Icon buttons are 44×44** with a 20px glyph and keep their tooltip and
   `aria-label`. A dialog's close button is the Astryx one, which the floor
-  makes 44px.
+  makes 44px. Icons in one row share one drawing: the header's Leaderboard,
+  Premium and Coins are stroke icons in the text colour (`CoinsIcon`, not the
+  filled `CoinIcon`, which reads as a status light at 20px).
 - **Every `Page` h1 sits at one x and one y.** The `Page` layout fills the
   column and always draws its kicker line.
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
