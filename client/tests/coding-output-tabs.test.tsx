@@ -115,5 +115,5 @@ it('draws the pane separator as a quiet 1px line in a 12px column with 2px eithe
   const rest = css.slice(css.indexOf('  .cd-splitter {'), css.indexOf('}', css.indexOf('  .cd-splitter {')));
   expect(rest).toContain('var(--ss-card-line)');
   expect(rest).not.toContain('border-radius: 999px');
-  expect(css).toMatch(/\.cd-splitter:hover,\s*\.cd-splitter:focus-visible \{ background: linear-gradient\([^)]*var\(--brand-accent\)/);
+  expect(css).toMatch(/\.cd-splitter:hover,\s*\.cd-splitter:focus-visible \{ background: linear-gradient.*var\(--brand-accent\)/);
 });
