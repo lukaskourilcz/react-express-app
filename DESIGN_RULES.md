@@ -268,7 +268,12 @@ coming back. The tokens and the map are in
   other route; `/dev` uncapped. A page never sets its own page `max-width`. A
   part that needs the wide page while mounted (a Learn or FDE coding phase)
   puts the class `ss-wide-page` on its root. A new route goes into the map
-  and its test, not into a stylesheet.
+  and its test, not into a stylesheet. The same goes for the shared page
+  roots (`.de-page`, `.cd-page`, `.lb`) and a page's own top stack: they fill
+  the column, so header, controls and content share one left edge
+  (`client/tests/page-own-width.test.ts`). A part inside the page (a deck,
+  a form) does not take a narrower width of its own either; only text keeps
+  a measure (`68ch`).
 - **Task cards are 640px.** Auth, billing and checkout cards, and the question
   column, use `--ss-width-task` inside the 800px column. Do not add another
   card width.
@@ -287,7 +292,19 @@ coming back. The tokens and the map are in
   pill: `.ss-action`, or any button in `.ss-info-actions` /
   `.ss-auth__actions`. The primary is never the smallest control in its row.
 - **One filled primary per screen**, and it is `SwimCta` md (44px). Other
-  actions are Astryx secondary or ghost.
+  actions are Astryx secondary or ghost. A second task's button turns
+  primary only once its own input is complete (Join on `/play` with a whole
+  code).
+- **Card actions are the default size.** No `size="sm"` on a card's actions;
+  a Retry inside a banner or a Remove on a list row is the only small
+  button.
+- **A control group's label sits above it**, never as a suffix, and the
+  group is the default size, so a form has one control height.
+- **A secondary path is a row, not a card.** A short form that is not the
+  page's task (the voucher with checkout on) is one row: its title on the
+  left, the field and a secondary button beside it.
+- **The scope sentence is the page lead.** An operational page says what it
+  shows under the `h1`, and its controls sit right on what they filter.
 - **Icon buttons are 44×44** with a 20px glyph and keep their tooltip and
   `aria-label`. A dialog's close button is the Astryx one, which the floor
   makes 44px.
