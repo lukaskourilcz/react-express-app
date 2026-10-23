@@ -210,9 +210,14 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
     logEvent('delete-account', { status: 200, user_id: auth.sub });
     return res.json({ ok: true });
   } catch (err) {
+    // A timeout is the database busy for a moment: 503 with its code, as
+    // caughtError answers every other op. Anything else is a fault, not a
+    // timeout, and is logged and answered as one.
     const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('delete-account', { status: 504, reason: 'timeout', error: message });
-    return jsonError(res, 504, 'upstream_timeout', 'Account deletion timed out; please try again');
+    const timedOut = err instanceof ServiceUnavailableError;
+    logEvent('delete-account', { status: timedOut ? 503 : 500, reason: timedOut ? 'timeout' : 'exception', error: message });
+    if (timedOut) return jsonError(res, 503, err.code, 'Account deletion timed out; please try again');
+    return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }
 

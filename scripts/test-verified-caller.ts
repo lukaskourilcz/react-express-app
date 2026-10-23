@@ -66,7 +66,9 @@ const EMAIL: Account = {
 const SLOW: Account = { id: '1a2b3c4d-0000-4000-8000-000000000010', token: 'slow-rows', email: 'slow@example.invalid', confirmed: true };
 // An account whose sharkname row the database fails to read.
 const HANDLES_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-000000000011', token: 'handles-down', email: 'handles@example.invalid', confirmed: true };
-const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN];
+// An account whose data erasure the database is too slow to run.
+const SLOW_ERASURE: Account = { id: '1a2b3c4d-0000-4000-8000-000000000012', token: 'slow-erasure', email: 'erasure@example.invalid', confirmed: true };
+const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE];
 // A token presented while Supabase Auth answers 500 (not one of ACCOUNTS).
 const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 'auth-is-down', email: 'down@example.invalid', confirmed: true };
 
@@ -140,6 +142,10 @@ async function startStandIns() {
     }
     if (url.pathname === '/rest/v1/rpc/allocate_shark_name' && (body as Row | undefined)?.p_user_id === SLOW.id) {
       setTimeout(() => send(200, { handle: 'slowSharkie1', ordinal: '1', base: 'slowSharkie' }), 5_500);
+      return;
+    }
+    if (url.pathname === '/rest/v1/rpc/delete_user_data' && (body as Row | undefined)?.p_user_id === SLOW_ERASURE.id) {
+      setTimeout(() => send(200, null), 8_500);
       return;
     }
     if (req.method === 'GET' && url.searchParams.get('user_id') === `eq.${SLOW.id}`) {
@@ -683,6 +689,11 @@ async function main() {
     assert.deepEqual(reads('/rest/v1/rpc/delete_user_data').map((one) => (one.body as Row).p_user_id), [EMAIL.id, EMAIL.id], 'its data is erased, before and after the identity');
     assert.equal(seen.filter((one) => one.method === 'DELETE' && one.path === `/auth/v1/admin/users/${EMAIL.id}`).length, 1, 'and its sign-in identity is deleted');
     console.log('PASS verified caller: an email and password account signs in, stays unnamed on boards, and deletes');
+
+    const slowErasure = await user('delete-account', { method: 'DELETE', account: SLOW_ERASURE, body: { confirmation: 'DELETE' } });
+    assert.equal(slowErasure.statusCode, 503, `an erasure that timed out answers 503 like every other timeout, not 504 (${JSON.stringify(slowErasure.body)})`);
+    assert.equal(errorCode(slowErasure), 'upstream_timeout');
+    console.log('PASS verified caller: an account erasure that times out answers 503 upstream_timeout');
 
     console.log('Verified-caller contracts passed: a token acts for its own account whatever user_id says, admin by confirmed address or role, private caching by default, read limits, and one-time claims that fail closed.');
   } finally {
