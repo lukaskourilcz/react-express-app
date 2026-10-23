@@ -8,11 +8,31 @@
 // stood 16px taller until the chunk arrived, and <main> moved up when it did.
 // The dialog's code loads on the press; a dialog that fails says so in a toast
 // (SignInDialogHost).
+import { useEffect, useRef } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { useT } from '../i18n/LanguageContext';
 import { openSignIn } from '../lib/signInDialog';
 
+// The header's Log out is pressed from the account menu, and the account
+// button goes when the session does: focus fell to <body>. This button takes
+// that place in the header, so it takes the focus too, when it is drawn within
+// a few seconds of a Log out and nothing else holds the focus.
+const FOCUS_WINDOW_MS = 5_000;
+let focusAfterSignOutUntil = 0;
+/** A Log out was pressed in the header: the Log in that replaces the account
+ * button takes the focus. `false` withdraws it (the Log out failed). */
+export function focusSignInAfterSignOut(on = true): void {
+  focusAfterSignOutUntil = on ? Date.now() + FOCUS_WINDOW_MS : 0;
+}
+
 export default function SignInButton() {
   const t = useT();
-  return <Button variant="secondary" size="md" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />;
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (Date.now() > focusAfterSignOutUntil) return;
+    focusAfterSignOutUntil = 0;
+    const active = document.activeElement;
+    if (!active || active === document.body) ref.current?.focus();
+  }, []);
+  return <Button ref={ref} variant="secondary" size="md" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />;
 }

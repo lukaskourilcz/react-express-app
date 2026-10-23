@@ -442,3 +442,25 @@ describe('Continue with Google in the dialog', () => {
     expect(alert.compareDocumentPosition(field(dialog, 'Email')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+describe("the header's Log in", () => {
+  it('takes the focus when it replaces the account button a Log out removed, and only then', async () => {
+    const [{ LanguageProvider }, { default: SignInButton, focusSignInAfterSignOut }] = await Promise.all([
+      import('../src/i18n/LanguageContext'),
+      import('../src/components/SignInButton'),
+    ]);
+    const header = (signedIn: boolean) => (
+      <LanguageProvider>{signedIn ? <button type="button">Account</button> : <SignInButton />}</LanguageProvider>
+    );
+    const view = render(header(true));
+    screen.getByRole('button', { name: 'Account' }).focus();
+    focusSignInAfterSignOut();
+    view.rerender(header(false));
+    expect(screen.getByRole('button', { name: 'Log in' })).toHaveFocus();
+    // Drawn again later, with no Log out pressed, it leaves the focus alone.
+    view.rerender(header(true));
+    screen.getByRole('button', { name: 'Account' }).focus();
+    view.rerender(header(false));
+    expect(screen.getByRole('button', { name: 'Log in' })).not.toHaveFocus();
+  });
+});
