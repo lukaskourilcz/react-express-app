@@ -108,9 +108,12 @@ as "—" rather than 0.
 
 The server keeps UTC days. The streak card, Today's target, the done and
 empty panels, the daily challenge and the cleared-level tooltip say when the
-day changes on the learner's clock (`client/src/lib/utcDay.ts`). Reaching
-Today's target hands out nothing: the panel says the plan is complete and
-when the next day starts.
+day changes on the learner's clock (`client/src/lib/utcDay.ts`). Today's plan
+and the Leaderboard's Today board move on to the new day at 00:00 UTC and
+when the learner returns to the tab (`useUtcDay`), so a page left open
+overnight does not keep yesterday's target or board. Reaching Today's target
+hands out nothing: the panel says the plan is complete and when the next day
+starts.
 
 ### Question of the day
 
@@ -134,8 +137,8 @@ track in the served bank, options shuffled by the same seed, the answer
 sealed in a quiz session with scope `qotd`. A future date answers 404
 `qotd_not_yet`, so nobody reads tomorrow's question today.
 `api/quiz/submit.ts` grades a `qotd` session as if signed out, whoever sends
-it: no result receipt, answer proof, XP, streak day, leaderboard entry or
-concept-review record. Every read seals a fresh session and one check claims
+it: no result receipt, XP, streak day, leaderboard entry or concept-review
+record. Every read seals a fresh session and one check claims
 it, so the response is `private, no-store` and the page fetches it with
 `cache: 'no-store'`. After a claimed or expired session, "Load it again"
 starts the question over.
@@ -236,9 +239,11 @@ setting removes a name from a board.
 `month`, `global`, `category` and `daily`) to everyone with
 `public, s-maxage=60` and no `stale-while-revalidate`, so the CDN never serves
 a board older than a minute. A request with a Bearer token or `me=1` also gets
-the learner's own line and is answered `private, no-store`. A `limit` is
-served as the next of 10, 25, 50, 100 or 200 rows, and a read that reaches the
-function takes the address read bucket ("Sign-in, caching and limits").
+the learner's own line, takes the `leaderboardPersonal` bucket and is answered
+`private, no-store`. A `limit` is served as the next of 10, 25, 50, 100 or 200
+rows, and a read that reaches the function takes the address read bucket
+("Sign-in, caching and limits"). Today's `date` must be one calendar day
+(`YYYY-MM-DD`, year 0001 or later), sent once; anything else answers 400.
 
 `friend_list` orders friends by correct answers and accuracy, shows each
 friend's live streak by the streak rule, and marks a friend active today when
@@ -251,8 +256,10 @@ starting, and the run seals them; refills cannot change them. A completed run
 with a positive score saves itself under one run id, for a signed-in learner
 under the server identity above and for a guest under a generated name tied
 to the run. There is no name-entry form, and a zero score creates no score or
-guest name. The board shows a count of the run's topics with the topics in a
-tooltip, or a gold fin for a run over every available topic.
+guest name. A run already saved with another score, owner or topic set
+answers 409 `run_already_saved`, and the browser drops it from the results it
+still has to send. The board shows a count of the run's topics with the
+topics in a tooltip, or a gold fin for a run over every available topic.
 
 A known limit: a run submits its answer proofs from the client
 (`api/quiz/challenge.ts`), and without a server-side append-only attempt
