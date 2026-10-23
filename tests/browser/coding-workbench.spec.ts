@@ -305,8 +305,11 @@ test('signed in: a pass inside the hour says in a toast when the XP opens again'
 test('signed in: Start starts a challenge run and opens its first task (C3-1)', async ({ page }) => {
   const seen = await prepare(page, { signedIn: true });
   await page.goto('/coding');
-  await page.getByRole('button', { name: /Challenge run/ }).click();
-  await page.getByRole('button', { name: 'Start', exact:true }).click();
+  // UX audit coding-08: the collapsed planner opens from its 'Plan a run'
+  // button; Start is the form's own, apart from the rows' Start fins.
+  const planner = page.getByRole('region', { name: 'Challenge run' });
+  await planner.getByRole('button', { name: 'Plan a run' }).click();
+  await planner.getByRole('button', { name: 'Start', exact:true }).click();
   await expect.poll(() => seen.practiceStarts.length).toBe(1);
   expect(seen.practiceStarts[0]).toMatchObject({ order: 'sequential' });
   await expect(page).toHaveURL(/\/coding\/javascript\/js-sum-array$/);
