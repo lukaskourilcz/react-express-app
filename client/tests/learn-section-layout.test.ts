@@ -37,3 +37,19 @@ describe('the section switcher on a phone (learn-20)', () => {
     expect(declared(narrow, '.rm-switcher-item__sep', 'display')).toBe('none');
   });
 });
+
+describe('the topic rail (learn-07)', () => {
+  it('fits five tiles a row in the 800px column and two on a phone', () => {
+    const sheet = addSheet('roadmap');
+    expect(declared(topRules(sheet), '.rm-topic-rail', 'grid-template-columns')).toBe('repeat(auto-fill, minmax(148px, 1fr))');
+    // No narrower override: 148px tiles give two columns at 360px and 390px.
+    expect(declared(mediaRules(sheet, 'max-width'), '.rm-topic-rail', 'grid-template-columns')).toBe('');
+  });
+
+  it('marks a locked tile with its lock glyph only, not a dashed edge or a fade', () => {
+    const rules = topRules(addSheet('roadmap'));
+    expect(declared(rules, ".rm-topic-pill[data-locked='true']", 'border-style')).toBe('');
+    expect(declared(rules, ".rm-topic-pill[data-locked='true']", 'opacity')).toBe('');
+    expect(declared(rules, '.rm-topic-progress .ss-premium-label', 'text-transform')).toBe('none');
+  });
+});

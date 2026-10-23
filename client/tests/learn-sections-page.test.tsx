@@ -2,7 +2,7 @@
 // moves to another section, and a section's single action joins it, asks a
 // visitor to sign in, or sends an account with no plan to choose one.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -317,6 +317,30 @@ describe('the section switcher (UX audit learn-20)', () => {
     // Focus moves; nothing opens.
     expect(screen.getByTestId('probe-path')).toHaveTextContent('/learn/web-developer');
     expect(web).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
+describe('the topic rail (UX audit learn-07)', () => {
+  it('says locked once per tile, and counts the locked topics beside the skill check', async () => {
+    answer();
+    await mountAt('/learn/web-developer');
+    await screen.findByRole('radio', { name: /^JavaScript/ });
+    const tiles = [...document.querySelectorAll<HTMLElement>('.rm-topic-rail [role="radio"]')];
+    const locked = tiles.filter((tile) => tile.getAttribute('data-locked') === 'true');
+    expect(locked.length).toBeGreaterThan(0);
+    for (const tile of locked) {
+      expect(tile).toHaveAccessibleName(/ — Locked/);
+      expect(tile.textContent).not.toContain('Locked');
+      expect(tile.querySelectorAll('.rm-topic-lock')).toHaveLength(1);
+    }
+    for (const tile of tiles) {
+      // "Premium" shows, once and in sentence case, only where it applies.
+      const premium = /, Premium$/.test(tile.getAttribute('aria-label') ?? '');
+      expect(within(tile).queryAllByText('Premium')).toHaveLength(premium ? 1 : 0);
+    }
+    const note = screen.getByText(/paths still locked\./);
+    expect(note.closest('.rm-skillcheck-row')).not.toBeNull();
+    expect(note.closest('.rm-skillcheck-row')!.querySelector('.rm-skillcheck-cta')).not.toBeNull();
   });
 });
 

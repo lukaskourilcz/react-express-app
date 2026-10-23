@@ -1,12 +1,15 @@
 // A Learn section's topic rail, and what the map area says when nothing in
 // the section is open yet.
 //
-// The rail is the radiogroup the Learn page always had. Locked topics stay
-// listed with a dashed edge and a lock; a topic outside the plan because the
-// learner has not joined the section is dimmed with "Not in your plan" (the
-// header holds the join action). Neither is selectable, and arrow keys skip
-// both. A shared topic says which other sections list it; its progress line is
-// the same record wherever it appears.
+// The rail is the radiogroup the Learn page always had. A locked topic stays
+// listed with one lock signal (UX audit learn-07): the lock glyph on its
+// second line, plus "Premium" where Premium opens it; "Locked" is in its
+// accessible name only. A topic outside the plan because the learner has not
+// joined the section is dimmed with "Not in your plan" (the header holds the
+// join action). Neither is selectable, and arrow keys skip both. A shared
+// topic says which other sections list it; its progress line is the same
+// record wherever it appears. How many topics are still locked, and how to
+// open them, is said once, beside the skill check (`LockedNote`).
 
 import type { CSSProperties } from 'react';
 import { Button } from '@astryxdesign/core/Button';
@@ -66,9 +69,6 @@ export function SectionRail({
     );
   }
 
-  const locked = entries.filter((entry) => entry.state === 'locked').length;
-  const reachable = entries.filter((entry) => entry.state !== 'dimmed').length;
-
   return (
     <>
       {/* Radiogroup semantics (not tabs: there is no tabpanel wiring), so
@@ -105,32 +105,40 @@ export function SectionRail({
                 <CategoryGlyph category={topic} color={color} size={20} />
               </span>
               <span className="rm-topic-text">
-                <span>{label}</span>
+                <span className="rm-topic-name">{label}</span>
                 <span className="rm-topic-progress">
+                  {state === 'locked' && <span className="rm-topic-lock" aria-hidden><LockIcon size={13} /></span>}
                   {premium && <span className="ss-premium-label">{t('premium.badge')}</span>}
                   {/* Without the structure (its request failed) the level
                       count is unknown: an open topic shows no figure. */}
                   {state === 'open'
                     ? levelCounts[topic] === undefined ? null : t('roadmap.progress', { done: passedLevelCount(progress, topic), total: levelCounts[topic] })
-                    : state === 'locked' ? t('roadmap.locked') : learnText('learn.rail.notJoined')}
+                    : state === 'dimmed' ? learnText('learn.rail.notJoined') : null}
                 </span>
               </span>
-              {state === 'locked' && <span className="rm-topic-lock" aria-hidden><LockIcon size={13} /></span>}
             </RadioCard>
           );
         })}
       </RadioCardGroup>
-
-      {/* How much of the section is still closed, and how to open it. Dimmed
-          topics are not counted: the join action opens them. */}
-      {locked > 0 && (
-        <p className="rm-topic-locked-note">
-          <LockIcon size={13} />
-          <span>{t('roadmap.topicsLockedCount', { locked, total: reachable })}</span>
-          <span>{t('roadmap.topicsLockedHowTo')}</span>
-        </p>
-      )}
     </>
+  );
+}
+
+/** How much of the section is still closed, and how to open it, for the
+ * skill-check row: the explanation sits beside the action it names (UX audit
+ * learn-07). Dimmed topics are not counted: the join action opens them. */
+export function LockedNote({ entries, t }: { entries: readonly RailEntry[]; t: TFn }) {
+  const locked = entries.filter((entry) => entry.state === 'locked').length;
+  if (locked === 0) return null;
+  const reachable = entries.filter((entry) => entry.state !== 'dimmed').length;
+  return (
+    <p className="rm-topic-locked-note">
+      <LockIcon size={13} />
+      <span>
+        {t('roadmap.topicsLockedCount', { locked, total: reachable })}{' '}
+        {t('roadmap.topicsLockedHowTo')}
+      </span>
+    </p>
   );
 }
 

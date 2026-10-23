@@ -51,7 +51,9 @@
    it only taught JavaScript. A wrapping grid shows the real breadth instead. */
 .rm-topic-rail {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  /* Five tiles a row in the 800px column, so ten tiles fill two full rows,
+     and two a row on a phone (UX audit learn-07). */
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 10px;
   margin: 0 -4px 12px;
   padding: 4px;
@@ -79,6 +81,7 @@
 .rm-path-canvas { width: 100%; min-width: 620px; }
 .rm-current-fin { position: absolute; left: 50%; top: -17px; line-height: 0; transform: translateX(-50%); animation: rmBob 1.8s ease-in-out infinite; }
 .rm-skillcheck-row { margin-top: 8px; padding: 14px 0; border-top: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--color-text-secondary); font-size: .78rem; }
+.rm-skillcheck-copy { display: grid; gap: 4px; min-width: 0; }
 
 /* The current node draws the eye: a gentle bob on the unlocked-current node. */
 .rm-bob { animation: rmBob 1.8s ease-in-out infinite; }
@@ -229,43 +232,44 @@
   background-color: color-mix(in srgb, var(--rm-accent) 12%, var(--color-background-surface));
   border-color: var(--rm-accent);
 }
-/* Locked topics stay listed so the breadth of the map is visible, but read as
-   unavailable through three non-colour cues: dimming, a dashed edge and the
-   lock glyph the pill renders inline. */
 /* The progress line under a topic's name. It takes the secondary text token
    rather than fading the pill's colour with opacity: on the light theme's white
    an opacity of 0.72 blended the line to #809098, 3.3:1 (P1.8). */
 .rm-topic-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.66rem;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
+/* A locked topic stays listed so the breadth of the map is visible. It says
+   so once (UX audit learn-07): the lock glyph on its second line, beside
+   "Premium" where Premium opens it, with "Locked" in its accessible name. The
+   muted fill and grey logo only quieten it; no dashed edge or fade on top. */
 .rm-topic-pill[data-locked='true'] {
-  opacity: 0.6;
   cursor: not-allowed;
-  border-style: dashed;
   background-color: var(--color-background-muted);
 }
 .rm-topic-pill[data-locked='true'] .rm-topic-glyph { filter: grayscale(1); }
-.rm-topic-lock { display: inline-grid; place-items: center; margin-left: auto; flex-shrink: 0; color: var(--color-text-secondary); }
+.rm-topic-lock { display: inline-grid; place-items: center; flex-shrink: 0; color: var(--color-text-secondary); }
 
-/* Count of paths still locked, sitting under the rail. */
+/* Count of paths still locked, in the skill-check row beside the action it
+   names. */
 .rm-topic-locked-note {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  flex-wrap: wrap;
-  margin: 0 4px 20px;
-  font-size: 0.8rem;
+  margin: 0;
+  font-size: var(--ss-type-meta);
   color: var(--color-text-secondary);
 }
-.rm-topic-locked-note svg { flex-shrink: 0; }
+.rm-topic-locked-note svg { flex-shrink: 0; margin-top: 2px; }
 
 @media (max-width: 700px) {
   .rm-overview-card { align-items: flex-start; flex-direction: column; padding: 17px; gap: 14px; }
   .rm-overview-actions { width: 100%; justify-content: space-between; }
   .rm-overview-progress { width: 38%; }
-  .rm-topic-rail { grid-template-columns: repeat(auto-fill, minmax(142px, 1fr)); }
   .rm-skillcheck-row { align-items: flex-start; flex-direction: column; }
 }
 
@@ -562,7 +566,7 @@
 .rm-section-status { font-size: var(--ss-type-meta); color: var(--color-text-primary); }
 
 .rm-topic-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
-.rm-topic-progress .ss-premium-label { font-size: inherit; margin-right: 6px; }
+.rm-topic-progress .ss-premium-label { font-size: inherit; text-transform: none; letter-spacing: 0; }
 /* A topic outside the plan of a section the learner has not joined: dimmed
    with "Not in your plan" as text. It keeps a solid edge, which tells it apart
    from the dashed edge and lock of a topic behind a prerequisite. */

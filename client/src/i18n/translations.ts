@@ -860,7 +860,7 @@ export const en = {
   'roadmap.topicsLockedCount': '{locked} of {total} paths still locked.',
   'roadmap.topicsLockedHowTo': 'Clear the first part of a path to open what follows it, or take the skill check to open more at once.',
   'roadmap.skillCheckCta': 'Skill check',
-  'roadmap.skillCheckSubtitle': '20 mixed questions · unlimited hearts · unlocks more paths',
+  'roadmap.skillCheckSubtitle': '20 mixed questions · unlimited hearts',
   'roadmap.skillCheckResult': 'You scored {correct} / {total}',
   'roadmap.skillCheckPerfect': 'Every path is now open.',
   'roadmap.skillCheckSolid': 'Your score opened most paths.',

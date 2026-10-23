@@ -85,7 +85,7 @@ import {
   type RailEntry,
 } from './learn/sections';
 import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionSwitcher';
-import { CheckIcon, LockIcon, SectionEmpty, SectionRail } from './learn/SectionRail';
+import { CheckIcon, LockIcon, LockedNote, SectionEmpty, SectionRail } from './learn/SectionRail';
 import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
 import { useFdePathSteps } from './learn/useFdePathSteps';
 import { useOnline } from './learn/useOnline';
@@ -895,9 +895,14 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     };
   });
   const gate = sectionHasOpen ? null : sectionGate(entries, progress, extraUnlocksSet, members);
+  // The skill check and what it opens: the count of locked topics and how to
+  // open them sit here, beside the action they name (UX audit learn-07).
   const skillCheckRow = (
     <div className="rm-skillcheck-row">
-      <span>{t('roadmap.skillCheckSubtitle')}</span>
+      <div className="rm-skillcheck-copy">
+        {!loadingStructure && <LockedNote entries={entries} t={t} />}
+        <span>{t('roadmap.skillCheckSubtitle')}</span>
+      </div>
       <button type="button" className="rm-skillcheck-cta" onClick={() => setSkillCheckOpen(true)}>
         <BoltIcon size={15} /> {t('roadmap.skillCheckCta')}
       </button>
