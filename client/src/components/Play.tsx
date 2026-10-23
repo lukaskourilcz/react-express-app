@@ -35,7 +35,6 @@ import {
 } from '../lib/play';
 import { coalesceReads, joinMatchChannel, trailingThrottle, type CoalescedRead, type RealtimeChannel } from '../lib/realtime';
 import { visibleCategoryOptionsFor } from '../lib/categories';
-import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError, ApiError } from '../lib/api';
 import { categoryLabelKey } from '../lib/categories';
@@ -46,6 +45,7 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
+import './Play.css';
 import { BookIcon, TargetIcon } from './ui/icons';
 import { capture } from '../lib/analytics';
 import { visuallyHidden } from '../theme/MuiTheme';
@@ -146,7 +146,6 @@ export function PlayLanding() {
   const { t } = useLanguage();
   const config = useGameConfig();
   const isDesktop = useMediaQuery('(min-width: 900px)');
-  const accent = useActiveSubject().accent;
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'ffa' | 'classroom'>(() =>
@@ -410,27 +409,19 @@ export function PlayLanding() {
             <Card padding={4} width="100%">
               <VStack gap={2}>
                 <Kicker>{t('play.joinWithCode')}</Kicker>
-                {/* Room code is the star of the join card: big, monospaced,
-                    accent-ringed input so it reads like a ticket stub. */}
-                <div
-                  style={{
-                    borderRadius: 'var(--radius-element)',
-                    padding: 12,
-                    background: `${accent}0f`,
-                    border: `1.5px dashed ${accent}55`,
-                  }}
-                >
-                  <div style={{ fontFamily: 'monospace', letterSpacing: '0.32em', fontWeight: 800, fontSize: '1.2rem' }}>
-                    <TextInput
-                      label={t('play.matchCode')}
-                      value={joinCode}
-                      placeholder="ABC123"
-                      onChange={(v) => setJoinCode(v.toUpperCase())}
-                      // Enter in the code joins, as it would in a form; the
-                      // join's own ref guard keeps a held key to one join.
-                      onEnter={() => void handleJoin()}
-                    />
-                  </div>
+                {/* One frame around the field: the card. The code itself is
+                    monospaced and spaced like a ticket stub; the label keeps
+                    the body type (UX audit social-account-20). */}
+                <div className="play-code">
+                  <TextInput
+                    label={t('play.matchCode')}
+                    value={joinCode}
+                    placeholder="ABC123"
+                    onChange={(v) => setJoinCode(v.toUpperCase())}
+                    // Enter in the code joins, as it would in a form; the
+                    // join's own ref guard keeps a held key to one join.
+                    onEnter={() => void handleJoin()}
+                  />
                 </div>
                 {/* Join stays secondary beside the page's one primary (Create)
                     until the field holds a whole six-character code. */}

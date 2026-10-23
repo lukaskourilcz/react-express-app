@@ -1,0 +1,12 @@
+/* /play and the lobby (UX audit U6, #578). Page widths and control heights
+   come from the shared tokens; this file only lays out what sits inside. */
+
+/* The join code: monospace and spaced on the value only, so the "Match code"
+   label keeps the body type (social-account-20). The card is its one frame. */
+.play-code input {
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.32em;
+}
+.play-code input::placeholder { letter-spacing: 0.32em; }

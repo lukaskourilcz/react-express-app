@@ -6,6 +6,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
 import { DEFAULT_CONFIG, GAME_CONFIG_KEY } from '../src/lib/gameConfig';
 import type { Match, ScoreboardEntry } from '../src/lib/play';
+import { readFileSync } from 'node:fs';
 import { addSheet } from './css';
 
 // A live room as one player sees it, with the play API and the Realtime
@@ -103,6 +104,14 @@ async function mountWithRerender() {
   return { rerender: () => view.rerender(tree()) };
 }
 
+/** Play's own stylesheet in the test document (Vitest drops CSS imports). */
+function playSheet(): HTMLStyleElement {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(new URL('../src/components/Play.css', import.meta.url), 'utf8');
+  document.head.append(style);
+  return style;
+}
+
 const settle = () => act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
 
 beforeEach(() => {
@@ -127,6 +136,25 @@ describe('the Play page (social-account-12)', () => {
     expect(join().className).toBe(secondary);
     fireEvent.change(screen.getByLabelText('Match code'), { target: { value: 'abc123' } });
     expect(join().className).not.toBe(secondary);
+  });
+
+  it('says the scoring rule once and frames the join code once, spacing only its value (social-account-20)', async () => {
+    const sheet = playSheet();
+    await mount('/play');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    expect(screen.getByText('Everyone races to answer.')).toBeInTheDocument();
+    expect(document.body.textContent?.match(/speed bonus/g)).toHaveLength(1);
+    expect(screen.getByText('Anyone with the code can join; you play too.')).toBeInTheDocument();
+
+    const field = screen.getByLabelText('Match code');
+    expect(field.closest('.play-code')).not.toBeNull();
+    // No dashed, tinted box between the card and the field.
+    for (let node = field.parentElement; node && !node.classList.contains('ss-raised'); node = node.parentElement) {
+      expect(node.getAttribute('style') ?? '').not.toMatch(/dashed/);
+    }
+    expect(getComputedStyle(field).letterSpacing).not.toMatch(/^(normal|0px)?$/);
+    expect(getComputedStyle(screen.getByText('Match code')).letterSpacing).toMatch(/^(normal|0px)?$/);
+    sheet.remove();
   });
 
   it('labels the question count above its toggles, like the time limit', async () => {
