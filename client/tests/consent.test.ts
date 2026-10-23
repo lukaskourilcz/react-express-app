@@ -128,6 +128,20 @@ describe('the consent store', () => {
     expect(needsConsentDecision()).toBe(true);
   });
 
+  it('does not bring an earlier yes back when the browser refuses to store a withdrawal', () => {
+    acceptAllConsent();
+    expect(cookie()).toContain('analytics=1');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError'); });
+    const record = rejectAllConsent();
+    expect(record).toMatchObject({ analytics: false, marketing: false, stored: false });
+    expect(hasConsent('analytics')).toBe(false);
+    // The next visit asks again; it never reads the old yes.
+    reload();
+    expect(getConsent()).toBeNull();
+    expect(hasConsent('analytics')).toBe(false);
+    expect(cookie()).toBeNull();
+  });
+
   it('follows a choice made in another tab', () => {
     expect(getConsent()).toBeNull();
     const seen: unknown[] = [];
