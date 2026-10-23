@@ -126,6 +126,10 @@ async function startStandIns() {
       setTimeout(() => send(201, [body]), 5_500);
       return;
     }
+    if (url.pathname === '/rest/v1/rpc/allocate_shark_name' && (body as Row | undefined)?.p_user_id === SLOW.id) {
+      setTimeout(() => send(200, { handle: 'slowSharkie1', ordinal: '1', base: 'slowSharkie' }), 5_500);
+      return;
+    }
     if (req.method === 'GET' && url.searchParams.get('user_id') === `eq.${SLOW.id}`) {
       setTimeout(() => send(200, []), 5_500);
       return;
@@ -451,7 +455,7 @@ async function main() {
     console.log('PASS verified caller: a timed-out leaderboard answers 503');
 
     // So do the account ops whose own catch used to answer 500.
-    const slowOps = await Promise.all(['streak', 'xp', 'stats', 'leaderboard-visibility'].map(async (op) => [op, await user(op, { account: SLOW })] as const));
+    const slowOps = await Promise.all(['streak', 'xp', 'stats', 'leaderboard-visibility', 'identity', 'friends-handle'].map(async (op) => [op, await user(op, { account: SLOW })] as const));
     for (const [op, res] of slowOps) {
       assert.equal(res.statusCode, 503, `op=${op} whose read timed out answers 503 (${JSON.stringify(res.body)})`);
       assert.equal(errorCode(res), 'upstream_timeout');
