@@ -1911,7 +1911,6 @@ export const en = {
   'paths.error.catalog': 'The learning paths could not be loaded.',
   'paths.error.module': 'That module could not be loaded.',
   'paths.kicker.role': 'Role',
-  'paths.guestPreview': 'You can read the whole outline. Sign in to record graded work.',
   'paths.signInToRecord': 'You can read everything here. Signing in is what makes results stick.',
   'paths.notEnrolled': 'Start this path to open its activities.',
   'paths.paused': 'This path is paused. Your evidence is kept; resume whenever you want it back in your queue.',

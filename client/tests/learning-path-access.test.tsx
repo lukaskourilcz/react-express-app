@@ -52,10 +52,18 @@ const state = vi.hoisted(() => ({
   changes: [] as Record<string, unknown>[],
   saves: [] as unknown[][],
   sheet: vi.fn(),
+  signIn: vi.fn(),
+  guest: false,
 }));
 
 vi.mock('../src/lib/auth', () => ({
-  useAuth: () => ({ user: { id: 'user-1', user_metadata: state.metadata }, isAuthenticated: true, isLoading: false }),
+  useAuth: () => (state.guest
+    ? { user: null, isAuthenticated: false, isLoading: false }
+    : { user: { id: 'user-1', user_metadata: state.metadata }, isAuthenticated: true, isLoading: false }),
+}));
+vi.mock('../src/lib/signInDialog', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../src/lib/signInDialog')>(),
+  openSignIn: state.signIn,
 }));
 vi.mock('../src/lib/entitlement', () => ({
   useEntitlement: () => ({ tier: state.tier, signedIn: true, loading: false, failed: false, data: null, refetch: () => {} }),
@@ -153,6 +161,8 @@ beforeEach(() => {
   state.changes.length = 0;
   state.saves.length = 0;
   state.sheet.mockReset();
+  state.signIn.mockReset();
+  state.guest = false;
   server.use(http.get('*/api/user/learning-path-reward', () => HttpResponse.json({ eligible: false, claimed: false, orderId: null })));
 });
 
@@ -278,6 +288,46 @@ describe('the path page', () => {
     const start = screen.getByRole('button', { name: 'Start this path' });
     await act(async () => { fireEvent.click(start); fireEvent.click(start); });
     await waitFor(() => expect(state.changes).toHaveLength(1));
+  });
+
+  // UX audit learn-10: the hero stacks in every state, with one action row
+  // under the inventory and one filled primary in it.
+  it('stacks one action row under the hero, with one filled primary and Pause beside it', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const header = document.querySelector('.lp-head') as HTMLElement;
+    const actions = header.lastElementChild as HTMLElement;
+    expect(actions).toHaveClass('lp-head__actions');
+    expect(header.querySelector('.lp-head__text')!.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(actions.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(within(actions).getByRole('button', { name: 'Continue where you left off' })).toHaveClass('ss-swim-cta');
+    expect(within(actions).getByRole('button', { name: 'Pause' })).not.toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.lp-page .ss-swim-cta')).toHaveLength(1);
+  });
+
+  it('says what the four kinds of activity are for under the Modules heading, not in the hero', async () => {
+    await overview('fde');
+    const note = screen.getByText(/^Lessons explain the idea/);
+    expect(note.closest('header')).toBeNull();
+    expect(note.closest('section')).toBe(screen.getByRole('heading', { level: 2, name: 'Modules' }).closest('section'));
+  });
+
+  it('offers a guest Sign in to start as the one primary, and nothing to press on a closed path', async () => {
+    state.guest = true;
+    await overview('fde');
+    const signIn = within(document.querySelector('.lp-head__actions') as HTMLElement).getByRole('button', { name: 'Sign in to start' });
+    expect(signIn).toHaveClass('ss-swim-cta');
+    fireEvent.click(signIn);
+    expect(state.signIn).toHaveBeenCalledWith({ returnTo: '/learn/forward-deployed-engineer/path' });
+    expect(screen.queryByText(/Sign in to record graded work/)).toBeNull();
+  });
+
+  it('draws no empty action row for a guest on a closed path', async () => {
+    state.guest = true;
+    state.availability = 'disabled';
+    await overview('fde');
+    expect(screen.getByText(/not open yet on this deployment/)).toBeInTheDocument();
+    expect(document.querySelector('.lp-head__actions')).toBeNull();
   });
 
   it('after Premium lapses, the first module stays open', async () => {

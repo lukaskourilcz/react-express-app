@@ -21,6 +21,8 @@ import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { ApiError, friendlyError } from '../../lib/api';
 import { isBarred, useLocks } from '../../lib/locks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
+import { openSignIn } from '../../lib/signInDialog';
+import { SwimCta } from '../landing/LandingKit';
 import { useTrack } from '../../lib/tracks';
 import { capturePathEvent } from '../../lib/analytics';
 import { CodingCompletion } from '../../coding/CodingCompletion';
@@ -294,6 +296,31 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
     ? manifest.modules.find(module => module.activities.some(activity => activity.id === manifest.diagnosticActivityId))
     : undefined;
 
+  // The one action row under the hero (UX audit learn-10): at most one filled
+  // primary (SwimCta md) and a ghost Pause, left-aligned in every state. A
+  // guest is offered Sign in only while the path is open; a closed path's
+  // notice already says the outline stays readable.
+  const actions = [
+    !isAuthenticated && open && (
+      <SwimCta key="sign-in" label={pathCopy['paths.action.signIn']} onClick={() => openSignIn({ returnTo: pathHref(pathId) })} />
+    ),
+    open && (barred || nextBarred) && <span key="premium">{premiumMark}</span>,
+    // Only once the account's enrollments are known: while they load (or
+    // after they failed) an enrolled learner would be offered Start.
+    isAuthenticated && enrollments.data && !enrollment && open && (
+      <SwimCta key="start" onClick={() => (barred ? askForPremium() : void enrol('enroll'))} disabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
+    ),
+    isAuthenticated && enrollment?.status === 'paused' && open && (
+      <SwimCta key="resume" onClick={() => (barred ? askForPremium() : void enrol('resume'))} disabled={enrolling} label={t('paths.action.resume')} />
+    ),
+    enrollment?.status === 'active' && open && next && nextModule && (
+      <SwimCta key="continue" onClick={() => (nextBarred ? openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${next}` }) : navigate(activityHref(pathId, nextModule.id, next)))} label={t('paths.action.continue')} />
+    ),
+    enrollment?.status === 'active' && (
+      <Button key="pause" variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
+    ),
+  ].filter(Boolean);
+
   return (
     <div className="lp-page">
       <header className="lp-head">
@@ -326,32 +353,8 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               {t('paths.inventory.hours', { min: manifest.estimatedHours.min, max: manifest.estimatedHours.max })}
             </li>
           </ul>
-          {/* What the four kinds of activity are for, said once at the top of
-              the path rather than repeated at each one. The last sentence is
-              the one that matters: coming back to earlier material is the plan
-              working, not the plan slipping. */}
-          <p className="lp-note">
-            {pathCopy['paths.activityKinds']}
-          </p>
         </div>
-        <div className="lp-head__actions">
-          {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}
-          {open && (barred || nextBarred) && premiumMark}
-          {/* Only once the account's enrollments are known: while they load
-              (or after they failed) an enrolled learner would be offered Start. */}
-          {isAuthenticated && enrollments.data && !enrollment && open && (
-            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('enroll'))} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
-          )}
-          {isAuthenticated && enrollment?.status === 'paused' && open && (
-            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('resume'))} isDisabled={enrolling} label={t('paths.action.resume')} />
-          )}
-          {enrollment?.status === 'active' && open && next && nextModule && (
-            <Button variant="primary" onClick={() => (nextBarred ? openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${next}` }) : navigate(activityHref(pathId, nextModule.id, next)))} label={t('paths.action.continue')} />
-          )}
-          {enrollment?.status === 'active' && (
-            <Button variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
-          )}
-        </div>
+        {actions.length > 0 && <div className="lp-head__actions">{actions}</div>}
       </header>
 
       {enrollError && (
@@ -493,6 +496,11 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
 
       <section className="lp-section">
         <h2>{t('paths.outline')}</h2>
+        {/* What the four kinds of activity are for, said once above the
+            modules rather than at each one (UX audit learn-10 moved it out of
+            the hero). The last sentence is the one that matters: coming back
+            to earlier material is the plan working, not the plan slipping. */}
+        <p className="lp-note">{pathCopy['paths.activityKinds']}</p>
         <div className="lp-modules">
           {requiredModules.map((module, index) => (
             <ModuleCard

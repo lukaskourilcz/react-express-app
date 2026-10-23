@@ -30,18 +30,25 @@
 
 /* ── header ────────────────────────────────────────────────────────────── */
 
+/* The path and module headers stack in every state (UX audit learn-10): the
+   text takes the whole column, and the one action row sits left-aligned under
+   it. As a wrapping row, the actions took a right column 44px tall and
+   squeezed the lead into 486px beside a 277x355px blank. */
 .lp-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px 24px;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
 }
-.lp-head__text { flex: 1 1 380px; min-width: 0; }
-.lp-head__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; max-width: 100%; }
+.lp-head__text { min-width: 0; }
+.lp-head__actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; max-width: 100%; }
+/* An open activity's own header keeps its title and Close on one row. */
+.lp-workspace > .lp-head { flex-direction: row; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start; justify-content: space-between; }
+.lp-workspace > .lp-head > .lp-head__text { flex: 1 1 380px; }
 /* With large text on a phone a one-line label ran past the screen edge;
    path action labels wrap inside their button instead. */
 .lp-head__actions .astryx-button,
+.lp-head__actions .ss-swim-cta,
 .lp-portfolio-export__actions .astryx-button { max-width: 100%; height: auto; min-height: 44px; white-space: normal; text-align: center; }
 
 .lp-kicker {
@@ -80,6 +87,8 @@
 }
 .lp-card--muted { background: var(--color-background-muted); }
 .lp-section { display: flex; flex-direction: column; gap: 12px; }
+/* A section's gap already spaces its note from the heading above it. */
+.lp-section > .lp-note { margin: 0; }
 .lp-list { margin: 0; padding-left: 1.15em; color: var(--color-text-secondary); line-height: 1.6; }
 .lp-list li + li { margin-top: 6px; }
 .lp-list--plain { list-style: none; padding-left: 0; }
