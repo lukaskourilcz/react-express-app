@@ -73,8 +73,12 @@ export function useDraftChoice(id: string | null, opening: OpeningDraft | null, 
     openOther: () => {
       if (!id) return;
       setOther('loading');
+      // The draft belongs to the account that asked: one that arrives after
+      // a sign-out or another sign-in is not opened for whoever is here now.
+      const askedAs = accountEpoch();
       takeConflictingDraft(id).then((draft) => {
         setOther(null);
+        if (askedAs !== accountEpoch()) return;
         const device = deviceDraft(id);
         const differs = device !== null && device !== draft.code;
         reopen({ code: draft.code, conflict: differs ? 'account' : null, ...(differs ? { setAside: device } : {}), epoch }, draft.updatedAt, false);

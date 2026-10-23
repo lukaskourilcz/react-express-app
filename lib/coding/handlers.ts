@@ -31,8 +31,8 @@ import { classifyFailure, failureHint, isSyntaxError, jsonKind } from '../../sha
 import { afterCodingPass } from '../github-garden';
 import { approachesFor } from './approaches';
 import { evolvingPassed, evolvingStage, evolvingUnlocked } from '../../shared/evolving';
-import { codingContent, type GatedContent } from '../../shared/tiers';
-import { refuseLocked } from '../access';
+import { codingContent, contentTier, type GatedContent } from '../../shared/tiers';
+import { refuseLocked, resolveTier, serverContentIndex } from '../access';
 import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
 import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
@@ -111,10 +111,15 @@ async function loadProgressRow(supabase: SupabaseClient, userId: string, taskId:
 }
 
 /** Highest contiguous cleared `javascript` Learn level, from the roadmap blob.
- * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`). */
+ * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`).
+ * Throws when the row cannot be read, as a timeout already did: read as 0, a
+ * failed read locked tier 3 for a learner who had opened it, and the task
+ * page then sealed no session for it. A caller for which fewer cleared levels
+ * only narrows what it offers catches it. */
 export async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data, error } = await withTimeout(supabase.from('roadmap_progress').select('data').eq('user_id', userId).maybeSingle());
-  if (error || !data?.data) return 0;
+  if (error) throw new Error('db_error');
+  if (!data?.data) return 0;
   const levels = ((data.data as Record<string, { levels?: Record<string, { passed?: boolean }> }>).javascript?.levels) ?? {};
   let cleared = 0;
   while (levels[String(cleared + 1)]?.passed === true) cleared++;
@@ -138,6 +143,14 @@ function sessionFrom(raw: unknown): CodingSession | null {
   return decodeCodingSession(raw);
 }
 
+/** The Learn level attempt a coding session belongs to expired or was
+ * completed. The coding routines check the attempt again under its row lock
+ * and raise `invalid_roadmap_attempt` when it ended after the check below. */
+const learnAttemptEnded = (res: VercelResponse) =>
+  jsonError(res, 409, 'invalid_session', 'This learning attempt expired or ended. Start the lesson again.');
+const raisedEndedLearnAttempt = (error: { message?: string } | null | undefined): boolean =>
+  /\binvalid_roadmap_attempt\b/.test(error?.message ?? '');
+
 async function refuseInvalidLearnLink(supabase: SupabaseClient | null, res: VercelResponse, session: CodingSession, userId: string | null): Promise<boolean> {
   if (!session.roadmapAttemptId) return false;
   if (session.userId !== userId) { jsonError(res, 409, 'session_owner_mismatch', 'This lesson was opened under a different sign-in. Start it again.'); return true; }
@@ -147,7 +160,7 @@ async function refuseInvalidLearnLink(supabase: SupabaseClient | null, res: Verc
   const attempt = row.data;
   if (!attempt || (attempt.user_id ?? null) !== userId || attempt.completed_at || Date.parse(attempt.expires_at) <= Date.now()
     || !Array.isArray(attempt.coding_task_ids) || !attempt.coding_task_ids.includes(session.taskId)) {
-    jsonError(res, 409, 'invalid_session', 'This learning attempt expired or ended. Start the lesson again.'); return true;
+    learnAttemptEnded(res); return true;
   }
   return false;
 }
@@ -239,7 +252,12 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   let draftUpdatedAt: string | null = null;
   let locked: CodingTaskResponse['locked'] = null;
   let passedIds: ReadonlySet<string> = new Set();
+  const gated = linkedSession ? codingSessionContent(task, linkedSession) : codingContent(task.id);
   if (userId && supabase) {
+    // Premium content asks for the plan below in any case. The question goes
+    // out now, beside the progress reads, and the gate reads the answer the
+    // request remembers (a failure is asked again there and answered 503).
+    if (contentTier(gated, serverContentIndex()) === 'premium') void resolveTier(userId).catch(() => undefined);
     try {
       const [rows, cleared, draftRow] = await Promise.all([
         loadProgressRows(supabase, userId),
@@ -250,6 +268,11 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       passedIds = passed;
       const mine = rows.find((row) => row.task_id === task.id);
       progress = mine ? toProgress(mine) : null;
+      // An unreadable draft is not "no draft": the page would open the
+      // starter (or an evolving stage's previous code) over the account's
+      // saved code, which a stage Submit then overwrites. The previous
+      // stage's read below already fails the same way.
+      if (draftRow.error) throw new Error('draft_unavailable');
       draft = typeof draftRow.data?.code === 'string' ? draftRow.data.code : null;
       draftUpdatedAt = draft !== null && typeof draftRow.data?.updated_at === 'string' ? draftRow.data.updated_at : null;
       locked = tierLockReason({ track: task.track, tier: task.tier, progress: { passed }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: cleared });
@@ -262,7 +285,8 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
           draft = typeof previous.data?.code === 'string' ? prepareEvolvingDraft(previous.data.code, stage.challenge, stage.index) : null;
         }
       }
-    } catch {
+    } catch (error) {
+      logEvent({ status: 500, kind: 'task_progress_unavailable', reason: error instanceof Error ? error.message : 'unknown' });
       return jsonError(res, 500, 'db_error', 'Could not load coding progress');
     }
   } else {
@@ -276,7 +300,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   // Premium opens the rest of the catalogue; a guest and a free account are
   // refused it with 402. A task already passed stays open for review whatever
   // the tier.
-  if (await refuseLocked(res, userId, linkedSession ? codingSessionContent(task, linkedSession) : codingContent(task.id), { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
+  if (await refuseLocked(res, userId, gated, { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
   if (linkedSession) locked = null;
 
   const play = playable(task);
@@ -574,6 +598,13 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
       jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
       return null;
     }
+    // The level attempt ended between the link check and this write (the
+    // level was completed in another tab, or it expired): nothing was
+    // recorded, and the learner reopens the lesson, as for any ended link.
+    if (raisedEndedLearnAttempt(saved.error)) {
+      learnAttemptEnded(res);
+      return null;
+    }
     jsonError(res, 500, 'db_error', 'Could not record the verdict');
     return null;
   }
@@ -585,16 +616,24 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   // (#227). The last stage of a project or short path is a Premium milestone.
   // A task's repeat XP (058) is XP only: it credits no coins.
   const xpAwarded = data.xpAwarded === true && xp > 0;
-  if (xpAwarded && data.xpKind !== 'repeat') {
-    await creditVerifiedXp(supabase, {
-      userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
-    });
-  }
-  // From migration 048 every applied verified pass is also a streak day, which
-  // can reach a Premium streak milestone; an unverified (checklist) pass
-  // settles nothing.
-  if (data.applied === true && input.verdict === 'passed' && input.verified) await settleMilestones(supabase, userId, 'webdev');
-  const progress = await loadProgressRow(supabase, userId, task.id);
+  const rewards = async () => {
+    if (xpAwarded && data.xpKind !== 'repeat') {
+      await creditVerifiedXp(supabase, {
+        userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
+      });
+    }
+    // From migration 048 every applied verified pass is also a streak day,
+    // which can reach a Premium streak milestone; an unverified (checklist)
+    // pass settles nothing.
+    if (data.applied === true && input.verdict === 'passed' && input.verified) await settleMilestones(supabase, userId, 'webdev');
+  };
+  // The progress row the verdict wrote does not depend on the coins, so it is
+  // read beside them. Both settle before the answer: a read that fails must
+  // not end the request while a credit is still in flight.
+  const [read, credited] = await Promise.allSettled([loadProgressRow(supabase, userId, task.id), rewards()]);
+  if (credited.status === 'rejected') throw credited.reason;
+  if (read.status === 'rejected') throw read.reason;
+  const progress = read.value;
   return {
     progress,
     firstPass: data.firstPass === true,
@@ -715,6 +754,9 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
       if (written.error && isRpcMissing(written.error)) {
         return jsonError(res, 503, 'migration_required', 'Practice migration 027 is not installed');
       }
+      // The arrangement is still answered: it is evidence about ordering and
+      // records no progress. A lost record is logged, never dropped silently.
+      if (written.error) logEvent({ status: 500, kind: 'puzzle_unrecorded', reason: written.error.code ?? 'unknown' });
     }
     logEvent({ status: 200, kind: 'puzzle', track: task.track, accepted });
     res.setHeader('Cache-Control', 'private, no-store');
@@ -745,6 +787,9 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   } else {
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
+    // A signed-in Submit of an evolving stage stores its code as the stage
+    // draft, which Postgres text cannot hold with U+0000 in it.
+    if (userId && evolvingStage(task.id) && hasNul(body.code)) return jsonError(res, 400, 'bad_request', NUL_MESSAGE);
     code = body.code;
     const done = enterInFlight(req, 'grading', { item: gradingItem.task(task.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, userId ? `user:${userId}` : undefined);
     if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
@@ -781,6 +826,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
       // verdict, so the browser's next save builds on it.
       if (code !== null) {
         const draft = await storeDraft(supabase, userId, task.id, code, 'force');
+        if (draft === 'busy') return draftBusy(res);
         if (!draft || draft === 'missing') return jsonError(res, 500, 'db_error', 'Could not save stage code');
         if (draft.saved && draft.updatedAt) draftUpdatedAt = draft.updatedAt;
       }
@@ -875,6 +921,9 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
     }));
     if (marked.error) {
       if (isRpcMissing(marked.error)) return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
+      // The level attempt ended after the link check: nothing was recorded
+      // and nothing is revealed, as for any ended link.
+      if (raisedEndedLearnAttempt(marked.error)) return learnAttemptEnded(res);
       return jsonError(res, 500, 'db_error', 'Could not record the reveal');
     }
     try { progress = await loadProgressRow(supabase, userId, task.id); } catch { /* the reveal itself succeeded */ }
@@ -915,7 +964,8 @@ export async function handleCodingProgress(req: VercelRequest, res: VercelRespon
     res.setHeader('Cache-Control', 'private, no-store');
     const out: CodingProgressResponse = { tasks, due, javascriptLevelsCleared: cleared, passedByTrack };
     return res.json(out);
-  } catch {
+  } catch (error) {
+    logEvent({ status: 500, kind: 'progress_unavailable', reason: error instanceof Error ? error.message : 'unknown' });
     return jsonError(res, 500, 'db_error', 'Could not load coding progress');
   }
 }
@@ -929,13 +979,27 @@ const isDraftTime = (value: unknown): value is string =>
 
 type StoredDraft = { saved: true; updatedAt: string | null } | { saved: false; updatedAt: string };
 
+/** save_coding_draft_v2 met two other saves of the same new draft and gave
+ * up (`coding_draft_busy`). Nothing was written; another try a moment later
+ * goes through. */
+function draftBusy(res: VercelResponse) {
+  res.setHeader('Retry-After', '1');
+  return jsonError(res, 503, 'draft_busy', 'Another save of this draft was in progress. Try again in a moment.');
+}
+
 /** Write a task's draft: only while the account's draft still has `base`
  * (null: none yet), or whatever it holds with 'force'. Migration 059's
  * save_coding_draft_v2 decides under a row lock. Before that migration the
  * save goes through save_coding_draft (025), which always writes, and the
  * time is read back: none when another save overtook it. Null for a database
- * error, 'missing' when neither routine exists. */
-async function storeDraft(supabase: SupabaseClient, userId: string, taskId: string, code: string, base: string | null | 'force'): Promise<StoredDraft | 'missing' | null> {
+ * error, 'missing' when neither routine exists, 'busy' when 059's routine
+ * gave up on concurrent first saves. */
+/** Postgres text cannot hold U+0000: a draft holding it is refused before
+ * the database, which would raise and answer 500. */
+const hasNul = (code: string): boolean => code.includes('\u0000');
+const NUL_MESSAGE = 'Code cannot contain a NUL (U+0000) character';
+
+async function storeDraft(supabase: SupabaseClient, userId: string, taskId: string, code: string, base: string | null | 'force'): Promise<StoredDraft | 'missing' | 'busy' | null> {
   const force = base === 'force';
   const result = await withTimeout(supabase.rpc('save_coding_draft_v2', { p_user_id: userId, p_task_id: taskId, p_code: code, p_base: force ? null : base, p_force: force }));
   if (!result.error) {
@@ -944,6 +1008,7 @@ async function storeDraft(supabase: SupabaseClient, userId: string, taskId: stri
     if (answer?.saved === false && answer.conflict === true && updatedAt) return { saved: false, updatedAt };
     return { saved: true, updatedAt };
   }
+  if (/\bcoding_draft_busy\b/.test(result.error.message ?? '')) return 'busy';
   if (!isRpcMissing(result.error)) return null;
   const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: taskId, p_code: code }));
   if (saved.error) return isRpcMissing(saved.error) ? 'missing' : null;
@@ -975,12 +1040,15 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     const body = (req.body ?? {}) as Partial<Record<keyof CodingDraftSaveRequest, unknown>>;
     const code = body.code;
     if (typeof code !== 'string' || Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required and limited to 20 kB');
+    // Refused here rather than raised by the save routine as a 500.
+    if (hasNul(code)) return jsonError(res, 400, 'bad_request', NUL_MESSAGE);
     // The account draft's time this code builds on (owner decision 10). A
     // client from before it sends none and writes as it always did.
     const base = !('base' in body) ? 'force' : body.base === null ? null : isDraftTime(body.base) ? body.base : undefined;
     if (base === undefined) return jsonError(res, 400, 'bad_request', 'base must be a draft time or null');
     const saved = await storeDraft(supabase, userId, id, code, base);
     if (!saved) return jsonError(res, 500, 'db_error', 'Could not save the draft');
+    if (saved === 'busy') return draftBusy(res);
     if (saved === 'missing') return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
     // Saved from another device or tab since: nothing was written, and the
     // browser asks the learner which code to keep. The other code stays on

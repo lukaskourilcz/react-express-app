@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   signedIn: true,
   response: null as unknown,
   save: vi.fn(async (_id: string, _code: string, _base: string | null): Promise<{ ok: true; updatedAt: string | null }> => ({ ok: true, updatedAt: null })),
+  refetch: vi.fn(async () => undefined),
 }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: mocks.signedIn }), signedInAccount: () => (mocks.signedIn ? 'user-1' : null) }));
 vi.mock('../src/coding/practice', () => ({
@@ -40,14 +41,15 @@ vi.mock('../src/coding/api', () => ({
   saveCodingDraft: mocks.save,
   useCodingProgress: () => ({ data: undefined }),
   // One response object per load, as the query cache hands out.
-  useCodingTask: () => ({ data: mocks.response }),
+  useCodingTask: () => ({ data: mocks.response, refetch: mocks.refetch }),
 }));
 vi.mock('../src/coding/CodingWorkbench', () => ({
-  CodingWorkbench: ({ initialCode, task, onDraft, onEdit }: CodingWorkbenchProps) => {
+  CodingWorkbench: ({ initialCode, task, onDraft, onEdit, onRefreshTask }: CodingWorkbenchProps) => {
     const [code, setCode] = useState(initialCode ?? task.starter);
     return <>
       <textarea aria-label="Code" value={code} onChange={(event) => { setCode(event.target.value); onEdit?.(event.target.value); }} />
       <button onClick={() => onDraft?.(code)}>Run</button>
+      <button onClick={() => void onRefreshTask?.(code)}>Load the latest brief</button>
     </>;
   },
 }));
@@ -412,6 +414,33 @@ it('opens the other device’s draft on request, and keeps this code on this dev
   expect(mocks.save).toHaveBeenLastCalledWith(ID, '// mine', other);
 });
 
+// The other draft is the account's: one that arrived after a sign-out was
+// opened in the editor for whoever was at the device by then.
+it('does not open the other draft when the account changed while it loaded', async () => {
+  const loaded = iso(NOW - minutes(10));
+  const other = '2026-10-09T11:59:00.123456+00:00';
+  serve('// loaded', loaded);
+  let answer!: () => void;
+  const answered = new Promise<void>((resolve) => { answer = resolve; });
+  let asked = false;
+  server.use(http.get('*/api/user/*', async () => {
+    asked = true;
+    await answered;
+    return HttpResponse.json({ code: '// the account’s other draft', updatedAt: other });
+  }));
+  mount();
+  refuse(other);
+  await run('// mine');
+  await waitFor(() => expect(conflictNote()).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: 'Open the other draft' }));
+  await waitFor(() => expect(asked).toBe(true));
+  act(() => { clearAccountData(); });
+  answer();
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+  expect(screen.getByLabelText('Code')).toHaveValue('// mine');
+  expect(screen.queryByText(/the account’s other draft/)).toBeNull();
+});
+
 it('offers back a copy set aside on an earlier visit until a Run saves', async () => {
   const saved = iso(NOW - minutes(1));
   localStorage.setItem(`devshark:coding:draft-aside:${ID}`, '// set aside before');
@@ -448,6 +477,42 @@ it('gives the code kept at that sign-out back when the same account opens the ta
   expect(note()).toHaveTextContent('Other code for this task is kept on this device until you Run or Submit.');
   fireEvent.click(screen.getByRole('button', { name: 'Open the code from this device' }));
   expect(screen.getByLabelText('Code')).toHaveValue('// typed as a guest since');
+});
+
+// Signing out from the header left the account's code in the editor, on a
+// page whose saves and Submit no longer belonged to anyone, for whoever used
+// the device next.
+it('reads the task again on a sign-out, and leaves none of the account’s code on screen', async () => {
+  serve('// the account’s code', iso(NOW - minutes(1)));
+  const view = mount();
+  expect(screen.getByLabelText('Code')).toHaveValue('// the account’s code');
+  mocks.refetch.mockClear();
+  mocks.refetch.mockImplementationOnce(async () => { serve(null, null); });
+  // A chosen sign-out: the account's copies on this device go.
+  act(() => { clearAccountData(); mocks.signedIn = false; });
+  view.refetch();
+  await waitFor(() => expect(mocks.refetch).toHaveBeenCalledTimes(1));
+  view.refetch();
+  expect(screen.getByLabelText('Code')).toHaveValue('// starter');
+  expect(screen.queryByText(/the account’s code/)).toBeNull();
+});
+
+// The code carried over a refresh of the brief stayed in the screen's
+// memory, and the editor opened on it again after a sign-out, for whoever
+// used the device next.
+it('does not reopen the code kept over a brief refresh after a sign-out', async () => {
+  serve(null, null);
+  const view = mount();
+  fireEvent.change(screen.getByLabelText('Code'), { target: { value: '// the account’s code' } });
+  mocks.refetch.mockImplementationOnce(async () => ({ error: null }) as never);
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Load the latest brief' })));
+  serve(null, null);
+  view.refetch();
+  expect(screen.getByLabelText('Code')).toHaveValue('// the account’s code');
+  act(() => { clearAccountData(); mocks.signedIn = false; });
+  serve(null, null);
+  view.refetch();
+  expect(screen.getByLabelText('Code')).toHaveValue('// starter');
 });
 
 it('never opens code kept for another account', () => {

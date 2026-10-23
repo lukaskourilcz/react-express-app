@@ -122,7 +122,10 @@ export function selectPersonalizedReview(
     return (1 - accuracy) * 100 + (question.importance ?? 5) * 8 + recentMiss + missRatio * 30 - repeatedRecently;
   };
 
-  const ranked = [...questions].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id));
+  // Scored once each: the sort compares every question many times, and a
+  // score parses two dates and reads two maps.
+  const scores = new Map(questions.map((question) => [question, score(question)]));
+  const ranked = [...questions].sort((a, b) => scores.get(b)! - scores.get(a)! || a.id.localeCompare(b.id));
   const older = ranked.filter((question) => {
     const seen = historyByQuestion.get(question.id)?.last_seen_at;
     return !seen || now - Date.parse(seen) >= 3 * DAY_MS;

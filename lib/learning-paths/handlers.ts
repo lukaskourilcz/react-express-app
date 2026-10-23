@@ -709,6 +709,16 @@ type ActivityPayload =
       draftUnavailable?: boolean;
     };
 
+/** Postgres JSONB and text refuse U+0000 (22P05), which would answer 500:
+ * a draft or artifact holding the character is refused first. The values are
+ * walked, not the JSON, so code that spells the escape out as text passes. */
+function holdsNul(value: unknown, depth = 0): boolean {
+  if (typeof value === 'string') return value.includes('\u0000');
+  if (depth > 4 || value === null || typeof value !== 'object') return false;
+  return Object.values(value as Record<string, unknown>).some((one) => holdsNul(one, depth + 1));
+}
+const NUL_MESSAGE = 'Text cannot contain a NUL (U+0000) character';
+
 /** Builds the learner-facing payload. Options are shuffled per attempt and the
  * correct index is returned separately, for the sealed session only. */
 async function buildActivityPayload(
@@ -1068,6 +1078,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       if (submitted && Buffer.byteLength(JSON.stringify(submitted), 'utf8') > PATH_LIMITS.payloadBytes) {
         return jsonError(res, 413, 'too_large', 'The submission is limited to 64 kB');
       }
+      if (submitted && holdsNul(submitted)) return jsonError(res, 400, 'bad_request', NUL_MESSAGE);
       const graded = gradeArtifact(activity, submitted as Record<string, string | string[]> | undefined);
       state = graded.state;
       criteria = graded.criteria;
@@ -1470,6 +1481,7 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
     if (Buffer.byteLength(serialized, 'utf8') > PATH_LIMITS.payloadBytes) {
       return jsonError(res, 413, 'too_large', 'A draft is limited to 64 kB');
     }
+    if (holdsNul(content)) return jsonError(res, 400, 'bad_request', NUL_MESSAGE);
     if (typeof content.code === 'string' && pathCodeTooLarge(content.code)) {
       return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     }

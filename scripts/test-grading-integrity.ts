@@ -282,6 +282,20 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   assert.equal(outage.body?.graderUnavailable, true, 'the verdict says the grader could not run');
   assert.equal(db.attemptIds.length, before, 'a runner outage writes no verdict');
   console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
+
+  // React code nested past the compiler's recursion threw a RangeError on
+  // this side, before any VM, and was answered as a runner outage the learner
+  // could only retry. It is the learner's error, as in the TypeScript grader.
+  const deep = { statusCode: 200, body: null as null | { verdict?: string; codeError?: string | null; graderUnavailable?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit({
+    method: 'POST', headers: { 'x-forwarded-for': '203.0.113.73' }, query: {},
+    body: { session: encodeCodingSession({ taskId: reactTask.id, track: 'react', userId: null }), code: `export default function App() { return ${'('.repeat(9000)}null${')'.repeat(9000)}; }` },
+  } as never, deep as never, null);
+  assert.equal(deep.statusCode, 200, JSON.stringify(deep.body));
+  assert.equal(deep.body?.verdict, 'error');
+  assert.equal(deep.body?.graderUnavailable, undefined, 'over-deep code is not a grader outage');
+  assert.match(deep.body?.codeError ?? '', /nests too deeply/);
+  console.log('PASS integrity: React code nested too deeply for the compiler is an error verdict, not a runner outage');
 }
 
 // ── a checkpoint hands over nothing that passes its milestone ───────────
@@ -696,6 +710,27 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     const forged = reply();
     await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: opened.body!.session, order: lines.map((_, index) => `b${index + 2}`) } } as never, forged as never, null);
     assert.equal(forged.statusCode, 400, `${id}: an id the session never issued is refused`);
+  }
+  // A signed-in arrangement whose record fails is still answered, and the
+  // lost record is logged rather than dropped without a trace.
+  {
+    const id = 'js-sum-array';
+    const authored = puzzleFor(id)!;
+    const opened = reply();
+    await handleCodingTask({ method: 'GET', headers: {}, query: { id } } as never, opened as never, null);
+    const byCode = new Map(opened.body!.task!.puzzle!.lines.map((line) => [line.code, line.id]));
+    const order = authored.accepted[0].map((line) => byCode.get(authored.lines.find((one) => one.id === line)!.code)!);
+    const failing = { rpc: async () => ({ data: null, error: { code: 'XX000', message: 'connection reset' } }) };
+    const lines: string[] = [];
+    const log = console.log;
+    console.log = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
+    const sent = reply();
+    try {
+      await handleCodingSubmit({ method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.72' }, query: {}, body: { session: opened.body!.session, order, user_id: 'user-puzzle-0001' } } as never, sent as never, failing as never);
+    } finally { console.log = log; }
+    assert.equal(sent.statusCode, 200, JSON.stringify(sent.body));
+    assert.equal(sent.body?.puzzle?.accepted, true);
+    assert.ok(lines.some((line) => line.includes('"kind":"puzzle_unrecorded"') && line.includes('"reason":"XX000"')), 'the failed puzzle record is logged');
   }
   console.log('PASS integrity: a code-ordering puzzle submits through the session that issued it');
 }

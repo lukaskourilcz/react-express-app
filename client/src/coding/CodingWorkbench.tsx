@@ -200,7 +200,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const resetRef = useRef<HTMLButtonElement | null>(null);
   const revealRef = useRef<HTMLButtonElement | null>(null);
   const solutionRef = useRef<HTMLDivElement | null>(null);
-  // The browser's own run during a Submit, which the server's answer replaces.
+  // The browser's run in progress: a Run, or the preview during a Submit,
+  // which the server's answer replaces.
   const localRun = useRef<AbortController | null>(null);
   const harness = useReactHarness();
   // What a narrow screen gets instead of an editor: the task's puzzle when it
@@ -229,8 +230,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const rungs = useMemo(() => ladderRungs(task), [task]);
   const taken = Math.min(hintsTaken, rungs.length);
 
-  // Format the code for display once the learner pauses.
+  // Format the code for display once the learner pauses, which tells the
+  // Format button whether it has anything to do. Not while a puzzle or the
+  // wait for a bigger screen stands in for the editor: there is no Format
+  // button then, and a phone downloaded Prettier for nothing.
+  const formatterNeeded = !puzzleMode && !pendingOnDesktop;
   useEffect(() => {
+    if (!formatterNeeded) return;
     let active = true;
     const timer = window.setTimeout(() => {
       if (!code.trim()) { setFormattedCode(code); setFormatSource(code); return; }
@@ -241,7 +247,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       });
     }, 350);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [code, task.track]);
+  }, [code, task.track, formatterNeeded]);
 
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
   // The runner, and TypeScript's compiler, load while the brief is read: the
@@ -251,7 +257,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // has no Run for. Choosing the editor starts it.
   const editorShown = !puzzleMode && !pendingOnDesktop;
   useEffect(() => (isReact || !editorShown ? undefined : warmRunner(codeTrack)), [isReact, editorShown, codeTrack]);
-  // A Submit's browser preview has nowhere to report once the task is left.
+  // A Run, or a Submit's browser preview, has nowhere to report once the task
+  // is left.
   useEffect(() => () => localRun.current?.abort(), []);
   useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
 
@@ -279,12 +286,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       if (box.width <= 0) return;
       setSplit(((moveEvent.clientX - box.left) / box.width) * 100);
     };
+    // A drag the browser takes over (a touch that turns into a scroll, a
+    // lost capture) ends with pointercancel and no pointerup: without it the
+    // split kept following the pointer after the drag was over.
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   }, [setSplit]);
 
   const onCodeChange = useCallback((next: string) => {
@@ -312,10 +324,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         if (outcome.status !== 'done' || outcome.failed > 0) setFailedRun(true);
         setTab(task.suite ? 'results' : 'preview');
       } else {
+        // Leaving the task stops the run (the unmount below aborts it), so a
+        // loop or a first compile does not keep a worker busy for nothing.
+        const controller = new AbortController();
+        localRun.current = controller;
         setRunPhase('starting');
         const outcome = await runCodeTests({
-          runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase,
+          runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase, signal: controller.signal,
         });
+        if (controller.signal.aborted) return;
         setRun(outcome);
         setServerChecked(false);
         // A runner that never loaded is not an attempt, so it opens no hint.
@@ -501,8 +518,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     }
   }, [skipNote, skipReason, skipSubmitting, task.id, t]);
 
+  // One reveal at a time: after a pass the Solution button asks straight
+  // away and stays on screen until the answer comes, so a second press sent
+  // a second request.
+  const revealing = useRef(false);
   const reveal = useCallback(async () => {
-    if (!session) return;
+    if (!session || revealing.current) return;
+    revealing.current = true;
     setConfirming(null);
     setSubmitError(null);
     try {
@@ -514,6 +536,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) })
         : isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
       revealRef.current?.focus();
+    } finally {
+      revealing.current = false;
     }
   }, [session, taken, onRevealed, rungs.length, t, submitFailure, task.track]);
   // The button that asked for the solution is gone once it shows, so focus
@@ -539,7 +563,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // tooltip, and a click on one does nothing.
   const hintUnavailable = solution ? t('coding.hintTip.solutionShown') : !nextRung ? t('coding.hintExhausted') : !attemptReady ? t('coding.hintTip.locked') : '';
   const giveUpUnavailable = !canGiveUp(taken, rungs.length) ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) }) : '';
-  const takeHint = () => { if (!hintUnavailable && nextRung) setHintsTaken(taken + 1); };
+  // A revealed rung takes focus, so a screen reader reads it: it appears in
+  // the pane beside the editor, away from the button that asked for it.
+  const hintList = useRef<HTMLOListElement | null>(null);
+  const hintRevealed = useRef(false);
+  useEffect(() => {
+    if (!hintRevealed.current) return;
+    hintRevealed.current = false;
+    (hintList.current?.lastElementChild as HTMLElement | null)?.focus();
+  }, [taken]);
+  const takeHint = () => {
+    if (hintUnavailable || !nextRung) return;
+    hintRevealed.current = true;
+    setHintsTaken(taken + 1);
+  };
   // Revealing the solution before a pass costs this task its XP and coins: the
   // server records the reveal against the account, and a later first pass then
   // pays nothing. After a recorded pass it costs nothing, so a section task
@@ -580,8 +617,16 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const busy = phase !== 'idle';
   const submitDisabled = taskChanged || mode === 'landing' || busy || !session || !online || Boolean(solution);
 
-  // The shortcut does what the button would: nothing, while Submit is off.
+  // The shortcut does what the button would: nothing, while Submit is off,
+  // and nothing while a puzzle or the wait for a bigger screen stands in for
+  // the editor. There is no Run or Submit then, and the code under them is
+  // hidden: Ctrl+Shift+Enter on a puzzle sent it as a failed attempt.
+  // They are the editor's keys, too: the skip note, the report dialog and the
+  // confirmations sit inside the workbench, and Ctrl+Enter there (the "send"
+  // of many forms) ran the code and Ctrl+Shift+Enter submitted it.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!editorShown) return;
+    if (event.target instanceof Element && event.target.closest('form, dialog, [role="dialog"], [role="alertdialog"]')) return;
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       if (event.shiftKey) { if (!submitDisabled) void submit(); }
@@ -1185,9 +1230,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {notesOpen && (
             <div className="cd-pane cd-pane--controls">
               {hintsOpen && <div className="cd-hints" role="group" aria-label={t('coding.hint')}>
-                <ol className="cd-hint-list">
+                <ol className="cd-hint-list" ref={hintList}>
                   {rungs.slice(0, taken).map((rung, index) => (
-                    <li key={index} className="cd-hint">
+                    <li key={index} className="cd-hint" tabIndex={-1}>
                       <span className="cd-hint__label">
                         {rung.kind === 'hint' ? t('coding.hint.hint', { n: rung.index + 1 }) : rung.kind === 'approach' ? t('coding.hint.approach', { n: rung.index + 1 }) : rung.kind === 'skeleton' ? t('coding.hint.skeleton') : t('coding.hint.docs')}
                       </span>

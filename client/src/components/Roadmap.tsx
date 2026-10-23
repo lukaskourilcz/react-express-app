@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
@@ -8,30 +8,22 @@ import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button as AxButton } from '@astryxdesign/core/Button';
-import { IconButton } from '@astryxdesign/core/IconButton';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { AppToast } from './ui/AppToast';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
-import { useIsMobile } from '../lib/useMediaQuery';
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
   RoadmapPlayable,
-  RoadmapQuestion,
-  RoadmapAnswerResult,
   RoadmapStructure,
   Question,
 } from '../types/quiz';
 import type { LearnRepeatXp } from '../../../shared/repeat-xp';
-import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 import {
   fetchRoadmapLevel,
   fetchRoadmapPartTest,
-  submitRoadmapAnswer,
-  completeRoadmapAttempt,
-  checkRoadmapAttempt,
   applySkillCheckReceipt,
   recordLevelResult,
   recordPartTestResult,
@@ -57,8 +49,6 @@ import {
   type PartRange,
 } from '../lib/roadmap';
 import { availabilityOf } from '../lib/roadmap';
-import ReferralMoment from './ReferralMoment';
-import ResultShareActions from './ResultShareActions';
 import { useSubject, topicsForSubject, type SubjectId } from '../lib/subjects';
 import {
   masteryState,
@@ -67,20 +57,20 @@ import {
   type MasteryState,
   type LevelMasteryEntry,
 } from '../../../shared/mastery';
-import { ROADMAP_MAX_HEARTS, type PlacementReview } from '../../../shared/assessment';
-import { levelIntro } from '../lib/levelIntros';
+import type { PlacementReview } from '../../../shared/assessment';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
 import { announceLearnRepeat, awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
-import { getCategoryHexColor, categoryLabelKey, hoverFilterOn, onCategoryColorText, textOnColor } from '../lib/categories';
+import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { learnText } from '../i18n/translations.learn';
 import { LearnLesson } from './learn/LearnLesson';
 import { useAuth } from '../lib/auth';
-import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
+import { accountEpoch } from '../lib/accountData';
+import { friendlyError, isPremiumRequired } from '../lib/api';
 import { NO_PENDING, useInPlan, useLearnerSections, type PendingJoin } from '../lib/eligibility';
 import { entryFor, isOpen, useEnrollments, usePathCatalog } from '../lib/learningPaths';
 import { openSignIn } from '../lib/signInDialog';
@@ -98,45 +88,35 @@ import {
   type RailEntry,
 } from './learn/sections';
 import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionSwitcher';
-import { LockIcon, SectionEmpty, SectionRail } from './learn/SectionRail';
+import { CheckIcon, LockIcon, SectionEmpty, SectionRail } from './learn/SectionRail';
 import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
 import { useFdePathSteps } from './learn/useFdePathSteps';
 import { useOnline } from './learn/useOnline';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
-import { reportQuestion } from '../lib/supabase';
-import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readJSON, readString, writeJSON, writeString } from '../lib/storage';
-import { autosaveDraft, codingDraftQuery, flushAutosave, forgetDeviceDraft, openingDraft, saveDraft } from '../coding/drafts';
-import { fetchCodingTask } from '../coding/api';
-import { DraftNote, useDraftChoice } from '../coding/DraftNote';
 import { renderQuestion } from './CodeBlock';
-import { TermsBar } from './ui/Terms';
-import { LessonFigures } from './ui/LessonFigure';
-import { figuresFor } from '../../../shared/lesson-figures';
-import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { RedFlagDialog } from './RedFlagDialog';
-import { IconTile, BoltIcon, CloseIcon, FlagIcon, TrophyIcon } from './ui/icons';
+import { IconTile, BoltIcon, CloseIcon, TrophyIcon } from './ui/icons';
 import { SwimCta } from './landing/LandingKit';
 import { lazyShellPart } from '../lib/routeRecovery';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import ErrorRetry from './ErrorRetry';
 import { localDayChangeTime } from '../lib/utcDay';
-import { SaveSharkCard } from './SaveSharkCard';
 import './Roadmap.css';
 import './DeepEndScreens.css';
 
-// The coding workbench pulls the editor and the runner in; keep it out of the
-// Learn chunk until a devShark level actually reaches its coding phase. A
-// `lazyShellPart` inside its own boundary: when its code does not load, the
-// level stays on screen with "Could not load this task." and a Try again that
-// asks again, or reloads when the same failure comes straight back.
 // Keep path screens and their styles outside the normal topic chunk.
 const PathShelf = lazyShellPart(() => import('./paths/PathShelf'));
 
-const CodingWorkbench = lazyShellPart(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
+// An open level's runner, with the level intros and worked-example figures it
+// shows, was about two thirds of the Learn chunk, and the map needs none of
+// it. It loads when a level opens: open() starts the load beside the level's
+// own request, and LessonStage holds the loader meanwhile.
+const loadLessonRunner = () => import('./learn/LessonRunner');
+const preloadLessonRunner = () => { loadLessonRunner().catch(() => {}); };
+const LessonRunner = lazyShellPart(() => loadLessonRunner().then((m) => ({ default: m.LessonRunner })));
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
@@ -151,10 +131,6 @@ const writeSectionTopic = (section: LearnSectionId, topic: string): void =>
   writeJSON(SECTION_TOPIC_KEY, { ...readJSON<Partial<Record<LearnSectionId, string>>>(SECTION_TOPIC_KEY, {}), [section]: topic });
 const PART_KEY = 'devquiz:roadmap:part';
 const CHECKPOINT_GOLD = BRAND.gold;
-// Lives for a level lesson: one heart that drains a third per wrong answer.
-// The API grades the same rule, so the number is shared.
-const MAX_HEARTS = ROADMAP_MAX_HEARTS;
-const HEART_COLOR = BRAND.coral;
 const CHECKPOINT_GRAD: [string, string] = ['#ffd54f', BRAND.gold];
 
 // Per-topic path colour. The path takes its base hue from the chosen category
@@ -243,11 +219,6 @@ function useElementWidth<T extends HTMLElement>() {
   return [ref, width] as const;
 }
 
-const CheckIcon = ({ size = 22 }: { size?: number }) => (
-  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
 // Mastered levels carry a filled star; cleared-but-due levels carry a small
 // review (circular-arrow) marker. Both pair the mastery colour with a distinct
 // shape so status never rides on colour alone.
@@ -299,16 +270,6 @@ function variedConnector(x1: number, y1: number, x2: number, y2: number, index: 
   const mx = (x1 + x2) / 2 - (dy / length) * amplitude * direction;
   const my = (y1 + y2) / 2 + (dx / length) * amplitude * direction;
   return `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`;
-}
-
-// The server already shuffles answer options and seals their accepted indices.
-// We may vary question order locally without changing those protected indices.
-function presentQuestions(questions: RoadmapQuestion[], prev?: RoadmapQuestion[]): RoadmapQuestion[] {
-  const byId = new Map(questions.map((q) => [q.id, q]));
-  const reference = (prev ?? questions).map((q) => byId.get(q.id)).filter((q): q is RoadmapQuestion => !!q);
-  return reference.length === questions.length
-    ? shuffleDifferentFrom(questions, reference)
-    : shuffleDifferentFrom(questions, questions);
 }
 
 // What to play after finishing `a`, within the active topic's part ranges: the
@@ -445,6 +406,8 @@ function Roadmap() {
   const [readingLessonId, setReadingLessonId] = useState<string | null>(null);
   const [lessonError, setLessonError] = useState<string | null>(null);
   const lessonAbortRef = useRef<AbortController | null>(null);
+  // Leaving Learn while a level loads drops its request too.
+  useEffect(() => () => lessonAbortRef.current?.abort(), []);
   const learningXpBeforeAttemptRef = useRef(0);
 
   // Skill check (assessment) state. `open` controls the modal; the runner
@@ -548,6 +511,16 @@ function Roadmap() {
   // state names the section it belongs to, so a switch during a save never
   // shows its result under another section.
   const [join, setJoin] = useState<(JoinState & { section: LearnSectionId }) | null>(null);
+  // A join, and one the session has not read back yet, belong to the account
+  // that made it. Kept across a sign-out, the next account on this page was
+  // planned with sections it never joined and told it had joined them.
+  const accountId = user?.id ?? null;
+  const [joinAccount, setJoinAccount] = useState(accountId);
+  if (joinAccount !== accountId) {
+    setJoinAccount(accountId);
+    setPending(NO_PENDING);
+    setJoin(null);
+  }
   // The saved line is said once: leaving the section drops it.
   useEffect(() => {
     setJoin((current) => (current?.status === 'saved' && current.section !== section ? null : current));
@@ -558,21 +531,37 @@ function Roadmap() {
   const fdeEntry = entryFor(pathCatalog.data, 'fde');
   const fdeBarred = isBarred(lockOf({ kind: 'learning-path', pathId: 'fde' }));
   const fdePath = useFdePathSteps();
+  // One join at a time. A ref, not only `join`: a second click can land
+  // before "saving" re-renders, and each saved the plan (and enrolled) again.
+  const joiningRef = useRef(false);
   const runJoin = async (id: LearnSectionId) => {
-    if (!user || !profile || join?.status === 'saving') return;
+    if (!user || !profile || join?.status === 'saving' || joiningRef.current) return;
+    joiningRef.current = true;
     const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
-    setJoin({ section: id, status: 'saving' });
-    const outcome = id === 'software-engineer'
-      ? await joinSoftwareEngineer(user.id, profile, queryClient)
-      : await joinFde({
-        userId: user.id,
-        profile,
-        entry: fdeEntry,
-        enrollment: enrollments.data?.enrollments.find((one) => one.pathId === 'fde'),
-        barred: fdeBarred,
-        queryClient,
-        skipEnroll: retryAfterSave,
-      });
+    const started = { section: id, status: 'saving' as const };
+    const epoch = accountEpoch();
+    setJoin(started);
+    let outcome: Awaited<ReturnType<typeof joinSoftwareEngineer>>;
+    try {
+      outcome = id === 'software-engineer'
+        ? await joinSoftwareEngineer(user.id, profile, queryClient)
+        : await joinFde({
+          userId: user.id,
+          profile,
+          entry: fdeEntry,
+          enrollment: enrollments.data?.enrollments.find((one) => one.pathId === 'fde'),
+          barred: fdeBarred,
+          queryClient,
+          skipEnroll: retryAfterSave,
+        });
+    } finally {
+      joiningRef.current = false;
+    }
+    // The account changed during the save: its outcome is not this page's.
+    if (accountEpoch() !== epoch) {
+      setJoin((current) => (current === started ? null : current));
+      return;
+    }
     if (outcome.ok) {
       setPending((current) => (id === 'software-engineer'
         ? { ...current, sections: [...current.sections, id] }
@@ -610,6 +599,7 @@ function Roadmap() {
   );
 
   const open = (a: Active, questions = false) => {
+    preloadLessonRunner();
     const lessonId = a.kind === 'level' && !questions ? levels.find((level) => level.level === a.ref)?.lessonId : undefined;
     setReadingLessonId(lessonId ?? null);
     if (lessonId) {
@@ -711,7 +701,11 @@ function Roadmap() {
     open(a);
   };
 
+  // Back on the map, focus returns to the step the level was opened for:
+  // the control that closed it is gone, and focus fell to the top of the page.
+  const returnFocusTo = useRef<{ topic: RoadmapTopic; step: string } | null>(null);
   const exitLesson = () => {
+    if (active) returnFocusTo.current = { topic, step: active.kind === 'level' ? `lvl-${active.ref}` : `test-${active.ref}` };
     lessonAbortRef.current?.abort();
     setActive(null);
     setPlayable(null);
@@ -803,6 +797,16 @@ function Roadmap() {
     return { width: pathWidth, height, cellW, nodes: placed, segments };
   }, [pathWidth, levels, ranges, progress, topic, availability, lockOf, topicInPlan]);
 
+  // The map lays its nodes out once it has measured itself, a render or two
+  // after a level closes, so focus waits for the layout.
+  useEffect(() => {
+    const target = returnFocusTo.current;
+    if (active !== null || !layout || !target) return;
+    returnFocusTo.current = null;
+    if (target.topic !== topic) return;
+    sectionBodyRef.current?.querySelector<HTMLElement>(`.rm-path-canvas [data-step="${target.step}"] button`)?.focus();
+  }, [active, layout, topic]);
+
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
     return (
@@ -843,6 +847,7 @@ function Roadmap() {
           ? t('roadmap.nextPart')
           : t('roadmap.nextLevel');
     return (
+      <LessonStage onExit={exitLesson} t={t}>
       <LessonRunner
         key={`${topic}-${active.kind}-${active.ref}`}
         playable={playable}
@@ -858,6 +863,7 @@ function Roadmap() {
         onReplay={() => open(active)}
         t={t}
       />
+      </LessonStage>
     );
   }
 
@@ -931,17 +937,19 @@ function Roadmap() {
           onJoin={() => void runJoin(section)}
           onRetry={() => void runJoin(section)}
           onSignIn={() => openSignIn({ returnTo: `/learn/${section}` })}
-          fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
+          // The join enrols or resumes by the enrollment it finds, so it waits
+          // for the account's enrollments as well as the catalogue.
+          fde={fdeOnScreen ? { entryLoading: pathCatalog.isPending || enrollments.isLoading, pathOpen: isOpen(fdeEntry?.availability), barred: fdeBarred } : undefined}
           premiumLabel={t('premium.badge')}
           retryLabel={t('roadmap.retry')}
         />
 
         {LEARN_SECTIONS.find((one) => one.id === section)!.paths.length > 0 && (
-          <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.error.catalog')} onRetry={retry} busy={busy} />}>
-            <Suspense fallback={<Skeleton width="100%" height={180} radius="rounded" />}>
+          <Suspense fallback={<Skeleton width="100%" height={180} radius="rounded" />}>
+            <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.error.catalog')} onRetry={retry} busy={busy} />}>
               <PathShelf pathIds={LEARN_SECTIONS.find((one) => one.id === section)!.paths} />
-            </Suspense>
-          </ShellPartBoundary>
+            </ShellPartBoundary>
+          </Suspense>
         )}
 
         <SectionRail
@@ -1078,6 +1086,7 @@ function Roadmap() {
                 {layout.nodes.map((n) => (
                   <div
                     key={n.key}
+                    data-step={n.key}
                     style={{ position: 'absolute', transform: 'translateX(-50%)', left: n.cx, top: n.cy - n.half }}
                   >
                     <div className="rm-node" style={{ animationDelay: `${n.i * 0.025}s` }}>
@@ -1410,804 +1419,16 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
   );
 }
 
-/* ──── lesson runner (instant feedback) ─────────────────────────────────── */
-
-const HEART_PATH =
-  'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
-
-const HeartShape = ({ color, style }: { color: string; style?: CSSProperties }) => (
-  <svg width="30" height="30" viewBox="0 0 24 24" style={style} aria-hidden>
-    <path fill={color} d={HEART_PATH} />
-  </svg>
-);
-
-// A single heart that drains a third per mistake. The red fill is anchored to the
-// bottom and clipped to the remaining fraction, so it empties from the top down.
-function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; hit: boolean; t: TFn }) {
-  const remaining = Math.max(0, max - mistakes);
-  const frac = remaining / max;
+/** The lazily loaded runner in a boundary of its own: code that did not load
+ * leaves the learner a Try again and the way back to the map, not the page's
+ * error screen. */
+function LessonStage({ onExit, t, children }: { onExit: () => void; t: TFn; children: ReactNode }) {
   return (
-    <div
-      className={`rm-heart${hit ? ' rm-shake' : ''}`}
-      role="img"
-      aria-label={t('roadmap.heartsLeft', { n: remaining, max })}
-      style={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}
-    >
-      <HeartShape color={`${HEART_COLOR}2e`} style={{ position: 'absolute', inset: 0 }} />
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${frac * 100}%`, overflow: 'hidden', transition: 'height 0.45s cubic-bezier(0.34, 1.3, 0.5, 1)' }}>
-        <HeartShape color={HEART_COLOR} style={{ position: 'absolute', bottom: 0, left: 0 }} />
-      </div>
-    </div>
-  );
-}
-
-/** Why a level's session can no longer be used. `expired`: it outlived the
- * attempt the server keeps for it (two hours), or the attempt was closed.
- * `signInChanged`: it was opened under a different sign-in than the one now
- * answering (a sign-in or sign-out mid-level). */
-type SessionRestart = 'expired' | 'signInChanged';
-function sessionRestartFor(error: unknown): SessionRestart | null {
-  if (!(error instanceof ApiError)) return null;
-  if (error.code === 'session_owner_mismatch') return 'signInChanged';
-  if (error.code === 'invalid_session' || error.code === 'attempt_conflict') return 'expired';
-  return null;
-}
-
-/** One coding task of a level. It opens on this device's copy or the
- * account draft, keeps a device copy as the learner types and saves to the
- * account on Run and Submit, as a task in the Coding section does
- * (coding/drafts.ts): a copy from this device that did not open is offered
- * back, and a save the account refused is asked about. The workbench reads
- * its code once, so it waits for the account's draft; a draft that cannot
- * load leaves this device's copy. */
-function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onContinue }: {
-  task: PlayableCodingTask;
-  session: string;
-  signedIn: boolean;
-  onPassed: () => void;
-  onRevealed: () => void;
-  onContinue: () => void;
-}) {
-  const { t } = useLanguage();
-  const [currentTask, setCurrentTask] = useState({ task, session });
-  const draft = useQuery({ ...codingDraftQuery(task.id), enabled: signedIn });
-  const waiting = signedIn && draft.isLoading;
-  const opening = useMemo(() => (waiting ? null : openingDraft(task.id, draft.data?.code ?? null, draft.data?.updatedAt)), [waiting, task.id, draft.data]);
-  const choice = useDraftChoice(task.id, opening, draft.data?.updatedAt ?? null, { signedIn });
-  const { base, epoch } = choice;
-  // Leaving the step writes what is still waiting.
-  useEffect(() => () => flushAutosave(task.id), [task.id]);
-  const loading = <div className="cd-note" role="status">{t('common.loading')}</div>;
-  if (!opening) return loading;
-  return (
-    <>
-      <DraftNote choice={choice} />
-      <Suspense fallback={loading}>
-        <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
-          <CodingWorkbench
-            key={choice.version}
-            task={currentTask.task}
-            session={currentTask.session}
-            locked={null}
-            signedIn={signedIn}
-            initialCode={choice.code}
-            mode="lesson"
-            onDraft={(code) => saveDraft(task.id, code, { signedIn, base, epoch })}
-            onEdit={(code) => autosaveDraft(task.id, code, base, epoch)}
-            onVerdict={(verdict) => {
-              if (verdict.verdict === 'passed') {
-                forgetDeviceDraft(task.id, epoch);
-                onPassed();
-              }
-            }}
-            onRefreshTask={async (code) => {
-              saveDraft(task.id, code, { signedIn, base, epoch });
-              const refreshed = await fetchCodingTask(task.id, undefined, currentTask.session);
-              if (!refreshed.session) throw new Error(t('coding.loadError'));
-              setCurrentTask({ task: refreshed.task, session: refreshed.session });
-            }}
-            onRevealed={onRevealed}
-            onContinue={onContinue}
-          />
-        </ShellPartBoundary>
-      </Suspense>
-    </>
-  );
-}
-
-function LessonRunner({
-  playable, firstLevelPass = false, topicCompleted = false, skipIntro = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t,
-}: {
-  playable: RoadmapPlayable;
-  /** No Learn level was passed before this one opened (#239). */
-  firstLevelPass?: boolean;
-  topicCompleted?: boolean;
-  /** Full lesson reading already preceded this attempt. */
-  skipIntro?: boolean;
-  topicColor: string; hasNext: boolean; nextLabel: string;
-  onExit: () => void; onFinished: (pct: number, repeatXp?: LearnRepeatXp) => void; onNext: () => void;
-  onReplay: () => void; t: TFn;
-}) {
-  const { user } = useAuth();
-  // Fixed when the level opens: the pass itself updates the progress the
-  // parent reads, and the offer must stay on the finish screen.
-  const [firstPassMoment] = useState(() => firstLevelPass && playable.kind === 'level');
-  // Read only to say whether this topic is part of the learner's own plan.
-  const isMobile = useIsMobile();
-  const isCheckpoint = playable.kind === 'checkpoint';
-  const accent = isCheckpoint ? CHECKPOINT_GOLD : topicColor;
-  // Accent-filled buttons take their text colour from the fill: topic hues run
-  // from CSS blue to JavaScript yellow and checkpoints use gold, so no single
-  // colour reads on all of them. The hover filter follows the text colour.
-  const accentFill = {
-    backgroundColor: accent,
-    ['--rm-on-accent']: textOnColor(accent),
-    ['--rm-accent-hover']: hoverFilterOn(accent),
-  } as CSSProperties;
-  // A level opens with a short info panel (what this section is about + a core
-  // principle) before the first question. Checkpoints/part-tests skip it, as do
-  // levels with no authored intro.
-  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref) : null;
-  const [showIntro, setShowIntro] = useState<boolean>(() => !skipIntro && !!intro);
-  // Question sequence + answer order are shuffled on every play (and re-shuffled
-  // on replay, avoiding the previous layout) so positions stay unmemorisable.
-  const [presented] = useState<RoadmapQuestion[]>(() => presentQuestions(playable.questions));
-  const total = presented.length;
-  const [qIndex, setQIndex] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [revealed, setRevealed] = useState(false);
-  const [grade, setGrade] = useState<RoadmapAnswerResult | null>(null);
-  const [grading, setGrading] = useState(false);
-  const [answerError, setAnswerError] = useState<string | null>(null);
-  const [completing, setCompleting] = useState(false);
-  const [correctCount, setCorrectCount] = useState(0);
-  const [finished, setFinished] = useState(false);
-  // Hearts apply to levels only; checkpoints keep the percent-based pass rule.
-  const [mistakes, setMistakes] = useState(0);
-  const [dead, setDead] = useState(false);
-  const [heartHit, setHeartHit] = useState(false);
-  const [flagOpen, setFlagOpen] = useState(false);
-  const [flagSnack, setFlagSnack] = useState(false);
-  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
-  // devShark code levels end with coding tasks. The level passes only when the
-  // server has a passed verdict for every one of them (the ids are sealed in
-  // the level session), so the finish screen reads the server's answer.
-  const codingTasks = useMemo(() => (playable.kind === 'level' ? playable.coding ?? [] : []), [playable]);
-  const [codingPhase, setCodingPhase] = useState(false);
-  const [codingIndex, setCodingIndex] = useState(0);
-  const [codingPassed, setCodingPassed] = useState<string[]>([]);
-  const [codingPending, setCodingPending] = useState<string[]>([]);
-  // The learner showed the current task's solution, which ends the attempt.
-  // The workbench stays, with the solution open, until they finish the level.
-  const [solutionShown, setSolutionShown] = useState(false);
-  // Signed out, the server passes a level on its questions and says its
-  // coding tasks went unchecked; the finish screen says when they count.
-  const [codingUnverified, setCodingUnverified] = useState(false);
-  // The attempt was closed without a verdict because a question in it was
-  // retired while it was open. Nothing was recorded, so the finish screen
-  // offers the level again rather than a score.
-  const [invalidated, setInvalidated] = useState(false);
-  // The server can no longer use this session: it outlived its attempt, or it
-  // was opened under a different sign-in. Sending it again fails the same
-  // way, so the level offers a fresh start instead of Try again.
-  const [restart, setRestart] = useState<SessionRestart | null>(null);
-  const reportError = useCallback((error: unknown) => {
-    const reason = sessionRestartFor(error);
-    if (reason) setRestart(reason);
-    else setAnswerError(friendlyError(error));
-  }, []);
-
-  const question = presented[qIndex];
-  // Out of hearts once this answer is revealed and it pushed mistakes to the max.
-  const outOfHearts = !isCheckpoint && mistakes >= MAX_HEARTS;
-
-  const choose = useCallback(
-    async (index: number) => {
-      if (revealed || grading) return;
-      setGrading(true);
-      setAnswerError(null);
-      setSelected(index);
-      try {
-        const result = await submitRoadmapAnswer(playable.sessionId, question.id, index);
-        setSelected(result.selectedIndex);
-        setGrade(result);
-        setRevealed(true);
-        if (result.isCorrect) {
-          setCorrectCount((count) => count + 1);
-        } else if (!isCheckpoint) {
-          setMistakes((mistakeCount) => mistakeCount + 1);
-          setHeartHit(true);
-          window.setTimeout(() => setHeartHit(false), 500);
-        }
-      } catch (error) {
-        reportError(error);
-      } finally {
-        setGrading(false);
-      }
-    },
-    [revealed, grading, playable.sessionId, question.id, isCheckpoint, reportError],
-  );
-
-  const complete = useCallback(async () => {
-    setCompleting(true);
-    setAnswerError(null);
-    try {
-      const result = await completeRoadmapAttempt(playable.sessionId);
-      if (result.invalidated) {
-        setInvalidated(true);
-        setCodingPhase(false);
-        setFinished(true);
-        return;
-      }
-      setCorrectCount(result.correctAnswers);
-      setCodingPending(result.codingPending ?? []);
-      setCodingUnverified(result.codingUnverified === true);
-      if (result.waiting) {
-        setCodingPhase(true);
-        return;
-      }
-      // A level that fails its coding gate is recorded as not passed even with
-      // a full question score; report the percentage the server computed but
-      // keep the local pass record honest.
-      onFinished((result.codingPending?.length ?? 0) > 0 ? Math.min(result.percentage, playable.passPct - 1) : result.percentage, result.repeatXp);
-      setCodingPhase(false);
-      setFinished(true);
-    } catch (error) {
-      reportError(error);
-    } finally {
-      setCompleting(false);
-    }
-  }, [onFinished, playable.passPct, playable.sessionId, reportError]);
-
-  const checkCoding = useCallback(async () => {
-    try {
-      const status = await checkRoadmapAttempt(playable.sessionId);
-      const passed = status.coding.filter(item => item.passed).map(item => item.taskId);
-      setCodingPassed(passed);
-      if (status.coding.some(item => item.revealed)) setSolutionShown(true);
-      if (codingPhase && codingTasks.every(item => passed.includes(item.task.id))) await complete();
-    } catch (error) { reportError(error); }
-  }, [playable.sessionId, codingPhase, codingTasks, complete, reportError]);
-  useEffect(() => {
-    if (!user || codingTasks.length === 0 || finished) return;
-    const refresh = () => { if (document.visibilityState === 'visible') void checkCoding(); };
-    window.addEventListener('focus', refresh);
-    document.addEventListener('visibilitychange', refresh);
-    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
-  }, [user, codingTasks.length, finished, checkCoding]);
-
-  const advance = useCallback(async () => {
-    if (outOfHearts) {
-      setCompleting(true);
-      setAnswerError(null);
-      try {
-        const result = await completeRoadmapAttempt(playable.sessionId);
-        if (result.invalidated) {
-          setInvalidated(true);
-          setFinished(true);
-          return;
-        }
-        setCorrectCount(result.correctAnswers);
-        // Out of hearts is a failed level however the percentage lands, so keep
-        // the local record below the pass mark and let the server decide.
-        onFinished(result.passed ? result.percentage : Math.min(result.percentage, playable.passPct - 1), result.repeatXp);
-        setDead(true);
-        setFinished(true);
-      } catch (error) {
-        reportError(error);
-      } finally {
-        setCompleting(false);
-      }
-    } else if (qIndex < total - 1) {
-      setQIndex((i) => i + 1);
-      setSelected(null);
-      setRevealed(false);
-      setGrade(null);
-      setAnswerError(null);
-    } else if (codingTasks.length > 0) {
-      // Questions done: the coding phase decides the rest of the level.
-      setRevealed(false);
-      setGrade(null);
-      setAnswerError(null);
-      setCodingPhase(true);
-    } else {
-      await complete();
-    }
-  }, [total, outOfHearts, qIndex, onFinished, playable.passPct, playable.sessionId, codingTasks.length, complete, reportError]);
-
-  const submitFlag = async (detail?: string) => {
-    await reportQuestion({
-      questionId: question.id,
-      reason: 'needs-review',
-      detail,
-      reporterSub: user?.id,
-      // The wording that was on screen, so a fix can be checked against it.
-      contentVersion: question.review?.version,
-    });
-    setFlagOpen(false);
-    setFlagSnack(true);
-  };
-
-  useEffect(() => {
-    if (finished || showIntro || codingPhase) return;
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
-      if (!revealed && /^[1-9]$/.test(e.key)) {
-        const idx = parseInt(e.key, 10) - 1;
-        if (idx < question.options.length) {
-          e.preventDefault();
-          void choose(idx);
-        }
-      } else if (revealed && e.key === 'Enter') {
-        e.preventDefault();
-        void advance();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [finished, showIntro, codingPhase, revealed, question, choose, advance]);
-
-  useEffect(() => {
-    if (finished || restart) resultHeadingRef.current?.focus({ preventScroll: true });
-  }, [finished, restart]);
-
-  if (restart) {
-    return (
-      <div
-        style={{
-          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          alignItems: 'center', textAlign: 'center', maxWidth: 520, margin: '0 auto', position: 'relative',
-          paddingLeft: 16, paddingRight: 16,
-        }}
-      >
-        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
-          {restart === 'expired' ? t('roadmap.expiredTitle') : t('roadmap.signInChangedTitle')}
-        </h1>
-        <div role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-          {restart === 'expired' ? t('roadmap.expiredBody') : t('roadmap.signInChangedBody')}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          <button type="button" className="rm-accent-btn" onClick={onReplay} style={accentFill}>
-            {t('roadmap.restartLevel')}
-          </button>
-          <button type="button" className="rm-text-btn" onClick={onExit}>
-            {t('roadmap.backToPath')}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (showIntro && intro) {
-    return (
-      <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
-          <div style={{ flex: 1 }} />
-        </div>
-        <div
-          className="rm-feedback"
-          style={{
-            marginTop: 8,
-            padding: isMobile ? 20 : 24,
-            borderRadius: 8,
-            border: '1px solid var(--color-border)',
-            borderLeft: `4px solid ${accent}`,
-            backgroundColor: `${accent}0d`,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
-              {`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
-            </span>
-          </div>
-          <div style={{ color: 'var(--color-text-secondary)', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.75rem' }}>
-            {t('roadmap.introKicker')}
-          </div>
-          <div style={{ fontSize: '1.02rem', lineHeight: 1.6, marginTop: 4, marginBottom: 4 }}>
-            {intro}
-          </div>
-          {/* The worked example for this level's objective, before the
-              questions. Figures that would answer one of them are held back;
-              `figuresFor` filters them out at this phase rather than the
-              renderer hiding them afterwards. */}
-          <LessonFigures figures={figuresFor(playable.topic, playable.ref, 'before')} />
-          {codingTasks.length > 0 && (
-            <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-              <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
-              {codingTasks.map(({ task, session }, index) => <span key={task.id}>
-                {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title}</a>
-              </span>)}
-            </div>
-          )}
-        </div>
-        <button
-          type="button"
-          className="rm-accent-btn"
-          onClick={() => setShowIntro(false)}
-          style={{ marginTop: 20, width: '100%', ...accentFill }}
-        >
-          {t('roadmap.introStart')}
-        </button>
-      </div>
-    );
-  }
-
-  if (codingPhase && codingTasks[codingIndex]) {
-    const current = codingTasks[codingIndex];
-    const title = current.task.title;
-    return (
-      <div className="cd-page" style={{ flex: 1, minHeight: 0, overflowY: 'auto', gap: 12, paddingBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
-          <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
-            {`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
-          </span>
-          <Kicker style={{ marginLeft: 'auto' }}>{t('coding.lesson.kicker')} · {t('coding.lesson.counter', { n: codingIndex + 1, total: codingTasks.length })}</Kicker>
-        </div>
-        <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
-        <div className="cd-actions">
-          <a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${current.task.track}/${current.task.id}#learn=${encodeURIComponent(current.session)}`}>{t('coding.lesson.openTab')}</a>
-          {user && <AxButton variant="secondary" label={t('coding.lesson.checkCompletion')} onClick={() => void checkCoding()} isDisabled={completing} />}
-        </div>
-        {answerError && <div role="alert" className="cd-note cd-note--error">{answerError}</div>}
-        <LessonCodingTask
-          key={current.task.id}
-          task={current.task}
-          session={current.session}
-          signedIn={Boolean(user)}
-          onPassed={() => setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]))}
-          onRevealed={() => setSolutionShown(true)}
-          onContinue={() => {
-            if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
-            else void complete();
-          }}
-        />
-        {/* The solution the learner asked for stays on screen: the attempt
-            ends when they finish the level, not the moment it opens. */}
-        {solutionShown && (
-          <div className="cd-note" role="status">
-            <p style={{ margin: '0 0 12px' }}>{t('coding.lesson.solutionShown')}</p>
-            <button type="button" className="rm-accent-btn" onClick={() => void complete()} disabled={completing} style={accentFill}>
-              {t('coding.lesson.finishLevel')}
-            </button>
-          </div>
-        )}
-        <span className="cd-visually-hidden" aria-live="polite">{t('coding.lesson.pending', { n: codingTasks.length - codingPassed.length })}: {title}</span>
-      </div>
-    );
-  }
-
-  if (finished && invalidated) {
-    return (
-      <div
-        style={{
-          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          alignItems: 'center', textAlign: 'center', maxWidth: 520, margin: '0 auto', position: 'relative',
-          paddingLeft: 16, paddingRight: 16,
-        }}
-      >
-        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">{t('roadmap.invalidatedTitle')}</h1>
-        <div role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-          {t('roadmap.invalidatedBody')}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          <button type="button" className="rm-accent-btn" onClick={onReplay} style={accentFill}>
-            {t('roadmap.retryLevel')}
-          </button>
-          <button type="button" className="rm-text-btn" onClick={onExit}>
-            {t('roadmap.backToPath')}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (finished) {
-    const pct = Math.round((correctCount / total) * 100);
-    const passed = !dead && pct >= playable.passPct && codingPending.length === 0;
-    const title = dead
-      ? t('roadmap.outOfHeartsTitle')
-      : passed
-        ? isCheckpoint ? t('roadmap.checkpointComplete') : t('roadmap.levelComplete')
-        : isCheckpoint ? t('roadmap.checkpointFailed') : t('roadmap.levelFailed');
-    return (
-      // Center vertically in the lesson viewport (celebration deserves the
-      // stage) and move focus to the outcome heading when grading completes.
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          maxWidth: 520,
-          margin: '0 auto',
-          position: 'relative',
-          paddingLeft: 16,
-          paddingRight: 16,
-        }}
-      >
-        {/* Confetti IS the celebration on a pass; the icon stays quiet. */}
-        {passed && <Confetti color={accent} />}
-        {passed && (
-          <div className="rm-celebrate" style={{ marginBottom: 12 }} aria-hidden>
-            <IconTile color={accent} size={56}>
-              {isCheckpoint ? <TrophyIcon size={26} /> : <CheckIcon size={26} />}
-            </IconTile>
-          </div>
-        )}
-        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">{title}</h1>
-        {dead ? (
-          <div style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-            {t('roadmap.outOfHeartsBody', { max: MAX_HEARTS })}
-          </div>
-        ) : (
-          <>
-            <div className="rm-count" style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 800, color: passed ? accent : 'var(--color-text-secondary)', marginBottom: 4 }}>
-              {pct}%
-            </div>
-            <div style={{ color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-              {t('roadmap.scoreLine', { correct: correctCount, total })}
-            </div>
-            {codingTasks.length > 0 && !codingUnverified && (
-              <div style={{ fontSize: '0.9rem', color: codingPending.length === 0 ? 'var(--ss-success-strong, var(--ss-success))' : 'var(--ss-warning)', fontWeight: 600, marginBottom: 8 }}>
-                {codingPending.length === 0 ? t('coding.lesson.allPassed') : t('coding.lesson.pending', { n: codingPending.length })}
-              </div>
-            )}
-            {/* Signed out, a coding task's pass is never stored, so the level
-                passed on its questions and is kept on this device only. */}
-            {codingTasks.length > 0 && codingUnverified && (
-              <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-                {t('coding.lesson.guestUnverified')}
-              </div>
-            )}
-            {!passed && pct < playable.passPct && (
-              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: 16 }}>
-                {t('roadmap.passNeeded', { pct: playable.passPct })}
-              </div>
-            )}
-          </>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          {passed && hasNext && (
-            <button type="button" className="rm-accent-btn" onClick={onNext} style={accentFill}>
-              {nextLabel}
-            </button>
-          )}
-          <button type="button" className={passed ? 'rm-outline-btn' : 'rm-accent-btn'} onClick={onReplay} style={passed ? undefined : accentFill}>
-            {t('roadmap.retryLevel')}
-          </button>
-          <button type="button" className="rm-text-btn" onClick={onExit}>
-            {t('roadmap.backToPath')}
-          </button>
-        </div>
-        {/* The learner's first passed level is the moment to offer the invite
-            link (#239): a friend who joins gets the same first win. */}
-        {passed && firstPassMoment && (
-          <div style={{ marginTop: 20, width: '100%' }}>
-            <ReferralMoment signedIn={!!user} source="learn_level" />
-          </div>
-        )}
-        {passed && topicCompleted && <ResultShareActions centered kind="learn_topic_result"
-          label={t(categoryLabelKey(playable.topic))} headline={t('roadmap.topicCompleted')}
-          detail={t('roadmap.topicShareDetail')} text={t('roadmap.topicShareText', { topic: t(categoryLabelKey(playable.topic)) })}
-          path={`/learn?topic=${playable.topic}`} />}
-      </div>
-    );
-  }
-
-  const progressPct = ((qIndex + (revealed ? 1 : 0)) / total) * 100;
-  const isRight = grade?.isCorrect === true;
-
-  return (
-    // One-viewport lesson layout matching the Quiz card geometry: 560px
-    // column, content capped at ~80% height on sm+ and centred; question
-    // scrolls, answer options anchored toward the bottom in a stable position.
-    <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: isMobile ? 680 : 560, margin: '0 auto' }}>
-    <div style={{ flex: '1 1 auto', minHeight: 0, maxHeight: isMobile ? undefined : '80%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header: exit + (hearts for a level, progress bar for a checkpoint) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexShrink: 0 }}>
-        <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
-        {isCheckpoint ? (
-          <>
-            <div
-              role="progressbar"
-              aria-label={t('roadmap.question', { current: qIndex + 1, total })}
-              aria-valuenow={Math.round(progressPct)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: 'var(--color-background-muted)', overflow: 'hidden' }}
-            >
-              <div style={{ height: '100%', width: `${progressPct}%`, borderRadius: 6, backgroundColor: accent, transition: 'width 0.35s ease' }} />
-            </div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-              {correctCount}/{total}
-            </span>
-          </>
-        ) : (
-          <>
-            <HeartMeter mistakes={mistakes} max={MAX_HEARTS} hit={heartHit} t={t} />
-            <div style={{ flex: 1 }} />
-          </>
-        )}
-        <IconButton
-          label={t('flag.ariaLabel')}
-          icon={<FlagIcon size={16} />}
-          variant="ghost"
-          size="sm"
-          tooltip={t('flag.ariaLabel')}
-          onClick={() => setFlagOpen(true)}
-        />
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap', flexShrink: 0 }}>
-        <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
-          {`${isCheckpoint ? t('roadmap.checkpoint') : t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
-        </span>
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginLeft: 'auto' }}>
-          {t('roadmap.question', { current: qIndex + 1, total })}
-        </span>
-      </div>
-
-      {/* Question — the only region that scrolls when long. */}
-      <div id="lesson-question" style={{ fontWeight: 500, marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-        {renderQuestion(question.question)}
-        {/* One control for the whole item: the question, every option and the
-            explanation. Beside the block rather than inside an option, so it
-            can never select an answer, and the same list for every option, so
-            it can never single one out. */}
-        <TermsBar
-          texts={[question.question, ...question.options, grade?.explanation]}
-          domain={glossaryDomainFor(playable.topic)}
-        />
-      </div>
-
-      {/* Options — anchored toward the bottom, labelled by the question. */}
-      <RadioCardGroup
-        value={selected}
-        onChange={(value) => setSelected(Number(value))}
-        onActivate={(value) => void choose(Number(value))}
-        labelledBy="lesson-question"
-        style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
-      >
-        {question.options.map((option, index) => {
-          const isCorrect = index === grade?.correctAnswer;
-          const isPicked = index === selected;
-          const overrides: CSSProperties = {};
-          let cls: string | undefined;
-          if (revealed && isCorrect) {
-            overrides.borderColor = 'var(--ss-success)'; overrides.backgroundColor = 'var(--ss-success-soft)'; overrides.color = 'var(--ss-success)'; cls = 'rm-correct-pop';
-          } else if (revealed && isPicked && !isCorrect) {
-            overrides.borderColor = 'var(--ss-error)'; overrides.backgroundColor = 'var(--ss-error-soft)'; overrides.color = 'var(--ss-error)'; cls = 'rm-shake';
-          } else if (isPicked) {
-            overrides.borderColor = accent;
-          }
-          return (
-            <RadioCard
-              key={index}
-              value={index}
-              index={index}
-              className={`rm-option${cls ? ` ${cls}` : ''}`}
-              disabled={revealed || grading}
-              tone={revealed && isCorrect ? 'success' : 'default'}
-              style={{ ['--rm-accent']: accent, ...overrides } as CSSProperties}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 4, fontSize: '0.75rem', fontWeight: 800, backgroundColor: 'var(--color-background-muted)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>
-                {index + 1}
-              </span>
-              <span style={{ flex: 1 }}>{option}</span>
-              {revealed && isCorrect && <span style={{ color: 'var(--ss-success)', display: 'inline-flex' }}><CheckIcon size={18} /></span>}
-            </RadioCard>
-          );
-        })}
-      </RadioCardGroup>
-
-      {!revealed && !answerError && (
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: isMobile ? 'none' : 'block', marginTop: 12, flexShrink: 0 }}>
-          {t('roadmap.keyboardTip', { max: question.options.length })}
-        </div>
-      )}
-
-      {/* Feedback OVERLAYS the answer options — a solid card floating over
-          the bottom of the lesson viewport, so the anchored options don't get
-          shoved around when the grade lands. Live region keeps AT informed. */}
-      {(revealed || answerError) && (
-        <div
-          aria-live="polite"
-          style={{
-            position: 'absolute',
-            left: isMobile ? 8 : 16,
-            right: isMobile ? 8 : 16,
-            bottom: isMobile ? 12 : 20,
-            zIndex: 5,
-          }}
-        >
-          <div
-            className="rm-feedback"
-            style={{
-              padding: 16,
-              borderRadius: 8,
-              borderLeft: `4px solid ${isRight ? 'var(--ss-success)' : 'var(--ss-error)'}`,
-              backgroundColor: 'var(--color-background-surface)',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
-              maxHeight: '48vh',
-              overflowY: 'auto',
-            }}
-          >
-            {answerError ? (
-              <>
-                <div role="alert" style={{ fontWeight: 700, color: 'var(--ss-error)' }}>{answerError}</div>
-                <button
-                  type="button"
-                  className="rm-accent-btn"
-                  onClick={() => revealed ? void advance() : selected !== null ? void choose(selected) : undefined}
-                  disabled={grading || completing || (!revealed && selected === null)}
-                  style={{ marginTop: 16, width: '100%', ...accentFill }}
-                >
-                  {t('roadmap.retry')}
-                </button>
-              </>
-            ) : grade ? (
-              <>
-                <div style={{ fontWeight: 800, color: isRight ? 'var(--ss-success)' : 'var(--ss-error)', marginBottom: 4 }}>
-                  {isRight ? t('roadmap.correct') : t('roadmap.incorrect')}
-                </div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                  {grade.explanation}
-                </div>
-                {/* Shark Cards (owner decision 12): a missed question can be
-                    kept with the answer and explanation graded here. */}
-                {!isRight && (
-                  <SaveSharkCard question={question} correctIndex={grade.correctAnswer} explanation={grade.explanation ?? ''} />
-                )}
-                <button
-                  type="button"
-                  className="rm-accent-btn"
-                  onClick={() => void advance()}
-                  disabled={completing}
-                  style={{ marginTop: 16, width: '100%', ...accentFill }}
-                >
-                  {outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      )}
-
-      <RedFlagDialog open={flagOpen} onClose={() => setFlagOpen(false)} onSubmit={submitFlag} />
-      <AppToast
-        open={flagSnack}
-        onClose={() => setFlagSnack(false)}
-        message={t('flag.sent')}
-        autoHideDuration={3000}
-      />
-    </div>
-    </div>
-  );
-}
-
-/* ──── confetti burst ───────────────────────────────────────────────────── */
-
-function Confetti({ color }: { color: string }) {
-  const colors = [color, '#f5b301', '#2e7d32', '#3178c6', '#ec4899'];
-  return (
-    <div className="rm-confetti" aria-hidden>
-      {Array.from({ length: 16 }).map((_, i) => (
-        <i
-          key={i}
-          style={{
-            left: `${(i / 16) * 100}%`,
-            background: colors[i % colors.length],
-            animationDelay: `${(i % 5) * 0.08}s`,
-          }}
-        />
-      ))}
-    </div>
+    <Suspense fallback={<QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />}>
+      <ShellPartBoundary fallback={(retry) => <LessonError message={t('roadmap.error')} onRetry={retry} onExit={onExit} t={t} />}>
+        {children}
+      </ShellPartBoundary>
+    </Suspense>
   );
 }
 
@@ -2297,6 +1518,13 @@ function SkillCheckRunner({
   useEffect(() => {
     if (phase === 'result') resultHeadingRef.current?.focus({ preventScroll: true });
   }, [phase]);
+  // Next disables itself on the question it opens (nothing is picked yet), and
+  // a new round replaces the whole view, so focus fell to the page. Each
+  // question takes it instead, as a Learn level's do.
+  const questionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (phase === 'playing') questionRef.current?.focus({ preventScroll: true });
+  }, [phase, qIndex, questions]);
 
   // Swap in a fetched round and reset the per-round answer sheet. `dir` drives
   // the stepping-up / stepping-down banner (null on the opening round).
@@ -2347,7 +1575,11 @@ function SkillCheckRunner({
     setPhase('result');
   }, [isAuthenticated, applyReceipt]);
 
+  // The account the placement ran for. Its result opens nothing on this
+  // device once another account (or nobody) is signed in here.
+  const epochRef = useRef(accountEpoch());
   const start = useCallback(async () => {
+    epochRef.current = accountEpoch();
     setPhase('loading');
     setError(null);
     setVerifiedUnlocks(undefined);
@@ -2365,8 +1597,13 @@ function SkillCheckRunner({
     }
   }, [subject, applyRound, finishFrom]);
 
+  // One submit per round. A ref, not only the phase: a second click on Next
+  // or Finish can land before "submitting" re-renders, and the server answers
+  // a round sent twice with placement_round_used, which ended the placement.
+  const submittingRef = useRef(false);
   const submitRound = useCallback(async () => {
-    if (!token) return;
+    if (!token || submittingRef.current) return;
+    submittingRef.current = true;
     setPhase('submitting');
     setError(null);
     try {
@@ -2387,6 +1624,8 @@ function SkillCheckRunner({
     } catch (err) {
       setError(friendlyError(err));
       setPhase('error');
+    } finally {
+      submittingRef.current = false;
     }
   }, [token, answers, difficulty, questions, applyRound, finishFrom]);
 
@@ -2474,7 +1713,7 @@ function SkillCheckRunner({
           {unapplied && (
             <AxButton variant="primary" label={t('roadmap.retry')} isDisabled={applying} onClick={() => void applyReceipt(unapplied)} />
           )}
-          <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
+          <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, accountEpoch() === epochRef.current ? verifiedUnlocks : [])} />
           <AxButton variant="secondary" label={learnText('placement.retry')} onClick={() => void start()} />
         </div>
         <section className="rm-placement-review" aria-label={learnText('placement.review')}>
@@ -2557,7 +1796,7 @@ function SkillCheckRunner({
         </div>
       </div>
 
-      <div id="placement-question" style={{ fontWeight: 500, marginBottom: 16 }}>{renderQuestion(current.question)}</div>
+      <div id="placement-question" ref={questionRef} tabIndex={-1} style={{ fontWeight: 500, marginBottom: 16, outline: 'none' }}>{renderQuestion(current.question)}</div>
 
       <RadioCardGroup
         value={optionValue}
@@ -2640,6 +1879,7 @@ export function BigOIntroduction() {
     retry: false,
   });
   const open = (next: 1 | 2) => {
+    preloadLessonRunner();
     before.current = computeLearningXp(getRoadmapProgress());
     setGeneration((value) => value + 1);
     setReading(true);
@@ -2649,14 +1889,14 @@ export function BigOIntroduction() {
     if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
     if (lesson.isPending) return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
-    return <LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
+    return <LessonStage onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
       topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
       onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} t={t}
       onFinished={(pct, repeatXp) => {
         recordLevelResult('dsa', level, pct, lesson.data!.passPct);
         awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before.current, isAuthenticated);
         if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
-      }} />;
+      }} /></LessonStage>;
   }
   return <div className="de-page" style={{ maxWidth: 640 }}>
     <h1>{t('bigO.pathTitle')}</h1>

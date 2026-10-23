@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { submitCoding } from '../src/coding/api';
-import { warmRunner } from '../src/coding/runner/run-tests';
+import { runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
+import { formatCode } from '../src/coding/runner/format';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
 vi.mock('../src/coding/Editor', () => ({
@@ -12,9 +13,11 @@ vi.mock('../src/coding/Editor', () => ({
     <textarea aria-label="Test editor" value={value} onChange={event => onChange(event.target.value)} />,
 }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({ data: undefined }), submitCoding: vi.fn(), revealCoding: vi.fn() }));
+vi.mock('../src/coding/runner/format', () => ({ formatCode: vi.fn(async (code: string) => code) }));
 vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/coding/runner/run-tests')>(),
   warmRunner: vi.fn(() => () => {}),
+  runCodeTests: vi.fn(() => new Promise(() => {})),
 }));
 
 // A Learn-level task with no puzzle: below 1024 CSS px it opened on "waiting
@@ -87,6 +90,18 @@ it('loads no runner while the screen waits for a bigger one, and loads it once t
   expect(warmRunner).toHaveBeenCalledWith('typescript');
 });
 
+// The display formatter ran 350 ms after the task opened, so a phone waiting
+// for a bigger screen downloaded Prettier for a Format button it did not show.
+it('loads no formatter while the screen waits for a bigger one, and formats once the editor opens', async () => {
+  vi.mocked(formatCode).mockClear();
+  mount();
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+  expect(formatCode).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+  expect(formatCode).toHaveBeenCalled();
+});
+
 // CODE-5: a section task with a puzzle showed only the puzzle on a narrow
 // screen. Arranging lines never completes a task, so five free tasks could
 // not be passed on a phone.
@@ -119,6 +134,22 @@ it('offers the editor beside a puzzle, and an earlier choice of the editor opens
   mountPuzzle();
   expect(screen.getByLabelText('Test editor')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Submit' })).toBeVisible();
+});
+
+// Ctrl+Shift+Enter on a puzzle submitted the code under it, which the
+// learner could not see, as a failed attempt; Ctrl+Enter ran it.
+it('lets no shortcut run or submit the hidden code while a puzzle or the wait stands in for the editor', () => {
+  vi.mocked(submitCoding).mockClear();
+  mountPuzzle();
+  const check = screen.getByRole('button', { name: /Check the order/ });
+  fireEvent.keyDown(check, { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.keyDown(check, { key: 'Enter', metaKey: true });
+  cleanup();
+  mount();
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor on this screen' }), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Use the editor on this screen' }), { key: 'Enter', ctrlKey: true });
+  expect(submitCoding).not.toHaveBeenCalled();
+  expect(runCodeTests).not.toHaveBeenCalled();
 });
 
 // CODE-11: an accepted order is never recorded, for anyone, so a signed-in

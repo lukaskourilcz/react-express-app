@@ -58,6 +58,29 @@ async function main() {
 
   console.log('Coding account-bound submit and reveal authorization passed: guests and other signed-in accounts are refused, the owner is not.');
 
+  // The level attempt ends after the link check (completed in another tab, or
+  // expired): the routine re-checks it under its lock and raises. That is the
+  // ended link the learner reopens, 409 invalid_session, not a 500.
+  const endedLink = {
+    from: () => {
+      const chain = {
+        select: () => chain, eq: () => chain, in: () => chain,
+        maybeSingle: async () => ({ data: { user_id: 'account-a', completed_at: null, expires_at: new Date(Date.now() + 600_000).toISOString(), coding_task_ids: ['js-double-numbers'] }, error: null }),
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+      };
+      return chain;
+    },
+    rpc: async () => ({ data: null, error: { code: 'P0001', message: 'invalid_roadmap_attempt' } }),
+  };
+  const endedSubmit = response();
+  await handleCodingSubmit({ ...request(linkedA, 'account-a'), headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '203.0.113.71' } } as never, endedSubmit as never, endedLink as never);
+  assert.deepEqual([endedSubmit.statusCode, errorCode(endedSubmit.body)], [409, 'invalid_session'], `a verdict for an attempt that ended mid-submit is an ended link (${JSON.stringify(endedSubmit.body)})`);
+  const endedReveal = response();
+  await handleCodingReveal(request(linkedA, 'account-a') as never, endedReveal as never, endedLink as never);
+  assert.deepEqual([endedReveal.statusCode, errorCode(endedReveal.body)], [409, 'invalid_session'], `a reveal for an attempt that ended mid-request is an ended link (${JSON.stringify(endedReveal.body)})`);
+  assert.ok(!(endedReveal.body as { solution?: string }).solution, 'an ended link reveals nothing');
+  console.log('Coding Learn link ended mid-submit and mid-reveal passed: 409 invalid_session, not 500.');
+
   // #493: a Learn-linked DSA session is gated as the DSA level it belongs to.
   // DSA level 6 is Premium, so a guest and a free account are refused with
   // the shared 402 before anything is graded; DSA level 1 is free, so a
@@ -108,6 +131,53 @@ async function main() {
   const own = await open('account-a');
   assert.equal(own.draft, 'const double = (ns) => ns;');
   assert.equal(own.draftUpdatedAt, '2026-10-09T10:00:00.000Z', 'the draft comes with the time it was saved');
+  // The cleared Learn levels open JavaScript tier 3. A roadmap row that cannot
+  // be read is an error, not "no levels cleared": that answered 200 with the
+  // task locked and no session for a learner who had opened it.
+  {
+    const unreadable = {
+      from: (table: string) => {
+        const chain = {
+          select: () => chain, eq: () => chain,
+          maybeSingle: async () => (table === 'roadmap_progress' ? { data: null, error: { code: '57014', message: 'statement timeout' } } : { data: null, error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+        };
+        return chain;
+      },
+    };
+    const out = response();
+    const logged: string[] = [];
+    const log = console.log;
+    console.log = (...args: unknown[]) => { logged.push(args.map(String).join(' ')); };
+    try {
+      await handleCodingTask({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: 'js-double-numbers', user_id: 'account-a' } } as never, out as never, unreadable as never);
+    } finally { console.log = log; }
+    assert.deepEqual([out.statusCode, errorCode(out.body)], [500, 'db_error'], `an unreadable roadmap row is not read as no cleared levels (${JSON.stringify(out.body)})`);
+    assert.ok(logged.some((line) => line.includes('"kind":"task_progress_unavailable"')), 'the failed read is logged, not only answered');
+  }
+  // An account draft that cannot be read is not "no draft": answered as none,
+  // the page opened the starter over the account's saved code.
+  {
+    const unreadableDraft = {
+      from: (table: string) => {
+        const chain = {
+          select: () => chain, eq: () => chain,
+          maybeSingle: async () => (table === 'coding_drafts' ? { data: null, error: { code: '57014', message: 'statement timeout' } } : { data: null, error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+        };
+        return chain;
+      },
+    };
+    const out = response();
+    const logged: string[] = [];
+    const log = console.log;
+    console.log = (...args: unknown[]) => { logged.push(args.map(String).join(' ')); };
+    try {
+      await handleCodingTask({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: 'js-double-numbers', user_id: 'account-a' } } as never, out as never, unreadableDraft as never);
+    } finally { console.log = log; }
+    assert.deepEqual([out.statusCode, errorCode(out.body)], [500, 'db_error'], `an unreadable draft is not answered as no draft (${JSON.stringify(out.body)})`);
+    assert.ok(logged.some((line) => line.includes('"reason":"draft_unavailable"')), 'the failed draft read is logged');
+  }
   const other = await open('account-b');
   assert.equal(other.draft, null);
   assert.equal(other.draftUpdatedAt, null, 'no draft, no time');
@@ -192,6 +262,21 @@ async function main() {
     const bad = await post({ code: '// x', base });
     assert.deepEqual([bad.status, bad.body.error?.code, bad.args], [400, 'bad_request', undefined], `base ${JSON.stringify(base)} is refused before the database`);
   }
+  // Postgres text cannot hold U+0000, so the routine raised on such code and
+  // the save answered 500 db_error. It is refused as a bad request before the
+  // database, as the size limit is.
+  {
+    const nul = await post({ code: 'const a = "\u0000";', base: null });
+    assert.deepEqual([nul.status, nul.body.error?.code, nul.args], [400, 'bad_request', undefined], `code holding U+0000 is refused before the database (${JSON.stringify(nul.body)})`);
+  }
+  // save_coding_draft_v2 gives up after three concurrent first saves with
+  // coding_draft_busy. That is a retry, not a 500.
+  {
+    const busy = { from: database.from, rpc: async () => ({ data: null, error: { code: 'P0001', message: 'coding_draft_busy' } }) };
+    const out = response();
+    await handleCodingDraft({ method: 'POST', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-c' }, body: { id: 'js-double-numbers', user_id: 'account-c', code: '// x', base: null } } as never, out as never, busy as never);
+    assert.deepEqual([out.statusCode, errorCode(out.body)], [503, 'draft_busy'], `a busy draft save asks for a retry (${JSON.stringify(out.body)})`);
+  }
   console.log('Coding draft conflict passed: a save built on an older draft time is refused with 409 and the stored time, never its code; no base writes as before.');
 
   // An evolving stage's Submit stores the submitted code as the stage draft,
@@ -206,6 +291,13 @@ async function main() {
   const stageWrite = calls.find((one) => one.fn === 'save_coding_draft_v2');
   assert.equal(stageWrite?.args.p_force, true, 'the stage draft is written whatever the account held');
   assert.equal((submitted.body as { draftUpdatedAt?: string }).draftUpdatedAt, stored.get(`account-c:${stageId}`)?.updated_at, 'the verdict carries the time the stage draft was stored');
+  {
+    const nulSubmit = response();
+    calls.length = 0;
+    await handleCodingSubmit({ method: 'POST', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '203.0.113.59' }, query: { user_id: 'account-c' }, body: { session: stageSession, code: '// not there yet \u0000', user_id: 'account-c' } } as never, nulSubmit as never, conditional as never);
+    assert.deepEqual([nulSubmit.statusCode, errorCode(nulSubmit.body)], [400, 'bad_request'], `a stage Submit whose code holds U+0000 is a bad request, not a failed stage write (${JSON.stringify(nulSubmit.body)})`);
+    assert.equal(calls.some((one) => one.fn === 'save_coding_draft_v2' || one.fn === 'record_coding_verdict'), false, 'nothing is written for it');
+  }
   console.log('Coding evolving stage draft passed: Submit stores the stage code and returns its time.');
 
   // V3-2: an id no task could have (/coding/javascript/no-such-task) is as

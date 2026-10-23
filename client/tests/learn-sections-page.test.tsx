@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Roadmap from '../src/components/Roadmap';
+import { clearAccountData } from '../src/lib/accountData';
 import type { RoadmapStructure } from '../src/types/quiz';
 import { server } from './mocks/server';
 
@@ -172,6 +173,53 @@ describe('joining Software Engineer', () => {
     expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
   });
 
+  // The session had not read the join back (its refresh failed) when the
+  // account signed out and another signed in on the same page: the pending
+  // join planned the next account with a section it never joined.
+  it('drops a join the session has not read back when the account changes', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    await mountAt('/learn/software-engineer');
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
+    expect(notInPlan()).toHaveLength(0);
+
+    auth.value = { ...auth.value, user: { id: 'user-2', user_metadata: { devquiz_learning_preference_v1: FRONTEND } }, isAuthenticated: true };
+    act(() => clearAccountData());
+    expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
+    expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add Software Engineer to your plan' })).toBeInTheDocument();
+  });
+
+  it('drops a join whose save lands after the account changed', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    let land!: (outcome: unknown) => void;
+    saves.results.push(new Promise((resolve) => { land = resolve; }));
+    await mountAt('/learn/software-engineer');
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Software Engineer to your plan' }));
+    await waitFor(() => expect(saves.calls).toHaveLength(1));
+
+    auth.value = { ...auth.value, user: { id: 'user-2', user_metadata: { devquiz_learning_preference_v1: FRONTEND } }, isAuthenticated: true };
+    act(() => clearAccountData());
+    await act(async () => { land({ ok: true, preference: FRONTEND }); });
+    expect(await screen.findByRole('radio', { name: /^Algorithms, not in your plan/ })).toBeDisabled();
+    expect(screen.queryByText(/Software Engineer is in your plan\./)).toBeNull();
+  });
+
+  it('saves once when Add is clicked twice before it re-renders', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    await mountAt('/learn/software-engineer');
+    const add = await screen.findByRole('button', { name: 'Add Software Engineer to your plan' });
+    act(() => {
+      add.click();
+      add.click();
+    });
+    expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
+    expect(saves.calls).toHaveLength(1);
+  });
+
   it('reports a failed save with one Try again, which saves again', async () => {
     signIn({ devquiz_learning_preference_v1: FRONTEND });
     answer();
@@ -187,6 +235,38 @@ describe('joining Software Engineer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText(/Software Engineer is in your plan\./)).toBeInTheDocument();
     expect(saves.calls).toHaveLength(2);
+  });
+});
+
+describe('joining Forward Deployed Engineer', () => {
+  // The join enrols, or resumes a paused enrollment, by the enrollment it
+  // finds. Offered while the account's enrollments were still loading, it
+  // found none and asked to enrol a learner who had paused the path.
+  it('waits for the account’s enrollments before offering the path', async () => {
+    signIn({ devquiz_learning_preference_v1: FRONTEND });
+    answer();
+    const manifest = {
+      id: 'fde', kind: 'role_specialization', version: 1, title: 'Forward Deployed Engineer',
+      summary: 'Customer-facing engineering from scoping to handoff.', entryRequirement: 'You ship code in one track.',
+      estimatedHours: { min: 20, max: 30 },
+      modules: [{ id: 'fde-v1-entry', title: 'Entry', activities: [{ id: 'fde-v1-entry-check', title: 'Where you start' }] }],
+    };
+    let release!: () => void;
+    server.use(
+      http.get('*/api/quiz/roadmap', ({ request }) => (new URL(request.url).searchParams.get('resource') === 'learning-path-catalog'
+        ? HttpResponse.json({ versions: { fde: 1 }, paths: [{ manifest, availability: 'available', inventory: { modules: 1, lessons: 0, moduleChecks: 1, moduleCodeExercises: 0, finalCodeExercises: 0 } }] })
+        : undefined)),
+      http.get('*/api/user/*', ({ request }) => (new URL(request.url).searchParams.get('op') === 'learning-path-enrollment'
+        ? new Promise<Response>((resolve) => { release = () => resolve(HttpResponse.json({ enrollments: [] })); })
+        : undefined)),
+    );
+    await mountAt('/learn/forward-deployed-engineer');
+    expect(await screen.findByRole('radio', { name: /^Forward Deployed Engineer/ })).toBeInTheDocument();
+    await waitFor(() => expect(release).toBeTypeOf('function'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(screen.queryByRole('button', { name: 'Start the FDE path' })).toBeNull();
+    await act(async () => { release(); });
+    expect(await screen.findByRole('button', { name: 'Start the FDE path' })).toBeInTheDocument();
   });
 });
 

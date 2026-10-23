@@ -6041,3 +6041,58 @@ The owner asked for a code review of the FDE path before launch: find bad practi
 **Left open**
 - **Code retries:** a network retry of a code submit with the same idempotency key re-runs the grader before the replay is detected. It costs grader time, not correctness.
 - **Read rate limits:** the progress and preference GETs have no per-caller read limit, like most user GETs. Adding one is a rate-limit policy decision (NEEDED.md).
+
+## Web Developer code review — 23 October 2026
+
+This is the same audit as the FDE review, run with `.claude/skills/section-code-audit/SKILL.md`. It covered the Web Developer Learn section (`api/quiz/roadmap.ts` Learn branches, `lib/roadmap*.ts`, `lib/questions-store.ts`, `lib/review-selection.ts`, `client/src/components/Roadmap.tsx`, `client/src/components/learn/*`, `client/src/lib/roadmap.ts`) and the Coding section (`lib/coding/handlers.ts`, `practice-handlers.ts`, the React runner, `client/src/coding/*`, `client/src/components/coding/*`). Branch `claude/webdev-code-review`, built on the FDE review branch. It makes no change to the twelve handlers' routing, no SQL migration, no reviewed content, no tier gate and no XP amount.
+
+**Fixed (server)**
+- **Placement:** the final round checks the sign-in before it claims the round, so a refused token no longer spends it.
+- **Completion:**
+  - The attempt, the served set and the answers are read together.
+  - First-pass comes from the locked completion RPC.
+  - Concept reviews are read only for levels that name a concept (about 23 % of levels).
+  - An expired attempt answers 409 `invalid_session`, not 500.
+- **Progress and step reads:** they run in parallel with the plan and settings reads. The question bank and its overrides load together.
+- **Review selection:** sort keys are computed once (4.7 ms to 1.7 ms for 2,453 questions).
+- **Coding:**
+  - Verdicts and reveals for a Learn attempt that ended mid-request answer 409.
+  - `coding_draft_busy` answers 503 with `Retry-After`.
+  - A draft holding U+0000 answers 400.
+  - Practice-run positions are clamped.
+  - Failed reads answer 503 or a logged 500 instead of re-offering passed work or locking a tier.
+  - React code nested too deeply for the transpiler is a compile error, not a runner failure.
+  - The fixture modules are converted once per runner.
+- **CDN:** the public Learn map is cached at the edge (`s-maxage=60, stale-while-revalidate=300`).
+- **FDE follow-up:** learning-path drafts and artifacts holding U+0000 answer 400 instead of a JSONB 500.
+
+**Fixed (client)**
+- **Learn:**
+  - Ref guards stop double answers, double completions, double skill-check rounds and double section joins.
+  - A completion that returns after sign-out writes nothing.
+  - Stored progress is read by shape (an object-shaped unlock list crashed the page).
+  - The level request is aborted on unmount.
+  - Focus moves to Continue, to each question, and back to the map node.
+  - The lesson runner is lazy-loaded.
+  - A progress GET that started before a completion no longer overwrites it.
+  - The empty hide-time progress flusher is removed.
+- **Coding:**
+  - A browser run stops when the learner leaves.
+  - Shortcuts ignore forms, dialogs and a hidden editor.
+  - Ref guards on Reveal and on starting a challenge run.
+  - The track search keeps every keystroke.
+  - Task rows are memoised (up to 316).
+  - Long tokens wrap.
+  - Revealed hints take focus.
+  - Prettier and CodeMirror are not loaded while the editor is hidden or the browser asks to save data.
+  - Draft and session state follow account changes (`accountEpoch()`).
+
+**Checks** (local, Node 24, `npm run ci:parity -- --only …`)
+- **Passed:** typecheck:api, typecheck:scripts, typecheck:tooling, check:unused, check:security, build, check:public, check:bundle (initial load 238,262 gzip bytes, 100 below the FDE branch), test:launch, test:coding-auth, test:grading-integrity, test:react-authority, test:paths, test:fallbacks, test:client (110 files, 1,140 tests).
+- **After the last three commits:** typecheck:api, typecheck:scripts, test:launch, test:paths, the client typecheck, check:unused and the signout-sync tests passed again.
+- **Not run:** browser, responsive and SQL; CI covers them.
+
+**Left open (NEEDED.md)**
+- **Hearts on the last question:** when the third miss is the last question of a 12-question level, the server still records a pass. Closing this changes a grading rule and needs a migration.
+- **One active practice run per learner:** this needs a partial unique index, which is a migration.
+- **The progress PUT:** it writes nothing but is still sent after shop changes.

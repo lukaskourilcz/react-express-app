@@ -274,10 +274,12 @@ async function effective(subject?: ScopeSubjectId): Promise<EffectiveCache> {
   const active = inflight.get(key);
   if (active) return active;
   const loading = (async () => {
-    const baseQuestions = subject
-      ? await loadSubjectQuestionBank(subject)
-      : await loadDeploymentQuestionBank();
-    const overrides = await loadOverrides();
+    // The bank (a module import on a cold instance) and the override rows (a
+    // database read) do not depend on each other, so they load together.
+    const [baseQuestions, overrides] = await Promise.all([
+      subject ? loadSubjectQuestionBank(subject) : loadDeploymentQuestionBank(),
+      loadOverrides(),
+    ]);
     const merged = overrides
       ? buildEffective(baseQuestions, overrides, subject)
       : baseQuestions.map(withImportance);

@@ -61,6 +61,8 @@ const tables: Record<string, Row[]> = {
 };
 /** Every routine the handler called, with its arguments, in order. */
 const rpcCalls: { name: string; args: Row }[] = [];
+/** Every table the handler read, in order. */
+const tableReads: string[] = [];
 /** Answer advance_verified_streak as a database before migration 048 does. */
 let streakRoutineMissing = false;
 /** Answer complete_verified_roadmap_attempt_v2 as a database before 060 does. */
@@ -116,7 +118,9 @@ function recordAnswer(args: Row): { status: number; body: unknown } {
  * handler relies on, including the mastery fields it writes on a level. */
 function completeAttempt(args: Row): { status: number; body: unknown } {
   const attempt = tables.roadmap_attempts.find((row) => row.attempt_id === args.p_attempt_id);
-  if (!attempt || attempt.user_id !== args.p_user_id) return { status: 400, body: { code: 'P0001', message: 'invalid_roadmap_attempt' } };
+  if (!attempt || attempt.user_id !== args.p_user_id || (typeof attempt.expires_at === 'string' && Date.parse(attempt.expires_at) < Date.now())) {
+    return { status: 400, body: { code: 'P0001', message: 'invalid_roadmap_attempt' } };
+  }
   if (attempt.completed_at) return { status: 200, body: false };
   const answers = tables.roadmap_attempt_answers.filter((row) => row.attempt_id === attempt.attempt_id);
   if (answers.length !== attempt.total_questions) return { status: 400, body: { code: 'P0001', message: 'incomplete_roadmap_attempt' } };
@@ -224,6 +228,7 @@ async function startStandIn() {
       const rows = tables[table] ?? [];
       const single = String(req.headers.accept ?? '').includes('vnd.pgrst.object');
       if (req.method === 'GET') {
+        tableReads.push(table);
         const found = rows.filter((row) => matches(row, filters));
         return single ? (found.length === 1 ? send(200, found[0]) : send(406, { code: 'PGRST116', message: 'no rows' })) : send(200, found);
       }
@@ -590,6 +595,7 @@ async function main() {
           if (answer.statusCode !== 200) break; // out of hearts
         }
         rpcCalls.length = 0;
+        tableReads.length = 0;
         const done = await call('POST', { resource: 'complete' }, REPEAT.token, { sessionId: level.body.sessionId });
         assert.equal(done.statusCode, 200, JSON.stringify(done.body));
         return done;
@@ -602,6 +608,9 @@ async function main() {
       assert.equal(first.body.repeatXp?.xp, 0, 'a first pass pays learning XP, not repeat XP');
       assert.equal(first.body.repeatXp?.withheld, null);
       assert.ok(credits().some((one) => one.name === 'credit_verified_xp_tokens'), 'a first pass credits its coins');
+      assert.equal(tableReads.filter((table) => table === 'roadmap_progress').length, 1,
+        `060 says it was the first pass, so the progress row is read once, after the completion (${tableReads.join(', ')})`);
+      assert.equal(tableReads.includes('concept_reviews'), false, 'an HTML level names no concept, so no review state is read');
 
       const soon = await playLevel(true);
       assert.equal(soon.body.passed, true);
@@ -683,6 +692,23 @@ async function main() {
     assert.equal(bigODone.statusCode,200,JSON.stringify(bigODone.body));
     assert.equal(bigODone.body.passed,true,'a free beginner completes Big O without DSA level one or placement');
     console.log('PASS learn: Big O level two can be completed directly without placement or an earlier DSA level');
+
+    // ── An attempt past its two hours answers 409, not 500 ──────────────────
+    // The completion routine raises invalid_roadmap_attempt for an attempt
+    // that ran out; the learner restarts the level, so the answer says so in
+    // the code the client already reads as expired.
+    {
+      const level = await call('GET', { topic: 'html', level: '1' }, OTHER.token);
+      assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+      assert.ok((await answerAll(level.body.sessionId, OTHER.token)).every((status) => status === 200));
+      const attemptId = tokens.decodeSessionEnvelope(level.body.sessionId)!.attemptId;
+      const attempt = tables.roadmap_attempts.find((row) => row.attempt_id === attemptId)!;
+      attempt.expires_at = new Date(Date.now() - 60_000).toISOString();
+      const expired = await call('POST', { resource: 'complete' }, OTHER.token, { sessionId: level.body.sessionId });
+      assert.equal(expired.statusCode, 409, `an expired attempt is refused as expired (${JSON.stringify(expired.body)})`);
+      assert.equal(expired.body?.error?.code, 'invalid_session');
+    }
+    console.log('PASS learn: a completion of an expired attempt answers 409 invalid_session');
   } finally {
     server.close();
   }

@@ -1,5 +1,6 @@
 // What the workbench says after Run and Submit, checked against the coding
 // audit of 8 October 2026 (C3, C4, C5). Each case names its finding.
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -12,6 +13,7 @@ import { ApiError } from '../src/lib/api';
 import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import type { CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { declared } from './css';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -257,6 +259,66 @@ it('keeps Run focusable while it runs', async () => {
   expect(screen.getByRole('button', { name: 'Run' })).not.toHaveAttribute('aria-disabled');
 });
 
+// A Run kept its worker going after the learner left the task: a loop ran on
+// to its budget, a first TypeScript compile for up to 45 s.
+it('stops a Run in progress when the task is left', async () => {
+  let signal: AbortSignal | undefined;
+  vi.mocked(runCodeTests).mockImplementationOnce((input) => { signal = input.signal; return new Promise(() => {}); });
+  const view = mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+  await waitFor(() => expect(runCodeTests).toHaveBeenCalledTimes(1));
+  expect(signal?.aborted).toBe(false);
+  view.unmount();
+  expect(signal?.aborted).toBe(true);
+});
+
+// A drag the browser cancelled (a touch turned into a scroll) never sent
+// pointerup, and the split went on following the pointer afterwards.
+it('ends a splitter drag the browser cancels', () => {
+  // jsdom has no pointer capture.
+  Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { value: () => {}, configurable: true });
+  mount();
+  const separator = screen.getByRole('separator');
+  vi.spyOn(separator.parentElement!, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 1000 } as DOMRect);
+  fireEvent.pointerDown(separator, { pointerId: 1 });
+  act(() => { window.dispatchEvent(new MouseEvent('pointermove', { clientX: 400 })); });
+  expect(separator).toHaveAttribute('aria-valuenow', '40');
+  act(() => { window.dispatchEvent(new MouseEvent('pointercancel')); });
+  act(() => { window.dispatchEvent(new MouseEvent('pointermove', { clientX: 700 })); });
+  expect(separator).toHaveAttribute('aria-valuenow', '40');
+  delete (HTMLElement.prototype as Partial<HTMLElement>).setPointerCapture;
+  localStorage.removeItem('devshark:coding:layout:v1');
+});
+
+// The shortcuts belong to the editor. Ctrl+Enter, which many forms take for
+// "send", in the report dialog or the skip note ran the code, and
+// Ctrl+Shift+Enter submitted it.
+it('leaves Ctrl+Enter in the report dialog and the skip note to them', async () => {
+  // jsdom has no modal dialogs.
+  const proto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
+  proto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
+  proto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
+  vi.mocked(submitCoding).mockResolvedValue(verdict({ verdict: 'failed', progress: progress('in_progress'), xpAwarded: 0, firstPass: false }));
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+  const note = screen.getByLabelText(/Anything you want to add/);
+  fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true });
+  fireEvent.keyDown(note, { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.click(screen.getByRole('button', { name: 'Report a problem with this task' }));
+  const detail = await screen.findByRole('textbox', { name: /Additional details/ });
+  fireEvent.keyDown(detail, { key: 'Enter', metaKey: true });
+  fireEvent.keyDown(detail, { key: 'Enter', metaKey: true, shiftKey: true });
+  await act(async () => {});
+  expect(runCodeTests).not.toHaveBeenCalled();
+  expect(submitCoding).not.toHaveBeenCalled();
+  // From the editor they still run and submit.
+  fireEvent.keyDown(editor(), { key: 'Enter', ctrlKey: true });
+  await waitFor(() => expect(runCodeTests).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Run' })).not.toHaveAttribute('aria-disabled'));
+  fireEvent.keyDown(editor(), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  await waitFor(() => expect(submitCoding).toHaveBeenCalledTimes(1));
+});
+
 it('closes the Reset confirmation on Escape, keeps the code and gives focus back to Reset', () => {
   mount();
   fireEvent.change(editor(), { target: { value: 'const double = () => [];' } });
@@ -294,6 +356,19 @@ it('tells a signed-out visitor what a reveal really does, and Keep trying return
   fireEvent.click(within(dialog).getByRole('button', { name: 'Keep trying' }));
   expect(screen.queryByRole('alertdialog')).toBeNull();
   expect(document.activeElement).toBe(solution);
+});
+
+// A rung appeared in the pane beside the editor while focus stayed on Hint,
+// so a screen reader never read it.
+it('moves focus to each hint as it is revealed', () => {
+  mount();
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 61_000);
+  fireEvent.change(editor(), { target: { value: 'const double = (list) => list.map((n) => n);' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Hint' }));
+  expect(document.activeElement).toHaveTextContent('Use map.');
+  fireEvent.click(screen.getByRole('button', { name: 'Next hint' }));
+  expect(document.activeElement).toHaveTextContent('Array.prototype.map()');
+  clock.mockRestore();
 });
 
 // C3-15: the documentation rung printed the task's tag slug ("map-set").
@@ -442,4 +517,17 @@ it('keeps the stale draft when loading the latest brief fails', async () => {
   expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
   expect(submitCoding).toHaveBeenCalledTimes(1);
+});
+
+// A long token in a brief, a hint or an error note (a member chain, a
+// minified line) pushed the page sideways at 360 px and 200 % text.
+it('lets long code tokens in the brief, the hints and the notes wrap', () => {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+  document.head.append(style);
+  const rules = [...style.sheet!.cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+  for (const selector of ['.cd-prompt', '.cd-prompt code', '.cd-inline-code', '.cd-hint', '.cd-note']) {
+    expect(declared(rules, selector, 'overflow-wrap'), selector).toBe('anywhere');
+  }
+  style.remove();
 });

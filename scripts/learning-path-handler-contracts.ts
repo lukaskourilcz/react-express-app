@@ -487,6 +487,17 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 0 }), res as never,
         fakeSupabase({ rpc: () => ({ error: { code: '23505', message: 'duplicate key value violates unique constraint "learning_path_drafts_pkey"' } }) }));
       if (res.statusCode !== 409 || code(res) !== 'draft_conflict') fail(`a first draft save that lost the race to the key answers ${res.statusCode} ${code(res)}, not 409 draft_conflict`);
+      // JSONB cannot store U+0000; the character is refused before the
+      // routine, while code that spells the escape out as text still saves.
+      called.length = 0;
+      res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 0, content: { code: 'const x = "\u0000";' } }), res as never,
+        fakeSupabase({ rpc: (name) => { called.push(name); return {}; } }));
+      if (res.statusCode !== 400 || called.length > 0) fail(`a draft holding U+0000 answers ${res.statusCode} after ${called.length} calls, not 400 before any`);
+      res = response();
+      await handlePathDraft(request('PUT', `draft-bounds-${stamp}`, { ...draft, expectedRevision: 0, content: { code: 'const nul = "\\u0000";' } }), res as never,
+        fakeSupabase({ rpc: () => ({ data: { revision: 1, updated_at: new Date().toISOString() } }) }));
+      if (res.statusCode === 400) fail('code that spells \\u0000 out as text was refused as a NUL');
     }
 
     /* ── every off-loop decision goes through one helper ──────────────── */

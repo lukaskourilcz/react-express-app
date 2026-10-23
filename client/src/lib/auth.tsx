@@ -12,16 +12,10 @@ import {
   supabaseLoadFailed,
 } from './supabaseClient';
 import { apiFetch } from './api';
-import { registerAccessTokenReader } from './roadmap';
 import { clearAccountData, forgetOthersKeptDrafts } from './accountData';
 import { readString, removeStored, writeString } from './storage';
 import { clearAuthReturn, clearSignInResume, currentReturnPath, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
 import { RELOAD_GRACE_MS, browserRecovery, isChunkLoadError, reloadOnPress, type Recovery } from './routeRecovery';
-
-// Cache the latest access token in memory so the pagehide beacon (which can't
-// await getSession()) can attach the Authorization header synchronously.
-let cachedAccessToken: string | null = null;
-registerAccessTokenReader(() => cachedAccessToken);
 
 // Report a real sign-in to the server (powers the /dev "Logs" tab) at most once
 // per browser tab session, so page refreshes (which re-emit SIGNED_IN) don't log
@@ -204,7 +198,6 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     // listener first, and the order keeps the restore out of the log.
     let initialized = false;
     const unsubscribe = onSupabaseAuthStateChange((event, session) => {
-      cachedAccessToken = session?.access_token ?? null;
       if (session?.user) signedIn(session.user.id);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -241,12 +234,10 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     // out, like a stalled session read always has.
     void withDeadline(getSupabaseSession(), AUTH_BOOT_TIMEOUT_MS)
       .then((session) => {
-        cachedAccessToken = session?.access_token ?? null;
         if (session?.user) signedIn(session.user.id);
         setUser(session?.user ?? null);
       })
       .catch(() => {
-        cachedAccessToken = null;
         setUser(null);
       })
       .finally(() => setIsLoading(false));
@@ -281,7 +272,6 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   // would have done here, since it announces none.
   const forgetSessionHere = () => {
     forgetStoredSession();
-    cachedAccessToken = null;
     clearSignInReport();
     clearAccountData();
     accountSignedIn = false;

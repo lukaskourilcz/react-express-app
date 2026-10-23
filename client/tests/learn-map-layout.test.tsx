@@ -3,7 +3,7 @@
 // narrow map now lays its nodes out three to a row. Locked names read in
 // the secondary text colour, with the lock glyph as the locked cue.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -71,5 +71,22 @@ describe('the Learn map at phone width', () => {
     expect(screen.getByRole('button', { name: 'Level 2: Level 2, Locked' })).toBeDisabled();
     expect(screen.getByText('Level 2').style.color).toBe('var(--color-text-secondary)');
     expect(screen.getByText('Level 1').style.color).toBe('var(--color-text-primary)');
+  });
+});
+
+// Closing a level removed the control that closed it, and focus fell to the
+// top of the page: a keyboard learner tabbed back through the shell and the
+// whole map to the step they had just played.
+describe('back on the Learn map', () => {
+  it('returns focus to the level that was open', async () => {
+    const question = { id: 'q-1', tags: [], introduction: '', question: 'Which option is first?', options: ['Option A', 'Option B'], category: 'javascript', difficulty: 1 };
+    await renderMap(800);
+    server.use(http.get('*/api/quiz/roadmap', ({ request }) => (new URL(request.url).searchParams.get('level')
+      ? HttpResponse.json({ kind: 'level', topic: 'javascript', ref: 1, title: 'Level 1', passPct: 75, sessionId: 'session-1', questions: [question] })
+      : undefined)));
+    fireEvent.click(screen.getByRole('button', { name: /^Level 1: Level 1/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Exit lesson' }, { timeout: 5000 }));
+    const node = await screen.findByRole('button', { name: /^Level 1: Level 1/ });
+    await waitFor(() => expect(node).toHaveFocus());
   });
 });

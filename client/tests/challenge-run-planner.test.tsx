@@ -6,15 +6,17 @@ import { ChallengeRunPlanner } from '../src/components/coding/ChallengeRunPlanne
 
 // Design audit P1.6: on the Coding home the planner is one row until opened,
 // and opening it shows the same form as before.
-const practice = vi.hoisted(() => ({ start: null as null | ((input: unknown, callbacks: { onSuccess: (data: unknown) => void }) => void) }));
-const mutate = vi.fn((input: unknown, callbacks: { onSuccess: (data: unknown) => void }) => practice.start?.(input, callbacks));
+const practice = vi.hoisted(() => ({ start: null as null | ((input: unknown, callbacks: { onSuccess: (data: unknown) => void; onSettled?: () => void }) => void), pending: false }));
+const mutate = vi.fn((input: unknown, callbacks: { onSuccess: (data: unknown) => void; onSettled?: () => void }) => practice.start?.(input, callbacks));
 vi.mock('../src/coding/practice', () => ({
-  usePracticeSession: () => ({ data: { session: null }, isError: false, refetch: () => {} }),
+  usePracticeSession: () => (practice.pending
+    ? { data: undefined, isPending: true, isError: false, refetch: () => {} }
+    : { data: { session: null }, isPending: false, isError: false, refetch: () => {} }),
   useStartSession: () => ({ mutate, isPending: false }),
   useAdvanceSession: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-beforeEach(() => { mutate.mockClear(); practice.start = null; });
+beforeEach(() => { mutate.mockClear(); practice.start = null; practice.pending = false; });
 
 const mount = (collapsible = true) => render(
   <MemoryRouter initialEntries={['/coding']}>
@@ -52,4 +54,27 @@ it('Start the run sends the chosen options and opens the first task', async () =
   expect(mutate).toHaveBeenCalledTimes(1);
   expect(mutate.mock.calls[0][0]).toEqual({ count: 5, order: 'random', topic: 'javascript' });
   expect(await screen.findByRole('heading', { level: 1, name: 'Task page' })).toBeInTheDocument();
+});
+
+// A second press before the button turned busy started a second run, which
+// replaced the first.
+it('starts one run for a double press, and can start again once it settled', () => {
+  let settle: (() => void) | undefined;
+  practice.start = (_input, { onSettled }) => { settle = onSettled; };
+  mount(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+  expect(mutate).toHaveBeenCalledTimes(1);
+  settle?.();
+  fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+  expect(mutate).toHaveBeenCalledTimes(2);
+});
+
+// While the open run was still loading the form offered Start, and a run
+// started then replaced the one the learner already had.
+it('offers no Start while the open run is loading', () => {
+  practice.pending = true;
+  mount(false);
+  expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+  expect(screen.getByRole('status')).toHaveTextContent('Loading');
 });

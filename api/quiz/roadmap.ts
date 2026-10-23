@@ -94,6 +94,7 @@ import {
 import { itemReview, contentVersion } from '../../lib/curation';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
+import { conceptOf } from '../../shared/concepts';
 import { refuseLocked } from '../../lib/access';
 import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
@@ -416,32 +417,23 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
 
   // Paths granted to a named account (see lib/topic-grants.ts) are resolved
   // here rather than stored, so they stay server-owned and survive a progress
-  // reset. Everything else in `extra` still comes from the row.
-  const grantExtra = async (extra: ReturnType<typeof sanitizeExtra>) => {
-    const { ownerEmail } = await getGameSettings();
-    return { ...extra, unlocked: withGrantedTopics(extra.unlocked, email, ownerEmail) };
-  };
+  // reset. Everything else in `extra` still comes from the row. The owner
+  // address the grants are keyed on is read alongside the row, not after it.
+  const [{ ownerEmail }, current] = await Promise.all([
+    getGameSettings(),
+    withTimeout(supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', userId).maybeSingle()),
+  ]);
+  if (current.error) return jsonError(res, 500, 'db_error', 'Could not load progress');
+  const stored = sanitizeExtra(current.data?.extra);
+  const extra = { ...stored, unlocked: withGrantedTopics(stored.unlocked, email, ownerEmail) };
 
   if (req.method === 'GET') {
-    const { data, error } = await withTimeout(
-      supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', userId).maybeSingle(),
-    );
-    if (error) return jsonError(res, 500, 'db_error', 'Could not load progress');
-    return res.json({
-      data: (data?.data as ProgressBlob) ?? {},
-      extra: await grantExtra(sanitizeExtra(data?.extra)),
-    });
+    return res.json({ data: (current.data?.data as ProgressBlob) ?? {}, extra });
   }
 
   // Learning progress and all stored extras are authoritative. The client may
   // request a sync, but it cannot write entitlements or currency snapshots.
-  const current = await withTimeout(
-    supabase.from(PROGRESS_TABLE).select('data,extra').eq('user_id', userId).maybeSingle(),
-  );
-  if (current.error) return jsonError(res, 500, 'db_error', 'Could not load progress');
-  const authoritative = sanitize(current.data?.data);
-  const authoritativeExtra = await grantExtra(sanitizeExtra(current.data?.extra));
-  return res.json({ ok: true, data: authoritative, extra: authoritativeExtra });
+  return res.json({ ok: true, data: sanitize(current.data?.data), extra });
 }
 
 async function handleSkillCheck(req: VercelRequest, res: VercelResponse) {
@@ -818,6 +810,20 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
       isCorrect, explanation: servedNow.get(item.questionId)!.explanation });
   }
 
+  const history = [...state.history, ...roundOutcomes];
+  const graded = state.items.length - voided;
+  const nextDifficulty = graded > 0 ? stepDifficulty(state.difficulty, roundCorrect, graded) : state.difficulty;
+  // The run ends when the budget is met. A void leaves the budget short, so
+  // one more round is served (bounded: a round always asks at least one
+  // question, and the budget is twenty).
+  const finished = history.length >= PLACEMENT_TOTAL;
+  // The last round names the account its receipt is for. That sign-in is
+  // checked before the round is claimed: an expired or unreadable token is
+  // refused with nothing spent, so the same round can be sent again once the
+  // session is refreshed instead of answering 409 for a round never graded.
+  const userId = finished ? await optionalAuthSub(req, res) : null;
+  if (userId === undefined) return;
+
   // Each round is graded once. The token is sealed but not single-use, and
   // every response reports how the round went (the next difficulty, the
   // round's score, the final total), so a round submitted again with other
@@ -829,17 +835,7 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 409, 'placement_round_used', 'This placement round was already submitted. Start the placement again.');
   }
 
-  const history = [...state.history, ...roundOutcomes];
-  const graded = state.items.length - voided;
-  const nextDifficulty = graded > 0 ? stepDifficulty(state.difficulty, roundCorrect, graded) : state.difficulty;
-  // The run ends when the budget is met. A void leaves the budget short, so
-  // one more round is served (bounded: a round always asks at least one
-  // question, and the budget is twenty).
-  const finished = history.length >= PLACEMENT_TOTAL;
-
   if (finished) {
-    const userId = await optionalAuthSub(req, res);
-    if (userId === undefined) return;
     const correct = history.filter((h) => h.isCorrect).length;
     const total = history.length;
     const breakdown: Record<string, { correct: number; total: number }> = {};
@@ -1144,7 +1140,20 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (userId === undefined) return;
   if (refuseForeignSession(res, session, userId)) return;
   if (await refuseLockedSession(res, userId, session)) return;
-  const attemptResult = await ensureAttempt(session, userId);
+  // The attempt row, the served question set and the graded answers are
+  // independent reads, so they run together once the session's owner is
+  // confirmed. The answers are used only after the attempt is shown to be
+  // this session's, and only when none of its questions was retired.
+  const [attemptResult, served, answers] = await Promise.all([
+    ensureAttempt(session, userId),
+    getEffectiveQuestionsById(session.subject),
+    withTimeout(
+      supabase
+        .from('roadmap_attempt_answers')
+        .select('question_id,is_correct')
+        .eq('attempt_id', session.attemptId!),
+    ),
+  ]);
   if (attemptResult.error || !attemptResult.data) {
     if (isRpcMissing(attemptResult.error)) {
       return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
@@ -1161,7 +1170,6 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // is closed without a verdict instead: nothing is written to the learner's
   // progress, no pass is granted on a flawed item and no fail is recorded for
   // one. The client offers the level again with its current questions.
-  const served = await getEffectiveQuestionsById(session.subject);
   const retired = session.questions.filter((q) => !served.has(q.questionId)).map((q) => q.questionId);
   if (retired.length > 0) {
     if (!attempt.completed_at) {
@@ -1184,12 +1192,6 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       invalidated: { reason: 'content_retired', questionIds: retired },
     });
   }
-  const answers = await withTimeout(
-    supabase
-      .from('roadmap_attempt_answers')
-      .select('question_id,is_correct')
-      .eq('attempt_id', session.attemptId!),
-  );
   if (answers.error) return jsonError(res, 500, 'db_error', 'Could not grade the learning attempt');
   const graded = answers.data ?? [];
   const correctAnswers = graded.filter((answer) => answer.is_correct === true).length;
@@ -1236,6 +1238,30 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // The concept items this attempt graded, and the learner's review state
+  // for them. The state is read while the completion runs: the completion
+  // never writes it, and the review is recorded from it at the end.
+  const reviewSubject = userId && isScopeSubject(session.subject) ? session.subject : null;
+  const reviewItems = reviewSubject
+    ? graded.flatMap((answer) => {
+      const question = served.get(String(answer.question_id));
+      if (!question) return [];
+      return [{
+        itemId: question.id,
+        itemVersion: contentVersion(question),
+        category: question.category,
+        tags: question.tags,
+        correct: answer.is_correct === true,
+        kind: 'independent' as const,
+      }];
+    })
+    : [];
+  // Most items name no concept, and an attempt whose items name none has
+  // nothing to record, so its state is not read at all.
+  const reviewStates = userId && reviewSubject && reviewItems.some((item) => conceptOf(item) !== null)
+    ? loadReviewStates(supabase, userId, reviewSubject)
+    : null;
+
   let progress: unknown;
   let applied = false;
   let repeatXp: LearnRepeatXp | null = null;
@@ -1267,8 +1293,10 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
   } else if (userId) {
     // Only a first pass earns a step's learning XP, so only a first pass
-    // credits coins. Read before the completion writes the pass (#227).
-    const passedBefore = passed ? await stepPassed(userId, session) : null;
+    // credits coins (#227). From migration 060 the completion says whether
+    // it was the step's first pass, read under the progress lock it holds
+    // while recording it; before 060 the record is read here, before the
+    // completion writes the pass.
     const completion = {
       p_user_id: userId,
       p_attempt_id: session.attemptId,
@@ -1278,6 +1306,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     // again, an hour after the step last paid (owner decision of 9 Oct
     // 2026), and says so. Before 060 the completion of 056 answers alone.
     let completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt_v2', completion));
+    const passedBefore = passed && isRpcMissing(completed.error) ? await stepPassed(userId, session) : null;
     if (isRpcMissing(completed.error)) {
       completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt', completion));
     }
@@ -1291,18 +1320,25 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       if (/roadmap_prerequisite_not_met/i.test(completed.error.message ?? '')) {
         return jsonError(res, 409, 'prerequisite_not_met', 'Complete the preceding learning steps first');
       }
+      // The routine refuses an attempt that ran past its two hours (the
+      // owner was checked above), which the learner fixes by starting the
+      // level again, as the attempt-status check tells them.
+      if (/invalid_roadmap_attempt/i.test(completed.error.message ?? '')) {
+        return jsonError(res, 409, 'invalid_session', 'This learning attempt expired. Start the lesson again.');
+      }
       return jsonError(res, 500, 'db_error', 'Could not save learning progress');
     }
-    const outcome = completed.data as { applied?: unknown; repeatXp?: unknown } | boolean | null;
+    const outcome = completed.data as { applied?: unknown; repeatXp?: unknown; firstPass?: unknown } | boolean | null;
     applied = typeof outcome === 'object' && outcome !== null ? outcome.applied === true : outcome === true;
     // XP only: a repeat credits no coins and is no first pass.
     repeatXp = typeof outcome === 'object' && outcome !== null ? learnRepeatXpOf(outcome.repeatXp) : null;
+    const firstPass = typeof outcome === 'object' && outcome !== null ? outcome.firstPass === true : passedBefore === false;
     const row = await withTimeout(
       supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
     );
     if (row.error) return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
     progress = sanitize(row.data?.data);
-    if (applied && passedBefore === false && progressStepPassed(row.data?.data, session)) {
+    if (applied && firstPass && progressStepPassed(row.data?.data, session)) {
       await creditLearnPass(supabase, {
         userId,
         subject: session.subject!,
@@ -1337,28 +1373,12 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // affordance, so unlike a quiz there is nothing to downgrade. Questions left
   // unanswered when the hearts ran out are simply absent from the graded rows
   // and are not recorded as failures — they were not attempted.
-  if (userId && isScopeSubject(session.subject)) {
-    const byId = await getEffectiveQuestionsById(session.subject);
-    const items = graded.flatMap((answer) => {
-      const question = byId.get(String(answer.question_id));
-      if (!question) return [];
-      return [{
-        itemId: question.id,
-        itemVersion: contentVersion(question),
-        category: question.category,
-        tags: question.tags,
-        correct: answer.is_correct === true,
-        kind: 'independent' as const,
-      }];
-    });
-    if (items.length > 0) {
-      const states = await loadReviewStates(supabase, userId, session.subject);
-      await recordConceptReviews(
-        supabase,
-        { userId, subject: session.subject, eventId: session.attemptId!, items },
-        states,
-      );
-    }
+  if (userId && reviewSubject && reviewStates) {
+    await recordConceptReviews(
+      supabase,
+      { userId, subject: reviewSubject, eventId: session.attemptId!, items: reviewItems },
+      await reviewStates,
+    );
   }
 
   logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts, repeatXp: repeatXp?.xp ?? null });
@@ -1467,9 +1487,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET' && req.query.resource === 'eligibility') {
     if (!(await limitRead(req, res))) return;
     try {
-      const learner = await learnerContext(req, res);
+      // The served set is the same for everyone, so it loads while the
+      // learner's plan and record are read rather than after them.
+      const [learner, byId] = await Promise.all([learnerContext(req, res), getEffectiveQuestionsById()]);
       if (learner === undefined) return;
-      const byId = await getEffectiveQuestionsById();
       const exists = (id: string) => byId.has(id);
       const structure = liveRoadmapStructure(exists);
       const levelCount = (topic: string) => (structure as Record<string, { levels: unknown[] } | undefined>)[topic]?.levels.length ?? 0;
@@ -1566,7 +1587,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           return [topic, unavailableParts.length > 0 ? { ...withCounts, unavailableParts } : withCounts];
         }),
     );
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    // The map is the same for every caller, so the CDN may share it: one
+    // function run per minute per region instead of one per Learn visit.
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
     logEvent({ status: 200, kind: 'structure', latency_ms: Date.now() - started });
     return res.json({ topics, structure });
   }
@@ -1579,9 +1602,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!(await limitRead(req, res))) return;
   // One read of the learner's plan and verified record, shared by the three
   // step branches below. A guest has neither, and takes the preview path.
-  const learner = await learnerContext(req, res);
+  // The served question set does not depend on who asks, so it loads at the
+  // same time instead of waiting for the record.
+  const [learner, byId] = await Promise.all([learnerContext(req, res), getEffectiveQuestionsById(subject)]);
   if (learner === undefined) return;
-  const byId = await getEffectiveQuestionsById(subject);
   const exists = (id: string) => byId.has(id);
   const live = buildLiveTopic(topic, exists);
   const availability = liveAvailability(live);

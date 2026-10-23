@@ -1,11 +1,12 @@
 // The Coding section: home, one track and one task. The review queue is
 // retired (a pass is permanent); /coding/review only redirects home.
 // devShark-only routes; the App gates them like /roadmap and /typing.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
+import { accountEpoch } from '../../lib/accountData';
 import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
@@ -168,7 +169,10 @@ function SaveButton({ taskId, saved, onToggle, busy, toolbar = false }: { taskId
   );
 }
 
-function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
+/** One row of a track's list. A track lists up to three hundred of them, and
+ * every key typed in its search box draws the list again: a row whose task
+ * and state did not change is not drawn again. */
+const TaskRow = memo(function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
   task: CodingTaskSummary;
   status: Status;
   /** 'locked' and 'preview' show the "Premium" badge. 'unknown' (the plan is
@@ -207,7 +211,7 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
       {save}
     </li>
   );
-}
+});
 
 /** On the free plan: which stages of a project, or levels of a short path,
  * come with it. The numbers are the index's projected flags, so they are
@@ -429,6 +433,11 @@ export function CodingTrackScreen() {
   // Every filter lives in the URL, so a filtered list is a link a learner can
   // keep, share with themselves on another device, or reload without losing.
   const query = params.get('q') ?? '';
+  // The search box keeps what is typed itself. Read back from the URL, which
+  // the router updates in a transition, it lost keys: React put the old value
+  // back until the list re-rendered, and the next key replaced the one before.
+  // Clearing the filters empties it, and another track starts a fresh one.
+  const searchBox = useRef<HTMLInputElement>(null);
   const difficulty = difficultyParam(params);
   const duration = params.get('time') ?? 'all';
   // No task is graded by a checklist since 29 Sep 2026, so an old
@@ -439,9 +448,12 @@ export function CodingTrackScreen() {
   const bookmarks = useBookmarks(isAuthenticated);
   const savedIds = useMemo(() => new Set(bookmarks.data?.saved ?? []), [bookmarks.data]);
   const save = useSaveChallenge();
+  // `mutate` keeps its identity while the mutation's result object does not,
+  // so the rows' callback stays the same and the rows can skip a redraw.
+  const saveChallenge = save.mutate;
   const onSave = useCallback((taskId: string, next: boolean) => {
-    save.mutate({ op: 'save', taskId, saved: next });
-  }, [save]);
+    saveChallenge({ op: 'save', taskId, saved: next });
+  }, [saveChallenge]);
 
   const tasks = useMemo(() => SECTION_INDEX.filter((task) => task.track === track), [track]);
   const needle = query.trim().toLowerCase();
@@ -545,9 +557,11 @@ export function CodingTrackScreen() {
       <div className="cd-search">
         <label className="cd-visually-hidden" htmlFor={`${track}-search`}>{t('coding.filter.searchLabel')}</label>
         <input
+          key={track}
+          ref={searchBox}
           id={`${track}-search`}
           type="search"
-          value={query}
+          defaultValue={query}
           placeholder={t('coding.filter.searchPlaceholder')}
           onChange={(event) => setFilter('q', event.target.value || null)}
         />
@@ -577,7 +591,7 @@ export function CodingTrackScreen() {
           <option value="debug">{t('coding.filter.formatDebug')}</option>
         </select>
         {filtersOn && (
-          <Button variant="ghost" onClick={() => setParams(new URLSearchParams(), { replace: true })} label={t('coding.filter.reset')} />
+          <Button variant="ghost" onClick={() => { if (searchBox.current) searchBox.current.value = ''; setParams(new URLSearchParams(), { replace: true }); }} label={t('coding.filter.reset')} />
         )}
       </div>
       <p className="cd-shortcuts" role="status">{t('coding.filter.count', { shown: filtered.length, total: tasks.length })}</p>
@@ -671,7 +685,7 @@ export function CodingTaskScreen() {
   const { track: trackParam, taskId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf, premiumOf, passed: passedIds } = useStatuses(progress.data);
   // A track the section does not offer (system design is hidden) is not
@@ -694,7 +708,9 @@ export function CodingTaskScreen() {
     }
   }, [learnSession, task.data, taskId]);
   const [attempt, setAttempt] = useState(0);
-  const [refreshDraft, setRefreshDraft] = useState<{ taskId: string; code: string } | null>(null);
+  // The code kept across a refresh of the brief belongs to the account it
+  // was typed under: after a sign-out the editor does not reopen on it.
+  const [refreshDraft, setRefreshDraft] = useState<{ taskId: string; code: string; epoch: number } | null>(null);
   const [completedTask, setCompletedTask] = useState<string | null>(null);
   const workbench = useWorkbench(track !== null, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
@@ -731,10 +747,14 @@ export function CodingTaskScreen() {
   // Signed in on this page (the sign-in dialog, another tab): the task is
   // read again for the account, and the editor reopens on whichever copy the
   // rules choose, the code kept at a sign-out the learner did not choose
-  // included (lib/accountData.ts).
+  // included (lib/accountData.ts). Signed out on it, the task is read again
+  // for nobody: the account's code does not stay in the editor for whoever
+  // uses the device next, on a session whose saves and Submit were its own.
   const fetchedSignedIn = task.data?.signedIn;
   const refetchTask = task.refetch;
-  useEffect(() => { if (fetchedSignedIn === false && isAuthenticated) void refetchTask(); }, [fetchedSignedIn, isAuthenticated, refetchTask]);
+  useEffect(() => {
+    if (!authLoading && fetchedSignedIn !== undefined && fetchedSignedIn !== isAuthenticated) void refetchTask();
+  }, [authLoading, fetchedSignedIn, isAuthenticated, refetchTask]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     setCompletedTask(verdict.verdict === 'passed' && !verdict.graderUnavailable ? taskId ?? null : null);
@@ -825,7 +845,7 @@ export function CodingTaskScreen() {
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
   const previousLocal = stage?.previous ? deviceDraft(stage.previous) : null;
-  const initialCode = (refreshDraft?.taskId === taskId ? refreshDraft.code : null) ?? choice.code ?? (stage && previousLocal !== null
+  const initialCode = (refreshDraft?.taskId === taskId && refreshDraft.epoch === accountEpoch() ? refreshDraft.code : null) ?? choice.code ?? (stage && previousLocal !== null
     ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
@@ -860,7 +880,7 @@ export function CodingTaskScreen() {
             onVerdict={onVerdict}
             onRefreshTask={async (code) => {
               keepDeviceDraft(data.task.id, code, draftBase, draftEpoch);
-              setRefreshDraft({ taskId: data.task.id, code });
+              setRefreshDraft({ taskId: data.task.id, code, epoch: accountEpoch() });
               const refreshed = await task.refetch();
               if (refreshed.error) throw refreshed.error;
             }}

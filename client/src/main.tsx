@@ -47,8 +47,7 @@ captureReferralFromUrl();
 // Register wallet + inventory into the account-synced blob so any sign-in
 // pulls the balance/owned/equipped that was earned on other devices. Runs at
 // module load, before any component mounts.
-import('./lib/roadmap').then(({ registerAccountExtras, installProgressSyncFlusher }) => {
-  installProgressSyncFlusher();
+import('./lib/roadmap').then(({ registerAccountExtras }) => {
   // XP has its own debounce; hook its beacon into the same pagehide/hidden events.
   import('./lib/xp').then(({ flushQuestXpBeacon }) => {
     const flush = () => flushQuestXpBeacon();

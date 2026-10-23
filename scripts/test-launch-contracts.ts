@@ -503,6 +503,23 @@ async function auditGateContracts() {
   assert.equal((replayRes.body as { error: { code: string } }).error.code, 'placement_round_used');
   assert.equal(JSON.stringify(replayRes.body).includes('lastRoundCorrect'), false, 'the refusal reports no score');
   assert.equal(JSON.stringify(replayRes.body).includes('correctAnswer'), false, 'a replay never receives review keys');
+  // The last round names the account its receipt is for. A sign-in refused on
+  // that round must not spend it: the same round, sent again with a working
+  // sign-in, is graded and mints the receipt instead of answering 409.
+  const finalPool = await getEffectiveQuestions('webdev');
+  const finalToken = encodePlacementRun({
+    subject: 'webdev', attemptId: 'placement-final-auth-contract-1234', round: 4, difficulty: 3,
+    history: finalPool.slice(1, 20).map((q) => ({ questionId: q.id, category: q.category, isCorrect: true })),
+    items: [{ questionId: finalPool[0].id, correctAnswer: 0, category: finalPool[0].category }],
+  });
+  const refusedFinal = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: { authorization: 'Bearer expired-contract-token' }, query: { resource: 'placement' }, body: { placementToken: finalToken, answers: { [finalPool[0].id]: 0 } } } as never, refusedFinal as never);
+  assert.equal(refusedFinal.statusCode, 401, `a broken sign-in on the last round is refused (${JSON.stringify(refusedFinal.body)})`);
+  const retriedFinal = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: { authorization: 'Bearer expired-contract-token' }, query: { resource: 'placement' }, body: { placementToken: finalToken, answers: { [finalPool[0].id]: 0 }, user_id: 'placement-final-contract-user' } } as never, retriedFinal as never);
+  assert.equal(retriedFinal.statusCode, 200, `the refused last round is still unspent (${JSON.stringify(retriedFinal.body)})`);
+  assert.equal((retriedFinal.body as { done?: boolean }).done, true);
+  assert.equal(typeof (retriedFinal.body as { resultReceipt?: unknown }).resultReceipt, 'string', 'and mints the receipt for the account');
 
   // A Learn session lives as long as the attempt the answer routine opens for
   // it (two hours), so a level whose coding tasks run past an hour can still
@@ -5722,6 +5739,71 @@ async function main() {
     assert.equal(skipped.statusCode, 200, JSON.stringify(skipped.body));
     const next = (skipped.body as { next?: string | null }).next;
     assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
+    // A skip note is cut to the 280 characters coding_skips holds by code
+    // point: cut by UTF-16 unit, an emoji at the edge left half of itself.
+    {
+      const notes: unknown[] = [];
+      const noteDb = practiceDb();
+      const recording = { from: noteDb.client.from, rpc: (name: string, args: Record<string, unknown>) => {
+        if (name === 'record_coding_skip') notes.push(args.p_note);
+        return noteDb.client.rpc(name, args);
+      } };
+      const noted = await asPremium(handleCodingSkip, { taskId: left.id, reason: 'unclear', note: `${'a'.repeat(279)}\u{1F600}\u{1F600}` }, { ...noteDb, client: recording as never });
+      assert.equal(noted.statusCode, 200, JSON.stringify(noted.body));
+      const kept = String(notes[0]);
+      assert.equal(Buffer.from(kept, 'utf8').toString('utf8'), kept, 'the note sent to record_coding_skip splits no character');
+      assert.equal(Array.from(kept).length, 280, 'the note keeps 280 characters');
+    }
+
+    // A run's place is a Postgres integer: a number past it failed the
+    // routine's call with a 500. The routine clamps the place to the queue,
+    // so the handler sends one the column can hold.
+    {
+      const moves: unknown[] = [];
+      const advanceDb = {
+        from: practiceDb().client.from,
+        rpc: (name: string, args: Record<string, unknown>) => {
+          if (name === 'advance_practice_session') moves.push(args.p_position);
+          return Promise.resolve({ data: null, error: null });
+        },
+      };
+      for (const position of [3, 1e12, -5]) {
+        const req = { method: 'PUT', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.82' }, query: {}, body: { sessionId: 'practice-session-0001', position, user_id: learner } };
+        const res = mockResponse();
+        await handlePracticeSession(req as never, res as never, advanceDb as never);
+        assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      }
+      assert.deepEqual(moves, [3, 40, 0], 'a place is sent within what a run can hold');
+      // The run is read back after the move. A read that fails is an error,
+      // not a run that does not exist.
+      const unreadable = {
+        rpc: advanceDb.rpc,
+        from: () => {
+          const chain = { select: () => chain, eq: () => chain, maybeSingle: () => Promise.resolve({ data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }) };
+          return chain;
+        },
+      };
+      const req = { method: 'PUT', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.82' }, query: {}, body: { sessionId: 'practice-session-0001', position: 1, user_id: learner } };
+      const res = mockResponse();
+      await handlePracticeSession(req as never, res as never, unreadable as never);
+      assert.equal(res.statusCode, 500, `a run that could not be read back is not answered as no run: ${JSON.stringify(res.body)}`);
+    }
+    // A run is built from what the learner has not passed. Passed tasks that
+    // could not be read were an empty set, and the run offered every task the
+    // learner had already done as new work.
+    {
+      const blind = practiceDb();
+      const from = (table: string) => {
+        const chain = blind.client.from(table) as Record<string, unknown>;
+        return table === 'coding_progress'
+          ? { ...chain, select: () => blinded, eq: () => blinded }
+          : chain;
+      };
+      const blinded = { eq: () => blinded, then: (resolve: (value: unknown) => unknown) => resolve({ data: null, error: { code: '57014', message: 'statement timeout' } }) };
+      const refused = await asPremium(handlePracticeSession, { count: 5, order: 'sequential', topic: 'javascript' }, { ...blind, client: { ...blind.client, from } } as never);
+      assert.equal(refused.statusCode, 503, `a run is not built without the passed tasks: ${JSON.stringify(refused.body)}`);
+      assert.equal(blind.started.length, 0, 'no run starts');
+    }
 
     // The task page agrees: it opens the tier-3 task the run holds.
     const taskPage = async (id: string, db: ReturnType<typeof practiceDb>) => {

@@ -2,7 +2,7 @@
 // account's verified record and unlocks, and the life of a level's session.
 // Each screen is rendered with invented fixtures in the real response shapes.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ import {
   unlockExtraTopics,
 } from '../src/lib/roadmap';
 import { closeUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
+import { clearAccountData } from '../src/lib/accountData';
 import { setTrackValue } from '../src/lib/tracks';
 import { masteryDayKey } from '../../shared/mastery';
 import type { RoadmapStructure } from '../src/types/quiz';
@@ -250,6 +251,20 @@ describe('the account’s record', () => {
     expect(getExtraUnlocks()).toEqual(['typescript']);
   });
 
+  // `new Set(...)` of an unlock list stored in another shape threw, and the
+  // Learn page fell to its error screen with no way back but clearing storage.
+  it('reads this device’s copies of another shape as empty instead of failing the page', async () => {
+    localStorage.setItem('devquiz:roadmap:unlocks:v1', JSON.stringify({ react: true }));
+    localStorage.setItem('devquiz:roadmap:v2', JSON.stringify(['javascript']));
+    answer();
+    await mountAt('/learn', <Roadmap />);
+    expect(await screen.findByRole('radio', { name: /^JavaScript/ })).toBeInTheDocument();
+    expect(getExtraUnlocks()).toEqual([]);
+    expect(getRoadmapProgress()).toEqual({});
+    localStorage.setItem('devquiz:roadmap:unlocks:v1', JSON.stringify(['react', 42, 'not-a-topic']));
+    expect(getExtraUnlocks()).toEqual(['react']);
+  });
+
   it('keeps the spaced-mastery days a completion returns', async () => {
     const progress = {
       html: {
@@ -291,6 +306,66 @@ describe('the account’s record', () => {
     await waitFor(() => expect(screen.queryByText(/could not be saved to your account/)).toBeNull());
     fireEvent.click(screen.getByRole('button', { name: 'Back to paths' }));
     expect(getExtraUnlocks()).toEqual(['typescript']);
+  });
+
+  // Back to paths after a sign-out on the result screen wrote the unlocks the
+  // account that left had earned into this browser for whoever came next.
+  it('opens nothing on this device from a placement of an account that has signed out', async () => {
+    signInAs(BACKEND);
+    answer({
+      placement: { done: true, correct: 20, total: 20, difficulty: 5, unlockedPreview: ['typescript'], resultReceipt: 'receipt-1' },
+      skillCheck: () => HttpResponse.json({ applied: true, unlocked: ['typescript'] }),
+    });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    const back = await screen.findByRole('button', { name: 'Back to paths' }, { timeout: 3000 });
+    act(() => { clearAccountData(); });
+    fireEvent.click(back);
+    expect(getExtraUnlocks()).toEqual([]);
+  });
+
+  // Next disables itself on the question it opens, so focus fell to the page.
+  it('moves focus to each placement question', async () => {
+    const ask = (n: number) => ({ id: `p-${n}`, tags: [], introduction: '', question: `Placement question ${n}?`, options: ['Yes', 'No'], category: 'javascript', difficulty: 3 });
+    answer({ placement: { done: false, round: 1, totalRounds: 4, difficulty: 3, asked: 0, total: 20, idkCountsAsMiss: true, placementToken: 'token-1', questions: [ask(1), ask(2)] } });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    expect(await screen.findByText('Placement question 1?', {}, { timeout: 3000 })).toBeInTheDocument();
+    await waitFor(() => expect(document.getElementById('placement-question')).toHaveFocus());
+    fireEvent.click(screen.getByRole('radio', { name: /Yes/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Placement question 2?')).toBeInTheDocument();
+    expect(document.getElementById('placement-question')).toHaveFocus();
+  });
+
+  // A second click on Finish before the page re-rendered sent the round
+  // again, and the server's placement_round_used answer ended the placement.
+  it('submits a placement round once when Finish is clicked twice', async () => {
+    const ask = { id: 'p-1', tags: [], introduction: '', question: 'Placement question 1?', options: ['Yes', 'No'], category: 'javascript', difficulty: 3 };
+    answer({ placement: { done: false, round: 4, totalRounds: 4, difficulty: 3, asked: 15, total: 16, idkCountsAsMiss: true, placementToken: 'token-4', questions: [ask] } });
+    let rounds = 0;
+    server.use(http.post('*/api/quiz/roadmap', ({ request }) => {
+      if (new URL(request.url).searchParams.get('resource') !== 'placement') return undefined;
+      rounds += 1;
+      return rounds === 1
+        ? HttpResponse.json({ done: true, correct: 12, total: 16, difficulty: 3, unlockedPreview: [], review: [] })
+        : HttpResponse.json({ error: { code: 'placement_round_used', message: 'This placement round was already submitted. Start the placement again.' } }, { status: 409 });
+    }));
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Yes/ }, { timeout: 3000 }));
+    const finish = screen.getByRole('button', { name: 'Finish' });
+    act(() => {
+      finish.click();
+      finish.click();
+    });
+    expect(await screen.findByRole('heading', { name: 'Placement complete' }, { timeout: 3000 })).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(rounds).toBe(1);
+    expect(screen.queryByText(/already submitted/)).toBeNull();
   });
 
   it('does not fall back to the score’s own unlocks after a failure', async () => {
@@ -379,6 +454,86 @@ describe('a level whose session cannot be used', () => {
     expect(await screen.findByRole('heading', { name: 'Not passed' })).toBeInTheDocument();
     expect(screen.getByText('1 coding tasks still to pass')).toBeInTheDocument();
     expect(screen.queryByText(/Coding tasks are not checked while you’re signed out/)).toBeNull();
+  });
+
+  it('drops a level’s request when the learner leaves Learn while it loads', async () => {
+    answer();
+    let signal: AbortSignal | null = null;
+    server.use(http.get('*/api/quiz/roadmap', ({ request }) => {
+      if (!new URL(request.url).searchParams.get('level')) return undefined;
+      signal = request.signal;
+      return new Promise<Response>(() => {});
+    }));
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    await waitFor(() => expect(signal).not.toBeNull());
+    cleanup();
+    await waitFor(() => expect(signal!.aborted).toBe(true));
+  });
+
+  // Two answer keys pressed before the first one re-rendered each sent an
+  // answer for the same question.
+  it('sends one answer when two keys land before the page re-renders', async () => {
+    let answers = 0;
+    answer({ answer: () => { answers += 1; return HttpResponse.json({ selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: 'Because it is first.' }); } });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }));
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+    });
+    expect(await screen.findByText('Because it is first.')).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(answers).toBe(1);
+  });
+
+  // An answer disabled the option that held focus, and Continue then removed
+  // itself, so focus fell to the page each time.
+  it('moves focus to Continue when an answer is revealed, then to the next question', async () => {
+    const second = { ...QUESTION, id: 'q-2', question: 'Which option is second?' };
+    answer({ playable: { ...PLAYABLE, questions: [QUESTION, second] } });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
+    const question = document.getElementById('lesson-question')!;
+    expect(question).toHaveFocus();
+    fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+    const next = await screen.findByRole('button', { name: 'Continue' });
+    await waitFor(() => expect(next).toHaveFocus());
+    fireEvent.click(next);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull());
+    expect(document.getElementById('lesson-question')).toHaveFocus();
+    expect(screen.getByRole('radio', { name: /Option A/ })).not.toBeDisabled();
+  });
+
+  // Returning to the tab fires focus and visibilitychange together. Each
+  // re-check found the coding task passed and completed the level, so the
+  // pass was recorded, and its XP announced, twice.
+  it('completes a level once when the coding re-checks land together', async () => {
+    signInAs();
+    let completions = 0;
+    answer({
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: 'Digit sum' }, session: 'coding-session-1' }] },
+      complete: () => {
+        completions += 1;
+        return HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: true, applied: true, codingPending: [] });
+      },
+    });
+    server.use(http.post('*/api/quiz/roadmap', ({ request }) => (new URL(request.url).searchParams.get('resource') === 'attempt-status'
+      ? HttpResponse.json({ completed: false, coding: [{ taskId: 'js-digit-sum', passed: true, revealed: false }] })
+      : undefined)));
+    await openLevelAndAnswer();
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    await screen.findByRole('button', { name: 'Finish the coding task' });
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(await screen.findByRole('heading', { name: 'Level complete' })).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(completions).toBe(1);
+    expect(screen.queryByRole('heading', { name: 'This level timed out' })).toBeNull();
   });
 
   // CODE-4: revealing a solution inside a level completed the attempt at once,

@@ -2,7 +2,7 @@
 // playable questions from the API, track per-level and per-checkpoint progress
 // in localStorage, and (when signed in) sync that progress to the user's account.
 
-import { apiFetch } from './api';
+import { ApiError, apiFetch } from './api';
 import type { LearnLessonResponse } from '../../../shared/learning-path-api';
 import { accountEpoch } from './accountData';
 import { staleProfileStats } from './queryClient';
@@ -137,12 +137,27 @@ export function submitRoadmapAnswer(
   });
 }
 
+// Counts the account records completions have written, so a progress sync
+// whose GET left before one of them does not write its older read over it.
+let completionWrites = 0;
+
 export async function completeRoadmapAttempt(sessionId: string): Promise<RoadmapCompletionResult> {
+  const epoch = accountEpoch();
   const result = await apiFetch<RoadmapCompletionResult>('/api/quiz/roadmap?resource=complete', {
     method: 'POST',
     body: JSON.stringify({ sessionId }),
   });
-  if (result.progress) writeProgress(result.progress);
+  // The account changed while the completion was out (a sign-out, or another
+  // account's sign-in): the record it carries belongs to the account that
+  // left, so nothing is written here. The level says the sign-in changed, as
+  // it does when the server refuses a request sent after the change.
+  if (accountEpoch() !== epoch) {
+    throw new ApiError('Your sign-in changed during this level.', 409, 'session_owner_mismatch');
+  }
+  if (result.progress) {
+    writeProgress(result.progress);
+    completionWrites += 1;
+  }
   // A finished level or part test is a streak day, passed or not.
   if (result.applied) staleProfileStats();
   return result;
@@ -161,7 +176,18 @@ export function applySkillCheckReceipt(resultReceipt: string): Promise<{ applied
 
 /* ──── Progress store (localStorage-backed) ─────────────────────────────── */
 
-const readProgress = (): RoadmapProgress => readJSON<RoadmapProgress>(PROGRESS_KEY, {});
+// This device's copies are read as what they should be, not trusted: a value
+// of another shape (an older build's, or one edited by hand) reads as empty
+// rather than taking the Learn page down with it.
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const isTopicId = (id: unknown): id is RoadmapTopic =>
+  typeof id === 'string' && Object.prototype.hasOwnProperty.call(TOPIC_PREREQS, id);
+
+const readProgress = (): RoadmapProgress => {
+  const stored = readJSON<unknown>(PROGRESS_KEY, {});
+  return isRecord(stored) ? stored as RoadmapProgress : {};
+};
 
 const store = createStore<RoadmapProgress>(readProgress);
 
@@ -243,8 +269,10 @@ export function passedLevelCount(p: RoadmapProgress, topic: RoadmapTopic): numbe
 
 // Extra-unlocked topics live in their own localStorage entry so resetting
 // roadmap progress doesn't accidentally relock skill-check rewards.
-const readExtraUnlocks = (): RoadmapTopic[] =>
-  readJSON<RoadmapTopic[]>(UNLOCKS_KEY, []);
+const readExtraUnlocks = (): RoadmapTopic[] => {
+  const stored = readJSON<unknown>(UNLOCKS_KEY, []);
+  return Array.isArray(stored) ? stored.filter(isTopicId) : [];
+};
 
 const writeExtraUnlocks = (next: RoadmapTopic[]): void => {
   writeJSON(UNLOCKS_KEY, next);
@@ -512,74 +540,6 @@ export async function pushProgressToServer(
   });
 }
 
-/**
- * Fire the same PUT with `keepalive: true` so the request survives the tab
- * closing (Chrome/Safari finish it after unload). Used from the pagehide /
- * visibilitychange flush so no learner ever loses a lesson pass by closing
- * the tab a beat too early. Best-effort — errors are swallowed.
- *
- * Skips itself when signed out (the endpoint would 401 anyway) by only
- * running if a Supabase access token is already in memory.
- */
-export function flushProgressBeacon(): void {
-  try {
-    const account = readAccountExtras();
-    const payload = JSON.stringify({
-      data: readProgress(),
-      extra: {
-        unlocked: readExtraUnlocks(),
-        wallets: account.wallets,
-        inventories: account.inventories,
-      },
-    });
-    // The auth Bearer is read via getAccessToken() inside apiFetch, which is
-    // async — we can't await here. Use the plain fetch with the stored token
-    // reference; if missing we just skip (guest users have nothing to sync).
-    const token = readCachedAccessToken();
-    if (!token) return;
-    void fetch(PROGRESS_PUT, {
-      method: 'PUT',
-      keepalive: true,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: payload,
-    });
-  } catch {
-    // Absolutely best-effort — do not throw during unload.
-  }
-}
-
-// Auth cache accessor set by lib/auth on session change so beacons can read
-// the current token synchronously (supabase-js exposes an async getSession(),
-// which is unusable inside pagehide).
-let readCachedAccessToken: () => string | null = () => null;
-export function registerAccessTokenReader(fn: () => string | null): void {
-  readCachedAccessToken = fn;
-}
-/** Public wrapper for other modules (xp.ts) that need the cached token. */
-export function getCachedAccessTokenForBeacon(): string | null {
-  return readCachedAccessToken();
-}
-
-/**
- * Install one-time listeners that flush any pending sync when the tab
- * becomes hidden or unloads. `pagehide` covers Safari (which doesn't fire
- * `beforeunload` for the back/forward cache); `visibilitychange` covers
- * mobile Chrome swipes. Both use fetch keepalive so the request completes
- * even after the tab dies.
- */
-export function installProgressSyncFlusher(): void {
-  if (typeof window === 'undefined') return;
-  const flush = () => flushProgressBeacon();
-  window.addEventListener('pagehide', flush);
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flush();
-  });
-}
-
 // On sign-in: pull the account's progress + per-subject wallets/inventories,
 // merge each with whatever is on this device (progress and unlocks: the
 // account's, as the server holds them; balances: per-subject max — tokens can
@@ -619,6 +579,7 @@ async function syncOnce(epoch: number): Promise<void> {
   }
   let serverProgress: RoadmapProgress = {};
   let serverExtras: ServerExtras = {};
+  const writesBefore = completionWrites;
   try {
     const res = await apiFetch<{ data: RoadmapProgress; extra?: ServerExtras }>(PROGRESS_GET);
     serverProgress = res.data ?? {};
@@ -631,14 +592,14 @@ async function syncOnce(epoch: number): Promise<void> {
   if (accountEpoch() !== epoch) return;
   // Signed-in progress is server-authoritative. Legacy server rows are retained
   // by migration; unverified browser-only values cannot unlock account XP.
-  writeProgress(serverProgress);
+  // A completion that answered while this GET was out wrote a newer read of
+  // the same record, which this one must not replace.
+  if (completionWrites === writesBefore) writeProgress(serverProgress);
 
   // Unlocks are the server's too. A guest's skill-check unlocks, or ones this
   // device granted itself when applying a receipt failed, would draw a topic
   // as open that the server refuses with topic_locked.
-  const serverUnlocked = (serverExtras.unlocked ?? []).filter((id): id is RoadmapTopic =>
-    (Object.keys(TOPIC_PREREQS) as string[]).includes(id),
-  ) as RoadmapTopic[];
+  const serverUnlocked = (Array.isArray(serverExtras.unlocked) ? serverExtras.unlocked : []).filter(isTopicId);
   const local = readExtraUnlocks();
   const accountUnlocks = Array.from(new Set<RoadmapTopic>(serverUnlocked));
   if (accountUnlocks.length !== local.length || accountUnlocks.some((id) => !local.includes(id))) writeExtraUnlocks(accountUnlocks);

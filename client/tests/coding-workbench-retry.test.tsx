@@ -4,7 +4,7 @@
 // boundary's Try again does: Chromium up to 155 and Safari remember a failed
 // module fetch, so asking again in place fails at once there.
 import { beforeEach, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -113,4 +113,23 @@ it('gives the button back when no reload starts, offline or with the server unre
   await vi.waitFor(() => expect(state.reloadOnPress).toHaveBeenCalledTimes(1));
   await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).not.toHaveAttribute('aria-busy'));
   expect(screen.getByRole('alert')).toHaveTextContent('Could not load this task.');
+});
+
+// The lists warm the workbench (CodeMirror, about 190 kB gzipped) once the
+// browser is idle, even for a visitor who asked it to save data; the runner
+// already waits for their first Run instead.
+it('warms the workbench from a list only when the browser is not saving data', async () => {
+  vi.stubGlobal('requestIdleCallback', (run: () => void) => { run(); return 1; });
+  vi.stubGlobal('cancelIdleCallback', () => {});
+  vi.stubGlobal('navigator', { ...navigator, connection: { saveData: true } });
+  try {
+    const { useWarmWorkbench } = await import('../src/coding/loadWorkbench');
+    renderHook(() => useWarmWorkbench()).unmount();
+    expect(state.loads).toBe(0);
+    vi.stubGlobal('navigator', { ...navigator, connection: { saveData: false } });
+    renderHook(() => useWarmWorkbench()).unmount();
+    expect(state.loads).toBe(1);
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

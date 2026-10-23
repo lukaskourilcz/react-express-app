@@ -90,13 +90,13 @@ async function refuseSavedLock(res: VercelResponse, supabase: SupabaseClient, us
 /* ── saved challenges and collections ─────────────────────────────────── */
 
 async function readBookmarks(supabase: SupabaseClient, userId: string): Promise<CodingBookmarksResponse | 'missing' | 'error'> {
-  const saved = await withTimeout(
-    supabase.from('coding_bookmarks').select('task_id').eq('user_id', userId).order('created_at', { ascending: false }),
-  );
+  // The saved list and the collections are independent reads; only the
+  // collections' items wait for the collection ids.
+  const [saved, collections] = await Promise.all([
+    withTimeout(supabase.from('coding_bookmarks').select('task_id').eq('user_id', userId).order('created_at', { ascending: false })),
+    withTimeout(supabase.from('coding_collections').select('collection_id,name,position').eq('user_id', userId).order('position')),
+  ]);
   if (saved.error) return isRpcMissing(saved.error) ? 'missing' : 'error';
-  const collections = await withTimeout(
-    supabase.from('coding_collections').select('collection_id,name,position').eq('user_id', userId).order('position'),
-  );
   if (collections.error) return isRpcMissing(collections.error) ? 'missing' : 'error';
   const ids = (collections.data ?? []).map((row) => String(row.collection_id));
   const items = ids.length
@@ -233,12 +233,14 @@ export async function handleCodingBookmarks(req: VercelRequest, res: VercelRespo
 
 /* ── skips ────────────────────────────────────────────────────────────── */
 
-/** The learner's passed tasks, for choosing what to offer next. */
+/** The learner's passed tasks, for choosing what to offer next. Throws when
+ * they cannot be read, as a timeout already did: an empty set would offer
+ * every task the learner already passed as new work. */
 async function passedTaskIds(supabase: SupabaseClient, userId: string): Promise<Set<string>> {
   const rows = await withTimeout(
     supabase.from('coding_progress').select('task_id,status').eq('user_id', userId).eq('status', 'passed'),
   );
-  if (rows.error) return new Set();
+  if (rows.error) throw new Error('progress_unavailable');
   return new Set((rows.data ?? []).map((row) => String(row.task_id)));
 }
 
@@ -259,7 +261,9 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   }
   const task = SECTION_TASKS.find((one) => one.id === body.taskId);
   if (!task) return jsonError(res, 400, 'bad_request', 'Unknown challenge');
-  const note = typeof body.note === 'string' ? body.note.trim().slice(0, 280) : '';
+  // coding_skips holds 280 characters (code points): cut by UTF-16 unit, an
+  // emoji at the edge kept half of itself.
+  const note = typeof body.note === 'string' ? Array.from(body.note.trim()).slice(0, 280).join('') : '';
 
   const recorded = await withTimeout(
     supabase.rpc('record_coding_skip', {
@@ -275,8 +279,11 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   // opens anything: the tier gate is applied here exactly as it is everywhere,
   // the Learn levels that open JavaScript tier 3 included. A plan that cannot
   // be read suggests from the free set, which only narrows.
-  const [passed, cleared] = await Promise.all([passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId)]);
-  const plan = await resolveTier(userId).catch((): Tier => 'free');
+  const [passed, cleared, plan] = await Promise.all([
+    // The skip is recorded; a suggestion read without the passed tasks is
+    // still one the learner may open.
+    passedTaskIds(supabase, userId).catch(() => new Set<string>()), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch((): Tier => 'free'),
+  ]);
   const next = nextAfterSkip(task.id, passed, plan, cleared);
 
   logEvent({ status: 200, kind: 'skip_recorded', reason: body.reason });
@@ -318,6 +325,10 @@ export function skipPostpones(taskId: string): boolean {
 }
 
 /* ── challenge runs (short practice sessions) ────────────────────────── */
+
+/** The longest queue a run holds (027's practice_sessions checks the queue
+ * length and the position against it). */
+const PRACTICE_QUEUE_MAX = 40;
 
 const estimatedMinutes = (ids: readonly string[]): number =>
   ids.reduce((total, id) => total + (SECTION_TASKS.find((task) => task.id === id)?.estimatedMinutes ?? 0), 0);
@@ -392,7 +403,7 @@ export function buildQueue(input: {
   }
   let budget = input.minutes;
   for (const task of ordered) {
-    if (queue.length >= 40) break;
+    if (queue.length >= PRACTICE_QUEUE_MAX) break;
     // Always offer at least one task, even when it is longer than the session:
     // an empty queue helps nobody, and the estimate is labelled as an estimate.
     if (queue.length > 0 && task.estimatedMinutes > budget) continue;
@@ -464,14 +475,15 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
     if ('error' in when) return jsonError(res, 400, 'bad_request', when.error);
     const topic = typeof body.topic === 'string' && isCodingSectionTrack(body.topic) ? body.topic : null;
 
-    const [passed, cleared] = await Promise.all([passedTaskIds(supabase, userId), javascriptLevelsCleared(supabase, userId)]);
+    // The plan, the passed tasks and the cleared Learn levels are read
+    // together; none of them needs another.
+    const [passed, cleared, plan] = await Promise.all([
+      // Unread Learn levels count as none, which only narrows the run.
+      passedTaskIds(supabase, userId).catch(() => null), javascriptLevelsCleared(supabase, userId).catch(() => 0), resolveTier(userId).catch(() => null),
+    ]);
+    if (passed === null) return jsonError(res, 503, 'progress_unavailable', 'Could not load your progress. Try again in a moment.');
+    if (plan === null) return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
     const due = new Set<string>();
-    let plan: Tier;
-    try {
-      plan = await resolveTier(userId);
-    } catch {
-      return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
-    }
 
     const queue = buildQueue({ minutes: minutes ?? 0, count, order, topic, plan, passed, due, javascriptLevelsCleared: cleared });
     if (queue.length === 0) {
@@ -541,7 +553,9 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
       supabase.rpc('advance_practice_session', {
         p_session_id: body.sessionId,
         p_user_id: userId,
-        p_position: Number.isInteger(body.position) ? Number(body.position) : null,
+        // The routine clamps the place to the queue, but the parameter is a
+        // Postgres integer: a larger number failed the call with a 500.
+        p_position: Number.isInteger(body.position) ? Math.max(0, Math.min(PRACTICE_QUEUE_MAX, Number(body.position))) : null,
         p_status: body.status ?? null,
       }),
     );
@@ -552,6 +566,9 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
     const row = await withTimeout(
       supabase.from('practice_sessions').select('*').eq('session_id', body.sessionId).eq('user_id', userId).maybeSingle(),
     );
+    // A failed read is not "no run": answering null would tell the browser
+    // the run it just moved does not exist.
+    if (row.error) return jsonError(res, 500, 'db_error', 'Could not load your session');
     res.setHeader('Cache-Control', 'private, no-store');
     const answer: PracticeSessionResponse = { session: row.data ? toSession(row.data) : null };
     return res.json(answer);
