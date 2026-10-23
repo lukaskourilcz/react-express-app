@@ -199,6 +199,7 @@ async function main() {
       http,
       { CODING_TASKS },
       { default: challenge },
+      { default: submit },
     ] = await Promise.all([
       import('../api/user/[op]'),
       import('../api/quiz/roadmap'),
@@ -211,6 +212,7 @@ async function main() {
       import('../lib/http'),
       import('../lib/coding/catalog'),
       import('../api/quiz/challenge'),
+      import('../api/quiz/submit'),
     ]);
 
     type Handler = (req: never, res: never) => unknown;
@@ -452,6 +454,17 @@ async function main() {
     assert.equal(timedOut.statusCode, 503, `a handler whose Supabase call timed out answers 503, not 500 (${JSON.stringify(timedOut.body)})`);
     assert.equal(errorCode(timedOut), 'upstream_timeout');
     console.log('PASS verified caller: a Supabase timeout answers 503 upstream_timeout');
+
+    // ── question reports ─────────────────────────────────────────────────
+    seen.length = 0;
+    const reported = await call(submit as Handler, { method: 'POST', account: A, query: { resource: 'report' }, body: { question_id: 'q-report-1', reason: 'typo', detail: 'A typo in the second option' } });
+    assert.equal(reported.statusCode, 200, JSON.stringify(reported.body));
+    assert.equal((reads('/rest/v1/question_reports')[0]?.body as Row | undefined)?.reporter_sub, A.id, 'a report names the token\'s account');
+    seen.length = 0;
+    const nul = await call(submit as Handler, { method: 'POST', query: { resource: 'report' }, body: { question_id: 'q-report-1', reason: 'other', detail: 'before\u0000after' } });
+    assert.equal(nul.statusCode, 400, `Postgres text cannot hold U+0000, so the report is refused before its insert (${JSON.stringify(nul.body)})`);
+    assert.equal(reads('/rest/v1/question_reports').length, 0, 'and nothing is written');
+    console.log('PASS verified caller: a question report is saved for its reporter, and one holding U+0000 is refused');
 
     // ── one-time claims with Upstash configured and failing ──────────────
     upstashCommands.length = 0;

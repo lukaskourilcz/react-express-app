@@ -401,6 +401,11 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
   if (typeof body.reason !== 'string' || !REPORT_REASONS.includes(body.reason as ReportReason)) {
     return jsonError(res, 400, 'bad_request', `reason must be one of: ${REPORT_REASONS.join(', ')}`);
   }
+  // Postgres text cannot hold U+0000, so a report carrying one failed its
+  // insert and answered 500. It is the reporter's text, refused as such.
+  if ([body.question_id, body.detail].some((value) => typeof value === 'string' && value.includes('\u0000'))) {
+    return jsonError(res, 400, 'bad_request', 'A report cannot contain a null character');
+  }
   const detail =
     typeof body.detail === 'string' && body.detail.length <= 1000 ? body.detail : null;
   // The version of the wording the reporter saw. Validated as the shape the
