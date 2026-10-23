@@ -52,7 +52,9 @@
   .cd-home-head { grid-template-columns: minmax(0, 1fr); }
   .cd-next { width: 100%; }
 }
-.cd-track-directory { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--ss-card-line); }
+/* Four tracks, one row of four from 1051px, 2x2 down to 701px and one column
+   below (UX audit coding-07): never one track alone on a row. */
+.cd-track-directory { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--ss-card-line); }
 .cd-track-entry { display: flex; gap: 14px; padding: 24px 18px; color: inherit; text-decoration: none; min-width: 0; }
 .cd-track-entry + .cd-track-entry { border-left: 1px solid var(--ss-card-line); }
 .cd-track-entry__body { flex: 1; min-width: 0; display: grid; gap: 12px; }
@@ -83,11 +85,16 @@
 .cd-stack-path i { font-style: normal; color: var(--color-text-secondary); }
 .cd-track-entry:focus-visible, .cd-fullstack-feature:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 3px; }
 .cd-discovery .cd-techniques { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+/* Nine technique groups fill a 3x3 grid from 1051px, with no orphan row. */
+@media (min-width: 1051px) { .cd-discovery .cd-techniques { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .cd-discovery .cd-technique { border: 0; border-bottom: 1px solid var(--ss-card-line); border-radius: 0; padding: 20px 0; background: transparent; }
 .cd-discovery .cd-technique:hover { background: var(--color-background-muted); }
 @media (max-width: 1050px) {
   .cd-projects { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .cd-track-directory { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cd-track-entry { padding-inline: 12px; gap: 8px; }
+  .cd-track-entry:nth-child(odd) { border-left: 0; }
+  .cd-track-entry:nth-child(n + 3) { border-top: 1px solid var(--ss-card-line); }
 }
 @media (max-width: 700px) {
   .cd-track-directory, .cd-fullstack-feature, .cd-discovery .cd-techniques { grid-template-columns: minmax(0, 1fr); }
