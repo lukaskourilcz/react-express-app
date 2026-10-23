@@ -217,6 +217,28 @@ describe('/reset-password', () => {
     expect(calls('/api/user/authevent')).toHaveLength(1);
   });
 
+  it('says a password was changed only to the account that changed it', async () => {
+    const OTHER = emailUser({ id: '6b1c2a54-0000-4000-8000-0000000000e2', email: 'grace@example.com' });
+    server.use(
+      http.put(`${AUTH}/user`, () => gotrueOk({ ...USER, updated_at: '2026-10-01T09:05:00Z' })),
+      http.post(`${AUTH}/logout`, () => new HttpResponse(null, { status: 204 })),
+      http.post(`${AUTH}/token`, () => gotrueOk(sessionFor(OTHER, 'other-access-token'))),
+    );
+    await openPage(`/reset-password${linkFragment('recovery')}`);
+    await screen.findByRole('heading', { level: 1, name: 'Set a new password' });
+    type('New password', 'a much longer passphrase');
+    type('Confirm new password', 'a much longer passphrase');
+    fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your password is changed' })).toBeInTheDocument();
+    // The account signs out on this page, and another signs in on it.
+    const { loadedSupabase } = await import('../src/lib/supabaseClient');
+    await act(async () => { await loadedSupabase()!.auth.signOut({ scope: 'local' }); });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reset your password' })).toBeInTheDocument();
+    await act(async () => { await loadedSupabase()!.auth.signInWithPassword({ email: 'grace@example.com', password: 'correct horse battery' }); });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Change your password' })).toBeInTheDocument();
+    expect(screen.getByText('Choose a new password for grace@example.com.')).toBeInTheDocument();
+  });
+
   it('says so when the new password is the old one', async () => {
     server.use(http.put(`${AUTH}/user`, () => authError(422, 'same_password', 'New password should be different from the old password.')));
     await openPage(`/reset-password${linkFragment('recovery')}`);

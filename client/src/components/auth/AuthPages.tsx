@@ -261,11 +261,13 @@ export function ResetPasswordPage() {
   // its refusal could show "expired" over the session the first one opened.
   const opening = useRef(false);
   const [verifyFailure, setVerifyFailure] = useState<AuthFailure | null>(null);
-  const [done, setDone] = useState<{ otherDevicesSignedOut: boolean } | null>(null);
+  // Whose password was set: another account signing in on this page has
+  // changed nothing yet.
+  const [done, setDone] = useState<{ userId: string; otherDevicesSignedOut: boolean } | null>(null);
 
   if (isLoading) return <LoadingScreen label={t('authPage.resetLoading')} />;
 
-  if (user && done) {
+  if (user && done?.userId === user.id) {
     return (
       <Page kicker={t('authPage.kicker')} title={t('authPage.setDoneTitle')} lead={t('authPage.setDoneLead', { email: user.email ?? '' })}>
         {done.otherDevicesSignedOut && <p className="ss-auth__note">{t('authPage.setDoneOthers')}</p>}
@@ -283,7 +285,7 @@ export function ResetPasswordPage() {
         title={t(passwordRecovery ? 'authPage.setTitle' : 'authPage.changeTitle')}
         lead={t('authPage.setLead', { email: user.email ?? '' })}
       >
-        <SetPasswordForm onDone={(otherDevicesSignedOut) => setDone({ otherDevicesSignedOut })} />
+        <SetPasswordForm onDone={(otherDevicesSignedOut) => setDone({ userId: user.id, otherDevicesSignedOut })} />
       </Page>
     );
   }
