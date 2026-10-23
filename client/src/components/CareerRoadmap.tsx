@@ -8,7 +8,7 @@
 // SegmentedControl track chooser, ProgressBars and Badges — all logic, hooks and
 // i18n preserved verbatim.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -151,21 +151,31 @@ export default function CareerRoadmap() {
   // Learn and Today to (a topic outside it answers 403 not_in_plan). Changing
   // it here changes it there too, or the map would show one track while every
   // level of it was refused. Signed out, it only chooses what the map shows.
+  // The chooser is disabled while a save runs, but that reaches React a
+  // render after the click: a second choice in between started a second save
+  // that could land first and leave the account on the other track.
+  const savingRef = useRef(false);
   const chooseTrack = async (next: Track) => {
+    if (savingRef.current) return;
     setTrack(next);
     setTrackNotice(null);
     if (!user) return;
+    savingRef.current = true;
     setSavingTrack(true);
-    const saved = await saveLearningPreference(user.id, {
-      schemaVersion: 1,
-      baseTrack: next,
-      specialization: preferredLearningOf(user)?.specialization ?? null,
-    });
-    if (saved.ok) await queryClient.invalidateQueries({ queryKey: eligibilityKeys.all });
-    setSavingTrack(false);
-    setTrackNotice(saved.ok
-      ? t('profile.pathSaved', { track: t(trackLabelKey(subject, next)), role: '' })
-      : t('paths.picker.saveFailed'));
+    try {
+      const saved = await saveLearningPreference(user.id, {
+        schemaVersion: 1,
+        baseTrack: next,
+        specialization: preferredLearningOf(user)?.specialization ?? null,
+      });
+      if (saved.ok) await queryClient.invalidateQueries({ queryKey: eligibilityKeys.all });
+      setTrackNotice(saved.ok
+        ? t('profile.pathSaved', { track: t(trackLabelKey(subject, next)), role: '' })
+        : t('paths.picker.saveFailed'));
+    } finally {
+      savingRef.current = false;
+      setSavingTrack(false);
+    }
   };
   const pillars = useMemo(() => webdevPillars(t), [t]);
 

@@ -250,6 +250,21 @@ describe('the plan', () => {
     expect(screen.queryByText('100%')).toBeNull();
   });
 
+  // Both choices land before React draws the disabled chooser, as two quick
+  // clicks do: the second must not start a save that races the first.
+  it('saves one /roadmap track at a time', async () => {
+    signInAs(BACKEND);
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    act(() => {
+      fireEvent.click(screen.getByRole('radio', { name: 'Frontend' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Backend' }));
+    });
+    expect(await screen.findByText('Saved: Frontend')).toBeInTheDocument();
+    expect(saves.calls).toHaveLength(1);
+    expect(saves.calls[0][1]).toMatchObject({ baseTrack: 'frontend' });
+  });
+
   it('only changes the view for a visitor', async () => {
     answer();
     await mountAt('/roadmap', <CareerRoadmap />);
