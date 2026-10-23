@@ -213,9 +213,11 @@ async function startCheckout(req: VercelRequest, res: VercelResponse, supabase: 
     let customerId = account.customerId ?? (await createCustomer(deps, userId, email, false));
     // Stripe may know before the webhook arrives: a subscription just created,
     // or a session paid in another tab a moment ago. Every session still open
-    // is expired, so only the one made now can be paid.
-    if ((await liveDevsharkSubscriptions(deps, customerId)).length > 0) return subscribed('subscription_live_at_stripe');
-    const open = await expireOpenCheckouts(deps, customerId);
+    // is expired, so only the one made now can be paid. The two run together:
+    // an open session of a customer who already subscribes must not be paid
+    // either, so expiring it on the way to a 409 changes nothing that matters.
+    const [live, open] = await Promise.all([liveDevsharkSubscriptions(deps, customerId), expireOpenCheckouts(deps, customerId)]);
+    if (live.length > 0) return subscribed('subscription_live_at_stripe');
     if (open.completed) return subscribed('session_completed');
     // One instant decides the offer for both attempts and the log line.
     const now = Date.now();
