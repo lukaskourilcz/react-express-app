@@ -12,6 +12,7 @@ import {
   withRequestContext,
   ServiceUnavailableError,
 } from '../../lib/http';
+import type { AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
 import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
