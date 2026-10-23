@@ -1,11 +1,9 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { createHash } from 'node:crypto';
 import {
-  decodeAnswerProof,
   decodeSessionEnvelope,
   encodeScoreProof,
   encodeQuizResultReceipt,
-  encodeAnswerProof,
   dailyDurationMs,
   stableAttemptId,
   type DecodedQuizSession,
@@ -275,7 +273,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       correctAnswer: sessionQ?.correctAnswer ?? -1,
       isCorrect,
       explanation: q?.explanation ?? '',
-      answerProof: sessionQ && session.scope !== 'qotd' ? encodeAnswerProof(questionId, subject, isCorrect) : undefined,
     };
     return session.scope === 'challenge' && session.runId && sessionQ
       ? { ...result, scoreProof: encodeScoreProof(session.runId, questionId, subject, isCorrect) }

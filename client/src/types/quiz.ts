@@ -35,7 +35,6 @@ export interface QuizResult {
     isCorrect: boolean;
     explanation: string;
     scoreProof?: string;
-    answerProof?: string;
   }[];
 }
 

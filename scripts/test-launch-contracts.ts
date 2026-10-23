@@ -24,11 +24,9 @@ import {
   subjectForTopic,
 } from '../shared/subject-catalog';
 import {
-  decodeAnswerProof,
   decodeChallengeRun,
   decodeQuizResultReceipt,
   decodeSession,
-  encodeAnswerProof,
   encodeQuizResultReceipt,
   encodeSession,
   encodeScoreProof,
@@ -473,6 +471,9 @@ async function auditGateContracts() {
   assert.equal(graded.totalQuestions, 1, 'the void item is left out of the total');
   assert.equal(graded.correctAnswers, 1, 'the served item still counts');
   assert.ok(graded.results.every((r) => r.questionId !== 'retired-while-open'), 'no proof is minted for a void item');
+  // Each graded answer used to carry a sealed answerProof that nothing ever
+  // opened: up to fifty AES-GCM seals per submit, for bytes the client dropped.
+  assert.ok(graded.results.every((r) => !('answerProof' in r)), 'a graded answer carries no unread answer proof');
 
   // A placement round voids a retired item and tops the run up instead of
   // ending it short of the budget.
@@ -3551,8 +3552,6 @@ async function main() {
 
   const run = createChallengeRun();
   assert.equal(decodeChallengeRun(run.runToken)?.runId, run.runId);
-  const proof = encodeAnswerProof('q-1', 'webdev', true);
-  assert.deepEqual(decodeAnswerProof(proof), { questionId: 'q-1', subject: 'webdev', isCorrect: true });
   const receipt = encodeQuizResultReceipt({
     userId: 'user-0001', correct: 1, total: 2,
     breakdown: { javascript: { correct: 1, total: 2 } },
