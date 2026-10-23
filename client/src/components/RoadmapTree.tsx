@@ -26,10 +26,10 @@ import { tracksForActiveSubject, stageTitleKey, localizedTopicDetail, type Track
 import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
-import { useIsMobile } from '../lib/useMediaQuery';
 import { useInPlan } from '../lib/eligibility';
 import type { TranslationKey } from '../i18n/translations';
 import './Roadmap.css';
+import './RoadmapTree.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -57,66 +57,41 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
       topics: stage.topics.filter((family) => isTopicUnlocked(progress, family, extraSet) && reachable(family)),
     }))
     .filter((entry) => entry.topics.length > 0);
-  const lastVisibleIndex = visibleStages.length > 0 ? visibleStages[visibleStages.length - 1].index : -1;
   const hiddenCount = def.stages.reduce((total, stage) => total + stage.topics.length, 0)
     - visibleStages.reduce((total, entry) => total + entry.topics.length, 0);
 
   return (
     // The map: stages flow top → bottom. Keyed by track so switching tracks
     // remounts and gently re-animates the new path into place.
-    <div
-      key={track}
-      className="rm-track-in"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-      }}
-    >
-      {visibleStages.map(({ stage, index: i, topics }) => (
-        <div key={stage.title} style={{ width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
-            <div
-              aria-hidden
-              data-stage-dot
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                backgroundColor: 'var(--brand-accent)',
-                color: 'var(--brand-on-accent)',
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {i + 1}
+    <div key={track} className="rm-track-in rm-map">
+      {/* One row per stage (UX audit learn-17): the label column on the left
+          holds the stage's number, its name and the connector down to the next
+          stage, and its topic cards sit on the right, so a stage with one
+          topic is one card tall instead of a centred card in an empty row.
+          Stages are numbered as drawn: a hidden stage leaves no gap. */}
+      <ol className="rm-map__stages">
+        {visibleStages.map(({ stage, index, topics }, position) => (
+          <li key={stage.title} className="rm-stage">
+            <div className="rm-stage__label">
+              <span aria-hidden="true" data-stage-dot className="rm-stage__dot">{position + 1}</span>
+              <span className="rm-stage__title">{t(stageTitleKey(subject, track, index))}</span>
             </div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.3px' }}>
-              {t(stageTitleKey(subject, track, i))}
+            <div className="rm-stage__topics">
+              {topics.map((family) => (
+                <TopicCard
+                  key={family}
+                  family={family}
+                  levelCount={levelCountOf(family)}
+                  progress={progress}
+                  extraSet={extraSet}
+                  inPlan={inPlan(family)}
+                  t={t}
+                />
+              ))}
             </div>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-            {topics.map((family) => (
-              <TopicCard
-                key={family}
-                family={family}
-                levelCount={levelCountOf(family)}
-                progress={progress}
-                extraSet={extraSet}
-                inPlan={inPlan(family)}
-                t={t}
-              />
-            ))}
-          </div>
-
-          {i < lastVisibleIndex && <StageConnector />}
-        </div>
-      ))}
+          </li>
+        ))}
+      </ol>
 
       {/* Locked paths are not shown as dimmed teasers: a learner should see the
           plan they are actually on, plus one honest sentence about the rest. */}
@@ -125,21 +100,6 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
           {t('roadmap.morePathsLater')}
         </p>
       )}
-    </div>
-  );
-}
-
-/** A short vertical line + downward chevron linking one stage to the next. */
-function StageConnector() {
-  return (
-    <div aria-hidden style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 8, marginBottom: 8 }}>
-      <div style={{ width: 2, height: 16, backgroundColor: 'var(--color-border)' }} />
-      <svg
-        viewBox="0 0 12 8"
-        style={{ width: 12, height: 8, color: 'var(--color-border)', display: 'block', marginTop: -2 }}
-      >
-        <path d="M1 1l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
     </div>
   );
 }
@@ -156,7 +116,6 @@ function TopicCard({
   inPlan: boolean;
   t: TFn;
 }) {
-  const isMobile = useIsMobile();
   const color = getCategoryHexColor(family);
   const unlocked = isTopicUnlocked(progress, family, extraSet);
   const ranges = partRanges(levelCount);
@@ -168,8 +127,7 @@ function TopicCard({
   return (
     <div
       style={{
-        flex: '1 1 200px',
-        maxWidth: isMobile ? '100%' : 260,
+        minWidth: 0,
         borderRadius: 8,
         border: `1px solid ${complete ? color : unlocked ? 'var(--color-border)' : 'transparent'}`,
         borderTop: `3px solid ${color}`,
