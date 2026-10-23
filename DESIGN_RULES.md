@@ -293,7 +293,9 @@ coming back. The tokens and the map are in
   pill: `.ss-action`, or any button in `.ss-info-actions` /
   `.ss-auth__actions`. The primary is never the smallest control in its row.
 - **One filled primary per screen**, and it is `SwimCta` md (44px). Other
-  actions are Astryx secondary or ghost. A second task's button turns
+  actions are Astryx secondary or ghost. `SwimCta` sm is never shorter than
+  44px either: in the coding workbench it takes the page-action type, so
+  Submit matches Run beside it. A second task's button turns
   primary only once its own input is complete (Join on `/play` with a whole
   code).
 - **Card actions are the default size.** No `size="sm"` on a card's actions;
