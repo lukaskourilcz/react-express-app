@@ -315,4 +315,8 @@ coming back. The tokens and the map are in
   filled `CoinIcon`, which reads as a status light at 20px).
 - **Every `Page` h1 sits at one x and one y.** The `Page` layout fills the
   column and always draws its kicker line.
+- **One state panel.** A sign-in gate, an empty shelf or a callback state is
+  the shared `StatePanel` (`components/ui/StatePanel.tsx`): centred in the
+  640px task column, one heading, one body line, the one primary first at
+  44px. Do not build a gate card by hand.
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".

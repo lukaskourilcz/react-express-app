@@ -31,7 +31,8 @@ import { renderQuestion } from './CodeBlock';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { AppToast } from './ui/AppToast';
-import { IconTile, BookmarkIcon, BookIcon } from './ui/icons';
+import { BookmarkIcon, BookIcon } from './ui/icons';
+import { StatePanel } from './ui/StatePanel';
 import { Kicker } from './landing/LandingKit';
 import './DeepEndScreens.css';
 import './SharkCards.css';
@@ -56,20 +57,6 @@ function StudyLink({ card, t }: { card: Flashcard; t: TFn }) {
       <BookIcon size={18} />
       <span>{label}</span>
     </Link>
-  );
-}
-
-/** A centred panel for the states that have no cards to show. */
-function StatePanel({ level, title, body, children }: { level: 1 | 2; title: string; body: string; children?: React.ReactNode }) {
-  return (
-    <div className="sc-state ss-raised ss-pop">
-      <IconTile size={48}>
-        <BookmarkIcon size={22} />
-      </IconTile>
-      <Heading level={level} justify="center">{title}</Heading>
-      <Text type="body" color="secondary" justify="center">{body}</Text>
-      {children && <div className="sc-state__actions">{children}</div>}
-    </div>
   );
 }
 
@@ -156,7 +143,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
 
   if (!isAuthenticated) {
     return (
-      <StatePanel level={heading} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')}>
+      <StatePanel level={heading} icon={<BookmarkIcon size={22} />} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')}>
         <Button variant="primary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
       </StatePanel>
     );
@@ -184,7 +171,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   if (!card) {
     return (
       <>
-        <StatePanel level={heading} title={t('sharkCards.emptyTitle')} body={t('sharkCards.emptyBody')}>
+        <StatePanel level={heading} icon={<BookmarkIcon size={22} />} title={t('sharkCards.emptyTitle')} body={t('sharkCards.emptyBody')}>
           <Button variant="primary" label={t('sharkCards.emptyQuiz')} onClick={() => navigate('/quiz')} />
           <Button variant="secondary" label={t('sharkCards.emptyLearn')} onClick={() => navigate('/learn')} />
         </StatePanel>
