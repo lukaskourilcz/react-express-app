@@ -482,6 +482,27 @@ describe('an expired quiz session', () => {
     expect(bodies[0].hinted).toEqual(['a']);
   });
 
+  it('resumes a saved quiz whose position is not a number at its first question, with only real picks', async () => {
+    sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({
+      sessionId: sessionFor('odd'), questions: [Q('a'), Q('b')], answers: { a: 'x', b: 1.5, constructor: 0 }, currentIndex: 'x', mode: 'standard',
+      expiresAt: Date.now() + 600_000,
+    }));
+    renderQuiz();
+    expect(await screen.findByText('Question a?')).toBeInTheDocument();
+    expect(counter()).toBe('Question 1 of 2');
+    expect(checked()).toEqual([false, false, false, false]);
+  });
+
+  it('drops a saved quiz whose questions this build cannot show, instead of failing', async () => {
+    sessionStorage.setItem(PROGRESS_KEY, JSON.stringify({
+      sessionId: sessionFor('broken'), questions: [{ id: 'a', question: 'Question a?' }], answers: {}, currentIndex: 0, mode: 'standard',
+      expiresAt: Date.now() + 600_000,
+    }));
+    renderQuiz();
+    expect(await screen.findByRole('button', { name: /start quiz/i })).toBeInTheDocument();
+    expect(sessionStorage.getItem(PROGRESS_KEY)).toBeNull();
+  });
+
   it('refused at submit, clears the saved quiz and offers a new one with the same settings', async () => {
     const asked: string[] = [];
     server.use(

@@ -103,6 +103,56 @@ interface PersistedProgress {
   start?: StartSpec;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value);
+
+const isSavedQuestion = (value: unknown): value is Question =>
+  isRecord(value) && typeof value.id === 'string' && typeof value.question === 'string' &&
+  typeof value.category === 'string' && Array.isArray(value.options) && value.options.length > 0 &&
+  value.options.every((option) => typeof option === 'string');
+
+function savedStart(value: unknown): StartSpec | null {
+  if (!isRecord(value)) return null;
+  if (value.mode === 'daily' || value.mode === 'review') return { mode: value.mode };
+  if (value.mode !== 'standard') return null;
+  const { count, difficulty, categories } = value;
+  return Number.isInteger(count) && (count as number) > 0 &&
+    DIFFICULTY_VALUES.includes(difficulty as DifficultyMode) &&
+    Array.isArray(categories) && categories.every((category) => typeof category === 'string')
+    ? { mode: 'standard', count: count as number, difficulty: difficulty as DifficultyMode, categories: categories as CategoryType[] }
+    : null;
+}
+
+/** The quiz this tab saved, or null when the copy is not one this build can
+ * resume: a position that is not a number left the screen blank, and a
+ * question without options threw. Answers keep only real picks of its own
+ * questions. */
+type RestoredProgress = Omit<PersistedProgress, 'expiresAt' | 'start'> & { expiresAt: number | null; start: StartSpec | null };
+function restoredProgress(raw: unknown): RestoredProgress | null {
+  if (!isRecord(raw) || typeof raw.sessionId !== 'string' || !raw.sessionId) return null;
+  const { questions } = raw;
+  if (!Array.isArray(questions) || questions.length === 0 || !questions.every(isSavedQuestion)) return null;
+  const answers: Record<string, number> = {};
+  if (isRecord(raw.answers)) {
+    for (const question of questions) {
+      const pick = Object.prototype.hasOwnProperty.call(raw.answers, question.id) ? raw.answers[question.id] : undefined;
+      if (Number.isInteger(pick) && (pick as number) >= 0 && (pick as number) < question.options.length) answers[question.id] = pick as number;
+    }
+  }
+  const index = Number.isInteger(raw.currentIndex) ? Math.min(Math.max(raw.currentIndex as number, 0), questions.length - 1) : 0;
+  return {
+    sessionId: raw.sessionId,
+    questions,
+    answers,
+    currentIndex: index,
+    mode: QUIZ_MODES.includes(raw.mode as string) ? raw.mode as QuizMode : 'standard',
+    expiresAt: typeof raw.expiresAt === 'number' && Number.isFinite(raw.expiresAt) ? raw.expiresAt : null,
+    hinted: Array.isArray(raw.hinted) ? raw.hinted.filter((id): id is string => typeof id === 'string') : [],
+    locked: raw.locked === true,
+    start: savedStart(raw.start),
+  };
+}
+
 const HintIcon = () => (
   <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
@@ -273,27 +323,30 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     try {
       const raw = sessionStorage.getItem(PROGRESS_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw) as PersistedProgress;
-      if (!saved?.sessionId || !Array.isArray(saved.questions) || saved.questions.length === 0) return;
+      const saved = restoredProgress(JSON.parse(raw));
+      if (!saved) {
+        sessionStorage.removeItem(PROGRESS_KEY);
+        return;
+      }
       // Past its hour the server would refuse every answer: say so now rather
       // than after the learner has answered the rest.
-      if (typeof saved.expiresAt === 'number' && Date.now() >= saved.expiresAt) {
+      if (saved.expiresAt !== null && Date.now() >= saved.expiresAt) {
         sessionStorage.removeItem(PROGRESS_KEY);
         setSnack(t('quiz.resumeExpired'));
         return;
       }
       setSessionId(saved.sessionId);
       setQuestions(saved.questions);
-      setAnswers(saved.answers || {});
-      setHintedIds(Array.isArray(saved.hinted) ? saved.hinted.filter((id) => typeof id === 'string') : []);
-      setExpiresAt(typeof saved.expiresAt === 'number' ? saved.expiresAt : null);
+      setAnswers(saved.answers);
+      setHintedIds(saved.hinted ?? []);
+      setExpiresAt(saved.expiresAt);
       setAnswersLocked(saved.locked === true);
-      setLastStart(saved.start ?? null);
-      setCurrentIndex(Math.min(saved.currentIndex || 0, saved.questions.length - 1));
+      setLastStart(saved.start);
+      setCurrentIndex(saved.currentIndex);
       // A quiz saved before practice mode was removed still says 'practice'
       // here. Nothing branches on it any more, but it would still be reported
       // as the mode to analytics, so an unknown mode reads as a standard quiz.
-      setMode(QUIZ_MODES.includes(saved.mode) ? saved.mode : 'standard');
+      setMode(saved.mode);
       setState('in-progress');
     } catch {
       // ignore corrupt state
