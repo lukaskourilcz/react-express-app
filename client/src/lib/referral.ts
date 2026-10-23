@@ -137,8 +137,9 @@ export const referralQuery = queryOptions({
   staleTime: 60_000,
 });
 
-export function useReferral(enabled: boolean) {
-  return useQuery({ ...referralQuery, enabled });
+/** `held`: the page's first-data hold read it (lib/routeData.ts HELD_READ). */
+export function useReferral(enabled: boolean, { held = false }: { held?: boolean } = {}) {
+  return useQuery({ ...referralQuery, enabled, retryOnMount: !held });
 }
 
 /** The link a learner shares. */

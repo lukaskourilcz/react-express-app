@@ -137,7 +137,7 @@ export function ledgerLabel(entry: Pick<WalletEntry, 'reason' | 'reference'>, t:
 
 function Wallet({ signedIn }: { signedIn: boolean }) {
   const t = useT();
-  const wallet = useWallet(signedIn);
+  const wallet = useWallet(signedIn, { held: true });
   const [showAll, setShowAll] = useState(false);
   const entries = wallet.data?.entries ?? [];
   const visible = showAll ? entries : entries.slice(0, LEDGER_PREVIEW);
@@ -455,11 +455,12 @@ function Shop() {
   useRewardsFirstData();
   const t = useT();
   const { isAuthenticated } = useAuth();
-  const { tier } = useEntitlement();
+  // Every read below is one the first-data hold made (useRewardsFirstData).
+  const { tier } = useEntitlement({ held: true });
   const config = useGameConfig();
-  const shop = useShop();
-  const wallet = useWallet(isAuthenticated);
-  const orders = useOrders(isAuthenticated && MERCH_ENABLED);
+  const shop = useShop(true, { held: true });
+  const wallet = useWallet(isAuthenticated, { held: true });
+  const orders = useOrders(isAuthenticated && MERCH_ENABLED, { held: true });
   const cosmetic = useCosmeticMutation();
   const protection = useProtectionMutation();
   const order = useOrderMutation();

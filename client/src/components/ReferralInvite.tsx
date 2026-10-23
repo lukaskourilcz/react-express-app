@@ -28,7 +28,8 @@ async function copyText(value: string): Promise<boolean> {
 export function ReferralInvite({ signedIn }: { signedIn: boolean }) {
   const t = useT();
   const config = useGameConfig();
-  const referral = useReferral(signedIn);
+  // Rewards, the one page that shows this, holds its first render for the read.
+  const referral = useReferral(signedIn, { held: true });
   const [copy, setCopy] = useState<CopyState>('idle');
   const field = useRef<HTMLInputElement>(null);
   const headingId = useId();

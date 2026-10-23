@@ -327,6 +327,35 @@ describe('the Rewards screen', () => {
     expect(await screen.findByText('Your coins could not load.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
+
+  it('draws a read that failed in the first-data hold as its error at once, without asking again', async () => {
+    signIn();
+    routes();
+    let reads = 0;
+    server.use(http.get('*/api/user/*', ({ request }) => {
+      if (new URL(request.url).searchParams.get('op') !== 'wallet') return undefined;
+      reads += 1;
+      return HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 });
+    }));
+    // The app's cache keeps a failed read for minutes (lib/queryClient.ts);
+    // the shared wrapper's gcTime 0 would drop it before the page mounts. A
+    // visit of its own, so the hold reads instead of finding an earlier
+    // test's wait (lib/routeData.ts keys it by the visit).
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await act(async () => render(<Shop />, {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={[{ pathname: '/shop', key: 'held-wallet-read' }]}>
+            <LanguageProvider>{children}</LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      ),
+    }));
+    expect(screen.getByText('Your coins could not load.')).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(reads).toBe(1);
+    expect(screen.getByText('Your coins could not load.')).toBeInTheDocument();
+  });
 });
 
 describe('Find devShark elsewhere', () => {

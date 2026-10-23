@@ -148,16 +148,21 @@ export const walletQuery = queryOptions({ queryKey: rewardKeys.wallet(), queryFn
 export const shopQuery = queryOptions({ queryKey: rewardKeys.shop(), queryFn: ({ signal }) => fetchShop(signal), staleTime: 5 * 60_000 });
 export const ordersQuery = queryOptions({ queryKey: rewardKeys.orders(), queryFn: ({ signal }) => fetchOrders(signal), staleTime: 30_000 });
 
-export function useWallet(enabled: boolean) {
-  return useQuery({ ...walletQuery, enabled });
+// `held`: the Rewards page's first-data hold read it (lib/routeData.ts
+// HELD_READ), so a failure the hold met draws as the page's error at once
+// instead of a loading line that the same error replaces after a retry.
+type Held = { held?: boolean };
+
+export function useWallet(enabled: boolean, { held = false }: Held = {}) {
+  return useQuery({ ...walletQuery, enabled, retryOnMount: !held });
 }
 
-export function useShop(enabled = true) {
-  return useQuery({ ...shopQuery, enabled });
+export function useShop(enabled = true, { held = false }: Held = {}) {
+  return useQuery({ ...shopQuery, enabled, retryOnMount: !held });
 }
 
-export function useOrders(enabled: boolean) {
-  return useQuery({ ...ordersQuery, enabled });
+export function useOrders(enabled: boolean, { held = false }: Held = {}) {
+  return useQuery({ ...ordersQuery, enabled, retryOnMount: !held });
 }
 
 /** Buying or wearing the crown; both invalidate the wallet, because both change
