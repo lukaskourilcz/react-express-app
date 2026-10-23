@@ -184,6 +184,16 @@ describe('/premium', () => {
     expect(within(cancel).getByRole('link', { name: 'Open the cancellation page' })).toHaveAttribute('href', '/premium/cancel');
   });
 
+  // UX audit money-08: one h2 size on the page, the shared section title.
+  it('draws every section h2 at the one section-title size', async () => {
+    serve();
+    renderAt('/premium', <PremiumPage />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Continue with monthly' })).toBeEnabled());
+    const titles = screen.getAllByRole('heading', { level: 2 });
+    expect(titles.map((h) => h.textContent)).toEqual(['Choose a plan', 'Have a voucher?', 'Free and Premium', 'Questions']);
+    for (const title of titles) expect(title).toHaveClass('ss-section-title');
+  });
+
   it('answers six questions in native disclosures', () => {
     serve();
     const { container } = renderAt('/premium', <PremiumPage />);

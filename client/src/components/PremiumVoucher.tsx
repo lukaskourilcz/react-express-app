@@ -195,7 +195,10 @@ export default function PremiumVoucher({ billingClosed, inline = false }: { bill
       aria-labelledby={headingId}
       aria-busy={authLoading || busy || undefined}
     >
-      <h2 id={headingId} className="ss-premium-section-title">{t('premium.voucher.title')}</h2>
+      {/* After the plans it is a section of the page and takes the page's one
+          section-title size (UX audit money-08); while it leads it is a card,
+          and its h2 is the card title. */}
+      <h2 id={headingId} className={inline ? 'ss-section-title ss-premium-section-title' : 'ss-premium-section-title'}>{t('premium.voucher.title')}</h2>
 
       {step.kind === 'done' ? (
         <div className="ss-premium-voucher__done" role="status">

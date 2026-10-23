@@ -143,7 +143,7 @@ export default function PremiumPage() {
         {voucherLeads && <PremiumVoucher billingClosed={closed} />}
 
         <section className="ss-premium-plans" aria-labelledby={ids.plans}>
-          <h2 id={ids.plans} className="ss-premium-section-title">{t('premium.page.plansTitle')}</h2>
+          <h2 id={ids.plans} className="ss-section-title ss-premium-section-title">{t('premium.page.plansTitle')}</h2>
           <div className="ss-premium-plan-grid">
             <PlanCard plan="monthly" showAction={!paying && !closed && !unreachable} offer={offer} />
             <PlanCard plan="annual" showAction={!paying && !closed && !unreachable} offer={offer} />
@@ -169,7 +169,7 @@ export default function PremiumPage() {
         <ComparisonTable embedded showCta={false} showOfferNote={false} />
 
         <section className="ss-premium-faq" aria-labelledby={ids.faq}>
-          <h2 id={ids.faq} className="ss-premium-section-title">{t('premium.page.faqTitle')}</h2>
+          <h2 id={ids.faq} className="ss-section-title ss-premium-section-title">{t('premium.page.faqTitle')}</h2>
           <div className="ss-premium-faq__list">
             {faq.map((item) => (
               <details key={item.q} className="ss-premium-faq__item">

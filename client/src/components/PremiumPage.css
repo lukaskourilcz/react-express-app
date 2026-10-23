@@ -3,14 +3,16 @@
  * included list and the questions. Tokens only; the accent marks the price and
  * nothing else. */
 .ss-premium-page { display: flex; flex-direction: column; gap: clamp(1.75rem, 4vw, 2.5rem); }
-.ss-premium-section-title {
-  margin: 0 0 0.85rem;
-  font: 800 1.35rem/1.2 var(--font-family-heading);
-  letter-spacing: -0.015em;
-}
+/* Every section h2 on /premium (Choose a plan, the plan table, Have a
+   voucher? after the plans, Questions) is the shared .ss-section-title, the
+   one public section-title size (UX audit money-08, shell-public-16): there
+   were 16.8, 21.6 and 28px h2s on this page. This class only spaces them. */
+.ss-premium-section-title,
+.ss-section-title.ss-premium-section-title { margin: 0 0 0.85rem; }
 
-/* Your plan: the Profile's plan line, without its separator rule. */
-.ss-premium-current .ss-premium-section-title { font-size: 1.05rem; margin-bottom: 0.25rem; }
+/* Your plan: a card title (.ss-info-card h2), over the Profile's plan line
+   without its separator rule. */
+.ss-premium-current .ss-premium-section-title { margin-bottom: 0.25rem; }
 .ss-premium-current .de-plan-line { margin-top: 0; padding-top: 0; border-top: none; }
 
 /* The two plans side by side, stacked below 640px. */
