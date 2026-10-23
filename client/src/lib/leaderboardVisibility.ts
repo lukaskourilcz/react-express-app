@@ -19,6 +19,8 @@ export const leaderboardVisibilityQuery = (userId: string) => queryOptions({
   staleTime: 5 * 60_000,
 });
 
+type Patch = { mode?: LeaderboardVisibility['mode']; showPhoto?: boolean };
+
 /**
  * The signed-in learner's setting and the way to change it. `setMode`
  * shows the new state at once and puts the old one back if the save fails;
@@ -26,6 +28,11 @@ export const leaderboardVisibilityQuery = (userId: string) => queryOptions({
  * every board this tab has loaded: the learner's own 30-day board, whose line
  * for them is uncached, follows at once, and the shared boards follow as soon
  * as the CDN's copy expires, within a minute (they are never served stale).
+ *
+ * A save writes its answer to the account that made it. The hook's options
+ * follow whoever is signed in now, and a pending save takes them up on each
+ * render, so a save that lands after another account signed in would
+ * otherwise write the first account's names into the second one's setting.
  */
 export function useLeaderboardVisibility() {
   const { user } = useAuth();
@@ -35,20 +42,22 @@ export function useLeaderboardVisibility() {
   const query = useQuery({ ...options, enabled: !!userId });
 
   const mutation = useMutation({
-    mutationFn: (patch: { mode?: LeaderboardVisibility['mode']; showPhoto?: boolean }) =>
+    mutationFn: (patch: Patch) =>
       apiFetch<LeaderboardVisibility>(URL, { method: 'PUT', body: JSON.stringify(patch) }),
-    onMutate: async (patch: { mode?: LeaderboardVisibility['mode']; showPhoto?: boolean }) => {
-      await queryClient.cancelQueries({ queryKey: options.queryKey });
-      const previous = queryClient.getQueryData(options.queryKey);
-      queryClient.setQueryData(options.queryKey, (old: LeaderboardVisibility | undefined) => old ? { ...old, ...patch } : old);
-      return { previous };
+    onMutate: async (patch: Patch) => {
+      const queryKey = options.queryKey;
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData(queryKey);
+      queryClient.setQueryData(queryKey, (old: LeaderboardVisibility | undefined) => old ? { ...old, ...patch } : old);
+      return { previous, queryKey };
     },
-    onError: (_error, _mode, context) => {
-      if (context?.previous) queryClient.setQueryData(options.queryKey, context.previous);
-      else void queryClient.resetQueries({ queryKey: options.queryKey });
+    onError: (_error, _patch, context) => {
+      if (!context) return;
+      if (context.previous) queryClient.setQueryData(context.queryKey, context.previous);
+      else void queryClient.resetQueries({ queryKey: context.queryKey });
     },
-    onSuccess: (saved) => {
-      queryClient.setQueryData(options.queryKey, saved);
+    onSuccess: (saved, _patch, context) => {
+      if (context) queryClient.setQueryData(context.queryKey, saved);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
   });
