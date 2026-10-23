@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Today from '../src/components/Today';
-import { localDayChangeTime } from '../src/lib/utcDay';
+import { localDayChangeTime, nextUtcDayStart } from '../src/lib/utcDay';
 import { masteryDayKey } from '../../shared/mastery';
 import { partRanges } from '../../shared/progression';
 import { server } from './mocks/server';
@@ -73,6 +73,22 @@ describe('Today, target reached', () => {
     expect(screen.queryByText('Card pack ready')).toBeNull();
     expect(screen.queryByRole('link', { name: 'Open your pack' })).toBeNull();
     expect(document.querySelector('a[href="/collection"]')).toBeNull();
+  });
+});
+
+describe('Today left open past the day change', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('moves the plan on to the new day', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    answer(
+      { topics: ['javascript', 'html', 'css'], structure: { javascript: { levels: levels(25), checkpoints: [] }, html: { levels: levels(6), checkpoints: [] }, css: { levels: levels(6), checkpoints: [] } } },
+      { javascript: { levels: { 1: PASSED_TODAY, 2: PASSED_TODAY, 3: PASSED_TODAY }, checkpoints: {} } },
+    );
+    await mountToday();
+    expect(await screen.findByText('Today’s plan is complete')).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(nextUtcDayStart() - Date.now() + 2_000); });
+    expect(screen.queryByText('Today’s plan is complete')).toBeNull();
   });
 });
 
