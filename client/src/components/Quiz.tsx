@@ -284,7 +284,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   // The saved plan, used only to say whether this topic is part of it.
   const profile = getUserProfile(user);
-  const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
+  // Once per account, not per render: a new list each render made the
+  // memos below and the review start's identity new on every render.
+  const visibleCategoryOptions = useMemo(() => visibleCategoryOptionsFor(profile.email), [profile.email]);
 
   // The /dev "default visible categories" setting picks which chips appear on
   // first sight; the rest unlock when the learner clicks "Show all". Empty
