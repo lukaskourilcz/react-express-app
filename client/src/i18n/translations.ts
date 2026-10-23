@@ -1428,6 +1428,8 @@ export const en = {
   'landing.compare.freeCaption': 'Every account',
   'landing.compare.premiumCaption': '{symbol}{monthly} a month, before VAT',
   'landing.compare.premiumCaptionOffer': '{monthlyPrice} a month, before VAT',
+  'landing.compare.premiumCaptionShort': '{symbol}{monthly} a month',
+  'landing.compare.premiumCaptionOfferShort': '{monthlyPrice} a month',
   'landing.compare.premiumLessons': 'All {topics}',
   'landing.compare.rowReact': 'React',
   'landing.compare.freeReact': 'Levels 1 to {level}',

@@ -89,7 +89,8 @@ export interface ComparisonTableProps {
   /** Optional homepage announcement directly below the comparison card. */
   afterTable?: ReactNode;
   /** Inside a page that already has its own section kicker and states VAT by
-   *  its prices (/premium): the table leaves out its kicker and subtitle. */
+   *  its prices (/premium): the table leaves out its kicker, its subtitle and
+   *  the Premium caption's ", before VAT" (UX audit money-03). */
   embedded?: boolean;
 }
 
@@ -148,7 +149,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
                 </th>
                 <th scope="col" role="columnheader" className="ss-compare__herocell">
                   {t('landing.compare.colOthers')}
-                  <span className="ss-compare-caption"><PremiumMonthlyCaption offer={offer} /></span>
+                  <span className="ss-compare-caption"><PremiumMonthlyCaption offer={offer} withVat={!embedded} /></span>
                 </th>
               </tr>
             </thead>

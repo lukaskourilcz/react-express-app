@@ -251,13 +251,15 @@ describe('the plan table', () => {
   });
 
   // /premium has its own section kicker and states VAT by its prices.
-  it('leaves out its kicker and subtitle when embedded', () => {
+  it('leaves out its kicker, its subtitle and the caption\'s VAT clause when embedded (money-03)', () => {
     server.use(settingsHandler);
     renderAt('/', <ComparisonTable embedded showCta={false} />);
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    const table = screen.getByRole('table');
     expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
     expect(screen.queryByText('Plans')).toBeNull();
     expect(screen.queryByText('Prices exclude VAT. Applicable VAT is added at checkout.')).toBeNull();
+    // The plan cards and Before you pay say 'before VAT' beside the price.
+    expect(within(table).getAllByRole('columnheader')[2]).toHaveTextContent(/^Premium€4\.99 a month$/);
   });
 
   // Merchandise is paused until next quarter (owner decision 10): the coin row
