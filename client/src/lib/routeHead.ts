@@ -143,8 +143,12 @@ export function applyRouteHead(pathname: string, t: Translate, shareHead: ShareH
   const canonical = publicTopic
     ? PUBLIC_ORIGIN + pathname.replace(/\/$/, '')
     : pathname === '/' ? PUBLIC_ORIGIN + '/' : page ? PUBLIC_ORIGIN + page.path : null;
+  // The build writes og:url beside every canonical it writes (vite.config.ts),
+  // so the head a page arrived with and the one the app writes agree.
   if (canonical) {
-    const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical; document.head.append(link);
+    const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical;
+    const ogUrl = document.createElement('meta'); ogUrl.setAttribute('property', 'og:url'); ogUrl.content = canonical;
+    document.head.append(link, ogUrl);
   }
   if (publicTopic && canonical) {
     const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';

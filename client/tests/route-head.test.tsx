@@ -167,9 +167,13 @@ for (const [section, name] of [['web-developer', 'Web Developer'], ['software-en
     visit(`/learn/${section}`);
     expect(document.title).toBe(`${name} · devShark`);
     expect(canonical()).toBe(`https://devshark.app/learn/${section}`);
+    // The prerendered page carries og:url beside its canonical; the app kept
+    // the canonical and dropped og:url.
+    expect(meta('meta[property="og:url"]')).toBe(`https://devshark.app/learn/${section}`);
     expect(meta('meta[name="description"]')).not.toBe('shell description');
     expect(robots()).toEqual([]);
     visit('/quiz');
     expect(canonical()).toBeNull();
+    expect(meta('meta[property="og:url"]')).toBeUndefined();
   });
 }
