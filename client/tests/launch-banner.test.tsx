@@ -33,6 +33,16 @@ it('expires on the open page even if settings still advertise the discount', () 
   act(() => { vi.advanceTimersByTime(1); });
   expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
 });
+it('expires on return to a tab whose timer slept past the end', () => {
+  billing.launchOffer = true;
+  vi.setSystemTime(LAUNCH_OFFER.endsBefore - 60_000);
+  mount();
+  expect(screen.getByRole('complementary')).toBeInTheDocument();
+  // The computer slept: the clock moved on, the timer did not fire.
+  vi.setSystemTime(LAUNCH_OFFER.endsBefore + 3_600_000);
+  act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+  expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+});
 it('reschedules a boundary beyond the browser timeout limit', () => {
   billing.launchOffer = true;
   vi.setSystemTime(LAUNCH_OFFER.startsAt);
