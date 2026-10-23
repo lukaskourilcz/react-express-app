@@ -706,6 +706,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const raw = eventText('invoice.paid', idsFor('RawX', newUserId()), 'rawx');
     const candidates = await lib.rawBodyCandidates(webhookReq(raw, 'x', 'stream') as never);
     assert.equal(candidates[0], raw, 'the replayed bytes come first');
+    // A runtime that read the stream already (a body parser) hands over an
+    // ended stream: the body is used at once, without waiting for events
+    // that never come.
+    const consumed = webhookReq(raw, 'x', 'stream') as unknown as Readable;
+    for await (const chunk of consumed) void chunk;
+    const started = Date.now();
+    const fallback = await lib.rawBodyCandidates(consumed as never);
+    assert.ok(Date.now() - started < 500, `an ended stream waited ${Date.now() - started} ms`);
+    assert.equal(JSON.parse(fallback[0]).id, JSON.parse(raw).id);
   });
 
   /* The subscription lifecycle, including a local billing simulation ------ */

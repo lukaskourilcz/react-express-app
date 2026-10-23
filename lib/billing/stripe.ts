@@ -85,7 +85,9 @@ type StreamLike = {
 
 function readStream(req: VercelRequest, timeoutMs: number): Promise<string | null> {
   const stream = req as unknown as StreamLike;
-  if (typeof stream.on !== 'function') return Promise.resolve(null);
+  // A stream a runtime has read already sends no more events: waiting for
+  // them would only add the whole timeout to every delivery.
+  if (typeof stream.on !== 'function' || stream.readableEnded === true) return Promise.resolve(null);
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
     let done = false;
