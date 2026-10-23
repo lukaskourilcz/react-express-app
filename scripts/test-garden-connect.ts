@@ -183,7 +183,7 @@ function query(name: string) {
     if (name === 'github_commits') {
       if (insertRow) {
         const id = `commit-${++commitSeq}`;
-        const row: CommitRow = { attempts: 0, status: 'queued', ...insertRow, id, seq: commitSeq } as CommitRow;
+        const row = { attempts: 0, status: 'queued', ...insertRow, id, seq: commitSeq } as unknown as CommitRow;
         commitRows.set(id, row);
         return { data: { ...row }, error: null };
       }
