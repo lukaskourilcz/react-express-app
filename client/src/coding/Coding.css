@@ -279,15 +279,24 @@
   .cd-workbench--activity .cd-pane--output { grid-column: 3; grid-row: 1; }
   /* Inside the frame the code pane is brief, editor, action bar: the brief
      and the bar keep their size and the editor takes the rest. */
+  /* When what sits above the editor outgrows its share (a lock or fixture
+     note under a long brief on a 600px frame), the editor keeps its floor and
+     the pane scrolls, so the action bar is never drawn over or cut off. */
   .cd-workbench--section .cd-pane--editor,
   .cd-workbench--lesson .cd-pane--editor,
-  .cd-workbench--activity .cd-pane--editor { min-height: 0; overflow: hidden; }
+  .cd-workbench--activity .cd-pane--editor { min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
   .cd-workbench--section .cd-pane--editor > *,
   .cd-workbench--lesson .cd-pane--editor > *,
   .cd-workbench--activity .cd-pane--editor > * { flex: none; }
+  /* The slot's own minimum is its toolbar plus the editor's floor: CodeMirror
+     starts from a zero basis here, so long code scrolls inside the editor and
+     never grows the slot. */
   .cd-workbench--section .cd-pane--editor > .cd-editor-slot,
   .cd-workbench--lesson .cd-pane--editor > .cd-editor-slot,
-  .cd-workbench--activity .cd-pane--editor > .cd-editor-slot { flex: 1 1 0; min-height: 0; }
+  .cd-workbench--activity .cd-pane--editor > .cd-editor-slot { flex: 1 1 0; }
+  .cd-workbench--section .cd-editor--fill > .cd-editor__cm,
+  .cd-workbench--lesson .cd-editor--fill > .cd-editor__cm,
+  .cd-workbench--activity .cd-editor--fill > .cd-editor__cm { flex-basis: 0; }
   /* The full brief still leaves the editor its floor and the bar its row. */
   .cd-workbench--section .cd-brief__body[data-capped='false'],
   .cd-workbench--lesson .cd-brief__body[data-capped='false'],

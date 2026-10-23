@@ -99,3 +99,13 @@ it('measures again when a note joins the brief, without re-subscribing on every 
   rerender(view(true));
   expect(await screen.findByRole('button', { name: 'Show full brief' })).toBeInTheDocument();
 });
+
+it('keeps the action bar reachable when the brief outgrows the frame: the pane scrolls and the editor keeps its floor', () => {
+  const css = readFileSync(resolve(__dirname, '../src/coding/Coding.css'), 'utf8');
+  expect(css).toMatch(/\.cd-workbench--activity \.cd-pane--editor \{ min-height: 0; overflow-x: hidden; overflow-y: auto;/);
+  // The slot no longer shrinks below its content (min-height: 0 let the
+  // editor's floor spill over the action bar); CodeMirror's zero basis keeps
+  // long code from growing it.
+  expect(css).toMatch(/\.cd-workbench--activity \.cd-pane--editor > \.cd-editor-slot \{ flex: 1 1 0; \}/);
+  expect(css).toMatch(/\.cd-workbench--activity \.cd-editor--fill > \.cd-editor__cm \{ flex-basis: 0; \}/);
+});
