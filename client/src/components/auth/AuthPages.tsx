@@ -12,7 +12,9 @@
 //
 // Both also take the scanner-safe link (`?token_hash=…&type=…`): the session
 // opens when the learner presses the button, not when a mail filter fetches
-// the link. Neither page is a new API handler: both talk to Supabase Auth.
+// the link. The button shows where another account is signed in too: the link
+// is for the account it was sent to. Neither page is a new API handler: both
+// talk to Supabase Auth.
 import { useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
@@ -43,6 +45,23 @@ import { EmailField, FailureBanner, PasswordField, useFieldMessage, withEmail } 
 function continuePath(next: string | null): string {
   if (!next || !isSafeReturnPath(next) || AUTH_LANDING_PATHS.some((path) => next.startsWith(path))) return '/';
   return next;
+}
+
+/**
+ * Where a scanner-safe link stands. It belongs to the account its email was
+ * sent to, which need not be the one signed in here (a shared computer), so
+ * it waits for its press and a refusal says so whoever is signed in, as a
+ * link that lands with its session in the address replaces the account here.
+ * Once it opened, the account it opened is the one signed in.
+ */
+function linkState(
+  tokenLink: unknown,
+  opened: boolean,
+  verifyFailure: AuthFailure | null,
+): 'none' | 'waiting' | 'refused' {
+  if (!tokenLink || opened) return 'none';
+  if (!verifyFailure || verifyFailure === 'network' || verifyFailure === 'serviceError') return 'waiting';
+  return 'refused';
 }
 
 /**
@@ -132,12 +151,14 @@ export function EmailConfirmedPage() {
   // A link opens once: a second press in the same task spent it again, and
   // its refusal could show "expired" over the session the first one opened.
   const opening = useRef(false);
+  const [opened, setOpened] = useState(false);
   const [verifyFailure, setVerifyFailure] = useState<AuthFailure | null>(null);
   const next = continuePath(params.get('next'));
 
   if (isLoading) return <LoadingScreen label={t('authPage.confirming')} />;
 
-  if (user) {
+  const link = linkState(tokenLink, opened, verifyFailure);
+  if (user && link === 'none') {
     const email = user.email ?? '';
     return (
       <Page
@@ -159,14 +180,16 @@ export function EmailConfirmedPage() {
     setVerifyFailure(null);
     const outcome = await verifyEmailLink(tokenLink);
     // Confirmed: supabase-js announces SIGNED_IN and the page above takes over.
-    if (!outcome.ok) {
-      opening.current = false;
-      setVerifying(false);
-      setVerifyFailure(outcome.failure);
+    if (outcome.ok) {
+      setOpened(true);
+      return;
     }
+    opening.current = false;
+    setVerifying(false);
+    setVerifyFailure(outcome.failure);
   };
 
-  if (tokenLink && (!verifyFailure || verifyFailure === 'network' || verifyFailure === 'serviceError')) {
+  if (link === 'waiting') {
     return (
       <Page kicker={t('authPage.kicker')} title={t('authPage.confirmTitle')} lead={t('authPage.confirmTokenLead')}>
         <section className="ss-info-card ss-auth-page">
@@ -193,9 +216,12 @@ export function EmailConfirmedPage() {
       title={t(expired ? 'authPage.expiredTitle' : 'authPage.confirmTitle')}
       lead={t(expired ? 'authPage.expiredLead' : 'authPage.confirmVisitLead')}
     >
-      <div className="ss-info-actions" style={{ marginTop: 0 }}>
-        <Button variant="secondary" label={t('authPage.signIn')} onClick={() => openSignIn({ view: 'signIn' })} />
-      </div>
+      {/* The sign-in dialog opens for a signed-out visitor only. */}
+      {!user && (
+        <div className="ss-info-actions" style={{ marginTop: 0 }}>
+          <Button variant="secondary" label={t('authPage.signIn')} onClick={() => openSignIn({ view: 'signIn' })} />
+        </div>
+      )}
       <EmailLinkRequest purpose="confirm" returnTo={next !== '/' ? next : undefined} />
     </Page>
   );
@@ -278,6 +304,7 @@ export function ResetPasswordPage() {
   // A link opens once: a second press in the same task spent it again, and
   // its refusal could show "expired" over the session the first one opened.
   const opening = useRef(false);
+  const [opened, setOpened] = useState(false);
   const [verifyFailure, setVerifyFailure] = useState<AuthFailure | null>(null);
   // Whose password was set: another account signing in on this page has
   // changed nothing yet.
@@ -296,7 +323,8 @@ export function ResetPasswordPage() {
     );
   }
 
-  if (user) {
+  const link = linkState(tokenLink, opened, verifyFailure);
+  if (user && link === 'none') {
     return (
       <Page
         kicker={t('authPage.kicker')}
@@ -315,14 +343,16 @@ export function ResetPasswordPage() {
     setVerifyFailure(null);
     const outcome = await verifyEmailLink(tokenLink);
     // Opened: supabase-js announces PASSWORD_RECOVERY and the form above shows.
-    if (!outcome.ok) {
-      opening.current = false;
-      setVerifying(false);
-      setVerifyFailure(outcome.failure);
+    if (outcome.ok) {
+      setOpened(true);
+      return;
     }
+    opening.current = false;
+    setVerifying(false);
+    setVerifyFailure(outcome.failure);
   };
 
-  if (tokenLink && (!verifyFailure || verifyFailure === 'network' || verifyFailure === 'serviceError')) {
+  if (link === 'waiting') {
     return (
       <Page kicker={t('authPage.kicker')} title={t('auth.dialog.forgotTitle')} lead={t('authPage.resetTokenLead')}>
         <section className="ss-info-card ss-auth-page">

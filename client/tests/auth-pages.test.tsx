@@ -340,6 +340,46 @@ describe('a press that lands twice on an email-link page', () => {
   });
 });
 
+describe('a scanner-safe link opened where another account is signed in', () => {
+  // A shared computer: ada is signed in, and grace opens the link her email
+  // sent her. The link is grace's, so the page opens it, as supabase-js opens
+  // a link that lands with its session in the address.
+  const GRACE = emailUser({ id: '6b1c2a54-0000-4000-8000-0000000000e2', email: 'grace@example.com' });
+  const signedInAsAda = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(SESSION));
+
+  it('confirms the link’s own account instead of saying the one signed in is confirmed', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => gotrueOk(sessionFor(GRACE, 'grace-access-token'))));
+    signedInAsAda();
+    await openPage('/auth/confirmed?token_hash=pkce_0123456789abcdef&type=email');
+    expect(await h1()).toHaveTextContent('Confirm your email');
+    expect(screen.queryByText(/ada@example\.com/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm my email' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your email is confirmed' })).toBeInTheDocument();
+    expect(screen.getByText('You’re signed in as grace@example.com.')).toBeInTheDocument();
+    expect(calls('/verify')).toHaveLength(1);
+  });
+
+  it('opens the reset link instead of offering to change the password of the account signed in', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => gotrueOk(sessionFor(GRACE, 'grace-access-token'))));
+    signedInAsAda();
+    await openPage('/reset-password?token_hash=pkce_0123456789abcdef&type=recovery');
+    expect(await h1()).toHaveTextContent('Reset your password');
+    expect(screen.queryByLabelText('New password')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Set a new password' })).toBeInTheDocument();
+    expect(screen.getByText('Choose a new password for grace@example.com.')).toBeInTheDocument();
+  });
+
+  it('says a refused link expired, without changing the account signed in', async () => {
+    server.use(http.post(`${AUTH}/verify`, () => authError(403, 'otp_expired', 'Email link is invalid or has expired')));
+    signedInAsAda();
+    await openPage('/reset-password?token_hash=pkce_0123456789abcdef&type=recovery');
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'This reset link has expired' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('New password')).toBeNull();
+  });
+});
+
 describe('where the app shell sends a learner from an email link', () => {
   it('opens the new-password form when a reset link lands on the home page', async () => {
     // Supabase sends the link to the Site URL when /reset-password is not on
