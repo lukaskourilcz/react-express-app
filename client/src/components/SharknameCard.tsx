@@ -151,7 +151,6 @@ function SharknameEditor({
   const preview = (base: string) => base === current && state.handle ? state.handle : numberedSharkname(base, state.ordinal);
   const [draft, setDraft] = useState(current);
   const [flip, setFlip] = useState<{ name: string; n: number } | null>(null);
-  const [rolls, setRolls] = useState(0);
   const [saving, setSaving] = useState(false);
   // Set at the press: Enter pressed twice, or Save clicked twice, lands
   // before `saving` disables anything, and the second save of a name just
@@ -184,7 +183,6 @@ function SharknameEditor({
   const land = (name: string) => {
     setFlip(null);
     setDraft(name);
-    setRolls((n) => n + 1);
     setAnnounce(t('sharkname.generated', { name: preview(name) }));
   };
 
@@ -282,7 +280,7 @@ function SharknameEditor({
           <p className="fr-note fr-note--error">{t('sharkname.taken', { name: taken.name })}</p>
           <Button
             variant="secondary"
-            onClick={() => { setDraft(taken.suggestion); setTaken(null); setRolls((n) => n + 1); input.current?.focus(); }}
+            onClick={() => { setDraft(taken.suggestion); setTaken(null); input.current?.focus(); }}
             label={t('sharkname.trySuggestion', { name: taken.suggestion })}
           />
         </div>
