@@ -361,6 +361,21 @@ export function PremiumCancelPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // One request at a time: a second press can land before `busy` disables the
+  // button, and a second confirmation would act or email twice.
+  const sending = useRef(false);
+  const send = async (request: () => Promise<void>) => {
+    if (sending.current) return;
+    sending.current = true;
+    setError(null);
+    setBusy(true);
+    try {
+      await request();
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
+  };
   // The emailed link lands here with #confirm=<token>. It is read once.
   const [token] = useState(() => cancelLinkToken(location.hash));
   const [step, setStep] = useState<CancelStep>(token ? { kind: 'link-loading' } : { kind: 'form' });
@@ -409,27 +424,25 @@ export function PremiumCancelPage() {
   const owner = isAuthenticated && typeof user?.email === 'string' && user.email.toLowerCase() === email.trim().toLowerCase();
 
   const submitForm = async () => {
+    if (sending.current) return;
     setError(null);
     if (!looksLikeEmail(email)) {
       setEmailError(t('error.badEmail'));
       return;
     }
     setEmailError(null);
-    setBusy(true);
-    try {
-      await requestCancellation(email.trim(), action, 'request');
-      setStep({ kind: 'confirm' });
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'bad_email') setEmailError(t('error.badEmail'));
-      else setError(friendlyError(err));
-    } finally {
-      setBusy(false);
-    }
+    await send(async () => {
+      try {
+        await requestCancellation(email.trim(), action, 'request');
+        setStep({ kind: 'confirm' });
+      } catch (err) {
+        if (err instanceof ApiError && err.code === 'bad_email') setEmailError(t('error.badEmail'));
+        else setError(friendlyError(err));
+      }
+    });
   };
 
-  const confirm = async () => {
-    setError(null);
-    setBusy(true);
+  const confirm = () => send(async () => {
     try {
       const answer = await requestCancellation(email.trim(), action, 'confirm');
       if (isCancelReceipt(answer)) setStep({ kind: 'done', receipt: answer });
@@ -437,23 +450,19 @@ export function PremiumCancelPage() {
       else setStep({ kind: 'signin' });
     } catch (err) {
       setError(friendlyError(err));
-    } finally {
-      setBusy(false);
     }
-  };
+  });
 
   const confirmLink = async () => {
     if (!token) return;
-    setError(null);
-    setBusy(true);
-    try {
-      setStep({ kind: 'done', receipt: await confirmCancelLink(token) });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 410) setStep({ kind: 'link-expired' });
-      else setError(friendlyError(err));
-    } finally {
-      setBusy(false);
-    }
+    await send(async () => {
+      try {
+        setStep({ kind: 'done', receipt: await confirmCancelLink(token) });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 410) setStep({ kind: 'link-expired' });
+        else setError(friendlyError(err));
+      }
+    });
   };
 
   const startAgain = () => { setError(null); setStep({ kind: 'form' }); };

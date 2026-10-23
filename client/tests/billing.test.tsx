@@ -329,6 +329,24 @@ describe('/premium/cancel', () => {
     expect(bodies.every((body) => body.action === 'cancel')).toBe(true);
   });
 
+  it('sends one request and one confirmation for double presses', async () => {
+    serve({ billing: { enabled: true, cancellable: true, cancelByEmail: true } });
+    const bodies = cancelApi(async (body) => {
+      await delay(20);
+      return body.step === 'request'
+        ? HttpResponse.json({ step: 'confirm' })
+        : HttpResponse.json({ received: true, confirmBy: 'email', action: body.action, email: body.email, receivedAt: '2026-09-25T14:32:00.000Z', expiresInMinutes: 60 });
+    });
+    renderAt('/premium/cancel', <PremiumCancelPage />);
+    fireEvent.change(await screen.findByLabelText(/Email address of your subscription/), { target: { value: 'payer@example.com' } });
+    const next = screen.getByRole('button', { name: 'Continue' });
+    act(() => { next.click(); next.click(); });
+    const confirm = await screen.findByRole('button', { name: 'Cancel my subscription now' });
+    act(() => { confirm.click(); confirm.click(); });
+    await screen.findByRole('heading', { level: 2, name: 'Check your email' });
+    expect(bodies.map((body) => body.step)).toEqual(['request', 'confirm']);
+  });
+
   it('takes focus back to the email field when the address changes', async () => {
     serve();
     cancelApi((body) => HttpResponse.json({ step: 'confirm', action: body.action, email: body.email }));
