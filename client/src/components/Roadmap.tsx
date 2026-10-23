@@ -1424,9 +1424,11 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
  * error screen. */
 function LessonStage({ onExit, t, children }: { onExit: () => void; t: TFn; children: ReactNode }) {
   return (
-    <ShellPartBoundary fallback={(retry) => <LessonError message={t('roadmap.error')} onRetry={retry} onExit={onExit} t={t} />}>
-      <Suspense fallback={<QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />}>{children}</Suspense>
-    </ShellPartBoundary>
+    <Suspense fallback={<QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />}>
+      <ShellPartBoundary fallback={(retry) => <LessonError message={t('roadmap.error')} onRetry={retry} onExit={onExit} t={t} />}>
+        {children}
+      </ShellPartBoundary>
+    </Suspense>
   );
 }
 
