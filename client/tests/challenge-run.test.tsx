@@ -349,6 +349,15 @@ describe('the run reward', () => {
     expect(JSON.parse(localStorage.getItem(PENDING) ?? '[]')).toEqual([expect.objectContaining({ runToken: 'OFFLINE' })]);
   });
 
+  it('drops a saved run the board already holds with another result, instead of sending it at every game over', async () => {
+    api.auth = { user: { id: 'learner-1' }, isAuthenticated: true, isLoading: false };
+    localStorage.setItem(PENDING, JSON.stringify([{ userId: 'learner-1', runToken: 'SAVED-ELSEWHERE', proofs: [] }]));
+    api.completeStatus = () => ({ status: 409, code: 'run_already_saved' });
+    await mount();
+    await waitFor(() => expect(api.completions.map((one) => one.runToken)).toEqual(['SAVED-ELSEWHERE']));
+    await waitFor(() => expect(localStorage.getItem(PENDING)).toBeNull());
+  });
+
   it('announces the XP the server credited to a signed-in learner, and counts the same amount signed out', async () => {
     const gains: number[] = [];
     const stop = onXpToast((toast: XpToast) => { if (toast.kind === 'gain') gains.push(toast.amount); });

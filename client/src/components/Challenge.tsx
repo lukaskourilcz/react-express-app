@@ -119,7 +119,9 @@ async function sendPendingRewards(userId: string | null): Promise<{ kept: number
       }
       dropPendingReward(run.runToken);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 400 && PERMANENT_REWARD_ERRORS.has(err.code ?? '')) {
+      // 409: the run is already on the board with another result, and
+      // sending it again is refused the same way.
+      if (err instanceof ApiError && ((err.status === 400 && PERMANENT_REWARD_ERRORS.has(err.code ?? '')) || (err.status === 409 && err.code === 'run_already_saved'))) {
         dropPendingReward(run.runToken);
         continue;
       }

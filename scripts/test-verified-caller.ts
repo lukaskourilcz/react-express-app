@@ -83,6 +83,9 @@ const SLOW_REPORT = 'stand-in: answer after the timeout';
 // A topic board asked with this minimum answers after the timeout too.
 const SLOW_BOARD_MIN_ATTEMPTS = 97;
 const upstashCommands: string[] = [];
+// A Challenge run saved with this score finds the run already on the board
+// with another one.
+const CONFLICTING_CHALLENGE_SCORE = 2;
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   let text = '';
@@ -153,6 +156,8 @@ async function startStandIns() {
     if (rpc) {
       if (rpc === 'claim_quiz_submission' && claimFails) return send(500, { code: '08006', message: 'stand-in: connection failure' });
       if (rpc === 'allocate_shark_name') return send(200, { handle: 'sleepySharkie17', ordinal: '17', base: 'sleepySharkie' });
+      // Migration 064 raises for a run already saved with another score.
+      if (rpc === 'save_completed_challenge_score' && (body as Row).p_score === CONFLICTING_CHALLENGE_SCORE) return send(400, { code: 'P0001', message: 'challenge_score_conflict' });
       if (rpc === 'save_completed_challenge_score') return send(200, { id: 'score-17', name: 'sleepySharkie17', score: (body as Row).p_score, selected_topics: (body as Row).p_topics, all_topics: (body as Row).p_all_topics, created_at: new Date().toISOString() });
       // The Premium check: account A is Premium, so every coding task opens.
       if (rpc === 'is_premium') return send(200, (body as Row | undefined)?.p_user === A.id);
@@ -327,7 +332,10 @@ async function main() {
     const foreignRun = await call(challenge as Handler, { method: 'POST', account: B, query: { resource: 'complete' }, body: { runToken: completedRun.runToken, proofs: [...strikes, tokens.encodeScoreProof(completedRun.runId, 'right', 'webdev', true)] } });
     assert.equal(foreignRun.statusCode, 400);
     assert.equal(reads('/rest/v1/rpc/save_completed_challenge_score').length, 1);
-    console.log('PASS verified caller: completed positive Challenge runs save automatically; zero and foreign sessions write nothing');
+    const conflicting = await call(challenge as Handler, { method: 'POST', query: { resource: 'complete' }, body: { runToken: completedRun.runToken, proofs: [...strikes, ...['right', 'also-right'].map((id) => tokens.encodeScoreProof(completedRun.runId, id, 'webdev', true))] } });
+    assert.equal(conflicting.statusCode, 409, `a run already saved with another score is a conflict, not an outage (${JSON.stringify(conflicting.body)})`);
+    assert.equal(errorCode(conflicting), 'run_already_saved');
+    console.log('PASS verified caller: completed positive Challenge runs save automatically; zero and foreign sessions write nothing; a conflicting save answers 409');
 
     // ── a token for A with a user_id of B acts for A ──────────────────────
     seen.length = 0;

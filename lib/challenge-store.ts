@@ -29,6 +29,11 @@ export interface ChallengeLeaderboard {
 
 export class ChallengeStoreError extends Error {}
 
+/** save_completed_challenge_score (migration 064) refused the run: it was
+ * already saved with another score, owner or topic set. Only a forged or
+ * legacy run token gets here, and sending it again cannot succeed. */
+export class ChallengeScoreConflictError extends ChallengeStoreError {}
+
 const MAX_SCORE = 100_000;
 
 function rowToScore(row: Record<string, unknown>): ChallengeScore {
@@ -70,6 +75,7 @@ export async function recordChallengeScore(input: {
       p_topics: input.topics ?? null, p_all_topics: input.allTopics ?? null,
     }), 5000);
     if (result.error?.message?.includes('handle_taken')) continue;
+    if (result.error?.message?.includes('challenge_score_conflict')) throw new ChallengeScoreConflictError(result.error.message);
     if (result.error || !result.data) throw new ChallengeStoreError(result.error?.message || 'Could not save score');
     return rowToScore(result.data as Record<string, unknown>);
   }

@@ -11,7 +11,7 @@ import { encodeSession, createChallengeRun, decodeChallengeRun, decodeScoreProof
 import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing, withRequestContext, tryAuthOnce } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions, getEffectiveQuestionsById } from '../../lib/questions-store';
-import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
+import { ChallengeScoreConflictError, getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
 import { enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
@@ -215,7 +215,10 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   let record;
   try {
     record = await recordChallengeScore({ score, runId: run.runId, subject: run.subject, userId: auth?.sub ?? null, topics: run.topics, allTopics: run.allTopics });
-  } catch {
+  } catch (error) {
+    // The run is already on the board with another score or owner: a retry
+    // would be refused the same way, so it is a conflict, not an outage.
+    if (error instanceof ChallengeScoreConflictError) return jsonError(res, 409, 'run_already_saved', 'This run was already saved with a different result');
     return jsonError(res, 503, 'leaderboard_unavailable', 'Could not save the score right now');
   }
   if (!auth) return res.json({ ok: true, awarded: false, score, record });
