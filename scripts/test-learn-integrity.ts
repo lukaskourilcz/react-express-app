@@ -709,6 +709,30 @@ async function main() {
       assert.equal(expired.body?.error?.code, 'invalid_session');
     }
     console.log('PASS learn: a completion of an expired attempt answers 409 invalid_session');
+
+    // ── A lapsed plan whose progress cannot be read ────────────────────────
+    // A Premium level sealed while the account was Premium, answered after
+    // the plan lapsed. The gate keeps a passed level open for review, so when
+    // the progress row cannot be read it cannot say "not passed": 503
+    // entitlement_unavailable, as lib/access.ts answers, never the 402
+    // upgrade sheet for a level the learner may have passed.
+    {
+      const [{ contentTier, FREE_LEARN_LEVELS }, { serverContentIndex }] = await Promise.all([import('../shared/tiers'), import('../lib/access')]);
+      // The first React level past the free ones.
+      const premiumLevel = { topic: 'react', level: Number(FREE_LEARN_LEVELS.react) + 1 };
+      assert.equal(contentTier({ kind: 'learn-level', ...premiumLevel }, serverContentIndex()), 'premium', 'React has a Premium level');
+      const sealFor = (userId: string) => tokens.encodeSession([{ questionId: 'lapsed-plan-question', correctAnswer: 0 }], {
+        scope: 'roadmap', subject: 'webdev', topic: premiumLevel.topic, roadmapKind: 'level', ref: premiumLevel.level, userId,
+      });
+      const broken = sealFor(BROKEN.id);
+      const unread = await call('POST', { resource: 'answer' }, BROKEN.token, { sessionId: broken, questionId: 'lapsed-plan-question', selectedIndex: 0 });
+      assert.deepEqual([unread.statusCode, unread.body?.error?.code], [503, 'entitlement_unavailable'], `an unreadable progress row is not "never passed" (${JSON.stringify(unread.body)})`);
+      const unreadDone = await call('POST', { resource: 'complete' }, BROKEN.token, { sessionId: broken });
+      assert.deepEqual([unreadDone.statusCode, unreadDone.body?.error?.code], [503, 'entitlement_unavailable'], `nor when the level is completed (${JSON.stringify(unreadDone.body)})`);
+      const fresh = await call('POST', { resource: 'answer' }, OTHER.token, { sessionId: sealFor(OTHER.id), questionId: 'lapsed-plan-question', selectedIndex: 0 });
+      assert.deepEqual([fresh.statusCode, fresh.body?.error?.code], [402, 'premium_required'], `a Premium level never passed is still refused with 402 (${JSON.stringify(fresh.body)})`);
+    }
+    console.log('PASS learn: a lapsed plan whose progress cannot be read answers 503 entitlement_unavailable, not 402');
   } finally {
     server.close();
   }
