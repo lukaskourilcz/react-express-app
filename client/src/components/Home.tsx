@@ -186,10 +186,11 @@ export default function Home() {
 
   // Public inventory counts from the subject registry, checked against the
   // server's deliverable question bank and active coding catalogue at release.
+  // English digits whatever the browser's locale ("2,134", never "2.134").
   const stats: StatSpec[] = [
     { value: String(subject.topics.length), label: t('home.statTracks') },
-    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions') },
-    { value: SUBJECT_SCOPE_CATALOG[subject.id].codingChallengeCount.toLocaleString(), label: t('home.statCodingChallenges') },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString('en-GB'), label: t('home.statQuestions') },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].codingChallengeCount.toLocaleString('en-GB'), label: t('home.statCodingChallenges') },
   ];
 
 

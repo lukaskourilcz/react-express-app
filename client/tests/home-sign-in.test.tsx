@@ -223,3 +223,22 @@ it('fetches the FDE path outline only when its section comes near', async () => 
     vi.unstubAllGlobals();
   }
 });
+
+// The hero counts are English copy: a browser set to German must not turn
+// 2,134 questions into "2.134".
+it('writes the hero counts with English digit grouping in any browser locale', () => {
+  server.use(settingsHandler, freeEntitlementHandler);
+  const original = Number.prototype.toLocaleString;
+  const spy = vi.spyOn(Number.prototype, 'toLocaleString').mockImplementation(function (this: number, locales?: Intl.LocalesArgument, options?: Intl.NumberFormatOptions) {
+    return original.call(this, locales ?? 'de-DE', options);
+  });
+  try {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+    const hero = screen.getByRole('region', { name: screen.getByRole('heading', { level: 1 }).closest('section')!.getAttribute('aria-label')! });
+    const questions = within(hero).getByText('questions').previousElementSibling;
+    expect(questions?.textContent).toMatch(/^\d{1,3}(,\d{3})+$/);
+  } finally {
+    spy.mockRestore();
+  }
+});
