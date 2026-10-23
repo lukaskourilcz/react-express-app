@@ -110,6 +110,16 @@ describe('/premium', () => {
     expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
   });
 
+  it('shows one Manage billing to a complimentary grant over a live subscription', async () => {
+    signIn();
+    serve({ plan: { ...FREE, tier: 'premium', source: 'promo', validUntil: '2026-12-31T00:00:00.000Z', billingAccount: true, subscriptionLive: true } });
+    await mountAt('/premium', <PremiumPage />);
+    const current = await screen.findByRole('region', { name: 'Your plan' });
+    expect(await within(current).findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Manage billing' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
+  });
+
   it('draws a signed-in plan with the page instead of adding it above the plans', async () => {
     signIn();
     serve({ plan: PAYING });

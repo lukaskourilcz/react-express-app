@@ -119,8 +119,10 @@ export default function PremiumPage() {
 
   const premium = plan.signedIn && plan.tier === 'premium' && !!plan.data;
   // A paying subscriber manages the plan they have; a second checkout would
-  // charge twice, and the server refuses it anyway.
-  const paying = premium && plan.data?.source === 'provider';
+  // charge twice, and the server refuses it anyway. A complimentary grant over
+  // a live subscription counts too, as it does for PremiumCheckoutButton, or
+  // each plan card would add its own Manage billing beside the plan line's.
+  const paying = premium && (plan.data?.source === 'provider' || plan.data?.subscriptionLive === true);
   const closed = billing.known && !billing.enabled;
   // Offline or the API is down: the buttons cannot know what to do, so the
   // page says so rather than spinning.
