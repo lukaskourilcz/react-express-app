@@ -117,3 +117,23 @@ it('draws the pane separator as a quiet 1px line in a 12px column with 2px eithe
   expect(rest).not.toContain('border-radius: 999px');
   expect(css).toMatch(/\.cd-splitter:hover,\s*\.cd-splitter:focus-visible \{ background: linear-gradient.*var\(--brand-accent\)/);
 });
+
+it('counts compiler errors and failing type checks apart, and says each count once (coding-19)', async () => {
+  vi.mocked(runCodeTests).mockResolvedValueOnce({
+    results: [{ pass: false, actual: '0', error: null }],
+    logs: [],
+    check: { codeErrors: [{ line: 1, message: "Parameter 'title' implicitly has an 'any' type." }], typeTests: [{ pass: false, error: 'no' }, { pass: false, error: 'no' }, { pass: false, error: 'no' }, { pass: false, error: 'no' }, { pass: true, error: null }] },
+  } as never);
+  const typescript = { ...tasks.typescript, typeTests: [1, 2, 3, 4, 5].map((n) => ({ code: `f(${n})`, rejects: false })) } as PlayableCodingTask;
+  render(<MemoryRouter><LanguageProvider><CodingWorkbench task={typescript} initialCode={null} session="s" locked={null} signedIn mode="section" /></LanguageProvider></MemoryRouter>);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Run' })); });
+  const types = screen.getByRole('tab', { name: /Types/ });
+  expect(types).toHaveAttribute('aria-selected', 'true');
+  // The badge reads like Results: checks passed of checks, in the failing colour.
+  expect(types.querySelector('.cd-tab__badge')).toHaveTextContent('1/5');
+  expect(types.querySelector('.cd-tab__badge')).toHaveClass('cd-tab__badge--bad');
+  expect(within(screen.getByRole('tabpanel', { name: /Types/ })).getByText('1 compiler error · 4 of 5 type checks fail')).toHaveClass('cd-summary');
+  fireEvent.click(screen.getByRole('tab', { name: /Results/ }));
+  expect(screen.getByRole('tab', { name: /Results/ }).querySelector('.cd-tab__badge')).toHaveTextContent('0/1');
+  expect(screen.queryByText(/of 1 passing/, { selector: '.cd-summary' })).toBeNull();
+});

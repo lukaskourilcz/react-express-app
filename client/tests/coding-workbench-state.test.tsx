@@ -117,7 +117,7 @@ it('blames the hidden checks only when every visible check passed', async () => 
 for (const [name, run, says] of [
   ['an error', outcome({ codeError: 'ReferenceError: x is not defined' }), 'Your code could not run.'],
   ['a timeout', outcome({ timedOut: true, codeError: 'Timed out. Check for an infinite loop.' }), 'Timed out. Check for an infinite loop.'],
-  ['type errors', outcome({ results: [{ pass: true, actual: '[2]', error: null }, { pass: true, actual: '[]', error: null }], check: { codeErrors: [{ line: 1, message: 'Type error' }], typeTests: [{ pass: false, error: 'no' }] } }), '2 of 2 passing. 2 type errors'],
+  ['type errors', outcome({ results: [{ pass: true, actual: '[2]', error: null }, { pass: true, actual: '[]', error: null }], check: { codeErrors: [{ line: 1, message: 'Type error' }], typeTests: [{ pass: false, error: 'no' }] } }), '2 of 2 passing. 1 compiler error · 1 of 1 type check fails'],
 ] as const) {
   it(`announces ${name} as what it is`, async () => {
     vi.mocked(runCodeTests).mockResolvedValueOnce(run);
@@ -438,7 +438,9 @@ it('shows three landing examples while Run still checks every test', async () =>
   const results = screen.getByRole('tabpanel', { name: 'Results' });
   expect(within(results).getAllByRole('listitem')).toHaveLength(3);
   fireEvent.click(screen.getByRole('button', { name: 'Run' }));
-  await waitFor(() => expect(within(results).getByText('5 of 5 passing')).toBeVisible());
+  // The count of every check run is the Results badge, said once (coding-19).
+  await waitFor(() => expect(screen.getByRole('tab', { name: /Results/ })).toHaveTextContent('Results5/5'));
+  expect(within(results).queryByText('5 of 5 passing')).toBeNull();
   expect(within(results).getAllByRole('listitem')).toHaveLength(3);
   expect(vi.mocked(runCodeTests).mock.calls[0][0].tests).toHaveLength(5);
 });

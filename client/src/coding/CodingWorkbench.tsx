@@ -666,7 +666,22 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const resultsBadge = isReact
     ? reactRun && reactRun.status === 'done' && reactRun.total > 0 ? `${reactRun.passed}/${reactRun.total}` : null
     : run && !run.codeError && run.results.length > 0 ? `${run.results.filter((r) => r.pass === true).length}/${run.results.length}` : null;
-  const typesBadge = run?.check ? (run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) ? 'ok' : String(run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length)) : null;
+  // The Types badge reads like the Results one, checks passed of checks
+  // (UX audit coding-19); compiler errors turn it to the failing colour and
+  // are counted in the panel's summary, never added into the checks.
+  const typesClean = run?.check ? run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) : null;
+  const typesBadge = run?.check
+    ? run.check.typeTests.length > 0 ? `${run.check.typeTests.filter((one) => one.pass).length}/${run.check.typeTests.length}` : typesClean ? 'ok' : String(run.check.codeErrors.length)
+    : null;
+  /** What the type checker said, each kind of error counted on its own:
+   * "1 compiler error · 4 of 5 type checks fail". */
+  const typesSummary = (check: NonNullable<RunOutcome['check']>): string => {
+    const failing = check.typeTests.filter((one) => !one.pass).length;
+    const parts: string[] = [];
+    if (check.codeErrors.length > 0) parts.push(t(check.codeErrors.length === 1 ? 'coding.types.compilerError' : 'coding.types.compilerErrors', { n: check.codeErrors.length }));
+    if (failing > 0) parts.push(t(check.typeTests.length === 1 ? 'coding.types.checkFails' : 'coding.types.checksFail', { failing, total: check.typeTests.length }));
+    return parts.length > 0 ? parts.join(' · ') : t('coding.types.clean');
+  };
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const resources = useMemo(() => taskResources(task.focus).filter(entry => !task.references?.some(ref => ref.url === entry.url)), [task.focus, task.references]);
   const resourceCount = resources.length + (task.references?.length ?? 0);
@@ -719,7 +734,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
-    ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
+    ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesClean }] : []),
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
     // Reading the documentation is not asking for help: this tab is open from
     // the moment the task loads, costs no hint rung, and needs no failed run.
@@ -884,7 +899,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       if (reactRun.status === 'timeout') return <p className="cd-note cd-note--warn">{t('coding.preview.timeout')}</p>;
       return (
         <>
-          {reactRun.status === 'done' && <p className="cd-summary">{t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total })}{verdict?.hidden && serverChecked && <small>{t('coding.results.hidden', { passed: verdict.hidden.passed, total: verdict.hidden.total })}</small>}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
+          {/* The count is the tab's badge; the panel says only what the
+              badge cannot (coding-19). */}
+          {reactRun.status === 'done' && (serverChecked || stale) && <p className="cd-summary">{verdict?.hidden && serverChecked && <small>{t('coding.results.hidden', { passed: verdict.hidden.passed, total: verdict.hidden.total })}</small>}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
           <ul className="cd-results">
             {reactRun.cases.map((one, index) => (
               <li key={index} className={`cd-result cd-result--${one.status}`}>
@@ -917,15 +934,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     }
     if (run.runnerUnavailable || run.timedOut) return <p className="cd-note cd-note--warn">{runNote(run)}</p>;
     if (run.codeError) return <p className="cd-note cd-note--error">{t('coding.results.codeError')} <code className="cd-inline-code">{run.codeError}</code></p>;
-    const passedCount = run.results.filter((r) => r.pass === true).length;
+    // "N of M passing" is the Results badge above, so it is not said again
+    // here; the live region still announces it (coding-19).
     return (
       <>
-        <p className="cd-summary">
-          {t('coding.results.passing', { passed: passedCount, total: run.results.length })}
+        {(serverChecked || stale) && <p className="cd-summary">
           {verdict?.hidden && serverChecked && <small>{t('coding.results.hidden', { passed: verdict.hidden.passed, total: verdict.hidden.total })}</small>}
           {serverChecked && <small>{t('coding.results.serverNote')}</small>}
           {stale && <small>{t('coding.results.stale')}</small>}
-        </p>
+        </p>}
         <ul className="cd-results">
           {(mode === 'landing' ? run.results.slice(0, 3) : run.results).map((result, index) => codeRow(tests[index] ?? { call: '', expected: undefined }, result, index))}
         </ul>
@@ -954,10 +971,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         </>
       );
     }
-    const failing = check.typeTests.filter((one) => !one.pass).length;
     return (
       <>
-        <p className="cd-summary">{check.codeErrors.length === 0 && failing === 0 ? t('coding.types.clean') : t('coding.types.errors', { n: check.codeErrors.length + failing })}</p>
+        <p className="cd-summary">{typesSummary(check)}</p>
         {check.codeErrors.length > 0 && (
           <ul className="cd-results">
             {check.codeErrors.map((error, index) => (
@@ -1065,8 +1081,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     if (run.runnerUnavailable || run.timedOut) return runNote(run);
     if (run.codeError) return t('coding.results.codeError');
     const passing = t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length });
-    const typeErrors = run.check ? run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length : 0;
-    return typeErrors > 0 ? `${passing}. ${t('coding.types.errors', { n: typeErrors })}` : passing;
+    return run.check && !typesClean ? `${passing}. ${typesSummary(run.check)}` : passing;
   };
   // Once the code changes, the results on screen are about earlier code. Read
   // out again they would sound like news about the new code (the first

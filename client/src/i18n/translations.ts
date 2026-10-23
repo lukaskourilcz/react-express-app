@@ -1787,7 +1787,11 @@ export const en = {
   'coding.results.codeError': 'Your code could not run.',
   'coding.results.serverNote': 'Checked on the server.',
   'coding.types.clean': 'Types check out.',
-  'coding.types.errors': '{n} type errors',
+  // Each kind of type error counted on its own (UX audit coding-19).
+  'coding.types.compilerError': '{n} compiler error',
+  'coding.types.compilerErrors': '{n} compiler errors',
+  'coding.types.checkFails': '{failing} of {total} type check fails',
+  'coding.types.checksFail': '{failing} of {total} type checks fail',
   'coding.types.line': 'Line {n}',
   'coding.types.rejects': 'must be rejected',
   'coding.types.tests': 'Type checks',
