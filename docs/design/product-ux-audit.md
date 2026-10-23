@@ -9,7 +9,7 @@ The route and state inventory design and QA work starts from, the standing rule 
 | `/` | No | Understand the product; choose a learning action | first visit, returning learner, auth failure, home sample | `Home` | Keep `LandingKit` and technical copy; check the hero at 360–1440px. |
 | `/today` | Optional | See what to do next | signed out, loading, nothing due, review cards, sections | `Today` | Signed-in sections load as their own chunks inside the route hold. |
 | `/quiz` | Optional | Configure, answer, submit, review | setup, loading, active, restored, empty, submit error, graded | `Quiz` | Keep signed sessions and stable answer geometry; test short phones, code, the review grid, expiry and retry. |
-| `/learn/:section?` | Optional | Pick a section and topic; complete levels and checkpoints | section preview, loading, no structure, locked, unavailable level, lesson, active level, grading, completion, failure, skill check | `Roadmap` | Three sections (`shared/learn-sections.ts`); verified grading; `RadioCards` keyboard behaviour. |
+| `/learn/:section?` | Optional | Pick a section and topic; complete levels and checkpoints | section preview, loading, no structure, locked, unavailable level, lesson, active level, grading, completion, failure, skill check | `Roadmap`, `learn/LessonRunner` | Three sections (`shared/learn-sections.ts`); verified grading; `RadioCards` keyboard behaviour. The level runner is its own chunk, loaded when a level opens. |
 | `/learn/forward-deployed-engineer/path` | Optional | Work through the FDE path | switch off (preview), outline, signed out, enrolled, activity, Premium lock, paused, completed | `paths/*` | Path on only with `LEARNING_PATH_FDE_ENABLED`; free diagnostic and first module. |
 | `/learn/big-o`, `/big-o` | No | Read the Big O introduction | reading | `BigOIntroduction`, `BigOPage` | Same lessons as DSA levels 1 and 2. |
 | `/challenge` | Optional | Understand the rules; complete a fair timed run | intro, board loading/error, buffering, active, timeout, verified result, share | `Challenge` | `RadioCardGroup` choices; board-unavailable shown apart from empty. |
@@ -54,18 +54,18 @@ No text on a coloured fill uses a fixed white:
 - `LoadingScreen` and `ErrorRetry` still carry a small adapter for MUI-style `sx` spacing props.
 - `/dev` → Question bank colours its review states with fixed hex values (`DevQuestions.tsx`) instead of the semantic tokens.
 - Multiplayer state refresh grows roughly with the square of the room size. A fix needs a forward API and RPC design inside the existing handlers.
-- Not re-checked since the July 2026 audit: clipping of multiline answers in the active quiz on short viewports, bounded user-readable states for slow or failed sign-in, and the serial stats, progress and XP requests on Profile (any consolidation belongs in the existing user handler, not a thirteenth function).
+- Not re-checked since the July 2026 audit: clipping of multiline answers in the active quiz on short viewports, bounded user-readable states for slow or failed sign-in, and the remaining serial requests on Profile. Since 23 October 2026 the streak card, the advisor and the leaderboard-name card start their reads beside the stats read; any further consolidation belongs in the existing user handler, not a thirteenth function.
 
 ## Strengths to keep
 
 - Central sources of truth: `client/product-catalog.ts`, `shared/subject-catalog.ts`, `client/src/lib/products.ts` and `client/src/lib/subjects.ts`. Product identity refuses any product but devShark.
-- Server-issued encrypted sessions, one-time grading claims, result receipts, answer proofs, atomic XP, streak and progression writes, product and subject validation, RLS and service-role isolation.
+- Server-issued encrypted sessions, one-time grading claims, result receipts, atomic XP, streak and progression writes, product and subject validation, RLS and service-role isolation.
 - Real content counts from `SUBJECT_SCOPE_CATALOG`, checked by `npm run test:launch`, and an on-demand question bank.
 - One-screen shell, internal main scroll, bottom-waterline clearance, skip link, route titles and route focus.
 - Astryx primitives, `SharkFin`, `LandingKit`, `CategoryGlyph`, `RadioCards`, dialogs, toasts and query helpers.
-- A click draws the next page once. The route boundary sits outside the keyed route box, links preload their page on intent (`lib/routePreload.ts`), and Coding, Today, Learn, Roadmap, Rewards, Premium, Leaderboard and the Challenge hold their first render for the reads that decide it (`lib/routeData.ts`, at most 1.2s).
+- A click draws the next page once. The route boundary sits outside the keyed route box, links preload their page on intent (`lib/routePreload.ts`) only for the paths its routes serve, and only on a left mouse press while the browser asks to save data, and Coding, Today, Learn, Roadmap, Rewards, Premium, Leaderboard and the Challenge hold their first render for the reads that decide it (`lib/routeData.ts`, at most 1.2s).
 - A page whose code fails to load shows `RouteErrorBoundary` inside the shell; Try again re-renders or reloads, and offline it waits for the connection (`tests/browser/route-errors.spec.ts`).
-- Lazy routes, lazy Prism languages, consent-gated analytics, optional Sentry and build-time CSS purging.
+- Lazy routes, lazy Prism languages, a lazy Learn level runner, a code editor that loads only when a path's code activity renders, Prettier only while the coding editor is on screen, consent-gated analytics, optional Sentry and build-time CSS purging.
 - The Realtime polling fallback and server-side match timing.
 
 ## Rejected rewrites
