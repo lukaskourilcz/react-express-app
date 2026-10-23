@@ -323,4 +323,10 @@ coming back. The tokens and the map are in
   the shared `StatePanel` (`components/ui/StatePanel.tsx`): centred in the
   640px task column, one heading, one body line, the one primary first at
   44px. Do not build a gate card by hand.
+- **One panel per subject on the Profile.** Every Profile card is `.ss-panel`
+  with 24px padding and a `<Kicker as="h2">`. The learner's names live in one
+  'Your name' panel with 'Friends see' and 'Leaderboards show' side by side;
+  the two settings stay independent. Account actions are settings rows whose
+  title never repeats the button. The banner does not repeat the footer's
+  appearance and sound controls (UX audit U6, #578).
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
