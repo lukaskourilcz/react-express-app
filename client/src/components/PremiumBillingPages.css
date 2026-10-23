@@ -44,8 +44,12 @@
    the right at its own width. Below 600px the primary stacks full width
    above the ghost. */
 .ss-checkout-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.25rem; }
+/* The ghost's label lines up with the card's text: it pulls back its own
+   20px inline padding while it sits at the row's start. */
+.ss-checkout-actions > .astryx-button.ghost:first-child { margin-inline-start: -20px; }
 @media (max-width: 599px) {
   .ss-checkout-actions { flex-direction: column-reverse; align-items: stretch; }
+  .ss-checkout-actions > .astryx-button.ghost:first-child { margin-inline-start: 0; }
 }
 .ss-checkout-form[data-ready="true"] { min-height: 320px; }
 /* Focus lands on the form's box when it opens, so Tab goes on into Stripe's
