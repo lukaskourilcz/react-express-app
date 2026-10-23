@@ -187,7 +187,7 @@ describe('the plan table', () => {
     expect(rows).toContain('React');
     // Nothing that has not opened yet (design audit P0.1), and no ads row:
     // the footnote says it once.
-    expect(rows).not.toContain('The FDE learning path');
+    expect(rows).not.toContain('Forward Deployed Engineer path');
     expect(rows).not.toContain('Coins for merchandise');
     expect(rows).not.toContain('Ads');
     expect(rows.join(' ')).not.toMatch(/AI|[Ll]anguage|[Tt]ranslat/);
@@ -195,6 +195,38 @@ describe('the plan table', () => {
     expect(within(table).getByText('Levels 1 to 12')).toBeInTheDocument();
     expect(within(table).getByText('All 17')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/learn');
+    // Projects have a row of their own (UX audit money-03): the coding row no
+    // longer folds the project stages into its free cell, so each is said once.
+    const projects = within(table).getByRole('rowheader', { name: 'Projects and short paths' }).closest('tr')!;
+    expect(within(projects).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Opening stages', 'Every stage']);
+    const coding = within(table).getByRole('rowheader', { name: 'Coding challenges' }).closest('tr')!;
+    expect(within(coding).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['A starter set', 'Every challenge, plus each new one']);
+    // The landing keeps its kicker and its VAT subtitle.
+    expect(screen.getByText('Plans')).toBeInTheDocument();
+    expect(screen.getByText('Prices exclude VAT. Applicable VAT is added at checkout.')).toBeInTheDocument();
+  });
+
+  // The phone layout draws rows as blocks (display: grid), which drops a
+  // table's implicit roles in some browsers: the roles are explicit.
+  it('keeps explicit table roles for the phone layout', () => {
+    server.use(settingsHandler);
+    renderAt('/', <ComparisonTable />);
+    const table = screen.getByRole('table');
+    expect(table).toHaveAttribute('role', 'table');
+    for (const row of within(table).getAllByRole('row')) expect(row).toHaveAttribute('role', 'row');
+    for (const header of within(table).getAllByRole('rowheader')) expect(header).toHaveAttribute('role', 'rowheader');
+    for (const cell of within(table).getAllByRole('cell')) expect(cell).toHaveAttribute('role', 'cell');
+    expect(within(table).getAllByRole('columnheader')[0]).toHaveClass('ss-compare__featurecol');
+  });
+
+  // /premium has its own section kicker and states VAT by its prices.
+  it('leaves out its kicker and subtitle when embedded', () => {
+    server.use(settingsHandler);
+    renderAt('/', <ComparisonTable embedded showCta={false} />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
+    expect(screen.queryByText('Plans')).toBeNull();
+    expect(screen.queryByText('Prices exclude VAT. Applicable VAT is added at checkout.')).toBeNull();
   });
 
   // Merchandise is paused until next quarter (owner decision 10): the coin row
@@ -207,7 +239,8 @@ describe('the plan table', () => {
     })));
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
-    expect(await within(table).findByRole('rowheader', { name: 'The FDE learning path' })).toBeInTheDocument();
+    const path = await within(table).findByRole('rowheader', { name: 'Forward Deployed Engineer path' });
+    expect(within(path.closest('tr')!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Diagnostic and first module', 'Every module as it ships']);
     expect(within(table).queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
   });
 

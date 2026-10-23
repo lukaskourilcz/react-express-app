@@ -105,19 +105,41 @@
   color: var(--color-text-secondary);
 }
 
-/* A phone shows all three columns: the Premium column is the one a reader
-   came for, so it must not hide behind a sideways scroll. The cells wrap
-   instead, and the scroll container stays as a fallback for zoomed text. */
+/* A phone keeps both plans in view: the Premium column is the one a reader
+   came for, so it must not hide behind a sideways scroll. Three columns
+   squeezed the plan cells to 77px and up to seven lines (UX audit
+   shell-public-07, money-16), so under 600px each row is a small block: the
+   feature on its own line, then Free and Premium side by side at half the
+   width each. The column headers stay once at the top; the feature column's
+   header stays for screen readers only. The table keeps its roles (set in
+   ComparisonTable.tsx), so it is still read as a table. */
 @media (max-width: 599px) {
-  .ss-compare { min-width: 0; table-layout: fixed; }
+  .ss-compare { position: relative; min-width: 0; }
+  .ss-compare,
+  .ss-compare thead,
+  .ss-compare tbody { display: block; }
+  .ss-compare tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid var(--ss-card-line);
+  }
+  .ss-compare thead tr { border-bottom: 2px solid var(--ss-card-edge); }
+  .ss-compare tbody tr:last-child { border-bottom: none; }
   .ss-compare th,
-  .ss-compare td { padding: 10px 8px; overflow-wrap: break-word; hyphens: auto; }
-  .ss-compare th:first-child,
-  .ss-compare td:first-child { padding-left: 12px; }
-  .ss-compare thead th { white-space: normal; font-size: var(--ss-type-compact); }
-  .ss-compare thead th:first-child { width: 36%; }
-  .ss-compare tbody th[scope='row'] { min-width: 0; font-size: var(--ss-type-compact); }
-  .ss-compare-mark { gap: 5px; font-size: var(--ss-type-meta); max-width: none; }
+  .ss-compare td { padding: 10px 12px; border-bottom: none; overflow-wrap: break-word; }
+  .ss-compare thead th { white-space: normal; }
+  .ss-compare thead .ss-compare__featurecol {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .ss-compare tbody th[scope='row'] { grid-column: 1 / -1; min-width: 0; padding-bottom: 0; }
+  .ss-compare tbody td { padding-top: 6px; }
+  .ss-compare-mark { gap: 4px; font-size: var(--ss-type-meta); max-width: none; }
   .ss-compare-mark svg { width: 12px; height: 12px; margin-top: 2px; }
   .ss-compare-caption { font-size: var(--ss-type-label); }
 }
