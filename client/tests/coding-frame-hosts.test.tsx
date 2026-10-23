@@ -3,13 +3,13 @@
 // editor is mounted, and the code activity sits in the workbench's frame with
 // the shared editor floor.
 import { expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 
 vi.mock('../src/coding/Editor', () => ({
-  Editor: ({ ariaLabel, fill, minHeight }: { ariaLabel: string; fill?: boolean; minHeight?: number }) =>
-    <textarea aria-label={ariaLabel} data-fill={String(Boolean(fill))} data-min={minHeight ?? 'token'} />,
+  Editor: ({ ariaLabel, fill, minHeight, value, onChange }: { ariaLabel: string; fill?: boolean; minHeight?: number; value?: string; onChange?: (next: string) => void }) =>
+    <textarea aria-label={ariaLabel} data-fill={String(Boolean(fill))} data-min={minHeight ?? 'token'} value={value ?? ''} onChange={(event) => onChange?.(event.target.value)} />,
 }));
 
 const source = (path: string) => readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8');
@@ -35,6 +35,11 @@ it('puts a path code activity in the workbench frame, on the wide page, with the
   expect(editor).toHaveAttribute('data-fill', 'true');
   expect(editor).toHaveAttribute('data-min', 'token');
   expect(code.querySelector('.cd-editor-actions')).toContainElement(screen.getByRole('button', { name: 'Submit' }));
+  // Submit is the frame's one filled primary, SwimCta md as on /coding, and
+  // nothing else in the activity is filled.
+  const submit = screen.getByRole('button', { name: 'Submit' });
+  expect(submit).toHaveClass('ss-swim-cta', 'ss-swim-cta--md');
+  expect(root.querySelectorAll('.ss-swim-cta, .astryx-button.primary')).toHaveLength(1);
   // Hints and the visible tests sit beside it.
   expect(beside).toContainElement(screen.getByRole('heading', { name: 'Hints' }));
   expect(beside).toContainElement(screen.getByRole('heading', { name: 'Tests you can see' }));
@@ -54,4 +59,33 @@ it('gives every editor call site the shared floor instead of a number of its own
   const css = source('coding/Coding.css');
   expect(css).toContain('--cd-editor-min: 280px;');
   expect(css).toMatch(/@media \(min-width: 1024px\) \{\s*:root \{ --cd-editor-min: 200px; \}/);
+});
+
+it('keeps a path code activity Submit focusable while it cannot submit, and a press then sends nothing', async () => {
+  const { CodeActivity } = await import('../src/components/paths/ActivityViews');
+  const onSubmit = vi.fn();
+  const view = (busy: boolean, starter: string) => (
+    <LanguageProvider>
+      <CodeActivity code={{ language: 'javascript', prompt: 'Sum it.', starter, hints: [], approach: [], tests: [] } as never}
+        draft={null} result={null} onSubmit={onSubmit} onDraft={() => {}} draftStatus="idle" busy={busy} />
+    </LanguageProvider>
+  );
+  const { rerender } = render(view(false, ''));
+  // Empty code: unavailable, not disabled, and a press does nothing.
+  const submit = screen.getByRole('button', { name: 'Submit' });
+  expect(submit).not.toBeDisabled();
+  expect(submit).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(submit);
+  expect(onSubmit).not.toHaveBeenCalled();
+  // The starter only seeds the first render, so type into the editor.
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Your solution' }), { target: { value: 'const sum = () => 1;' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(onSubmit).toHaveBeenCalledWith('const sum = () => 1;');
+  // Busy, the button that was pressed keeps focus and says what is happening.
+  screen.getByRole('button', { name: 'Submit' }).focus();
+  rerender(view(true, 'const sum = () => 0;'));
+  const busy = screen.getByRole('button', { name: 'Submitting…' });
+  expect(busy).toHaveFocus();
+  fireEvent.click(busy);
+  expect(onSubmit).toHaveBeenCalledTimes(1);
 });

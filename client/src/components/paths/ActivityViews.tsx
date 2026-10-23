@@ -28,6 +28,7 @@ import type {
 } from '../../../../shared/learning-path-api';
 import type { EvidenceState } from '../../../../shared/learning-paths';
 import { Button } from '@astryxdesign/core/Button';
+import { SwimCta } from '../landing/LandingKit';
 
 /* ── shared bits ───────────────────────────────────────────────────────── */
 
@@ -394,6 +395,7 @@ export function CodeActivity({
   );
 
   const verdict = result?.code ?? null;
+  const submitUnavailable = busy || submitBlocked || source.trim().length === 0;
 
   // The same frame as the coding workbench (UX audit coding-03): from 1024px
   // the code pane (a capped brief, the editor filling the rest, the actions
@@ -446,7 +448,11 @@ export function CodeActivity({
 
           <div className="cd-editor-actions">
             <div className="cd-actions cd-actions--commands">
-              <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || submitBlocked || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
+              {/* Submit is the coding frame's one filled primary, SwimCta md,
+                  as in the coding workbench (UX audit coding-02, coding-03).
+                  Unavailable, not disabled: the pressed button keeps focus
+                  while the submission is busy, and a press then does nothing. */}
+              <SwimCta dir={1} onClick={() => { if (!submitUnavailable) onSubmit(source); }} unavailable={submitUnavailable} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
               <Button variant="ghost" ref={resetButton} onClick={() => (source === code.starter ? reset() : setConfirmingReset(true))} isDisabled={busy} label={t('paths.code.reset')} />
               <span className="lp-actions__status cd-actions--utility" aria-live="polite">
                 {t(`paths.draft.${draftStatus}` as never)}
