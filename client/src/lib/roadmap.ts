@@ -540,15 +540,6 @@ export async function pushProgressToServer(
   });
 }
 
-/**
- * Kept for the module that calls it at start-up; it installs nothing. It
- * once sent the progress PUT with keepalive on every pagehide and every hide
- * of a signed-in tab, but that PUT writes nothing: the server keeps progress,
- * unlocks and extras itself (a pass is written by the level's completion),
- * so each tab switch only spent a function call, a token check and two reads.
- */
-export function installProgressSyncFlusher(): void {}
-
 // On sign-in: pull the account's progress + per-subject wallets/inventories,
 // merge each with whatever is on this device (progress and unlocks: the
 // account's, as the server holds them; balances: per-subject max — tokens can

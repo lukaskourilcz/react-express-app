@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from './mocks/server';
-import { completeRoadmapAttempt, installProgressSyncFlusher, syncProgressWithServer } from '../src/lib/roadmap';
+import { completeRoadmapAttempt, syncProgressWithServer } from '../src/lib/roadmap';
 import { clearAccountData } from '../src/lib/accountData';
 
 const PROGRESS = 'devquiz:roadmap:v2';
@@ -132,7 +132,6 @@ describe('a signed-in tab that is hidden or closed', () => {
   it('sends no progress PUT', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     try {
-      installProgressSyncFlusher();
       window.dispatchEvent(new Event('pagehide'));
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
       document.dispatchEvent(new Event('visibilitychange'));
