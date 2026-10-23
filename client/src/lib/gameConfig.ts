@@ -65,21 +65,6 @@ const DEFAULT_SHOP_PRICES: Record<string, number> = {
 };
 const DEFAULT_PATH_UNLOCK_PRICE = 200;
 
-// Default dev tips (mirrors lib/settings-store.ts DEFAULT_DEV_TIPS). No screen
-// shows them since design review 2 (R2-P1.18); the setting stays so saved
-// settings still parse.
-const DEFAULT_DEV_TIPS = [
-  'Remember to code.',
-  'Building projects beats talent.',
-  'Read the error message — then read it again.',
-  'Ship small, ship often.',
-  'Name things like the next dev is you.',
-  'Done is better than perfect.',
-  'Commit early, commit often.',
-  'The best debugger is a good night of sleep.',
-  'Write the test you wish you had.',
-  'Consistency compounds.',
-];
 
 export const DEFAULT_CONFIG: GameConfig = {
   quiz: {
@@ -94,7 +79,11 @@ export const DEFAULT_CONFIG: GameConfig = {
   features: { dailyChallenge: true, multiplayer: true, leaderboard: true, flashcards: true },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
-  devTips: [...DEFAULT_DEV_TIPS],
+  // No screen shows dev tips since design review 2 (R2-P1.18); the setting
+  // stays so saved settings still parse, and /dev edits the server's list
+  // (lib/settings-store.ts) through its own read. The ten defaults copied here
+  // rode in the initial chunk unread.
+  devTips: [],
   billing: { enabled: false, cancellable: false, cancelByEmail: false, seller: null, launchOffer: false },
   coins: DEFAULT_COIN_SETTINGS,
   merchPromo: null,
