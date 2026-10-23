@@ -9,6 +9,7 @@
 // caller says so. One entry per attempt, so a second failure does not
 // overwrite the first.
 import { ApiError } from './api';
+import { accountEpoch } from './accountData';
 import { readJSON, removeStored, writeJSON } from './storage';
 import { recordQuizResult, type UserStats } from './supabase';
 
@@ -76,7 +77,9 @@ let replaying: { userId: string; run: Promise<{ recorded: number; refused: numbe
 /** Send every waiting result of this learner again. Recorded ones and ones
  * the server refuses leave the queue; anything else (offline, a server
  * error) stays for the next try. A call while this learner's results are
- * already on their way waits for that replay and counts nothing itself. */
+ * already on their way waits for that replay and counts nothing itself. The
+ * replay stops when the account signs out: the rest are no longer this
+ * browser's to send, and a refusal then is no news for whoever is here. */
 export function replayPendingReceipts(
   userId: string,
   onRecorded?: (data: UserStats | null) => void,
@@ -94,15 +97,19 @@ async function sendPending(
   userId: string,
   onRecorded?: (data: UserStats | null) => void,
 ): Promise<{ recorded: number; refused: number }> {
+  const epoch = accountEpoch();
   let recorded = 0;
   let refused = 0;
   for (const [key, pending] of pendingReceiptsFor(userId)) {
+    if (accountEpoch() !== epoch) break;
     try {
       const saved = await recordQuizResult(pending.receipt, pending.profile);
+      if (accountEpoch() !== epoch) break;
       dropPendingReceipt(key);
       recorded++;
       onRecorded?.(saved.data);
     } catch (error) {
+      if (accountEpoch() !== epoch) break;
       if (isReceiptRefused(error)) {
         dropPendingReceipt(key);
         refused++;

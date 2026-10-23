@@ -676,6 +676,32 @@ describe('saving a result to the account', () => {
     expect(answers).toHaveLength(1);
   });
 
+  it('stops sending waiting results when the account signs out, and says nothing to whoever is next', async () => {
+    signIn();
+    localStorage.setItem(PENDING_KEY, JSON.stringify({
+      one: { userId: LEARNER.id, receipt: 'first', profile: {} },
+      two: { userId: LEARNER.id, receipt: 'second', profile: {} },
+    }));
+    const sent: string[] = [];
+    const answers: (() => void)[] = [];
+    server.use(http.post('*/api/user/stats', async ({ request }) => {
+      sent.push(((await request.json()) as { result_receipt: string }).result_receipt);
+      return new Promise<Response>((resolve) => {
+        answers.push(() => resolve(HttpResponse.json({ error: { code: 'invalid_receipt', message: 'Quiz result receipt expired or invalid' } }, { status: 400 })));
+      });
+    }));
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider><PendingQuizResults /></LanguageProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(answers).toHaveLength(1));
+    clearAccountData();
+    await act(async () => { answers[0](); await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(sent).toHaveLength(1);
+    expect(screen.queryByText(/earlier quiz result could not be saved/)).not.toBeInTheDocument();
+  });
+
   it('sends waiting results once signed in, and drops the ones too old to record', async () => {
     signIn();
     localStorage.setItem(PENDING_KEY, JSON.stringify({
