@@ -1,6 +1,7 @@
-import { Suspense, useEffect, useId, useState, type ReactNode } from 'react';
+import { createContext, Suspense, useContext, useEffect, useId, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Grid } from '@astryxdesign/core/Grid';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -44,6 +45,7 @@ import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDi
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
 import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
+import { leaderboardVisibilityQuery } from '../lib/leaderboardVisibility';
 import SharknameCard from './SharknameCard';
 import { useEntitlement } from '../lib/entitlement';
 import { clearAccountData } from '../lib/accountData';
@@ -93,11 +95,36 @@ function IdentitySettings() {
   );
 }
 
+// Reads the cards need, started with the stats read while the page waits
+// for it, so no card is a round trip behind the stats. The first card to ask
+// takes its read; a card that mounts again (back from the Friends tab) reads
+// afresh.
+interface EarlyReads {
+  protection?: Promise<StreakProtection>;
+  advice?: { subject: string; read: Promise<Advice> };
+}
+const EarlyReadsContext = createContext<MutableRefObject<EarlyReads> | null>(null);
+
+function takeProtectionRead(early: MutableRefObject<EarlyReads> | null): Promise<StreakProtection> {
+  const read = early?.current.protection;
+  if (early) early.current.protection = undefined;
+  return read ?? getStreakProtection();
+}
+
+function takeAdviceRead(early: MutableRefObject<EarlyReads> | null, subject: Parameters<typeof getAdvice>[0]): Promise<Advice> {
+  const held = early?.current.advice;
+  if (early) early.current.advice = undefined;
+  return held && held.subject === subject ? held.read : getAdvice(subject);
+}
+
 function Profile() {
   const t = useT();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const profile = getUserProfile(user);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const subjectId = useActiveSubject().id;
+  const early = useRef<EarlyReads>({});
 
   // Redirect signed-out visitors home once auth has resolved.
   useEffect(() => {
@@ -113,6 +140,16 @@ function Profile() {
   const stats: UserStats | null = statsQuery.data ?? null;
   const loading = authLoading || (enabled && statsQuery.isPending);
   const error = statsQuery.error ? friendlyError(statsQuery.error) : null;
+
+  // Only while the page waits: with the stats already cached the cards draw
+  // at once and read for themselves.
+  const waiting = enabled && statsQuery.isPending;
+  const userId = user?.id;
+  useEffect(() => {
+    if (!waiting || !userId) return;
+    early.current = { protection: getStreakProtection(), advice: { subject: subjectId, read: getAdvice(subjectId) } };
+    void queryClient.prefetchQuery(leaderboardVisibilityQuery(userId));
+  }, [waiting, userId, subjectId, queryClient]);
 
   if (authLoading || loading) {
     return <LoadingScreen label={t('profile.loading')} />;
@@ -148,6 +185,7 @@ function Profile() {
       ? Math.round((stats.total_correct / stats.total_questions) * 100)
       : 0;
   return (
+    <EarlyReadsContext.Provider value={early}>
     <ProfileBody
       user={profile}
       stats={stats}
@@ -158,6 +196,7 @@ function Profile() {
       statsWarning={error}
       onRetryStats={() => statsQuery.refetch()}
     />
+    </EarlyReadsContext.Provider>
   );
 }
 
@@ -369,12 +408,13 @@ export function StreakCard({
   // The shield and the count read one protection state, so a streak that a
   // shield or a protection still covers shows its days rather than 0.
   const [protection, setProtection] = useState<StreakProtection | null>(null);
+  const early = useContext(EarlyReadsContext);
   useEffect(() => {
     if (unavailable) return;
     let active = true;
-    getStreakProtection().then((next) => { if (active) setProtection(next); });
+    takeProtectionRead(early).then((next) => { if (active) setProtection(next); });
     return () => { active = false; };
-  }, [unavailable]);
+  }, [unavailable, early]);
   // A failed read leaves the shields and protections unknown. A streak whose
   // last day was today or yesterday needs neither; any other is shown as
   // unknown rather than as the 0 the no-protection rule would give.
@@ -651,13 +691,14 @@ function AdvisorCard() {
   const t = useT();
   const subject = useActiveSubject();
   const [advice, setAdvice] = useState<Advice | null>(null);
+  const early = useContext(EarlyReadsContext);
 
   useEffect(() => {
     let active = true;
     setAdvice(null);
-    getAdvice(subject.id).then((a) => { if (active) setAdvice(a); });
+    takeAdviceRead(early, subject.id).then((a) => { if (active) setAdvice(a); });
     return () => { active = false; };
-  }, [subject.id]);
+  }, [subject.id, early]);
 
   const hasData = !!advice && advice.weakAreas.length > 0;
 
