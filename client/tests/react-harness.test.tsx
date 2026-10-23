@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useReactHarness } from '../src/coding/useReactHarness';
+import { LOG_FLUSH_MS, useReactHarness } from '../src/coding/useReactHarness';
 
 afterEach(() => vi.useRealTimers());
 
@@ -75,4 +75,35 @@ it('keeps a build error when the frame closes the run with an empty done', async
   expect(h.result.current.run).toMatchObject({status:'compile-error', compileError:"Unexpected token, expected ';'"});
   h.unmount();
   h.frame.remove();
+});
+
+// Every console line from the frame was its own state update, so a preview
+// that logs in a loop or on every render redrew the whole workbench once per
+// line. Lines are now drawn together, and a settled run still carries them.
+it('draws console lines together and keeps them in the settled run', async () => {
+  vi.useFakeTimers();
+  let renders = 0;
+  const hook = renderHook(() => { renders += 1; return useReactHarness(); });
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  act(() => hook.result.current.iframeRef(frame));
+  const message = (data: unknown) => act(() => {
+    window.dispatchEvent(new MessageEvent('message', {source: frame.contentWindow, data}));
+  });
+  message({type:'ready'});
+  let run!: ReturnType<typeof hook.result.current.start>;
+  await act(async () => {run = hook.result.current.start({}, {tests:false, preview:true});});
+  const token = hook.result.current.run!.token;
+  const before = renders;
+  for (let line = 0; line < 50; line += 1) message({type:'console', token, level:'log', text:`line ${line}`});
+  expect(renders - before).toBeLessThanOrEqual(1);
+  await act(async () => {await vi.advanceTimersByTimeAsync(LOG_FLUSH_MS);});
+  expect(hook.result.current.run?.logs).toHaveLength(50);
+  expect(renders - before).toBeLessThanOrEqual(2);
+  message({type:'console', token, level:'log', text:'last'});
+  message({type:'done', token, passed:0, failed:0, total:0, ran:false});
+  expect((await run).logs.at(-1)).toEqual({level:'log', text:'last'});
+  expect(hook.result.current.run?.logs).toHaveLength(51);
+  hook.unmount();
+  frame.remove();
 });

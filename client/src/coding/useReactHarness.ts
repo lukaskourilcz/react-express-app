@@ -8,6 +8,12 @@ import type { MiniJestCase } from '../../../shared/coding-mini-jest';
 export const HARNESS_URL = '/sandbox/index.html';
 const RUN_TIMEOUT_MS = 20_000;
 const READY_TIMEOUT_MS = 20_000;
+/** Console lines are drawn at most this often. Each line arrives as its own
+ * message, and a preview that logs in a loop or on every render would
+ * otherwise redraw the whole workbench once per line. */
+export const LOG_FLUSH_MS = 100;
+/** The Console keeps the latest lines of a run. */
+const MAX_HARNESS_LOGS = 200;
 
 export interface HarnessRun {
   token: string;
@@ -46,9 +52,19 @@ export function useReactHarness(): HarnessHandle {
   const readyWaiters = useRef<((ready: boolean) => void)[]>([]);
   const readyRef = useRef(false);
   const generation = useRef(0);
+  const logFlush = useRef<number | undefined>(undefined);
+
+  // Draws the run as it stands, unless a terminal message drew it first.
+  const flushLogs = useCallback(() => {
+    if (logFlush.current === undefined) return;
+    window.clearTimeout(logFlush.current);
+    logFlush.current = undefined;
+    if (current.current) setRun(current.current);
+  }, []);
 
   // Every caller must settle, including callers waiting for the frame to boot.
   const cancel = useCallback(() => {
+    flushLogs();
     generation.current++;
     readyRef.current = false;
     readyWaiters.current.splice(0).forEach(resolve => resolve(false));
@@ -58,9 +74,11 @@ export function useReactHarness(): HarnessHandle {
       pending.current = null;
     }
     current.current = null;
-  }, []);
+  }, [flushLogs]);
 
   const settle = useCallback((next: HarnessRun) => {
+    window.clearTimeout(logFlush.current);
+    logFlush.current = undefined;
     current.current = next;
     setRun(next);
     if (pending.current && pending.current.token === next.token && (next.status === 'done' || next.status === 'compile-error' || next.status === 'timeout')) {
@@ -96,7 +114,10 @@ export function useReactHarness(): HarnessHandle {
           });
           return;
         case 'console':
-          settle({ ...active, logs: [...active.logs, { level: String(data.level), text: String(data.text) }].slice(-200) });
+          // Kept at once, so a result that settles next carries the line;
+          // drawn with the lines that follow it.
+          current.current = { ...active, logs: [...active.logs, { level: String(data.level), text: String(data.text) }].slice(-MAX_HARNESS_LOGS) };
+          if (logFlush.current === undefined) logFlush.current = window.setTimeout(flushLogs, LOG_FLUSH_MS);
           return;
         case 'preview-error':
           settle({ ...active, previewError: String(data.message ?? 'Render error') });
@@ -112,7 +133,7 @@ export function useReactHarness(): HarnessHandle {
     };
     window.addEventListener('message', onMessage);
     return () => { window.removeEventListener('message', onMessage); cancel(); };
-  }, [cancel, settle]);
+  }, [cancel, settle, flushLogs]);
 
   const reload = useCallback(() => {
     cancel();
