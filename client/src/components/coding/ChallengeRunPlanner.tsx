@@ -199,7 +199,10 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
         </p>
       )}
       {signedIn && open && <RunCard session={open} onDone={() => void session.refetch()} />}
-      {signedIn && !open && !session.isError && (
+      {/* Until the open run is known there is no Start: a run started now
+          would replace one the learner already has, unseen. */}
+      {signedIn && !open && !session.isError && session.isPending && <p className="cd-note" role="status">{t('common.loading')}</p>}
+      {signedIn && !open && !session.isError && !session.isPending && (
         <form className="cd-run__form" onSubmit={submit} aria-busy={start.isPending}>
           <div className="cd-run__field">
             <span className="cd-run__label" id="cd-run-track">{t('coding.run.track')}</span>
