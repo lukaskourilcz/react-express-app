@@ -439,20 +439,20 @@ export async function setQuestionDeleted(id: string, deleted: boolean): Promise<
     const { error } = await withTimeout(supabase.from(TABLE).delete().eq('question_id', id), 5000);
     if (error) throw new Error(error.message);
   } else {
-    // Update an existing override in place; if none exists yet, create a minimal
-    // soft-delete marker for the base question.
-    const { data: updated, error: updErr } = await withTimeout(
-      supabase.from(TABLE).update({ deleted, updated_at: new Date().toISOString() }).eq('question_id', id).select('question_id'),
+    // One upsert on the primary key: flip the flag on an existing override, or
+    // create a minimal soft-delete marker (is_custom defaults to false). An
+    // update followed by an insert lost the race when two deletes of the same
+    // untouched question ran at once: the second insert hit 23505 and the
+    // console answered 500. Only the flag is written, so an edit's content
+    // and a custom row's is_custom stay as they are.
+    const { error } = await withTimeout(
+      supabase.from(TABLE).upsert(
+        { question_id: id, deleted, updated_at: new Date().toISOString() },
+        { onConflict: 'question_id' },
+      ),
       5000,
     );
-    if (updErr) throw new Error(updErr.message);
-    if (!updated || updated.length === 0) {
-      const { error: insErr } = await withTimeout(
-        supabase.from(TABLE).insert({ question_id: id, is_custom: false, deleted }),
-        5000,
-      );
-      if (insErr) throw new Error(insErr.message);
-    }
+    if (error) throw new Error(error.message);
   }
   invalidateQuestionsCache();
 }

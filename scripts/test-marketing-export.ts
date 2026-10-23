@@ -8,7 +8,21 @@ let unavailable = false;
 let truncated = false;
 let mutateDuringRead = false;
 const reads: string[] = [];
+/** Answers a write to question_edits (the /dev console's delete and restore). */
+let onWrite: ((method: string, url: URL, body: string) => { status: number; body: unknown }) | null = null;
+const writes: Array<{ method: string; url: URL; body: string; prefer: string }> = [];
 const server = createServer((req, res) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && onWrite) {
+    let text = '';
+    req.on('data', (chunk) => { text += chunk; });
+    req.on('end', () => {
+      const url = new URL(req.url!, 'http://localhost');
+      writes.push({ method: req.method!, url, body: text, prefer: String(req.headers.prefer ?? '') });
+      const answer = onWrite!(req.method!, url, text);
+      res.writeHead(answer.status, { 'content-type': 'application/json' }).end(JSON.stringify(answer.body));
+    });
+    return;
+  }
   reads.push(req.url!);
   if (!req.url?.startsWith('/rest/v1/question_edits?')) { res.writeHead(500).end('unexpected table'); return; }
   if (unavailable) { res.writeHead(503, { 'content-type': 'application/json' }).end(JSON.stringify({ message: 'stand-in unavailable' })); return; }
@@ -73,5 +87,29 @@ try {
   assert.equal(daily.body.packets[0].canonicalUrl, `https://devshark.app/daily/${utcToday()}`);
   assert.equal((await call({ daily: '2099-01-01' })).status, 400);
   assert.ok(reads.every((url) => url.startsWith('/rest/v1/question_edits?')));
-  console.log('Marketing HTTP handler passed with local PostgREST: auth, fresh deletes, revision invalidation, cursor conflict, removal, incomplete/error DB, daily alignment.');
+
+  // Two owners hide the same untouched base question at once. The update finds
+  // no override for either, and the second plain insert hit the primary key
+  // (23505), so the /dev console answered 500. One upsert on question_id
+  // takes the race, and it writes only the flag, never an edit's content.
+  const { setQuestionDeleted } = await import('../lib/questions-store');
+  onWrite = (method, url) => {
+    if (method === 'PATCH') return { status: 200, body: [] };
+    if (method === 'POST' && url.searchParams.get('on_conflict') === 'question_id') return { status: 201, body: null };
+    return { status: 409, body: { code: '23505', message: 'duplicate key value violates unique constraint "question_edits_pkey"' } };
+  };
+  await setQuestionDeleted(base.id, true);
+  const upsert = writes.find((write) => write.method === 'POST');
+  assert.ok(upsert, 'the soft delete writes a row');
+  assert.equal(upsert.url.searchParams.get('on_conflict'), 'question_id', 'and takes a concurrent delete on the primary key');
+  assert.match(upsert.prefer, /resolution=merge-duplicates/);
+  const written = JSON.parse(upsert.body);
+  assert.deepEqual(Object.keys(written).sort(), ['deleted', 'question_id', 'updated_at'], 'only the flag is written, so an edit or a custom row keeps its content');
+  assert.equal(written.question_id, base.id);
+  assert.equal(written.deleted, true);
+  writes.length = 0;
+  await setQuestionDeleted(base.id, false);
+  assert.equal(JSON.parse(writes.find((write) => write.method === 'POST')!.body).deleted, false, 'a restore takes the same path');
+  onWrite = null;
+  console.log('Marketing HTTP handler passed with local PostgREST: auth, fresh deletes, revision invalidation, cursor conflict, removal, incomplete/error DB, daily alignment, concurrent soft deletes.');
 } finally { await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve())); }
