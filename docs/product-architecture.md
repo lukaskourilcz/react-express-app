@@ -723,7 +723,11 @@ table cells into anchors only for HTTPS and canonical internal Learn routes;
 anything else stays visible text, and inline code stays text. Learn opens the
 reading before creating an attempt; "Start the questions" opens the ordinary
 level. Reading is optional, records nothing and stays apart from grading and
-rewards. A failed lesson read still permits the questions.
+rewards. A failed lesson read still permits the questions. The content
+contracts refuse a trace with no frames, and `LessonBody` shows one that
+slips through as its words instead of failing the lesson. The level runner
+(`components/learn/LessonRunner.tsx`) is a chunk of its own: Learn fetches it
+when a level opens, not with the map.
 
 ## Learn sections
 
@@ -904,6 +908,10 @@ The board groups the recorded activity states by competency. It never turns
 reading, self-review and machine verification into a competency score, and it
 keeps diagnostic percentages in their own section. A failed progress read
 shows an error instead of a fresh board. Continue follows `nextActivityId`.
+A paused enrolment keeps its outline and evidence but links no activity,
+since the server refuses one with 409 `enrollment_paused`; the overview and
+the module page say the path is paused and lead to Resume. Start appears
+only once the account's enrolments have loaded.
 The completion card is available only when the server returns
 `guidedComplete`: it carries the exact "FDE guided path completed" label, the
 manifest's competency labels and recorded counts, and no identity or
@@ -950,8 +958,10 @@ write; loading the latest brief keeps the editor source. An automatic retry
 sends its previous seal when it starts a replacement attempt; a changed,
 legacy or expired code attempt needs a latest-brief review before another
 Submit. An accepted network retry returns the stored response read-only. A
-runtime-only grading change must bump the attempt tag in
-`lib/learning-paths/session.ts`.
+check whose attempt expired says so ("This attempt expired. Try again to
+start a new one.") and deals a new attempt only when the learner asks,
+because a silent deal would clear their answers. A runtime-only grading
+change must bump the attempt tag in `lib/learning-paths/session.ts`.
 
 An objective check grades against the key sealed in its attempt. A project
 check (`purpose: 'project'`; none is published) deals the same questions again
@@ -984,7 +994,22 @@ A code exercise or a written piece autosaves one draft per activity, up to
 `PATH_LIMITS.draftsPerEnrollment` (60) per enrolment, which `npm run
 test:paths` keeps at or above every path's code exercises plus artifacts. A
 pass keeps its draft, the only copy of the learner's passed code the server
-holds. `purge_expired_learning_data` removes drafts idle for 90 days.
+holds. `purge_expired_learning_data` removes drafts idle for 90 days. A draft
+or artifact holding U+0000 answers 400, and a first save that races another
+answers 409 `draft_conflict`.
+
+The browser keeps an unsaved draft on the device too
+(`client/src/lib/learningPathWorkspace.ts`), with the server revision it was
+typed on; once the server has moved past that revision, the server's copy
+wins. Starting an activity returns its draft in the same request, and
+`draftUnavailable: true` when the server could not read it: the device copy
+then stays for the next save to settle. Switching activity, leaving the view
+or a change of account writes what is waiting first (`beforeAccountChange`).
+An involuntary sign-out keeps these copies for that account alone, as it does
+coding drafts ("Drafts" under "Coding section"); another account signing in
+deletes them unread. In a code activity, Reset asks before it replaces
+changed code with the starter, and the code editor loads only when a code
+activity renders.
 
 `accept_learning_path_result` (migration 054) keeps a verified pass and a
 submitted written piece against any weaker later attempt, which is still
