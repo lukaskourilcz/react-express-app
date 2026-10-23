@@ -784,32 +784,41 @@ export function AccountDeletionCard() {
 
   return (
     <>
-      <div className="ss-panel" style={{ padding: 24, width: '100%', background: 'var(--color-background-muted)' }}>
-          <VStack gap={1.5}>
-            <SectionLabel>{t('profile.account')}</SectionLabel>
-            <Text weight="semibold">{t('profile.signOutEverywhere')}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.signOutEverywhereDescription')}</Text>
-            <HStack justify="end">
-              <Button
-                variant="secondary"
-                label={t('profile.signOutEverywhere')}
-                isDisabled={!isAuthenticated || signingOut}
-                onClick={signOutEverywhere}
-              />
-            </HStack>
-            <Text weight="semibold">{t('profile.deleteTitle')}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
-            {paying && (
-              <Text type="supporting" size="xsm">
-                {t('profile.deletePremium')}{' '}
-                <Link to="/premium/cancel?action=withdraw">{t('legal.link.cancel')}</Link>
-              </Text>
-            )}
-            <HStack justify="end">
-              <Button variant="destructive" label={t('profile.deleteAction')} onClick={requestDeletion} />
-            </HStack>
-          </VStack>
-        </div>
+      {/* Settings rows (UX audit social-account-07): one row per action, its
+          title and a short description on the left and its 44px button on the
+          right; stacked below 600px. The row title names what the action
+          reaches, so it does not repeat the button. Plain panel stock, like
+          every other Profile card. */}
+      <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
+        <VStack gap={2}>
+          <SectionLabel>{t('profile.account')}</SectionLabel>
+          <div className="de-setting-row">
+            <div className="de-setting-row__text">
+              <h3 className="de-setting-row__title">{t('profile.allDevices')}</h3>
+              <Text type="supporting" size="xsm" color="secondary">{t('profile.signOutEverywhereDescription')}</Text>
+            </div>
+            <Button
+              variant="secondary"
+              label={t('profile.signOutEverywhere')}
+              isDisabled={!isAuthenticated || signingOut}
+              onClick={signOutEverywhere}
+            />
+          </div>
+          <div className="de-setting-row">
+            <div className="de-setting-row__text">
+              <h3 className="de-setting-row__title">{t('profile.deleteTitle')}</h3>
+              <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
+              {paying && (
+                <Text type="supporting" size="xsm">
+                  {t('profile.deletePremium')}{' '}
+                  <Link to="/premium/cancel?action=withdraw">{t('legal.link.cancel')}</Link>
+                </Text>
+              )}
+            </div>
+            <Button variant="destructive" label={t('profile.deleteAction')} onClick={requestDeletion} />
+          </div>
+        </VStack>
+      </div>
       <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <AppToast open={!!message} message={message} onClose={() => setMessage(null)} severity="error" autoHideDuration={null} />
     </>

@@ -17,6 +17,15 @@
 /* The Profile's two card columns (social-account-03): each fills its grid
    cell, so a card is as wide as its column. */
 .de-profile-column{min-width:0;width:100%}
+/* Settings rows on the Profile's Account card (social-account-07): the title
+   and description on the left, the action on the right; a hairline between
+   rows; stacked below 600px. */
+.de-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px 16px}
+.de-setting-row+.de-setting-row{padding-top:16px;border-top:1px solid var(--ss-card-line)}
+.de-setting-row__text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
+.de-setting-row__title{margin:0;font:650 1rem/1.4 var(--font-family-body);letter-spacing:0}
+.de-setting-row>:last-child{flex:none}
+@media (max-width:600px){.de-setting-row{flex-direction:column;align-items:flex-start}}
 @media(max-width:820px){.de-challenge-grid{grid-template-columns:1fr}.de-page{padding-top:0}.de-hero-panel{padding:20px}.de-card-grid{grid-template-columns:1fr}.de-mode-card{padding:14px}.de-stat-row{gap:16px}}
 @media(prefers-reduced-motion:reduce){.de-flashcard__answer{transform:none}.de-mode-card,.de-flashcard__answer{transition:none}}
 /* Play's time limit: the Astryx group is one inline row, which at 320px ran
