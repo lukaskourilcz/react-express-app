@@ -30,8 +30,6 @@ import { renderQuestion } from './CodeBlock';
 import { useT, useLanguage } from '../i18n/LanguageContext';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
-import { useColorMode } from '../theme/ColorModeContext';
-import { useSettings } from '../lib/settings';
 // The friends tab keeps its code out of the profile until it opens, with a
 // boundary of its own: when that code does not load, the tab says so with a
 // Retry and the rest of the profile stays.
@@ -40,11 +38,10 @@ import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import { lazyShellPart } from '../lib/routeRecovery';
-import { ShieldIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
+import { ShieldIcon, TrophyIcon, TargetIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
-import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { leaderboardVisibilityQuery } from '../lib/leaderboardVisibility';
 import SharknameCard from './SharknameCard';
 import { useEntitlement } from '../lib/entitlement';
@@ -56,43 +53,6 @@ import './DeepEndScreens.css';
 // the waterline tick beneath (the "dive marker" that starts every section).
 function SectionLabel({ children }: { children: ReactNode }) {
   return <Kicker as="h2">{children}</Kicker>;
-}
-
-// Appearance and sound ride along in the identity banner. They are the only
-// account-wide switches on this screen and the banner had the room, so they
-// need no card, headings or help text of their own: each button states the
-// action it performs as its accessible name and its tooltip, and shows the
-// state it switches to (the moon while in light mode).
-function IdentitySettings() {
-  const { t } = useLanguage();
-  const { mode, toggle } = useColorMode();
-  const [settings, updateSettings] = useSettings();
-
-  const modeLabel = t(mode === 'light' ? 'common.darkMode' : 'common.lightMode');
-  const soundLabel = t(settings.soundEffects ? 'common.soundOff' : 'common.soundOn');
-
-  return (
-    <div className="de-identity-settings" role="group" aria-label={t('profile.preferences')}>
-      <button
-        type="button"
-        className="de-identity-settings__button"
-        onClick={toggle}
-        aria-label={modeLabel}
-        title={modeLabel}
-      >
-        {mode === 'light' ? <MoonIcon size={18} /> : <SunIcon size={18} />}
-      </button>
-      <button
-        type="button"
-        className="de-identity-settings__button"
-        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-        aria-label={soundLabel}
-        title={soundLabel}
-      >
-        {settings.soundEffects ? <SoundOffIcon size={18} /> : <SoundOnIcon size={18} />}
-      </button>
-    </div>
-  );
 }
 
 // Reads the cards need, started with the stats read while the page waits
@@ -235,8 +195,10 @@ function ProfileBody({
   return (
     <div className="de-page">
       <VStack gap={2}>
-        {/* Identity header — subject-accented top edge, avatar and name on the
-            left, the three account switches on the right. */}
+        {/* Identity header — subject-accented top edge, avatar and name, then
+            the plan in one row. Appearance and sound live in the footer on
+            every route, so the banner does not repeat them next to the name
+            (UX audit social-account-08). */}
         <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
           <div className="de-profile-identity" style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 'var(--radius-container)', width: '100%', position: 'relative', overflow: 'hidden' }}>
             <Card variant="default" padding={4} width="100%">
@@ -267,7 +229,6 @@ function ProfileBody({
                     </div>
                   </div>
                 </HStack>
-                <IdentitySettings />
               </div>
               <PlanLine />
             </Card>
@@ -345,8 +306,14 @@ function ProfileBody({
         <StreakCard stats={stats} />
 
         {/* On desktop the cards split into two columns so the profile lands close
-            to one viewport instead of one long scroll. On mobile they stack. */}
+            to one viewport instead of one long scroll; on mobile they stack.
+            The learning column (career, track, GitHub garden) is the left
+            one; the right one opens with the study advisor, then saved
+            questions, your name and account. With the advisor on the left
+            the right column ended 411px short at 1280; here both end within
+            about 20px of each other (UX audit social-account-03). */}
         <Grid columns={{ minWidth: 360, max: 2 }} gap={2} align="start" width="100%">
+          <div className="de-profile-column" data-column="learning">
           <VStack gap={2}>
             <CareerCard
               totals={{ quizzes: totalQuizzes, questions: totalQuestions, correct: totalCorrect, average: averageScore }}
@@ -355,9 +322,15 @@ function ProfileBody({
             {/* One card owns the track: the paths card, which carries the
                 joined Learn sections, the specialization and the picker. */}
             <LearningPathsCard />
-          </VStack>
 
+            <GithubGardenCard />
+          </VStack>
+          </div>
+
+          <div className="de-profile-column" data-column="account">
           <VStack gap={2}>
+            <AdvisorCard />
+
             {bookmarkedQuestions.length > 0 && (
               <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
                 <VStack gap={2}>
@@ -391,20 +364,14 @@ function ProfileBody({
               </div>
             )}
 
-            {/* The advisor sits in the right column, above the GitHub garden,
-                so the two columns end at about the same height. */}
-            <AdvisorCard />
-
-            <GithubGardenCard />
-
-            {/* Friends' identity and the independent leaderboard preferences
-                stay together in the Profile. */}
+            {/* One 'Your name' panel: the sharkname, then what friends see and
+                what leaderboards show, side by side and independent
+                (social-account-04). */}
             <SharknameCard focus={focusSharkname} onFocused={() => setFocusSharkname(false)} />
-
-            <LeaderboardVisibilityCard />
 
             <AccountDeletionCard />
           </VStack>
+          </div>
         </Grid>
         </VStack></div>)}
       </VStack>
@@ -447,7 +414,10 @@ export function StreakCard({
         <VStack gap={2}>
           <SectionLabel>{t('profile.streaks')}</SectionLabel>
 
-          <Grid columns={{ minWidth: 240, max: 2 }} gap={2}>
+          {/* Side by side down to a 320px phone: each tile holds a figure
+              and a two-word label, so at 390 the pair takes one 96px row
+              instead of two (UX audit social-account-18). */}
+          <Grid columns={{ minWidth: 120, max: 2 }} gap={2}>
             <div role="group" aria-labelledby={currentLabelId} style={{ display: 'flex', width: '100%' }}>
               <Card variant="muted" padding={3} width="100%">
                 <VStack gap={0.5} align="center">
@@ -465,10 +435,6 @@ export function StreakCard({
                   <Text id={currentLabelId} type="supporting" color="primary" weight="semibold" justify="center">
                     {t('profile.currentStreak')}
                   </Text>
-                  {/* Protection lives inside the streak it protects. It used to
-                      be a card of its own below, which read as a separate
-                      feature rather than as part of this number. */}
-                  {!unavailable && <StreakShield state={protection} streak={currentStreak} missed={missed} onChange={setProtection} />}
                 </VStack>
               </Card>
             </div>
@@ -493,6 +459,12 @@ export function StreakCard({
               </Card>
             </div>
           </Grid>
+
+          {/* Protection sits under the pair, full width, so both tiles are
+              sized to their figures (UX audit social-account-17). It used to
+              be a card of its own, then a button inside the current tile,
+              which stretched the longest-streak tile beside it. */}
+          {!unavailable && <StreakShield state={protection} streak={currentStreak} missed={missed} onChange={setProtection} />}
 
           {unavailable ? (
             <Text type="supporting" size="xsm" color="secondary" justify="center">
@@ -557,29 +529,34 @@ function StreakShield({
 
   if (!state || !state.shieldSupported) return null;
 
+  // One labelled group under the two tiles, whichever state it shows.
+  const row = (children: ReactNode) => (
+    <div className="de-streak-protect" role="group" aria-label={t('shop.protectionName')}>{children}</div>
+  );
+
   const left = shieldRemaining(state.shieldUntil, now);
   if (left) {
-    return (
+    return row(
       <span className="de-shield de-shield--on">
         <ShieldIcon size={16} />
         {t('profile.shieldActive', { h: left.hours, m: left.minutes })}
-      </span>
+      </span>,
     );
   }
 
   if (state.remaining <= 0) {
-    return (
+    return row(
       <span className="de-shield de-shield--spent">
         <ShieldIcon size={16} />
         {t('profile.shieldNone')}
-      </span>
+      </span>,
     );
   }
 
   if (streak <= 0) return null;
 
   if (state.remaining - 1 < missed) {
-    return <span className="de-shield__meta">{t('profile.shieldLearnToday')}</span>;
+    return row(<span className="de-shield__meta">{t('profile.shieldLearnToday')}</span>);
   }
 
   const spend = async () => {
@@ -594,15 +571,15 @@ function StreakShield({
     }
   };
 
-  return (
-    <VStack gap={0.5} align="center">
+  return row(
+    <>
       <button type="button" className="de-shield de-shield--action" onClick={spend} disabled={pending}>
         <ShieldIcon size={16} />
         {pending ? t('profile.shieldSpending') : t('profile.shieldAction')}
       </button>
       <span className="de-shield__meta">{t('profile.shieldLeft', { n: state.remaining })}</span>
       {error && <span className="de-shield__meta de-shield__meta--error" role="alert">{error}</span>}
-    </VStack>
+    </>,
   );
 }
 
@@ -650,11 +627,15 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
         <SectionLabel>{t('profile.career')}</SectionLabel>
         {syncWarning && <Banner status="warning" title={t('profile.syncUnavailable')} />}
 
-        <HStack gap={2} align="center" wrap="wrap">
+        {/* One row at every width (UX audit social-account-18): the rank
+            title takes what is left and wraps to two lines, the XP figure keeps
+            its width beside it. Below 480px the decorative rank tile steps out
+            so the title keeps its room. */}
+        <div className="de-career-head">
           {/* The learner's earned rank icon (data, not chrome) in a quiet tile. */}
           <div
             aria-hidden
-            className="ss-tile"
+            className="ss-tile de-career-head__tile"
             style={{
               width: 52,
               height: 52,
@@ -665,20 +646,17 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
           >
             <TrophyIcon size={24} />
           </div>
-          {/* The rank title takes the room it needs (at least 10rem); the XP
-              figure keeps its width and wraps under it on a narrow card, so a
-              long title never pushes it out of the card. */}
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: '1 1 10rem' }}>
+          <div className="de-career-head__title">
             <Heading level={3} maxLines={2}>{title}</Heading>
             <Text type="supporting" size="xsm" color="secondary">
               {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
             </Text>
           </div>
-          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <span className="de-career-head__xp">
             <Text size="3xl" weight="bold" color="accent">{nf(totalXp)}</Text>
             <Text type="supporting" color="secondary">{t('profile.xpUnit')}</Text>
           </span>
-        </HStack>
+        </div>
 
         <VStack gap={1}>
           <ProgressBar
@@ -764,20 +742,6 @@ function AdvisorCard() {
   );
 }
 
-/** The Profile's complete leaderboard name/photo preferences. Friends keep
- * their own independent identity settings in SharknameCard. */
-export function LeaderboardVisibilityCard() {
-  const t = useT();
-  return (
-    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
-      <VStack gap={1.5}>
-        <SectionLabel>{t('leaderboard.title')}</SectionLabel>
-        <LeaderboardVisibilitySwitch />
-      </VStack>
-    </div>
-  );
-}
-
 export function AccountDeletionCard() {
   const t = useT();
   const { isAuthenticated, signOut } = useAuth();
@@ -832,32 +796,41 @@ export function AccountDeletionCard() {
 
   return (
     <>
-      <div className="ss-panel" style={{ padding: 24, width: '100%', background: 'var(--color-background-muted)' }}>
-          <VStack gap={1.5}>
-            <SectionLabel>{t('profile.account')}</SectionLabel>
-            <Text weight="semibold">{t('profile.signOutEverywhere')}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.signOutEverywhereDescription')}</Text>
-            <HStack justify="end">
-              <Button
-                variant="secondary"
-                label={t('profile.signOutEverywhere')}
-                isDisabled={!isAuthenticated || signingOut}
-                onClick={signOutEverywhere}
-              />
-            </HStack>
-            <Text weight="semibold">{t('profile.deleteTitle')}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
-            {paying && (
-              <Text type="supporting" size="xsm">
-                {t('profile.deletePremium')}{' '}
-                <Link to="/premium/cancel?action=withdraw">{t('legal.link.cancel')}</Link>
-              </Text>
-            )}
-            <HStack justify="end">
-              <Button variant="destructive" label={t('profile.deleteAction')} onClick={requestDeletion} />
-            </HStack>
-          </VStack>
-        </div>
+      {/* Settings rows (UX audit social-account-07): one row per action, its
+          title and a short description on the left and its 44px button on the
+          right; stacked below 600px. The row title names what the action
+          reaches, so it does not repeat the button. Plain panel stock, like
+          every other Profile card. */}
+      <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
+        <VStack gap={2}>
+          <SectionLabel>{t('profile.account')}</SectionLabel>
+          <div className="de-setting-row">
+            <div className="de-setting-row__text">
+              <h3 className="de-setting-row__title">{t('profile.allDevices')}</h3>
+              <Text type="supporting" size="xsm" color="secondary">{t('profile.signOutEverywhereDescription')}</Text>
+            </div>
+            <Button
+              variant="secondary"
+              label={t('profile.signOutEverywhere')}
+              isDisabled={!isAuthenticated || signingOut}
+              onClick={signOutEverywhere}
+            />
+          </div>
+          <div className="de-setting-row">
+            <div className="de-setting-row__text">
+              <h3 className="de-setting-row__title">{t('profile.deleteTitle')}</h3>
+              <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
+              {paying && (
+                <Text type="supporting" size="xsm">
+                  {t('profile.deletePremium')}{' '}
+                  <Link to="/premium/cancel?action=withdraw">{t('legal.link.cancel')}</Link>
+                </Text>
+              )}
+            </div>
+            <Button variant="destructive" label={t('profile.deleteAction')} onClick={requestDeletion} />
+          </div>
+        </VStack>
+      </div>
       <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <AppToast open={!!message} message={message} onClose={() => setMessage(null)} severity="error" autoHideDuration={null} />
     </>

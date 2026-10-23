@@ -83,9 +83,8 @@ export default function BrandFooter() {
             })}
           </nav>
         )}
-        {/* The full versions of these live in Profile → Preferences. A visitor
-            who has not signed in still needs a comfortable contrast and a
-            choice about sound, so the same two settings stay reachable here. */}
+        {/* Appearance and sound live here on every route, signed in or not;
+            the Profile does not repeat them (UX audit social-account-08). */}
         {/* Short visible labels, so the row fits one line even in an 800px
             column (UX audit shell-public-03); the full action stays the
             accessible name, which contains the visible words. */}

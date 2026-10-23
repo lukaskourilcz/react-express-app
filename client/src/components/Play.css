@@ -1,0 +1,124 @@
+/* /play and the lobby (UX audit U6, #578). Page widths and control heights
+   come from the shared tokens; this file only lays out what sits inside. */
+
+/* The join code: monospace and spaced on the value only, so the "Match code"
+   label keeps the body type (social-account-20). The card is its one frame. */
+.play-code input {
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.32em;
+}
+.play-code input::placeholder { letter-spacing: 0.32em; }
+
+/* Topics (social-account-13). The pills wrap in one group; below 600px they
+   fold behind one 44px row that names the choice ("Topics: all"), which
+   saves about 330px above Create on a phone. A native <details>, so the
+   keyboard, the open state and the announcement come from the browser. */
+.play-topics__pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.play-topics__summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--ss-control-height);
+  gap: 12px;
+  padding: 0 1rem 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-element);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+/* The select's own chevron, turned up while the fold is open. Its own
+   element, because a background shorthand that names a missing token drops
+   the arrow with it. */
+.play-topics__summary::after {
+  content: '';
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  background: var(--ss-select-arrow) no-repeat center / 14px 14px;
+}
+.play-topics[open] > .play-topics__summary::after { transform: rotate(180deg); }
+.play-topics__summary::-webkit-details-marker { display: none; }
+.play-topics__summary:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.play-topics[open] > .play-topics__summary { border-color: var(--color-border-strong, var(--color-border)); }
+@media (forced-colors: active) {
+  .play-topics__summary::after { background: none; border: solid CanvasText; border-width: 0 2px 2px 0; width: 8px; height: 8px; transform: rotate(45deg); }
+  .play-topics[open] > .play-topics__summary::after { transform: rotate(-135deg); }
+}
+.play-topics__body { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
+
+/* The time limit is one select at the shared 44px height, as wide as its
+   longest option rather than the whole card. Its <label> is a flex box, so
+   the label text sits on the line "Questions" does beside it instead of on
+   a taller body-text line 4px lower. */
+.play-field-label { display: flex; }
+.ss-select.play-time-select { width: auto; min-width: 11rem; }
+
+/* The lobby (social-account-14): one panel, rows inside it. The share block
+   is the QR at its own size with "Scan to join", the URL and the two share
+   actions beside it; players are plain 56px rows with hairlines. */
+.play-lobby { display: flex; flex-direction: column; gap: 20px; width: 100%; padding: 24px; }
+.play-lobby__head { display: flex; flex-direction: column; gap: 8px; }
+/* The browser's h2 margin put 17px more above 'Lobby' than the panel's
+   padding; the head's gap spaces it. */
+.play-lobby__head h2 { margin: 0; }
+.play-lobby__count {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-weight: 700;
+  font-size: var(--ss-type-meta);
+  color: var(--brand-accent-on-soft, var(--brand-accent));
+  background: var(--brand-accent-soft);
+  font-variant-numeric: tabular-nums;
+}
+.play-lobby__share { display: flex; align-items: center; gap: 20px; }
+.play-lobby__qr {
+  flex: 0 0 auto;
+  width: 164px;
+  height: 164px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-inner);
+  background: var(--color-background-muted);
+  overflow: hidden;
+}
+.play-lobby__qr img { display: block; width: 100%; height: 100%; }
+.play-lobby__share-text { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.play-lobby__url { font-size: var(--ss-type-meta); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.play-lobby__share-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.play-lobby__players { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ss-card-line); border-bottom: 1px solid var(--ss-card-line); }
+.play-lobby__player { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 0; }
+.play-lobby__player + .play-lobby__player { border-top: 1px solid var(--ss-card-line); }
+.play-lobby__name { flex: 1; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.play-lobby__empty { margin: 0; padding: 16px 0; text-align: center; font-size: var(--ss-type-compact); color: var(--color-text-secondary); }
+@media (max-width: 520px) {
+  .play-lobby { padding: 16px; }
+  .play-lobby__share { flex-direction: column; align-items: stretch; }
+  .play-lobby__qr { align-self: center; }
+  .play-lobby__share-text { align-items: center; text-align: center; }
+  .play-lobby__share-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+}
+@media print {
+  .play-lobby__qr { width: 240px; height: 240px; border: 0; }
+}
+
+/* Start (social-account-15): alone on the footer row, on the right from
+   600px, the full width of the panel below it. */
+.play-lobby__start { display: flex; justify-content: flex-end; }
+@media (max-width: 599.95px) {
+  /* justify-content: normal, or the grid's one track shrinks to the
+     button and flex-end keeps it on the right. */
+  .play-lobby__start { display: grid; justify-content: normal; }
+}
+
+/* A room's header: the shared PageHeader on the left, the code badge (44px)
+   on the right, bottom-aligned. It stays beside the title on a phone too: at
+   390 the badge (about 125px) and 'Multiplayer' fit one row, and a badge
+   wrapped onto its own line left that row about 65% empty. The title and lead
+   wrap inside their own column instead. */
+.play-room__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.play-room__head > .ss-page-header { flex: 1 1 auto; min-width: 0; }
+.play-room__head > :last-child { flex: none; }

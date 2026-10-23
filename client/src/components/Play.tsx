@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Kicker, SwimCta } from './landing/LandingKit';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMediaQuery } from '../lib/useMediaQuery';
+import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -35,7 +35,6 @@ import {
 } from '../lib/play';
 import { coalesceReads, joinMatchChannel, trailingThrottle, type CoalescedRead, type RealtimeChannel } from '../lib/realtime';
 import { visibleCategoryOptionsFor } from '../lib/categories';
-import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError, ApiError } from '../lib/api';
 import { categoryLabelKey } from '../lib/categories';
@@ -44,8 +43,11 @@ import { renderQuestion } from './CodeBlock';
 import { QuoteLoader } from './LoadingScreen';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
+import { StatePanel } from './ui/StatePanel';
+import { PageHeader } from './ui/PageHeader';
 import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
+import './Play.css';
 import { BookIcon, TargetIcon } from './ui/icons';
 import { capture } from '../lib/analytics';
 import { visuallyHidden } from '../theme/MuiTheme';
@@ -104,15 +106,20 @@ function PlayUnavailable() {
   const navigate = useNavigate();
   const t = useT();
   return (
-    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
-      <Card padding={6} width="100%">
-        <VStack gap={2} align="center">
-          <Heading level={1} justify="center">{t('play.unavailableTitle')}</Heading>
-          <Text color="secondary" justify="center">{t('play.unavailableBody')}</Text>
-          <Button variant="primary" label={t('common.back')} onClick={() => navigate('/')} />
-        </VStack>
-      </Card>
-    </div>
+    <StatePanel level={1} title={t('play.unavailableTitle')} body={t('play.unavailableBody')}>
+      <Button variant="primary" label={t('common.back')} onClick={() => navigate('/')} />
+    </StatePanel>
+  );
+}
+
+/** /play and /play/:code signed out: the shared sign-in gate, as on /cards
+ * and /collection (UX audit social-account-16). */
+function PlaySignIn() {
+  const t = useT();
+  return (
+    <StatePanel level={1} title={t('play.signInTitle')} body={t('play.signInBody')}>
+      <Button variant="primary" label={t('authPage.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+    </StatePanel>
   );
 }
 
@@ -146,7 +153,10 @@ export function PlayLanding() {
   const { t } = useLanguage();
   const config = useGameConfig();
   const isDesktop = useMediaQuery('(min-width: 900px)');
-  const accent = useActiveSubject().accent;
+  // Below 600px the topic pills fold behind one 44px "Topics: all" row, so
+  // Create is not a full screen below the mode choice (social-account-13).
+  const foldTopics = useIsMobile();
+  const timeLimitId = useId();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'ffa' | 'classroom'>(() =>
@@ -177,25 +187,7 @@ export function PlayLanding() {
     return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
-        <Card padding={6} width="100%">
-          <VStack gap={2} align="center">
-            <Heading level={1} justify="center">
-              {t('play.signInTitle')}
-            </Heading>
-            <Text color="secondary" justify="center">
-              {t('play.signInBody')}
-            </Text>
-            <div style={{ marginTop: 8 }}>
-              <Button variant="primary" size="lg" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
-            </div>
-          </VStack>
-        </Card>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return <PlaySignIn />;
 
   const handleCreate = async () => {
     if (!user?.id || busyRef.current) return;
@@ -251,21 +243,29 @@ export function PlayLanding() {
     }
   };
 
+  // The same pills open on wide screens and inside the fold on a phone.
+  const topicPills = (
+    <div role="group" aria-label={t('play.categories')} className="play-topics__pills">
+      {categoryOptions.map((cat) => (
+        <TopicPill
+          category={cat.value}
+          selected={selectedCategories.includes(cat.value)}
+          onClick={() => toggleCategory(cat.value)}
+          key={cat.value}
+        />
+      ))}
+    </div>
+  );
+  const clearTopics = selectedCategories.length > 0 && (
+    <Button variant="ghost" label={t('play.clear')} onClick={() => setSelectedCategories([])} />
+  );
+
   return (
     <div className="de-page">
       <VStack gap={3}>
-        {/* Page opener in the house voice: kicker + display heading, same as
-            Shop and the Career Roadmap. */}
-        <div className="ss-pop" style={{ width: '100%' }}>
-          <VStack gap={1}>
-            <Kicker as="h1" className="ss-section-title">
-              {t('play.title')}
-            </Kicker>
-            <Text type="large" color="secondary">
-              {t('play.subtitle')}
-            </Text>
-          </VStack>
-        </div>
+        {/* The operational header the social pages share: kicker, an ink
+            h1 at display-3 and one lead (UX audit social-account-11). */}
+        <PageHeader kicker={t('play.title')} title={t('play.heading')} lead={t('play.subtitle')} />
 
         {error && (
           <Banner
@@ -305,42 +305,40 @@ export function PlayLanding() {
                 </RadioCardGroup>
               </VStack>
 
-              <VStack gap={1}>
-                <HStack justify="between" align="center">
-                  <Text type="label" weight="bold" color="secondary">
-                    {t('play.categories')}
+              {foldTopics ? (
+                <details className="play-topics">
+                  <summary className="play-topics__summary">
+                    {selectedCategories.length === 0
+                      ? t('play.topicsAll')
+                      : t('play.topicsSelected', { count: selectedCategories.length })}
+                  </summary>
+                  <div className="play-topics__body">
+                    {topicPills}
+                    {clearTopics}
+                  </div>
+                </details>
+              ) : (
+                <VStack gap={1}>
+                  <HStack justify="between" align="center">
+                    <Text type="label" weight="bold" color="secondary">
+                      {t('play.categories')}
+                    </Text>
+                    {clearTopics}
+                  </HStack>
+                  {topicPills}
+                  <Text type="supporting" size="xsm" color="secondary">
+                    {selectedCategories.length === 0
+                      ? t('play.allCategoriesHint')
+                      : t('play.categoriesSelected', { count: selectedCategories.length })}
                   </Text>
-                  {selectedCategories.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      label={t('play.clear')}
-                      onClick={() => setSelectedCategories([])}
-                    />
-                  )}
-                </HStack>
-                <div
-                  role="group"
-                  aria-label={t('play.categories')}
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
-                >
-                  {categoryOptions.map((cat) => {
-                    const selected = selectedCategories.includes(cat.value);
-                    return (
-                      <TopicPill category={cat.value} selected={selected} onClick={() => toggleCategory(cat.value)} key={cat.value} />
-                    );
-                  })}
-                </div>
-                <Text type="supporting" size="xsm" color="secondary">
-                  {selectedCategories.length === 0
-                    ? t('play.allCategoriesHint')
-                    : t('play.categoriesSelected', { count: selectedCategories.length })}
-                </Text>
-              </VStack>
+                </VStack>
+              )}
 
               {/* Question count and time limit: each with its label above, at
                   the shared 44px control height, side by side from 900px
-                  (UX audit social-account-12). */}
+                  (UX audit social-account-12). The time limit is one 44px
+                  select, as the Leaderboard's topic filter, so it never wraps
+                  a lone "No limit" onto a second row (social-account-13). */}
               <div style={{ display: 'flex', flexDirection: isDesktop ? 'row' : 'column', flexWrap: 'wrap', gap: '16px 32px' }}>
                 <VStack gap={1}>
                   <Text type="label" weight="bold" color="secondary">
@@ -359,21 +357,21 @@ export function PlayLanding() {
                 </VStack>
 
                 <VStack gap={1}>
-                  <Text type="label" weight="bold" color="secondary">
-                    {t('play.timeLimit')}
-                  </Text>
-                  <div className="play-time-limit" style={{ display: 'flex', flexWrap: 'wrap' }}>
-                    <ToggleButtonGroup
-                      label={t('play.timeLimit')}
-                      type="single"
-                      value={String(durationS)}
-                      onChange={(v) => v && setDurationS(Number(v))}
-                    >
-                      {config.play.durationOptionsS.map((n) => (
-                        <ToggleButton key={n} value={String(n)} label={formatDuration(n, t)} />
-                      ))}
-                    </ToggleButtonGroup>
-                  </div>
+                  <label htmlFor={timeLimitId} className="play-field-label">
+                    <Text type="label" weight="bold" color="secondary">
+                      {t('play.timeLimit')}
+                    </Text>
+                  </label>
+                  <select
+                    id={timeLimitId}
+                    className="ss-select play-time-select"
+                    value={String(durationS)}
+                    onChange={(event) => setDurationS(Number(event.target.value))}
+                  >
+                    {config.play.durationOptionsS.map((n) => (
+                      <option key={n} value={String(n)}>{formatDuration(n, t)}</option>
+                    ))}
+                  </select>
                 </VStack>
               </div>
 
@@ -410,27 +408,19 @@ export function PlayLanding() {
             <Card padding={4} width="100%">
               <VStack gap={2}>
                 <Kicker>{t('play.joinWithCode')}</Kicker>
-                {/* Room code is the star of the join card: big, monospaced,
-                    accent-ringed input so it reads like a ticket stub. */}
-                <div
-                  style={{
-                    borderRadius: 'var(--radius-element)',
-                    padding: 12,
-                    background: `${accent}0f`,
-                    border: `1.5px dashed ${accent}55`,
-                  }}
-                >
-                  <div style={{ fontFamily: 'monospace', letterSpacing: '0.32em', fontWeight: 800, fontSize: '1.2rem' }}>
-                    <TextInput
-                      label={t('play.matchCode')}
-                      value={joinCode}
-                      placeholder="ABC123"
-                      onChange={(v) => setJoinCode(v.toUpperCase())}
-                      // Enter in the code joins, as it would in a form; the
-                      // join's own ref guard keeps a held key to one join.
-                      onEnter={() => void handleJoin()}
-                    />
-                  </div>
+                {/* One frame around the field: the card. The code itself is
+                    monospaced and spaced like a ticket stub; the label keeps
+                    the body type (UX audit social-account-20). */}
+                <div className="play-code">
+                  <TextInput
+                    label={t('play.matchCode')}
+                    value={joinCode}
+                    placeholder="ABC123"
+                    onChange={(v) => setJoinCode(v.toUpperCase())}
+                    // Enter in the code joins, as it would in a form; the
+                    // join's own ref guard keeps a held key to one join.
+                    onEnter={() => void handleJoin()}
+                  />
                 </div>
                 {/* Join stays secondary beside the page's one primary (Create)
                     until the field holds a whole six-character code. */}
@@ -845,25 +835,7 @@ function PlayRoom() {
     return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 'var(--ss-width-task)', margin: '0 auto' }}>
-        <Card padding={6} width="100%">
-          <VStack gap={2} align="center">
-            <Heading level={1} justify="center">{t('play.signInTitle')}</Heading>
-            <Text color="secondary" justify="center">{t('play.signInBody')}</Text>
-            <Button
-              variant="primary"
-              size="lg"
-              label={t('auth.logIn')}
-              aria-haspopup="dialog"
-              onClick={() => openSignIn()}
-            />
-          </VStack>
-        </Card>
-      </div>
-    );
-  }
+  if (!isAuthenticated) return <PlaySignIn />;
 
   if (joining) {
     // Same loading look as the other study modes, but no artificial minimum
@@ -876,7 +848,7 @@ function PlayRoom() {
       <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
         <VStack gap={2}>
           {/* The page's heading, so a match that cannot open still has one. */}
-          <Heading level={1} type="display-3">{t('play.title')}</Heading>
+          <PageHeader title={t('play.title')} />
           <Banner status="error" title={error} />
           <HStack gap={1} wrap="wrap">
             <Button
@@ -904,17 +876,16 @@ function PlayRoom() {
     // as on Quiz, Learn and Challenge (UX audit social-account-01).
     <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', width: '100%' }}>
       <VStack gap={2}>
-        <HStack justify="between" align="center" gap={2}>
-          <VStack gap={0}>
-            <Heading level={1} type="display-3">
-              {match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
-            </Heading>
-            <Text type="supporting" size="xsm" color="secondary">
-              {t('play.hostedBy', { name: match.host_name })}
-            </Text>
-          </VStack>
+        {/* The shared operational header, with the room's code badge as its
+            one compact action on the right (social-account-11, -15). */}
+        <div className="play-room__head">
+          <PageHeader
+            kicker={t('play.title')}
+            title={match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
+            lead={t('play.hostedBy', { name: match.host_name })}
+          />
           <CodeBadge code={code} />
-        </HStack>
+        </div>
 
         {error && (
           <Banner
@@ -982,7 +953,6 @@ const CodeBadge = ({ code }: { code: string }) => {
   return (
     <Button
       variant="secondary"
-      size="sm"
       label={`${code} — ${status}`}
       onClick={() => {
         void copyText(code).then((ok) => {
@@ -1018,7 +988,9 @@ function Lobby({
 }) {
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
-  const [qrUrl, setQrUrl] = useState('');
+  // The QR's box is held while the code draws, so the share text beside it
+  // does not jump; a QR that cannot be drawn leaves the URL and the buttons.
+  const [qrUrl, setQrUrl] = useState<string | null>('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   useEffect(() => {
     let active = true;
@@ -1030,79 +1002,34 @@ function Lobby({
         errorCorrectionLevel: 'M',
       }))
       .then((url) => { if (active) setQrUrl(url); })
-      .catch(() => {});
+      .catch(() => { if (active) setQrUrl(null); });
     return () => { active = false; };
   }, [shareUrl]);
+  // One panel with rows inside it, never a card in a card (UX audit
+  // social-account-14). The header's badge carries the code, so the
+  // instruction does not repeat it.
   return (
-    <div className="ss-raised ss-pop play-invite" style={{ display: 'flex', width: '100%' }}>
-    <Card padding={4} width="100%">
-      <VStack gap={3}>
-        <VStack gap={1}>
-          <HStack gap={1.5} align="center">
-            <Heading level={2}>{t('play.lobby')}</Heading>
-            {participants.length > 0 && (
-              <div
-                style={{
-                  marginLeft: 'auto',
-                  borderRadius: 999,
-                  padding: '3px 11px',
-                  fontWeight: 700,
-                  fontSize: '0.78rem',
-                  color: 'var(--brand-accent)',
-                  background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
-                }}
-              >
-                {participants.length}
-              </div>
-            )}
-          </HStack>
-          <Text color="secondary">
-            {t('play.shareInstructions', {
-              code: match.code,
-              action: isHost ? t('play.actionHostStart') : t('play.actionGuestWait'),
-            })}
-          </Text>
-        </VStack>
+    <section className="ss-panel ss-pop play-invite play-lobby">
+      <div className="play-lobby__head">
+        <HStack gap={1.5} align="center">
+          <Heading level={2}>{t('play.lobby')}</Heading>
+          {participants.length > 0 && (
+            <span className="play-lobby__count">{participants.length}</span>
+          )}
+        </HStack>
+        <Text color="secondary">{isHost ? t('play.shareHost') : t('play.shareGuest')}</Text>
+      </div>
 
-        {qrUrl && (
-          <div className="play-invite__qr">
-            <img src={qrUrl} alt={t('play.qrAlt', { code: match.code })} width={164} height={164} />
-            <VStack gap={0.5}>
-              <Text weight="bold">{t('play.scanToJoin')}</Text>
-              <Text type="supporting" size="xsm" color="secondary">{shareUrl}</Text>
-            </VStack>
+      <div className="play-lobby__share">
+        {qrUrl !== null && (
+          <div className="play-lobby__qr">
+            {qrUrl && <img src={qrUrl} alt={t('play.qrAlt', { code: match.code })} width={164} height={164} />}
           </div>
         )}
-
-        <VStack gap={1}>
-          {participants.map((p, i) => (
-            <div
-              key={p.user_id}
-              className="ss-raised ss-pop"
-              style={{ display: 'flex', width: '100%', animationDelay: `${i * 55}ms` }}
-            >
-              <Card variant="muted" padding={1.5} width="100%">
-                <HStack gap={1.5} align="center">
-                  <Avatar name={p.display_name} size="small" />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text weight="medium">{p.display_name}</Text>
-                  </div>
-                  {p.user_id === match.host_id && <Badge variant="yellow" label={t('play.host')} />}
-                </HStack>
-              </Card>
-            </div>
-          ))}
-          {participants.length === 0 && (
-            <VStack gap={1} align="center" padding={3}>
-              <Text type="supporting" size="xsm" color="secondary" justify="center">
-                {t('play.noPlayers')}
-              </Text>
-            </VStack>
-          )}
-        </VStack>
-
-        <HStack gap={1.5} wrap="wrap" justify="between">
-          <HStack gap={1} wrap="wrap">
+        <div className="play-lobby__share-text">
+          {qrUrl !== null && <Text weight="bold">{t('play.scanToJoin')}</Text>}
+          <span className="play-lobby__url">{shareUrl}</span>
+          <div className="play-lobby__share-actions">
             <Button
               variant="secondary"
               label={copyStatus === 'copied' ? t('play.copied') : copyStatus === 'failed' ? t('play.copyFailed') : t('play.copyLink')}
@@ -1114,20 +1041,37 @@ function Lobby({
               }}
             />
             <Button variant="ghost" label={t('play.printInvite')} onClick={() => window.print()} />
-          </HStack>
-          {isHost && (
-            <Button
-              variant="primary"
-              size="lg"
-              label={t('play.startWithCount', { count: questionCountOf(match) })}
-              isDisabled={participants.length < 1 || startPending}
-              onClick={onStart}
-            />
-          )}
-        </HStack>
-      </VStack>
-    </Card>
-    </div>
+          </div>
+        </div>
+      </div>
+
+      {participants.length > 0 ? (
+        <ul className="play-lobby__players" aria-label={t('play.players')}>
+          {participants.map((p) => (
+            <li key={p.user_id} className="play-lobby__player">
+              <Avatar name={p.display_name} size="small" />
+              <span className="play-lobby__name">{p.display_name}</span>
+              {p.user_id === match.host_id && <Badge variant="yellow" label={t('play.host')} />}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="play-lobby__empty">{t('play.noPlayers')}</p>
+      )}
+
+      {/* The host's Start is the screen's one primary (SwimCta md, 44px):
+          right-aligned on its own row, full width on a phone, never a
+          wrapped afterthought under the share buttons (social-account-15). */}
+      {isHost && (
+        <div className="play-lobby__start">
+          <SwimCta
+            label={t('play.startWithCount', { count: questionCountOf(match) })}
+            disabled={participants.length < 1 || startPending}
+            onClick={onStart}
+          />
+        </div>
+      )}
+    </section>
   );
 }
 

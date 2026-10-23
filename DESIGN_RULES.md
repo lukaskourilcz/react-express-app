@@ -297,7 +297,9 @@ coming back. The tokens and the map are in
   44px either: in the coding workbench it takes the page-action type, so
   Submit matches Run beside it. A second task's button turns
   primary only once its own input is complete (Join on `/play` with a whole
-  code).
+  code). A row of buttons that switches the view is never filled: the open
+  one is secondary with `aria-current`, the rest ghost (the `/collection`
+  shelf tabs).
 - **Card actions are the default size.** No `size="sm"` on a card's actions;
   a Retry inside a banner or a Remove on a list row is the only small
   button.
@@ -306,6 +308,10 @@ coming back. The tokens and the map are in
 - **A secondary path is a row, not a card.** A short form that is not the
   page's task (the voucher with checkout on) is one row: its title on the
   left, the field and a secondary button beside it.
+- **One operational header.** An operational page's title is the shared
+  `PageHeader` (`components/ui/PageHeader.tsx`): optional `<Kicker>`, an ink
+  `h1` at `display-3`, one lead line, 8px apart. Do not hand-build an `h1`
+  with its own size, weight or gap.
 - **The scope sentence is the page lead.** An operational page says what it
   shows under the `h1`, and its controls sit right on what they filter.
 - **Icon buttons are 44×44** with a 20px glyph and keep their tooltip and
@@ -318,6 +324,16 @@ coming back. The tokens and the map are in
 - **One section-title size.** A public page's section `h2` takes
   `.ss-section-title` (1.75rem, 1.5rem under 600px); a section never sets its
   own heading size inline or in its own stylesheet.
+- **One state panel.** A sign-in gate, an empty shelf or a callback state is
+  the shared `StatePanel` (`components/ui/StatePanel.tsx`): centred in the
+  640px task column, one heading, one body line, the one primary first at
+  44px. Do not build a gate card by hand.
+- **One panel per subject on the Profile.** Every Profile card is `.ss-panel`
+  with 24px padding and a `<Kicker as="h2">`. The learner's names live in one
+  'Your name' panel with 'Friends see' and 'Leaderboards show' side by side;
+  the two settings stay independent. Account actions are settings rows whose
+  title never repeats the button. The banner does not repeat the footer's
+  appearance and sound controls (UX audit U6, #578).
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
 - **One signed-out state.** A money screen asks a visitor to sign in with
   `SignedOutBlock`: one sentence and one "Sign in" button, in place of the

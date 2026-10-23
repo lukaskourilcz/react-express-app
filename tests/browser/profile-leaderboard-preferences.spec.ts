@@ -36,8 +36,11 @@ for (const theme of ['light', 'dark'] as const) {
       return route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'offline' } } });
     });
     await page.goto('/profile');
-    const account = page.getByRole('radio', { name: 'Account name', exact: true });
-    const nickname = page.getByRole('radio', { name: 'Shark nickname', exact: true });
+    // The 'Your name' panel has two Sharkname / Account name choices side by
+    // side (social-account-04); these are the 'Leaderboards show' ones.
+    const board = page.getByRole('radiogroup', { name: /Leaderboards show/ });
+    const account = board.getByRole('radio', { name: 'Account name', exact: true });
+    const nickname = board.getByRole('radio', { name: 'Sharkname', exact: true });
     const photo = page.getByRole('switch', { name: 'Show my photo on leaderboards', exact: true });
     await expect(nickname).toBeChecked();
     await account.focus(); await account.press('Space');
