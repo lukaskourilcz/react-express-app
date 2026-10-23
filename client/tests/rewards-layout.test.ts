@@ -25,5 +25,7 @@ describe('/shop on a phone', () => {
     const narrow = css.slice(css.indexOf('@media (max-width: 639px)'));
     expect(narrow).toMatch(/\.rw-earn__note \{ flex-direction: column; align-items: flex-start; \}/);
     expect(narrow).toContain('.rw-earn__note > .astryx-button.ghost { margin-inline-start: -20px; }');
+    // The sentence's 20rem basis must not turn into a 320px height in the column.
+    expect(narrow).toContain('.rw-earn__note p { flex: none; }');
   });
 });
