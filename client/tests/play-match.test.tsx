@@ -545,6 +545,28 @@ describe('what a room broadcasts', () => {
   });
 });
 
+describe('double presses', () => {
+  // Two presses in one task land before React disables the button, so a
+  // double click on Next asked the server to advance twice and skipped a
+  // question for the whole room.
+  it('sends one control for a double click on the presenter’s Next', async () => {
+    const match = running({ mode: 'classroom', host_id: USER.id, questions: KEYED_QUESTIONS });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.fetchDistribution.mockResolvedValue({ buckets: [] });
+    let release!: () => void;
+    api.controlMatch.mockImplementation(() => new Promise((done) => { release = () => done({ ok: true, status: 'running', current_index: 1 }); }));
+    await mount();
+    const next = await screen.findByRole('button', { name: 'Next question →' });
+    act(() => { next.click(); next.click(); });
+    expect(api.controlMatch).toHaveBeenCalledTimes(1);
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await act(async () => { release(); });
+    await screen.findByText('Next one?');
+    expect(api.controlMatch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('the room clock', () => {
   // A device clock 31 s ahead of the server's. The server says what its clock
   // reads in every join and state response.

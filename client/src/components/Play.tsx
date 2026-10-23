@@ -698,8 +698,13 @@ export function PlayMatch() {
     };
   }, [isHost, user?.id, code, match?.status]);
 
+  // Synchronous control lock, like the submit lock: a double click on Next
+  // lands both clicks before `controlPending` disables the button, and the
+  // server would advance twice, skipping a question for the whole room.
+  const controlLockRef = useRef(false);
   const runHostControl = async (action: 'start' | 'advance' | 'finish' | 'reveal') => {
-    if (!user?.id || !match || controlPending) return;
+    if (!user?.id || !match || controlLockRef.current) return;
+    controlLockRef.current = true;
     setControlPending(true);
     try {
       const result = await controlMatch({ code, host_id: user.id, action });
@@ -727,6 +732,7 @@ export function PlayMatch() {
     } catch (err) {
       setError(friendlyError(err));
     } finally {
+      controlLockRef.current = false;
       setControlPending(false);
     }
   };
