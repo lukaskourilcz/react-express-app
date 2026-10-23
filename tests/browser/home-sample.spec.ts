@@ -17,7 +17,9 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(stats.getByText('coding challenges', { exact: true })).toBeVisible();
     await expect(stats).toContainText(SUBJECT_SCOPE_CATALOG.webdev.codingChallengeCount.toLocaleString());
     await expect(page.locator('.ss-feature-gallery, .ss-home-video')).toHaveCount(0);
-    const content = page.locator('#main-content > div');
+    // The page width sits on the route box (.ss-route); its wrapper is full width
+    // so the footer keeps its own box (UX audit U1, #573).
+    const content = page.locator('#main-content .ss-route');
     for (const width of [1440, 2560]) {
       await page.setViewportSize({ width, height: 1000 });
       const bounds = await content.boundingBox();
