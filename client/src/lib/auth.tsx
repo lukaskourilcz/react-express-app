@@ -11,7 +11,7 @@ import {
   supabaseForSession,
   supabaseLoadFailed,
 } from './supabaseClient';
-import { apiFetch } from './api';
+import { ApiError, apiFetch } from './api';
 import { clearAccountData, forgetOthersKeptDrafts } from './accountData';
 import { readString, removeStored, writeString } from './storage';
 import { clearAuthReturn, clearSignInResume, currentReturnPath, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
@@ -32,15 +32,41 @@ function withDeadline<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     );
   });
 }
+// The report on its way, and which sign-in it was for: a sign-out in between
+// (clearSignInReport) moves the generation on, so a late answer for the
+// account that left cannot mark the next one's sign-in as reported.
+let reportInFlight = false;
+let reportGeneration = 0;
 function reportSignIn(): void {
   try {
     if (sessionStorage.getItem(AUTH_REPORTED_KEY)) return;
-    sessionStorage.setItem(AUTH_REPORTED_KEY, '1');
   } catch {
-    // sessionStorage unavailable — fall through and still report once
+    // sessionStorage unavailable — fall through and still report
   }
-  // Fire-and-forget: never let logging affect the sign-in UX.
-  void apiFetch('/api/user/authevent', { method: 'POST', body: '{}' }).catch(() => {});
+  if (reportInFlight) return;
+  reportInFlight = true;
+  const generation = reportGeneration;
+  // Fire-and-forget: never let logging affect the sign-in UX. The tab counts
+  // as reported once the server decided on the report; one that never got an
+  // answer (offline, a 5xx during an outage, a 429) is sent again on the next
+  // sign-in supabase-js announces in this tab.
+  const settled = (decided: boolean) => {
+    if (generation !== reportGeneration) return;
+    reportInFlight = false;
+    if (!decided) return;
+    try {
+      sessionStorage.setItem(AUTH_REPORTED_KEY, '1');
+    } catch {
+      // ignore
+    }
+  };
+  void apiFetch('/api/user/authevent', { method: 'POST', body: '{}' }).then(
+    () => settled(true),
+    (error: unknown) => {
+      const status = error instanceof ApiError ? error.status : 0;
+      settled(status >= 400 && status < 500 && status !== 429);
+    },
+  );
 }
 /** supabase-js's AuthRetryableFetchError (no answer, or a 502/503/504) or any
  * other 5xx: the server did not decide anything. Read by name and status, as
@@ -49,6 +75,8 @@ function serverUnreachable(error: { name?: string; status?: number }): boolean {
   return error.name === 'AuthRetryableFetchError' || (typeof error.status === 'number' && (error.status === 0 || error.status >= 500));
 }
 function clearSignInReport(): void {
+  reportGeneration += 1;
+  reportInFlight = false;
   try {
     sessionStorage.removeItem(AUTH_REPORTED_KEY);
   } catch {
@@ -197,7 +225,11 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     // that before this effect ran; a client loaded on demand can attach this
     // listener first, and the order keeps the restore out of the log.
     let initialized = false;
+    // Whether supabase-js has said anything yet: after that its events, not
+    // a session read that missed the boot deadline, say who is here.
+    let heard = false;
     const unsubscribe = onSupabaseAuthStateChange((event, session) => {
+      heard = true;
       if (session?.user) signedIn(session.user.id);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -238,7 +270,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
         setUser(session?.user ?? null);
       })
       .catch(() => {
-        setUser(null);
+        if (!heard) setUser(null);
       })
       .finally(() => setIsLoading(false));
 
@@ -249,7 +281,18 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   // account are deleted unread; its own learning-path drafts go back in place
   // now, and its coding drafts come back when it opens a coding task
   // (coding/drafts.ts).
+  //
+  // An email link or another tab can replace the session of one account with
+  // another's without a SIGNED_OUT in between (supabase-js saves the link's
+  // session over the stored one). The account that was here leaves the same
+  // way a Log out would make it leave: its progress, coins and waiting results
+  // must not be merged into the one arriving, and that sign-in is reported.
   function signedIn(id: string) {
+    if (accountSignedIn && accountId !== null && accountId !== id) {
+      clearSignInReport();
+      clearAccountData();
+      setPasswordRecovery(false);
+    }
     accountSignedIn = true;
     accountId = id;
     forgetOthersKeptDrafts(id);

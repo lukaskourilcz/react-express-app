@@ -13,6 +13,7 @@
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from './http';
+import { authUndecided } from './auth';
 import type { EntitlementResponse, EntitlementSource } from '../shared/tiers';
 
 const logEvent = createLogger('entitlements');
@@ -64,8 +65,10 @@ export async function handleEntitlement(req: VercelRequest, res: VercelResponse,
   if (error) {
     // Before migration 039 nobody can hold a grant, so every account is free.
     if (isRpcMissing(error)) return res.json(FREE);
-    logEvent({ status: 500, kind: 'entitlement', reason: 'db_error' });
-    return jsonError(res, 500, 'db_error', 'Could not load your plan');
+    // The plan is unknown, not free: a 503 the client retries, with the copy
+    // the tier gate uses for the same failure (lib/access.ts).
+    logEvent({ status: 503, kind: 'entitlement', reason: 'db_error' });
+    return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
   }
   const body = toEntitlementResponse(data);
   logEvent({ status: 200, kind: 'entitlement', tier: body.tier, source: body.source });
@@ -135,17 +138,37 @@ export function parseValidUntil(value: unknown, now = Date.now()): { ok: true; v
   return { ok: true, value: new Date(time).toISOString() };
 }
 
-/** Whether the account exists. An unconfigured admin API (local development)
- * cannot tell, and does not block the grant. The billing webhook asks the same
- * question before it mirrors a subscription (`lib/billing/sync.ts`). */
-export async function accountExists(supabase: SupabaseClient, userId: string): Promise<boolean> {
+/** A Supabase Auth account id, as supabase-js checks it before it asks Auth. */
+const AUTH_USER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** Whether the account exists: `unknown` when Supabase Auth did not answer
+ * (a timeout, no connection, a 5xx or its own rate limit). An unconfigured
+ * admin API (local development) cannot tell either, and reads as `exists`, so
+ * it does not block a grant.
+ *
+ * An id that is not a lowercase UUID names no account. supabase-js throws for
+ * one before asking Auth, and a catch meant for an Auth that does not answer
+ * read that as "exists": a mistyped id got a Premium grant nobody holds. */
+export async function lookupAccount(supabase: SupabaseClient, userId: string): Promise<'exists' | 'missing' | 'unknown'> {
+  if (!AUTH_USER_ID.test(userId)) return 'missing';
   try {
     const { data, error } = await withTimeout(supabase.auth.admin.getUserById(userId));
-    if (error) return !/not.?found|invalid/i.test(error.message ?? '');
-    return Boolean(data?.user);
+    if (error) {
+      if (/not.?found|invalid/i.test(error.message ?? '')) return 'missing';
+      return authUndecided(error) ? 'unknown' : 'exists';
+    }
+    return data?.user ? 'exists' : 'missing';
   } catch {
-    return true;
+    return 'unknown';
   }
+}
+
+/** The billing webhook's question before it mirrors a subscription
+ * (`lib/billing/sync.ts`): an Auth that does not answer must not drop a paid
+ * subscription, so only a definite "no such account" is false. The admin grant
+ * asks `lookupAccount` and waits for Auth instead. */
+export async function accountExists(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  return (await lookupAccount(supabase, userId)) !== 'missing';
 }
 
 export async function handleAdminEntitlements(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -167,6 +190,13 @@ export async function handleAdminEntitlements(req: VercelRequest, res: VercelRes
       }
       return jsonError(res, 500, 'db_error', 'Could not load grants');
     }
+    // An account's plan that could not be read is not "not Premium": the
+    // owner would grant Premium to someone who holds it, or tell them they do
+    // not.
+    if (premium?.error) {
+      if (isRpcMissing(premium.error)) return jsonError(res, 503, 'migration_required', 'Entitlement migration 039 is not installed');
+      return jsonError(res, 503, 'entitlement_unavailable', "Could not check this account's plan. Try again in a moment.");
+    }
     return res.json({
       grants: ((rows.data ?? []) as GrantRow[]).map(toAdminGrant),
       ...(userId ? { userId, premium: premium?.data === true } : {}),
@@ -185,7 +215,11 @@ export async function handleAdminEntitlements(req: VercelRequest, res: VercelRes
       }
       const validUntil = parseValidUntil(body.validUntil);
       if (!validUntil.ok) return jsonError(res, 400, 'bad_request', 'validUntil must be a future date within five years, or empty');
-      if (!(await accountExists(supabase, userId))) return jsonError(res, 404, 'not_found', 'No account with that id');
+      // An entitlement grant has no foreign key to the account, so a grant
+      // made while Auth cannot answer could open Premium for an id nobody holds.
+      const account = await lookupAccount(supabase, userId);
+      if (account === 'missing') return jsonError(res, 404, 'not_found', 'No account with that id');
+      if (account === 'unknown') return jsonError(res, 503, 'auth_unavailable', 'Could not check that account. Try again in a moment.');
       const granted = await withTimeout(supabase.rpc('grant_manual_entitlement', {
         p_user_id: userId,
         p_valid_until: validUntil.value,

@@ -61,6 +61,15 @@ const HIDDEN_RUN_MESSAGES: ReadonlySet<string> = new Set([TIMEOUT_MESSAGE, STACK
 /** What a hidden run that failed any other way reports. */
 export const HIDDEN_RUN_FAILED_MESSAGE = 'A hidden check could not run.';
 
+/** Error text the program produced, cut the way a console line is. A
+ * top-level `throw 'x'.repeat(5e6)` came back whole as the run's error, five
+ * megabytes in one Submit response. The cut never splits a surrogate pair. */
+const cutErrorText = (text: string): string => {
+  if (text.length <= MAX_LOG_LINE_CHARS) return text;
+  const last = text.charCodeAt(MAX_LOG_LINE_CHARS - 1);
+  return text.slice(0, last >= 0xd800 && last <= 0xdbff ? MAX_LOG_LINE_CHARS - 1 : MAX_LOG_LINE_CHARS) + LOG_LINE_CUT;
+};
+
 /** Where the host's URL parser waits for the program, which takes it and
  * deletes the name before any learner code runs. */
 const URL_HOST_NAME = '__devsharkHostURL';
@@ -408,8 +417,14 @@ function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult>
         return;
       }
       settle(reply.type === 'done');
-      if (reply.type === 'done') resolve(reply.result);
-      else reject(new Error(reply.message));
+      if (reply.type === 'done') { resolve(reply.result); return; }
+      // The thread could not run the program at all: QuickJS would not load
+      // or would not give it a runtime, before any learner code ran. That is
+      // the host's fault, so the caller hears the grader is busy and records
+      // nothing, as for a thread that would not start; a plain error was an
+      // HTTP 500. The thread is stopped above.
+      console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_run_failed' }));
+      reject(new GraderBusyError('sandbox_worker_run_failed'));
     };
     // A thread that dies mid-run (its heap limit, a WebAssembly abort) took
     // the learner's program with it, and says so like any other failed run.
@@ -488,14 +503,25 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
   vm.setProp(vm.global, URL_HOST_NAME, urlFunction);
   urlFunction.dispose();
   let driver: QuickJSHandle | null = null;
+  // `dump` releases a promise handle itself, and learner code can throw a
+  // promise. Releasing it a second time threw "Lifetime not alive", which
+  // came back as the run's error in place of what the code threw. A promise
+  // rejected with another promise trips the same double release inside
+  // `dump` itself (it releases the inner promise, then frees it again), so
+  // that error reads as an unreadable thrown value instead.
+  const dumpError = (handle: QuickJSHandle): unknown => {
+    try { return vm.dump(handle); } catch (error) {
+      if ((error as Error | undefined)?.name === 'QuickJSUseAfterFree') return undefined;
+      throw error;
+    } finally { if (handle.alive) handle.dispose(); }
+  };
   const readDriver = (name: string): unknown => {
     if (!driver) return undefined;
     const fn = vm.getProp(driver, name);
     try {
       const result = vm.callFunction(fn, vm.undefined);
       if (result.error) {
-        const error = vm.dump(result.error);
-        result.error.dispose();
+        const error = dumpError(result.error) as { message?: string } | undefined;
         throw new Error(error?.message ?? 'Evaluator failed');
       }
       try { return vm.dump(result.value); } finally { result.value.dispose(); }
@@ -508,7 +534,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
   const failure = (message: string, timedOut = false): EvaluateResult => {
     let logs: string[] = [];
     try { logs = readLogs(); } catch { /* the VM may be unusable after an interrupt */ }
-    return { results: [], logs, codeError: message, timedOut };
+    return { results: [], logs, codeError: cutErrorText(message), timedOut };
   };
   const isInterrupt = (message: string) => /interrupted|InternalError: interrupted/i.test(message);
   const isStackOverflow = (message: string) => /stack overflow|maximum call stack|gc_obj_list/i.test(message);
@@ -517,8 +543,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
     const shownCalls = Math.max(0, Math.min(input.calls.length, Math.floor(input.shownCalls ?? input.calls.length)));
     const evaluated = vm.evalCode(program(input.code, input.calls, shownCalls, input.runtimePolicy), 'task.js');
     if (evaluated.error) {
-      const error = vm.dump(evaluated.error) as { message?: string; name?: string } | string;
-      evaluated.error.dispose();
+      const error = dumpError(evaluated.error) as { message?: string; name?: string } | string;
       const message = typeof error === 'string' ? error : `${error?.name ?? 'Error'}: ${error?.message ?? 'failed'}`;
       if (isInterrupt(message)) return failure(TIMEOUT_MESSAGE, true);
       if (isStackOverflow(message)) return failure(STACK_MESSAGE);
@@ -529,8 +554,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
     for (let tick = 0; tick < MAX_TICKS; tick++) {
       const jobs = runtime.executePendingJobs();
       if (jobs.error) {
-        const error = vm.dump(jobs.error) as { message?: string } | string;
-        jobs.error.dispose();
+        const error = dumpError(jobs.error) as { message?: string } | string;
         const message = typeof error === 'string' ? error : error?.message ?? 'failed';
         if (isInterrupt(message)) return failure(TIMEOUT_MESSAGE, true);
         // An unhandled rejection inside a job: keep pumping, the harness catches per call.
@@ -553,7 +577,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
     if (!Array.isArray(parsed) || parsed.length !== input.calls.length) return failure('Incomplete evaluation.');
     const results = parsed.map((outcome, index) => {
       if (!Array.isArray(outcome)) throw new Error('Malformed result');
-      if (outcome[0] === 'error' && typeof outcome[1] === 'string') return { pass: false, actual: null, error: outcome[1] };
+      if (outcome[0] === 'error' && typeof outcome[1] === 'string') return { pass: false, actual: null, error: cutErrorText(outcome[1]) };
       if (outcome[0] !== 'value') throw new Error('Malformed result');
       const actual = decode(outcome[1]);
       return { pass: input.expectations ? deepEqual(actual, input.expectations[index]) : null, actual: displayValue(actual), error: null };

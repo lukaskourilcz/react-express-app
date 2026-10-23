@@ -30,6 +30,10 @@
 .ss-auth__failure { display: flex; flex-direction: column; gap: 8px; }
 .ss-auth__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .ss-auth__status { margin: 0; font-size: var(--ss-type-compact); color: var(--color-text-primary); }
+/* The live region waits on the page empty. Out of the flex flow while it has
+   no words, so it adds no gap, yet still in the accessibility tree (unlike
+   display: none), so the words it gets are read out. */
+.ss-auth__status:empty { position: absolute; }
 
 /* "or" between Google and the email form: a hairline on each side. */
 .ss-auth__or {

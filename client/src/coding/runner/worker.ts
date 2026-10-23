@@ -8,7 +8,7 @@ import type { TaskRuntimePolicy } from '../../../../shared/coding-task-runtime';
 // becomes the grader's (shared/coding-run-realm.ts): UTC, the grader's
 // locale methods, and none of the globals the grader lacks, so Run
 // and Submit agree.
-import { evaluateCalls } from '../../../../shared/coding-evaluate';
+import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../../../shared/coding-evaluate';
 import { prepareRunRealm } from '../../../../shared/coding-run-realm';
 import type { TypeTestInput } from '../../../../shared/coding-ts-check';
 
@@ -47,6 +47,18 @@ self.onmessage = async (event: MessageEvent<RunnerRequest>) => {
       // learner's types, and a runaway one is stopped as such.
       self.postMessage({ phase: 'checking' });
       const compiled = compiler.compileTypeScript(request.code, request.typeTests ?? []);
+      // A checker that ran out of stack was stopped by the types, as one that
+      // ran out of time is: the same words the clock and Submit use. As a raw
+      // RangeError it read as the learner's code throwing, with that hint.
+      if (!compiled.check) {
+        post({ phase: 'done', results: [], logs: [], codeError: TYPE_CHECK_STOPPED_MESSAGE, check: null, timedOut: true });
+        return;
+      }
+      // Nothing to run, but the types were checked: keep them on screen.
+      if (compiled.js === null) {
+        post({ phase: 'done', results: [], logs: [], codeError: compiled.transpileError, check: compiled.check });
+        return;
+      }
       self.postMessage({ phase: 'running' });
       const hidden = prepareRunRealm(self, request.runtimePolicy);
       const run = await evaluateCalls({ code: compiled.js, calls: request.calls, expectations: request.expectations, hidden });

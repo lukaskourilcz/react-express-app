@@ -39,6 +39,8 @@ const GLOBAL_BUILT_INS = [
   'Float16Array', 'Float32Array', 'Float64Array', 'BigInt64Array', 'BigUint64Array',
   'isFinite', 'isNaN', 'parseFloat', 'parseInt', 'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent',
   'escape', 'unescape',
+  // ES2026 explicit resource management, which Node 24 ships.
+  'SuppressedError', 'DisposableStack', 'AsyncDisposableStack',
 ] as const;
 
 /** Names ordinary code assigns on objects that inherit them. */
@@ -116,8 +118,10 @@ export function lockDownRealm(): void {
   for (const key of OBJECT_OVERRIDABLE) allowOverride(Object.prototype, key);
   for (const key of FUNCTION_OVERRIDABLE) allowOverride(Function.prototype, key);
   for (const key of ARRAY_OVERRIDABLE) allowOverride(Array.prototype, key);
-  for (const ErrorType of [Error, AggregateError, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError]) {
-    for (const key of ERROR_OVERRIDABLE) allowOverride(ErrorType.prototype, key);
+  const errorTypes = [Error, AggregateError, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError, global.SuppressedError];
+  for (const ErrorType of errorTypes) {
+    if (typeof ErrorType !== 'function') continue;
+    for (const key of ERROR_OVERRIDABLE) allowOverride((ErrorType as { prototype: object }).prototype, key);
   }
 
   // React keeps Node's stack formatter, sets it to undefined while it reads a

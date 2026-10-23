@@ -14,6 +14,7 @@ import { types } from 'node:util';
 import { transform } from 'sucrase';
 import { failUncancelledSubmits, FETCH_STUB_SOURCE, type FormSubmitTarget } from '../../shared/coding-react-support';
 import { createMiniJest, type MiniJestRun } from '../../shared/coding-mini-jest';
+import { LOG_LINE_CUT, MAX_LOG_LINE_CHARS } from '../../shared/coding-evaluate';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
 import { UTC_TIME_SOURCE, type UtcTimeOptions } from '../../shared/coding-utc-time';
 import { createReactLearner, type ReactLearner } from './react-learner';
@@ -243,6 +244,17 @@ function holdRejections(starting: boolean) {
   }, 0);
 }
 
+/** Error text in the verdict, cut the way a console line is. A message the
+ * component threw, or a failed `toBe` on 300 000 characters it rendered, went
+ * into the verdict whole; the API refuses a verdict line past 256 000
+ * characters (react-guest.ts), so the learner's own mistake read as a grader
+ * outage. The cut never splits a surrogate pair. */
+const cutErrorText = (text: string): string => {
+  if (text.length <= MAX_LOG_LINE_CHARS) return text;
+  const last = text.charCodeAt(MAX_LOG_LINE_CHARS - 1);
+  return text.slice(0, last >= 0xd800 && last <= 0xdbff ? MAX_LOG_LINE_CHARS - 1 : MAX_LOG_LINE_CHARS) + LOG_LINE_CUT;
+};
+
 export interface ReactSuiteOutcome extends MiniJestRun {
   /** Set when the component or the suite could not be compiled or loaded. */
   compileError: string | null;
@@ -272,7 +284,7 @@ export async function runReactSuite(input: { suite: string; appSource: string; c
     });
     appModule=learner.exports;
   } catch(error) {
-    compileError=`compiling App: ${(error as Error).message.split('\n')[0]}`;
+    compileError=cutErrorText(`compiling App: ${(error as Error).message.split('\n')[0]}`);
     appModule={__esModule:true,default:()=>null};
   }
 
@@ -292,7 +304,7 @@ export async function runReactSuite(input: { suite: string; appSource: string; c
     learner?.dispose();
     return {
       cases: [], passed: 0, failed: 1, total: 1, timedOut: false,
-      compileError: `compiling suite: ${(error as Error).message.split('\n')[0]}`,
+      compileError: cutErrorText(`compiling suite: ${(error as Error).message.split('\n')[0]}`),
     };
   }
   // A form the component lets submit fails its case, as in the browser
@@ -318,6 +330,7 @@ export async function runReactSuite(input: { suite: string; appSource: string; c
     const passed = cases.filter((one) => one.status === 'pass').length;
     run = { cases, passed, failed: cases.length - passed, total: cases.length };
   }
+  run = { ...run, cases: run.cases.map((one) => (one.error === null ? one : { ...one, error: cutErrorText(one.error) })) };
   const timedOut = /interrupted/i.test(compileError??'') || run.cases.some((one) => one.status === 'fail' && /timed out|interrupted/i.test(one.error ?? ''));
   if (run.total === 0) {
     return { ...run, failed: 1, total: 1, timedOut, compileError: compileError ?? 'suite registered no test cases' };
