@@ -26,7 +26,7 @@ import { useEntitlement } from './lib/entitlement';
 import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m, AnimatePresence, useReducedMotion } from './lib/motion';
-import BrandFooter from './components/BrandFooter';
+import BrandFooter, { SettingsToggles } from './components/BrandFooter';
 import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
 import { CloseIcon, CoinsIcon, TrophyIcon } from './components/ui/icons';
@@ -202,6 +202,10 @@ const NAV_ITEMS: {
   feature?: keyof GameConfig['features'];
   signedIn?: true;
   drawerOnly?: true;
+  /** In the mobile drawer's second group, 'You' (UX audit shell-public-15):
+   * the learner's own pages and the purchase ones, as the desktop header
+   * splits them from the learning destinations. */
+  you?: true;
 }[] = [
   { to: '/today', key: 'nav.today', isActive: (p) => p === '/today', signedIn: true },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
@@ -209,11 +213,11 @@ const NAV_ITEMS: {
   { to: '/coding', key: 'nav.coding', isActive: (p) => p.startsWith('/coding') },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
-  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap', drawerOnly: true },
-  { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards', signedIn: true, drawerOnly: true },
-  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard', signedIn: true },
-  { to: '/premium', key: 'nav.premium', isActive: (p) => p === '/premium' || p.startsWith('/premium/') },
-  { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop', signedIn: true },
+  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap', drawerOnly: true, you: true },
+  { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards', signedIn: true, drawerOnly: true, you: true },
+  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard', signedIn: true, you: true },
+  { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop', signedIn: true, you: true },
+  { to: '/premium', key: 'nav.premium', isActive: (p) => p === '/premium' || p.startsWith('/premium/'), you: true },
 ];
 
 // Shown only while the first page of a visit loads: a navigation keeps the
@@ -679,19 +683,35 @@ function App() {
                 <BrandLogo height={20} />
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
-              <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {navItems.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    replace={inBox(item.to)}
-                    className="ss-drawer-link"
-                    data-active={item.isActive(navPath)}
-                    aria-current={item.isActive(location.pathname) ? 'page' : undefined}
-                  >
-                    {t(item.key)}
-                  </Link>
-                ))}
+              {/* Practice, then You, each under a small label (UX audit
+                  shell-public-15). Both always hold links: Learn and Quiz,
+                  Career and Premium are shown to everyone. */}
+              {[0, 1].map((you) => {
+                const label = t(you ? 'nav.groupYou' : 'nav.groupPractice');
+                return (
+                <div key={you} className="ss-drawer-group" role="group" aria-label={label}>
+                  <p className="ss-drawer-group__label" aria-hidden="true">{label}</p>
+                  {navItems.filter((item) => !item.you === !you).map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      replace={inBox(item.to)}
+                      className="ss-drawer-link"
+                      data-active={item.isActive(navPath)}
+                      aria-current={item.isActive(location.pathname) ? 'page' : undefined}
+                    >
+                      {t(item.key)}
+                    </Link>
+                  ))}
+                </div>
+                );
+              })}
+              {/* The appearance and sound toggles, pinned to the drawer's
+                  bottom: below the nav breakpoint the footer's pair hides,
+                  so they are not buried under a long page behind the open
+                  drawer. Pressing one keeps the drawer open. */}
+              <div className="ss-drawer-settings" role="group" aria-label={t('profile.preferences')} onClick={(event) => event.stopPropagation()}>
+                <SettingsToggles className="ss-drawer-link" />
               </div>
             </m.div>
           </m.div>

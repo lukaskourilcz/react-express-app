@@ -15,10 +15,33 @@ const SOCIAL_ICON: Record<SocialPlatform, typeof InstagramIcon> = {
   threads: ThreadsIcon,
 };
 
-export default function BrandFooter() {
+/** The appearance and sound toggles: short visible labels, the full action as
+ * the accessible name (which contains the visible words). The footer shows
+ * them from 1024px; below that the mobile drawer holds them (App.tsx, UX
+ * audit shell-public-15), so they live in one place at every width. */
+export function SettingsToggles({ className }: { className?: string }) {
   const t = useT();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
+  return (
+    <>
+      <button type="button" className={className} onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
+        {mode === 'light' ? t('footer.darkMode') : t('footer.lightMode')}
+      </button>
+      <button
+        type="button"
+        className={className}
+        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+        aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+      >
+        {settings.soundEffects ? t('footer.soundOff') : t('footer.soundOn')}
+      </button>
+    </>
+  );
+}
+
+export default function BrandFooter() {
+  const t = useT();
   // The public cancellation page is a legal link (§ 312k BGB): always one
   // click away wherever a subscription can exist.
   const billing = useBilling();
@@ -66,16 +89,7 @@ export default function BrandFooter() {
             column (UX audit shell-public-03); the full action stays the
             accessible name, which contains the visible words. */}
         <div className="ss-footer-settings" role="group" aria-label={t('profile.preferences')}>
-          <button type="button" onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
-            {mode === 'light' ? t('footer.darkMode') : t('footer.lightMode')}
-          </button>
-          <button
-            type="button"
-            onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-            aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-          >
-            {settings.soundEffects ? t('footer.soundOff') : t('footer.soundOn')}
-          </button>
+          <SettingsToggles />
         </div>
       </div>
     </footer>

@@ -463,7 +463,7 @@ it('tells a learner the session signed out that this task’s code is kept for t
   mount();
   expect(screen.getByLabelText('Code')).toHaveValue('// starter');
   expect(screen.getByText('You were signed out, so the code for this task is kept for your account. Sign in to open it.')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Log in' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Sign in' })).toBeVisible();
   expect(screen.queryByText(/kept for the account/)).toBeNull();
 });
 

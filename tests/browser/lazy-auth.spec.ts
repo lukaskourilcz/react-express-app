@@ -66,7 +66,7 @@ for (const route of ['/', '/learn']) {
     });
     const seen = watch(page);
     await page.goto(route);
-    await expect(page.getByRole('button', { name: 'Log in', exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
     await page.waitForLoadState('networkidle');
     expect(await libraryRequests(page, seen.chunks)).toEqual([]);
     expect(seen.project).toEqual([]);
@@ -95,11 +95,11 @@ test('signing in downloads supabase-js on the Google press, then leaves for the 
   await localAuth(page);
   const seen = watch(page);
   await page.goto('/');
-  const logIn = page.getByRole('button', { name: 'Log in', exact: true }).first();
+  const logIn = page.getByRole('button', { name: 'Sign in', exact: true }).first();
   await expect(logIn).toBeVisible();
   await page.waitForLoadState('networkidle');
   expect(await libraryRequests(page, seen.chunks)).toEqual([]);
-  // "Log in" opens the sign-in dialog: Google first, then an email and
+  // "Sign in" opens the sign-in dialog: Google first, then an email and
   // password. Opening it downloads nothing of supabase-js.
   await logIn.click();
   const google = page.getByRole('dialog').getByRole('button', { name: 'Continue with Google' });

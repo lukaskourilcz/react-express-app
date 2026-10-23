@@ -79,7 +79,8 @@ describe('the cookie banner', () => {
     expect(within(region!).getByText(/With your OK it also measures visits with PostHog \(EU\)/)).toBeInTheDocument();
     expect(within(region!).getByRole('link', { name: 'Read the privacy policy' })).toHaveAttribute('href', '/privacy#cookies');
     const actions = within(region!).getAllByRole('button');
-    expect(actions.map((button) => button.textContent)).toEqual(['Accept all', 'Reject all', 'Choose']);
+    // Reject all first, as in the settings dialog (UX audit shell-public-11).
+    expect(actions.map((button) => button.textContent)).toEqual(['Reject all', 'Accept all', 'Choose']);
     // Same variant, same size: Reject all is as easy to see and press as Accept all.
     expect(new Set(actions.map((button) => button.className)).size).toBe(1);
     expect(actions.every((button) => button.tagName === 'BUTTON' && !button.hasAttribute('disabled'))).toBe(true);
@@ -194,7 +195,11 @@ describe('the cookie settings dialog', () => {
   it('offers Reject all and Accept all inside the dialog too', async () => {
     mount();
     fireEvent.click(within(banner()!).getByRole('button', { name: 'Choose' }));
-    fireEvent.click(within(await openDialog()).getByRole('button', { name: 'Reject all' }));
+    const dialog = await openDialog();
+    // The same order as the banner it opened from: Reject all, Accept all.
+    const order = [...dialog.querySelectorAll('.ss-consent-dialog__actions button')].map((button) => button.textContent);
+    expect(order).toEqual(['Reject all', 'Accept all', 'Save choices']);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reject all' }));
     expect(getConsent()).toMatchObject({ analytics: false, marketing: false });
     expect(JSON.parse(localStorage.getItem(CONSENT_STORAGE_KEY)!)).toMatchObject({ analytics: false, marketing: false });
   });

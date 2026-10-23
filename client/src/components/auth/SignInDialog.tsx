@@ -1,6 +1,6 @@
 // The sign-in dialog: "Continue with Google" first, then an email and
 // password form that signs in, creates an account, or sends a password reset
-// link. Opened by every "Log in" and "Sign in" in the app (lib/signInDialog.ts)
+// link. Opened by every "Sign in" in the app (lib/signInDialog.ts)
 // and rendered by SignInDialogHost, which closes it when the account arrives.
 //
 // Creating an account signs nobody in: Supabase sends a confirmation link,
@@ -35,9 +35,12 @@ import { EmailField, FailureBanner, PasswordField, ResendButton, useFieldMessage
 type Stage = { kind: 'form' } | { kind: 'sent'; purpose: 'confirm' | 'reset'; email: string };
 type Busy = null | 'google' | 'submit' | 'resend';
 
+// One title for both modes (UX audit shell-public-05): 'Sign in to devShark'
+// over a 'Sign in' tab over a 'Sign in' button said it three times. The
+// segmented control carries the mode, and the submit says what it does.
 const TITLES: Record<SignInView, TranslationKey> = {
-  signIn: 'auth.dialog.signInTitle',
-  signUp: 'auth.dialog.signUpTitle',
+  signIn: 'auth.dialog.accountTitle',
+  signUp: 'auth.dialog.accountTitle',
   forgot: 'auth.dialog.forgotTitle',
 };
 
@@ -287,7 +290,7 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
                 <div className="ss-auth__google">
                   <Button
                     variant="secondary"
-                    size="lg"
+                    size="md"
                     className="ss-action"
                     icon={<GoogleIcon />}
                     label={busy === 'google' ? t('auth.dialog.googleBusy') : t('auth.dialog.google')}
@@ -318,29 +321,36 @@ export default function SignInDialog({ request }: { request: SignInRequest }) {
                 error={fieldMessage(showEmailIssue)}
                 inputRef={emailInput}
               />
+              {/* The password and one reserved 44px row under it, in both
+                  modes: 'Forgot password?' in Sign in, the length rule in
+                  Create account. Both views are the same height, so the
+                  centred dialog does not move under the pointer when the
+                  mode changes (UX audit shell-public-05). */}
               {view !== 'forgot' && (
-                <PasswordField
-                  label={t('auth.password.label')}
-                  value={password}
-                  onChange={(value) => { setPassword(value); if (formFailure) setFailure(null); }}
-                  onBlur={() => setBlurred((now) => ({ ...now, password: true }))}
-                  error={fieldMessage(showPasswordIssue)}
-                  hint={view === 'signUp' ? t('auth.password.rule', { min: PASSWORD_MIN_LENGTH }) : undefined}
-                  autoComplete={view === 'signUp' ? 'new-password' : 'current-password'}
-                  inputRef={passwordInput}
-                />
-              )}
-              {view === 'signIn' && (
-                <p className="ss-auth__row ss-text-links" style={{ justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => switchView('forgot', true)}>{t('auth.dialog.forgotLink')}</button>
-                </p>
+                <div className="ss-auth__password">
+                  <PasswordField
+                    label={t('auth.password.label')}
+                    value={password}
+                    onChange={(value) => { setPassword(value); if (formFailure) setFailure(null); }}
+                    onBlur={() => setBlurred((now) => ({ ...now, password: true }))}
+                    error={fieldMessage(showPasswordIssue)}
+                    hint={view === 'signUp' ? t('auth.password.rule', { min: PASSWORD_MIN_LENGTH }) : undefined}
+                    autoComplete={view === 'signUp' ? 'new-password' : 'current-password'}
+                    inputRef={passwordInput}
+                  />
+                  {view === 'signIn' && (
+                    <p className="ss-auth__forgot">
+                      <button type="button" onClick={() => switchView('forgot', true)}>{t('auth.dialog.forgotLink')}</button>
+                    </p>
+                  )}
+                </div>
               )}
               {formFailure && <FailureBanner failure={formFailure}>{failureActions(formFailure)}</FailureBanner>}
               <div className="ss-auth__submit">
                 <Button
                   type="submit"
                   variant="primary"
-                  size="lg"
+                  size="md"
                   className="ss-action"
                   label={submitLabel(view, busy === 'submit', t)}
                   isLoading={busy === 'submit'}

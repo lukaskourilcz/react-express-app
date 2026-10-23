@@ -124,3 +124,30 @@ test('phone: the drawer opens Coding without a blank or a loader', async ({ page
   expect(new Set(frames.slice(arrived).map((f) => f.root)).size).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+// UX audit shell-public-15: the drawer splits Practice from You, as the
+// desktop header does, and holds the appearance and sound toggles at its
+// bottom, where the footer's pair (hidden below 1024px) used to sit behind it.
+test('phone: the drawer groups its links and keeps the toggles at its bottom', async ({ page }) => {
+  await prepare(page, 390);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('.ss-footer-settings')).toBeHidden();
+  await page.getByRole('button', { name: 'Open navigation menu' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Navigation' });
+  const practice = drawer.getByRole('group', { name: 'Practice' });
+  const you = drawer.getByRole('group', { name: 'You' });
+  await expect(practice.getByRole('link', { name: 'Coding' })).toBeVisible();
+  await expect(you.getByRole('link', { name: 'Premium' })).toBeVisible();
+  await expect(practice.getByRole('link', { name: 'Premium' })).toHaveCount(0);
+  const dark = drawer.getByRole('button', { name: 'Switch to dark mode' });
+  const box = await dark.boundingBox();
+  const panel = await page.locator('.ss-drawer-panel').boundingBox();
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+  // Pinned to the bottom: the sound row ends within the panel's last 24px.
+  const sound = await drawer.getByRole('button', { name: 'Turn sound on' }).boundingBox();
+  expect(panel!.y + panel!.height - (sound!.y + sound!.height)).toBeLessThan(24);
+  // A toggle keeps the drawer open.
+  await dark.click();
+  await expect(drawer.getByRole('button', { name: 'Switch to light mode' })).toBeVisible();
+});

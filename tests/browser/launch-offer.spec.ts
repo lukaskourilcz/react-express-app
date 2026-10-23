@@ -35,7 +35,9 @@ async function settled(page: Page): Promise<void> {
 
 const plans = (page: Page) => page.getByRole('region', { name: 'Choose a plan' });
 
-test('Premium member has a gold diamond and a disabled Start free action with a keyboard tooltip', async ({ page }) => {
+// UX audit shell-public-17: 'Start free' is for a visitor without an account;
+// a Premium member gets no plan-table action at all.
+test('Premium member has a gold diamond and no Start free or See Premium action', async ({ page }) => {
   await prepare(page, { now: '2026-10-12T10:00:00Z', launchOffer: false });
   await storeFakeSession(page);
   await localAuth(page);
@@ -48,14 +50,10 @@ test('Premium member has a gold diamond and a disabled Start free action with a 
     } });
   });
   await page.goto('/');
-  const free = page.getByRole('button', { name: 'Start free', exact: true });
-  await expect(free).toHaveAttribute('aria-disabled', 'true');
-  await free.focus();
-  await free.press('Tab');
-  await page.keyboard.press('Shift+Tab');
-  await expect(page.getByRole('tooltip')).toHaveText('You are already a Premium member!\nThank you! 💙');
-  await expect(page.getByRole('tooltip')).toHaveCSS('white-space', 'pre-line');
   await expect(page.locator('.ss-premium-nav-icon--member')).toBeVisible();
+  await expect(page.getByRole('table')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start free', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'See Premium', exact: true })).toHaveCount(0);
 });
 
 test('inside the window: the launch price, the regular price from 1 Dec, and no earlier-price claim', async ({ page }) => {

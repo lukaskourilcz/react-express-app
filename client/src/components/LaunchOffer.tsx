@@ -44,12 +44,14 @@ function withAmounts(sentence: string, offer: LaunchOfferDisplay): ReactNode[] {
   });
 }
 
-/** The monthly caption of the plan table: "€3.99 a month, VAT included", or
- * the launch price with the regular one struck through. */
-export function PremiumMonthlyCaption({ offer }: { offer: LaunchOfferDisplay | null }) {
+/** The monthly caption of the plan table: "€4.99 a month, before VAT", or
+ * the launch price with the regular one struck through. `withVat={false}`
+ * drops ", before VAT" where the page already says it beside the price, on
+ * the plan cards and in Before you pay (/premium, UX audit money-03). */
+export function PremiumMonthlyCaption({ offer, withVat = true }: { offer: LaunchOfferDisplay | null; withVat?: boolean }) {
   const t = useT();
-  if (!offer) return <>{t('landing.compare.premiumCaption', premiumVars())}</>;
-  return <>{withAmounts(t('landing.compare.premiumCaptionOffer'), offer)}</>;
+  if (!offer) return <>{t(withVat ? 'landing.compare.premiumCaption' : 'landing.compare.premiumCaptionShort', premiumVars())}</>;
+  return <>{withAmounts(t(withVat ? 'landing.compare.premiumCaptionOffer' : 'landing.compare.premiumCaptionOfferShort'), offer)}</>;
 }
 
 /** "€3.99 a month or €39.99 a year, VAT included. Cancel any time.", or the
