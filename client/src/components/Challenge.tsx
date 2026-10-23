@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
-import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
@@ -33,7 +32,6 @@ import type { QuestionXpHeld } from '../../../shared/repeat-xp';
 import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import { accountEpoch } from '../lib/accountData';
-import './DeepEndScreens.css';
 import './Challenge.css';
 import {
   AnswerOptionList,
@@ -872,7 +870,7 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
 
   if (phase === 'error') {
     return (
-      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+      <div className="ss-pop challenge-end">
         <Card padding={5} width="100%">
           <VStack gap={2}>
             <Banner status="error" title={error || t('error.somethingWrong')} />
@@ -887,7 +885,7 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
 
   if (phase === 'gameover') {
     return (
-      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+      <div className="ss-pop challenge-end">
         <Card padding={5} width="100%">
           <VStack gap={2}>
             <VStack gap={1} align="center">
@@ -949,10 +947,12 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
               </VStack>
             )}
 
-            <HStack gap={1.5} justify="center" wrap="wrap">
-              <Button variant="primary" label={t('challenge.playAgain')} onClick={() => void startRun()} />
-              <Button variant="secondary" label={t('challenge.backToIntro')} onClick={() => setPhase('intro')} />
-            </HStack>
+            {/* The run's action row: Play again is the one SwimCta md, as
+                Start and Next were (UX audit U2). */}
+            <QuestionActions
+              secondary={<Button variant="secondary" label={t('challenge.backToIntro')} onClick={() => setPhase('intro')} />}
+              primary={{ label: t('challenge.playAgain'), onClick: () => void startRun() }}
+            />
 
             {/* The invite link at the end of a run (#239); nothing while
                 signed out or while invitations are off. */}

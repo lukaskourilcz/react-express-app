@@ -883,6 +883,17 @@ describe('focus mode', () => {
     expect(localStorage.getItem(PENDING)).toBeNull();
   });
 
+  it('ends on the run’s action row, with Play again as the one SwimCta', async () => {
+    await mount();
+    await start();
+    await strikeOutNow();
+    const again = screen.getByRole('button', { name: 'Play again' });
+    expect(again).toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(again.closest('.ss-question-actions')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Back' }).closest('.ss-question-actions__secondary')).not.toBeNull();
+  });
+
   it('rests the run keys while a dialog is open, so a digit or Enter in it acts on nothing behind it', async () => {
     await mount();
     await start();
