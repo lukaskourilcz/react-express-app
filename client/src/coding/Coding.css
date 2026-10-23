@@ -362,9 +362,11 @@
 @media (min-width: 1024px) {
   .cd-pane--controls { grid-row: 2; }
 }
-@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
-  .cd-workbench .ss-swim-cta--sm { --swim-cta-height: 32px; }
-}
+/* Submit and Continue are the workbench's one filled primary. They sit in the
+   row with Run, Format and Hint, which are 44px on every pointer (U1), so they
+   take the same height and the page-action type rather than SwimCta sm's 32px
+   with 12.5px text (the inline style needs !important). */
+.cd-workbench .ss-swim-cta--sm { padding: 10px 18px !important; font-size: 0.95rem !important; }
 .cd-shortcuts { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary); }
 
 .cd-note { margin: 0; padding: 10px 12px; border-radius: var(--radius-inner); background: var(--ss-info-soft); font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }

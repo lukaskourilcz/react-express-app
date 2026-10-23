@@ -110,6 +110,12 @@ describe('control heights on every pointer', () => {
       'calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2)',
     );
   });
+
+  it('gives the coding workbench’s Submit the row’s 44px and the page-action type, not SwimCta sm’s 32px', () => {
+    const coding = readFileSync(new URL('../src/coding/Coding.css', import.meta.url), 'utf8');
+    expect(coding).not.toContain('--swim-cta-height: 32px');
+    expect(coding).toContain('.cd-workbench .ss-swim-cta--sm { padding: 10px 18px !important; font-size: 0.95rem !important; }');
+  });
 });
 
 describe('reduced motion on the Learn map', () => {
