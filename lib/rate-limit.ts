@@ -22,6 +22,7 @@
 // Callers should prefer `await enforceRateLimit(...)`; `checkRateLimit()` stays
 // exported for the fallback path and any sync call site.
 
+import { isIP } from 'node:net';
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { jsonError, ServiceUnavailableError, verifiedCallerId } from './http';
 
@@ -254,12 +255,38 @@ function storeBucket(key: string, config: RateLimitConfig, tokens: number, now: 
  * for legit users behind a shared proxy.
  */
 function clientIp(req: VercelRequest): string {
-  const address = forwardedAddress(req);
+  const address = addressKey(forwardedAddress(req));
   // An account's bucket is `user:<id>`. No address starts that way, but the
   // header is whatever the client sent where no proxy overwrites it, so such
   // a value is moved out of that namespace rather than reach an account's
   // bucket.
   return address.startsWith('user:') ? `ip:${address}` : address;
+}
+
+/**
+ * The bucket key for an address. One IPv6 subscriber holds a whole /64 and can
+ * pick any address in it, so keyed per address every request could come from
+ * a fresh bucket: the admin gate, a guest's grading budget and every address
+ * backstop would hold nothing. An IPv6 address counts as its /64, the way an
+ * IPv4 household counts as its one public address, and an IPv4 address written
+ * as IPv6 (`::ffff:192.0.2.1`) as that IPv4 address. Anything else is kept.
+ */
+export function addressKey(address: string): string {
+  const bare = address.split('%')[0];
+  if (isIP(bare) !== 6) return address;
+  const lower = bare.toLowerCase();
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(lower);
+  if (mapped) return mapped[1];
+  const [head, tail] = lower.split('::');
+  const headGroups = head ? head.split(':') : [];
+  let groups = headGroups;
+  if (tail !== undefined) {
+    const tailGroups = tail ? tail.split(':') : [];
+    // An embedded IPv4 address fills the last two groups.
+    const tailWidth = tailGroups.length + (tailGroups.at(-1)?.includes('.') ? 1 : 0);
+    groups = [...headGroups, ...Array<string>(8 - headGroups.length - tailWidth).fill('0'), ...tailGroups];
+  }
+  return `${groups.slice(0, 4).map((group) => parseInt(group, 16).toString(16)).join(':')}::/64`;
 }
 
 function forwardedAddress(req: VercelRequest): string {

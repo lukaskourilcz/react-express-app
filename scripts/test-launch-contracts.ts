@@ -33,7 +33,7 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { addressKey, checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
@@ -4561,6 +4561,24 @@ async function main() {
     } finally {
       Date.now = realNow;
     }
+  }
+
+  // One IPv6 subscriber holds a whole /64 and may send from any address in
+  // it, so the address buckets count a /64 as one caller, as an IPv4 NAT is.
+  {
+    const stamp = Date.now();
+    const gate = { key: `ipv6-${stamp}`, capacity: 1, refillPerSecond: 0.0001 };
+    const from = (address: string) => ({ headers: { 'x-forwarded-for': address }, socket: {} }) as never;
+    assert.equal(checkRateLimit(from('2001:db8:aa:1::1'), mockResponse() as never, gate), true);
+    assert.equal(checkRateLimit(from('2001:db8:aa:1:ffff:1234:5678:9abc'), mockResponse() as never, gate), false,
+      'another address in the same /64 must not get a bucket of its own');
+    assert.equal(checkRateLimit(from('2001:db8:aa:2::1'), mockResponse() as never, gate), true, 'another /64 is another caller');
+    assert.equal(checkRateLimit(from('192.0.2.77'), mockResponse() as never, gate), true);
+    assert.equal(checkRateLimit(from('::ffff:192.0.2.77'), mockResponse() as never, gate), false, 'an IPv4 address written as IPv6 is that address');
+    assert.equal(addressKey('2001:0DB8:00aa:0001:0:0:0:1'), '2001:db8:aa:1::/64');
+    assert.equal(addressKey('::1'), '0:0:0:0::/64');
+    assert.equal(addressKey('64:ff9b::192.0.2.1'), '64:ff9b:0:0::/64');
+    assert.equal(addressKey(`contract-${stamp}`), `contract-${stamp}`, 'a value that is no address is kept as it is');
   }
 
   // Grader limits are per task (owner decision 9, 9 October 2026). A Submit
