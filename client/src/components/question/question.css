@@ -1,0 +1,249 @@
+/* The shared question parts (UX audit U2, #574). One shell, one header, one
+   answer list, inline feedback, one hint line and one action row, so Quiz,
+   Challenge, Daily, the Learn runner and Shark Cards draw a question the same
+   way. */
+
+/* The question tokens. They live here, not in astryx-theme.css, so they ship
+   with the question screens' lazy chunks and the app shell carries none of
+   them. */
+:root {
+  --ss-question-block-min: 200px;
+  --ss-question-block-max: 40vh;
+  --ss-answer-row-min: 48px;
+  --ss-answer-gap: 8px;
+  --ss-answer-chip: 26px;
+  --ss-question-title-size: 1.25rem;
+  /* Two lines of 24px tags with the 8px gap between them. */
+  --ss-question-tags-min: 56px;
+}
+
+/* ——— QuestionShell ——— */
+.ss-question {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: var(--ss-width-task);
+  margin: 0 auto;
+  min-width: 0;
+  /* A runner that opens its next screen at the top (scrollIntoView start)
+     stops clear of the floating site header. */
+  scroll-margin-top: 6rem;
+}
+.ss-question__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px;
+  border-radius: var(--radius-container);
+}
+/* The question block keeps one height, so the answers under it start at the
+   same y on every question; a long question scrolls inside it. */
+.ss-question__block {
+  min-height: var(--ss-question-block-min);
+  max-height: var(--ss-question-block-max);
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.ss-question__block[data-stable='false'] { min-height: 0; max-height: none; overflow: visible; }
+.ss-question__block pre { max-width: 100%; overflow-x: auto; }
+/* Focused when a run starts or moves on; the ring is for the keyboard only. */
+.ss-question__block:focus { outline: none; }
+.ss-question__block:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+.ss-question__body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+@media (max-width: 559px) {
+  .ss-question__panel { padding: 16px; }
+}
+
+/* ——— QuestionHeader ——— */
+.ss-question-header { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ss-question-header__row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ss-question-header__title {
+  /* Shrinks and wraps before it pushes the progress or the run status out of
+     a 360px panel ("Level 12 · Asynchronous JavaScript" beside a timer). */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-size: var(--ss-question-title-size);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.ss-question-header__run { color: var(--color-text-secondary); font-weight: 600; }
+.ss-question-header__title:focus { outline: none; }
+.ss-question-header__title:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+.ss-question-header__progress { flex: 1 1 auto; min-width: 48px; }
+.ss-question-header__status { flex: none; margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: var(--ss-type-compact); font-weight: 600; }
+.ss-question-header__meta { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.ss-question-header__tools { flex: none; display: flex; align-items: center; gap: 4px; margin-inline-start: auto; }
+/* Under 560px a tag and the difficulty badge wrap to two lines beside the
+   icon buttons for a long topic name and stay on one for a short one; the
+   row keeps the two lines' height either way, so the question block and the
+   answers under it start at one y on every question (questions-06). */
+@media (max-width: 559px) {
+  .ss-question-header__row--tags { min-height: var(--ss-question-tags-min); }
+}
+
+.ss-question-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--ss-control-height);
+  height: var(--ss-control-height);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color var(--ss-motion-feedback) ease, color var(--ss-motion-feedback) ease;
+}
+.ss-question-icon-button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
+.ss-question-icon-button[aria-pressed='true'] { background: var(--brand-accent-soft); color: var(--brand-accent-on-soft); }
+.ss-question-icon-button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.ss-question-icon-button svg { width: 20px; height: 20px; }
+
+/* ——— AnswerOptionList ——— */
+/* scroll-margin-top: when QuestionActions brings the list back into view
+   after its focus move, it stops clear of the floating site header. */
+.ss-answer-list { display: flex; flex-direction: column; gap: var(--ss-answer-gap); min-width: 0; scroll-margin-top: 6rem; }
+.ss-question .ss-answer-option.ss-radio-card,
+.ss-answer-list .ss-answer-option.ss-radio-card {
+  display: flex;
+  align-items: center;
+  min-height: var(--ss-answer-row-min);
+  border-radius: var(--radius-element);
+}
+.ss-answer-list .ss-answer-option.ss-radio-card[data-selected='true'] {
+  border-color: var(--brand-accent);
+  box-shadow: inset 0 0 0 1px var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+.ss-answer-list .ss-answer-option.ss-radio-card[data-tone='success'] {
+  border-color: var(--ss-success);
+  box-shadow: inset 0 0 0 1px var(--ss-success);
+  background: var(--ss-success-soft);
+}
+.ss-answer-list .ss-answer-option.ss-radio-card[data-tone='error'] {
+  border-color: var(--ss-error);
+  box-shadow: inset 0 0 0 1px var(--ss-error);
+  background: var(--ss-error-soft);
+}
+/* A graded list is disabled, but its marks are the answer: full strength. */
+.ss-answer-list .ss-answer-option.ss-radio-card:is([data-tone='success'], [data-tone='error']):disabled { opacity: 1; }
+.ss-answer-option__row { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; padding-inline-end: 20px; }
+.ss-answer-option__key {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--ss-answer-chip);
+  height: var(--ss-answer-chip);
+  border-radius: var(--radius-inner);
+  background: var(--color-background-muted);
+  color: var(--color-text-primary);
+  font-size: var(--ss-type-meta);
+  font-weight: 700;
+}
+.ss-answer-option[data-selected='true'] .ss-answer-option__key { background: var(--brand-accent); color: var(--brand-on-accent); }
+.ss-answer-option__text { display: grid; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-weight: 400; }
+.ss-answer-option[data-selected='true'] .ss-answer-option__text { font-weight: 600; }
+/* The words and a hidden semibold copy of them share one grid cell, so the
+   row is always as tall as its semibold text: a line near the row's edge that
+   wraps once it turns semibold (selected, or the Learn pick at grading) has
+   its second line held already, and the rows under it do not move. */
+.ss-answer-option__label { grid-area: 1 / 1; align-self: center; min-width: 0; }
+.ss-answer-option__text::after {
+  content: attr(data-reserve);
+  grid-area: 1 / 1;
+  min-width: 0;
+  font-weight: 600;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* A graded row never changes height. With the words beside the text,
+   "mutable by the component ✕ Your pick" went to two lines on a 320px phone
+   row, and so did a 44–62 character answer (a quarter of the bank) on the
+   590px desktop row, pushing the rows under it down at the moment of grading.
+   Every row keeps a 20px slot at its end (the row's padding-inline-end),
+   graded or not, and a graded row draws only its glyph there, ✓ or ✕ in the
+   status colour; the words stay in the row's accessible name, and the verdict
+   under the list says in words whether the pick was right. */
+.ss-answer-option__mark {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.ss-answer-option__mark-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.ss-answer-option[data-tone='success'] .ss-answer-option__mark { color: var(--ss-success-strong); }
+/* A wrong pick says so in its chip too, not only in its row: the selection
+   green on a red row read as a right answer at a glance. The mark uses the
+   error text colour, which holds 4.5:1 on the soft red. */
+.ss-answer-option[data-tone='error'] .ss-answer-option__mark { color: var(--ss-error-text); }
+.ss-answer-option[data-tone='error'][data-selected='true'] .ss-answer-option__key { background: var(--ss-error-text); color: var(--ss-on-error-text); }
+
+/* ——— QuestionHint ——— */
+/* One reserved line under the answers in every state: hiding the words never
+   moves the answers above or the actions below. Keys belong to a desktop with
+   a fine pointer; a phone or a touch screen does not have them, so the line
+   is not drawn there at all (the same on every question). */
+.ss-question-hint {
+  min-height: 1.5em;
+  margin: 0;
+  font-size: var(--ss-type-meta);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.ss-question-hint[data-hidden='true'] { visibility: hidden; }
+@media (pointer: coarse), (max-width: 599px) {
+  .ss-question-hint { display: none; }
+}
+
+/* ——— QuestionFeedback ——— */
+/* In normal flow, under the answers, never over them. */
+.ss-question-feedback { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ss-question-feedback:focus { outline: none; }
+.ss-question-feedback:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-element); }
+
+/* ——— QuestionActions ——— */
+/* One 44px row under the panel: secondaries on the left, the one primary
+   (SwimCta md) on the right. Under 560px the primary takes the last row at
+   full width, in the thumb zone, and the secondaries share the row above. */
+.ss-question-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ss-question-actions__secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.ss-question-actions__primary { display: flex; margin-inline-start: auto; }
+@media (max-width: 559px) {
+  .ss-question-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .ss-question-actions__secondary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ss-question-actions__secondary > * { width: 100%; }
+  .ss-question-actions__secondary:empty { display: none; }
+  .ss-question-actions__primary { margin-inline-start: 0; }
+  .ss-question-actions__primary > .ss-swim-cta { width: 100%; }
+}

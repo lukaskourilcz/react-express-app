@@ -1,14 +1,8 @@
 /* Quiz view styles — only the classes Quiz.tsx actually renders. */
 
-.quiz-question-text {
-  font-size: clamp(0.95rem, 3vw, 1rem);
-  margin-bottom: 1.25rem;
-  font-weight: 500;
-  line-height: 1.6;
-}
-/* Focused when the quiz starts (Quiz.tsx); the ring shows for the keyboard only. */
-.quiz-question-text:focus { outline: none; }
-.quiz-question-text:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+/* A one-line note under the first question (interleaved review, hardest
+   available); it sits in the shared question block. */
+.quiz-question-note { margin: 10px 0 0; font-size: var(--ss-type-compact); color: var(--color-text-secondary); }
 
 .quiz-review-header {
   font-family: var(--font-family-heading);
@@ -25,7 +19,8 @@
 .quiz-review-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  /* Paired cards end on one line. */
+  align-items: stretch;
   gap: 20px;
   width: 100%;
 }
@@ -42,6 +37,16 @@
 }
 .quiz-review-item.is-correct .quiz-review-card { border-top: 4px solid var(--ss-success-strong, #16803c) !important; }
 .quiz-review-item.is-incorrect .quiz-review-card { border-top: 4px solid var(--ss-error, #dc2626) !important; }
+.quiz-review-item > .quiz-review-card { height: 100%; }
+.quiz-review-explanation {
+  margin: 4px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--ss-card-line);
+  font-size: var(--ss-type-compact);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
 .quiz-review-question {
   min-width: 0;
   font-family: var(--font-family-heading);
@@ -58,16 +63,47 @@
   .quiz-review-grid { grid-template-columns: 1fr; gap: 14px; }
 }
 
-/* The keyboard hint names keys a phone does not have. A coarse pointer is the
-   honest test for "no keyboard"; the width guard catches a phone-sized layout
-   whose pointer still reports fine, such as device emulation without touch. */
-@media (pointer: coarse), (max-width: 599px) {
-  .quiz-keyboard-tip { display: none; }
-}
-
 /* The hint popover: the text, with a close button that is always on screen.
    The button keeps its own size — 44px under a coarse pointer, from the shared
    touch-target floor in app-shell.css — and tucks into the popover's corner. */
 .quiz-hint { display: flex; align-items: flex-start; gap: 8px; }
 .quiz-hint__text { flex: 1; min-width: 0; padding-block-start: 5px; font-size: 0.82rem; line-height: 1.6; overflow-wrap: anywhere; }
 .quiz-hint > .astryx-button { flex: none; margin-block-start: -4px; margin-inline-end: -6px; }
+
+/* Setup (UX audit U2, questions-15): the task column, the Page header, then
+   one panel whose sections are one 20px gap apart. */
+.quiz-setup { width: 100%; max-width: var(--ss-width-task); margin: 0 auto; }
+.quiz-setup__panel { display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: var(--radius-container); }
+.quiz-setup__error { font-size: var(--ss-type-meta); font-weight: 600; color: var(--ss-error); }
+.quiz-setup__error:empty { display: none; }
+.quiz-setup__settings { display: flex; flex-direction: column; gap: 20px; }
+.quiz-setup__group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.quiz-setup__start { display: flex; align-items: center; }
+@media (max-width: 559px) {
+  .quiz-setup__panel { padding: 16px; }
+}
+
+/* Results (UX audit U2, questions-12): the summary fills the route column, so
+   it and the review grid share both edges; its actions are the shared row. */
+.quiz-results { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.quiz-results__summary {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  border-radius: var(--radius-container);
+  text-align: center;
+}
+
+/* A stopped quiz (expired, graded, daily done, failed): the task column. */
+.quiz-stop { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: var(--ss-width-task); margin: 0 auto; }
+
+@media (max-width: 559px) {
+  .quiz-results__summary { padding: 24px 16px; }
+}
+
+/* Why Submit is unavailable on the last question, under the action row and
+   on the primary's side; Submit names it as its description. */
+.quiz-submit-why { margin: -8px 0 0; text-align: end; font-size: var(--ss-type-meta); color: var(--color-text-secondary); }

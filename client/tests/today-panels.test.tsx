@@ -2,6 +2,7 @@
 // talk about the next day, so both say when it starts on the learner's clock
 // (the server's day changes at 00:00 UTC). Reaching the target hands out
 // nothing, so the panel promises nothing.
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -107,5 +108,52 @@ describe('Today, nothing queued', () => {
     await mountToday();
     expect(await screen.findByText('Nothing is due today. A new plan is ready tomorrow.')).toBeInTheDocument();
     expect(screen.getByText(dayChange)).toBeInTheDocument();
+  });
+});
+
+// UX audit U2, questions-13: one visible h1 with the day's count on its row,
+// no line repeated on every card, and Start here as a tag after the title.
+describe('Today, a fresh plan', () => {
+  it('opens on a visible h1 with the count beside it, and repeats nothing', async () => {
+    answer(
+      { topics: ['javascript', 'html', 'css'], structure: { javascript: { levels: levels(25), checkpoints: [] }, html: { levels: levels(6), checkpoints: [] }, css: { levels: levels(6), checkpoints: [] } } },
+      {},
+    );
+    await mountToday();
+    const h1 = await screen.findByRole('heading', { level: 1, name: 'Today' });
+    expect(h1).not.toHaveClass('ss-sr-only');
+    expect(h1.parentElement).toHaveTextContent('0/3 done');
+    expect(screen.getByRole('progressbar', { name: '0/3 done' })).toBeInTheDocument();
+    expect(screen.getByText(dayChange)).toBeInTheDocument();
+    expect(screen.queryByText('Today’s target')).toBeNull();
+
+    const cards = await screen.findAllByRole('link', { name: /Level 1/ });
+    expect(cards).toHaveLength(3);
+    // The same reason on every card says nothing, so no card shows it.
+    expect(screen.queryByText('Next up on your path.')).toBeNull();
+    // Start here sits on the title's row, after the title.
+    const chip = screen.getByText('Start here');
+    expect(chip.parentElement).toHaveClass('today-card__title');
+    expect(chip.previousElementSibling).toHaveClass('today-card__meta');
+    // On a phone the tag wraps under its title; the cards of one list share
+    // the tallest card's height, so the Start here card is not the odd one.
+    const css = readFileSync(new URL('../src/components/Today.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/@media \(max-width: 560px\) \{\s*\.today-list \{ display: grid; grid-auto-rows: 1fr; \}/);
+    expect(css).toMatch(/\.today-list > li > \.today-card \{ flex: 1 1 auto;/);
+    // Three new levels and three cards: the backlog line would repeat them.
+    expect(screen.queryByText(/to finish|to review|\d+ new/)).toBeNull();
+  });
+
+  it('says the backlog only when there is more than the cards show, without zero counts', async () => {
+    const due = { passed: true, bestPct: 90, passDays: [DAYS_AGO(2)], mastered: false, lastPassDay: DAYS_AGO(2) };
+    answer(
+      { topics: ['javascript', 'html', 'css'], structure: { javascript: { levels: levels(25), checkpoints: [] }, html: { levels: levels(6), checkpoints: [] }, css: { levels: levels(6), checkpoints: [] } } },
+      { javascript: { levels: Object.fromEntries([1, 2, 3, 4, 5].map((n) => [String(n), due])), checkpoints: {} } },
+    );
+    await mountToday();
+    await screen.findByRole('heading', { level: 1, name: 'Today' });
+    const line = await screen.findByText(/to review/);
+    expect(line).toHaveTextContent(/^5 to review · \d+ new$/);
+    expect(screen.queryByText(/0 to finish/)).toBeNull();
   });
 });

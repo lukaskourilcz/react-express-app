@@ -76,7 +76,7 @@ describe('a submit whose sign-in cannot be read', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: /start quiz/i }));
     await screen.findByText('Question a?');
-    fireEvent.click(screen.getAllByRole('radio').filter((radio) => radio.closest('fieldset'))[0]);
+    fireEvent.click(screen.getAllByRole('radio').filter((radio) => radio.closest('.ss-answer-list'))[0]);
 
     session.token = null;
     fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));

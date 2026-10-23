@@ -1,6 +1,7 @@
 // The solo quiz (Quiz.tsx) and the results that wait to be saved
 // (PendingQuizResults). Invented question fixtures; the wire shapes are the
 // real ones from api/quiz/questions, daily, submit and api/user/stats.
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -80,9 +81,10 @@ function renderQuiz(path = '/quiz') {
   return render(quizTree(path));
 }
 
-const counter = () => screen.getAllByText(/^Question \d+ of \d+$/)[0].textContent;
+/** The counter is the run's h1, "Quiz · Question 2 of 5"; this reads its count. */
+const counter = () => screen.getByRole('heading', { level: 1 }).textContent!.replace(/^Quiz · /, '');
 /** The answer cards of the question on screen (the setup screen has radios too). */
-const answerCards = () => screen.getAllByRole('radio').filter((radio) => radio.closest('fieldset'));
+const answerCards = () => screen.getAllByRole('radio').filter((radio) => radio.closest('.ss-answer-list'));
 const checked = () => answerCards().map((radio) => radio.getAttribute('aria-checked') === 'true');
 /** Waits for a question, then lets its effects run: the shortcuts listen
  * from an effect, and a key pressed before it runs is lost. */
@@ -191,13 +193,134 @@ describe('focus', () => {
 });
 
 describe('touch targets', () => {
-  it('gives the hint and report buttons beside the question 44px', async () => {
+  it('gives the hint, report and exit buttons in the question header 44px', async () => {
     await startQuiz([Q('a', { introduction: 'Think about types.' })]);
-    for (const name of ['Show hint', 'Report this question']) {
+    for (const name of ['Show hint', 'Report this question', 'Exit quiz']) {
       const button = screen.getByRole('button', { name });
       expect(button.style.width).toBe('44px');
       expect(button.style.height).toBe('44px');
+      expect(button.closest('.ss-question-header__tools')).not.toBeNull();
     }
+  });
+});
+
+describe('the setup screen (UX audit U2)', () => {
+  it('opens on the Page header, stacks Questions over Difficulty, and starts with the one SwimCta md', async () => {
+    renderQuiz();
+    const start = await screen.findByRole('button', { name: /start quiz/i });
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Build your quiz.');
+    expect(headings[0].closest('.ss-info-page__header')).not.toBeNull();
+    // Each setting is a full-width group of its own, label above its pills.
+    const groups = [...document.querySelectorAll('.quiz-setup__settings > .quiz-setup__group')];
+    expect(groups.map((group) => group.firstElementChild?.textContent)).toEqual(['Questions', 'Difficulty']);
+    expect(groups.map((group) => group.querySelector('[role="radiogroup"]')?.getAttribute('aria-labelledby'))).toEqual(['quiz-count-label', 'quiz-difficulty-label']);
+    expect(start).toHaveClass('ss-swim-cta--md');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    // The empty error line takes no space until it has something to say.
+    const css = readFileSync(new URL('../src/components/Quiz.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.quiz-setup__error:empty \{ display: none; \}/);
+    expect(css).toMatch(/\.quiz-setup \{[^}]*max-width: var\(--ss-width-task\)/);
+  });
+});
+
+describe('the results screen (UX audit U2)', () => {
+  it('keeps the summary and the review on one column, with h1 then h2, and the shared action row', async () => {
+    server.use(http.post('*/api/quiz/submit', () => HttpResponse.json(graded([Q('a')]))));
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    await screen.findByText('1 / 1');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('1 / 1');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Review your answers (1)');
+    // No width of its own: the summary fills the column the review grid fills.
+    const summary = document.querySelector('.quiz-results__summary') as HTMLElement;
+    expect(summary.style.maxWidth).toBe('');
+    expect(summary.parentElement!.style.maxWidth).toBe('');
+    const newQuiz = screen.getByRole('button', { name: /^new quiz$/i });
+    expect(newQuiz).toHaveClass('ss-swim-cta--md');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /review answers/i }).closest('.ss-question-actions__secondary')).not.toBeNull();
+    // The explanation is text under a rule, not a box inside the card.
+    const explanation = screen.getByText('Why a');
+    expect(explanation).toHaveClass('quiz-review-explanation');
+    expect(explanation.style.border).toBe('');
+    const css = readFileSync(new URL('../src/components/Quiz.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.quiz-review-grid \{[^}]*align-items: stretch/);
+    expect(css).toMatch(/\.quiz-review-explanation \{[^}]*border-top: 1px solid var\(--ss-card-line\)/);
+  });
+
+  it('stops on the message with back to settings on the left and one primary on the right', async () => {
+    server.use(http.get('*/api/quiz/questions', () => HttpResponse.json({ error: { code: 'upstream', message: 'Busy' } }, { status: 503 })));
+    renderQuiz();
+    fireEvent.click(await screen.findByRole('button', { name: /start quiz/i }));
+    const retry = await screen.findByRole('button', { name: /^retry$/i });
+    expect(retry).toHaveClass('ss-swim-cta--md');
+    expect(screen.getByRole('button', { name: /back to settings/i }).closest('.ss-question-actions__secondary')).not.toBeNull();
+  });
+});
+
+describe('the question screen (UX audit U2)', () => {
+  it('keeps the 16px phone gutter on /quiz like every other route (questions-18)', () => {
+    const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+    const padding = app.match(/padding: isDev[\s\S]*?,\n\s*boxSizing/)?.[0] ?? '';
+    expect(padding).toMatch(/: mobile\s*\?\s*'1rem'/);
+    expect(padding).not.toMatch(/0\.75rem/);
+  });
+
+  it('names the run in one h1 that is also the counter, and shows the difficulty', async () => {
+    await startQuiz([Q('a', { difficulty: 3 }), Q('b')]);
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Quiz · Question 1 of 2');
+    // Said once: no hidden legend repeats the counter.
+    expect(screen.getAllByText(/Question 1 of 2/)).toHaveLength(1);
+    expect(screen.getByText('Difficulty 3')).toBeInTheDocument();
+  });
+
+  it('draws the run in the shared shell: one panel, the shared answer list and one primary on the right', async () => {
+    await startQuiz();
+    const shell = document.querySelector('.ss-question')!;
+    expect(shell.querySelectorAll('.ss-panel')).toHaveLength(1);
+    expect(screen.getByRole('radiogroup')).toHaveAccessibleName('Question a?');
+    expect(answerCards()).toHaveLength(4);
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /^next$/i })).toHaveClass('ss-swim-cta--md');
+    expect(screen.getByRole('button', { name: /^previous$/i }).closest('.ss-question-actions__secondary')).not.toBeNull();
+    // The question block is the same element from question to question, so
+    // the answers under it start at one y.
+    const block = document.querySelector('.ss-question__block');
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(document.querySelector('.ss-question__block')).toBe(block);
+    expect(block).toHaveAttribute('data-stable', 'true');
+  });
+
+  it('says what the keys do, and that Enter submits on the last question once all are answered', async () => {
+    await startQuiz();
+    expect(screen.getByText('Press 1–4 to select · Enter to continue')).toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(screen.getByText('Press 1–4 to select')).toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: '2' });
+    expect(screen.getByText('Press 1–4 to select · Enter to submit')).toBeInTheDocument();
+  });
+
+  it('keeps Submit pressable with questions left, says how many, and goes to the first one open', async () => {
+    await startQuiz([Q('a'), Q('b'), Q('c')]);
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+    fireEvent.keyDown(document.body, { key: '1' });
+    const submit = screen.getByRole('button', { name: /submit quiz/i });
+    expect(submit).not.toBeDisabled();
+    expect(submit).toHaveAttribute('aria-disabled', 'true');
+    expect(submit).toHaveAccessibleDescription('Answer 2 more to submit');
+    // Said in sight too, under the action row, not only to a screen reader.
+    const why = screen.getByText('Answer 2 more to submit');
+    expect(why).toHaveClass('quiz-submit-why');
+    expect(why.style.position).toBe('');
+    fireEvent.click(submit);
+    expect(screen.getByText('Question a?')).toBeInTheDocument();
   });
 });
 

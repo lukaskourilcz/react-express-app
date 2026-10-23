@@ -348,6 +348,76 @@ coming back. The tokens and the map are in
   title never repeats the button. The banner does not repeat the footer's
   appearance and sound controls (UX audit U6, #578).
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
+
+## 11. One question system
+
+The same audit (U2, #574) found five question widths, two answer designs and
+the main action in a different place on every runner. A question screen is
+built from the shared parts in `client/src/components/question/`
+([the design system](docs/design/design-system.md#question-screens) lists
+their props), never drawn again by hand.
+
+- **One shell.** `QuestionShell` is the `--ss-width-task` (640px) column with
+  one `.ss-panel` surface and no accent edge. A runner sets no width, card or
+  `flex: 1` of its own. The question block keeps one reserved height
+  (`--ss-question-block-min`) and scrolls past `--ss-question-block-max`, so
+  the answers start at the same y on every question. On a phone the header's
+  tag row keeps two lines (`--ss-question-tags-min`) whether a topic's tag
+  wraps or not, for the same reason.
+- **One answer list.** `AnswerOptionList`: 48px rows 8px apart, a 26px
+  number chip, the brand accent for the selection (never a track colour), no
+  border or radius of a runner's own. A graded row says what it is in a
+  glyph as well as colour, a ✓ or ✕ in a 20px slot every row keeps at its
+  end, graded or not, so grading never rewraps a row; "Correct answer" and
+  "Your pick" are in the row's accessible name.
+- **One action row.** `QuestionActions` sits 16px under the panel: the
+  secondaries on the left, the one primary (`SwimCta` md) on the right. On a
+  phone the primary is the last row at full width and the secondaries share
+  the row above, so the next step is in the same place on every runner.
+  When grading moves focus to the primary, the page scrolls the least that
+  shows it and never past the top of the answers: the learner sees their
+  pick, the right answer and the verdict together, at 360px too.
+- **One header with the screen's h1.** `QuestionHeader` names the run in the
+  `h1` ("Quiz · Question 3 of 10") at one compact size, with progress and
+  status on the first row and tags plus 44px icon buttons (hint, report,
+  exit) on the second. The question text and code span the whole panel; no
+  icon sits beside them.
+- **One keyboard hint, on a reserved line.** `QuestionHint` says "Press 1–4
+  to {select|answer} · Enter to {continue|submit}" under the answers, on a
+  desktop with a fine pointer only. Grading hides its words, never its line.
+- **Feedback under the answers, never over them.** `QuestionFeedback` is the
+  verdict and explanation in normal flow below the list, inside the panel,
+  and it takes focus when it appears. Nothing on a question screen is
+  absolutely positioned over the answers.
+- **A live run hides the site chrome.** An active Quiz, a live Challenge
+  run and a Learn level's questions (on a Learn section or Big O) report it
+  through `onActiveChange`, and `App.tsx` hides the header and footer on that
+  route; their setup, intro, result and error screens bring them back, and
+  so does a page that fails. With no nav on screen, the run's
+  `QuestionHeader` carries its own way out: an Exit icon button that asks
+  first in an `AlertDialog`.
+- **A setup screen is laid out like the Quiz setup.** One `--ss-width-task`
+  column: the h1 and lead above one panel, the choices in it with a Select
+  all / Deselect all link on their label row, then the one `SwimCta` md.
+  Anything else (the Challenge's top scores) sits under the panel as a short
+  list, never in a side column beside it. A stat row does not repeat what the
+  lead already says.
+- **A page says each fact once.** /daily's day is the kicker over its h1, and
+  its lead says once that nothing is recorded. /today opens on a visible h1
+  with the day's count on the same row, and a card line that would be the
+  same on every card in a section is left out.
+- **A card deck is a question screen too.** Shark Cards keep the route
+  column but use the shared Page header and the one `QuestionActions` row
+  (Previous and Next together on the left). Their one filled primary is the
+  next step: "Show the answer" face down, Got it once the card is turned. Got
+  it stays in one place and only its fill changes.
+- **A run's other screens share its shell.** A Learn level's intro and its
+  result, the screens that start a level again (timed out, sign-in changed,
+  a retired question) and every skill-check screen render inside
+  `QuestionShell` with the same header, so the exit button does not move
+  when Start is pressed. Each has one primary in `QuestionActions`; a track
+  or checkpoint colour may tint the confetti and the result's icon tile,
+  never text or a button (JavaScript's yellow is under 3:1 on the panel).
 - **One signed-out state.** A money screen asks a visitor to sign in with
   `SignedOutBlock`: one sentence and one "Sign in" button, in place of the
   content, never a placeholder number or a silently disabled button. A

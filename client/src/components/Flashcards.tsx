@@ -8,6 +8,13 @@
 //   review  turn the card, Previous / Next (also ← and →), and Got it, which
 //           takes the card out of the deck with an Undo
 //
+// The deck is the shared question parts where they fit a card (UX audit U2,
+// questions-14): the Page header on /cards (h1 and one lead line, no kicker),
+// the card's position in its meta row, and the one QuestionActions row under
+// it, Previous and Next together on the left and Got it on the right.
+// Face down the card's Show the answer is the one filled primary; turned, Got
+// it is (social-account-19).
+//
 // Rendered at /cards and as the first tab of /collection (`embedded`). The
 // collectible card packs this name once meant are retired; nothing here opens
 // a pack.
@@ -30,6 +37,7 @@ import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { AppToast } from './ui/AppToast';
 import { BookmarkIcon, BookIcon } from './ui/icons';
+import { QuestionActions } from './question';
 import { StatePanel } from './ui/StatePanel';
 import { PageHeader } from './ui/PageHeader';
 import './DeepEndScreens.css';
@@ -70,6 +78,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   const focusNext = useRef(false);
   const backId = useId();
   const positionId = useId();
+  const hintId = useId();
 
   const enabled = !authLoading && isAuthenticated;
   // Inside /collection the page's hold read the cards (Collection.tsx).
@@ -186,14 +195,14 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
       )}
 
       <section className="sc-deck__body" aria-labelledby={positionId} onKeyDown={onDeckKey}>
-        <p id={positionId} className="sc-deck__position" aria-live="polite">
-          {t('sharkCards.position', { n: at + 1, total: count })}
-        </p>
-
-        <article key={card.question_id} className={`sc-card ss-raised${turned ? ' is-turned' : ''}`} data-side={turned ? 'back' : 'front'}>
+        {/* Not keyed by card: the position is a live region, and one that is
+            drawn again with each card is not read out. */}
+        <article className={`sc-card ss-raised${turned ? ' is-turned' : ''}`} data-side={turned ? 'back' : 'front'}>
           <div className="sc-card__meta">
             {topic ? <Badge variant="cyan" label={topic} /> : <span />}
-            <span className="sc-card__side">{t(turned ? 'sharkCards.backLabel' : 'sharkCards.frontLabel')}</span>
+            <span id={positionId} className="sc-card__position" aria-live="polite">
+              {t('sharkCards.position', { n: at + 1, total: count })}
+            </span>
           </div>
           <div className="sc-card__question">{renderQuestion(card.question)}</div>
 
@@ -223,18 +232,31 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
           </button>
         </article>
 
-        <div className="sc-deck__controls">
-          <Button variant="secondary" label={t('sharkCards.previous')} isDisabled={at === 0} onClick={() => go(at - 1)} />
-          <Button
-            variant="primary"
-            label={t('sharkCards.gotIt')}
-            isDisabled={remove.isPending}
-            aria-describedby={`${positionId}-hint`}
-            onClick={gotIt}
-          />
-          <Button variant="secondary" label={t('sharkCards.next')} isDisabled={at >= count - 1} onClick={() => go(at + 1)} />
-        </div>
-        <p id={`${positionId}-hint`} className="sc-deck__hint">{t('sharkCards.gotItHint')}</p>
+        {/* One filled primary (UX audit social-account-19): face down it is
+            Show the answer, in the card, and Got it is a secondary; turned, Got
+            it is the SwimCta. Got it keeps one place, on the right of the row
+            (a full-width last row on a phone), so only its fill changes. */}
+        <QuestionActions
+          className="sc-deck__actions"
+          secondary={(
+            <>
+              <Button variant="secondary" label={t('sharkCards.previous')} isDisabled={at === 0} onClick={() => go(at - 1)} />
+              <Button variant="secondary" label={t('sharkCards.next')} isDisabled={at >= count - 1} onClick={() => go(at + 1)} />
+              {!turned && (
+                <Button
+                  variant="secondary"
+                  className="sc-deck__got-it"
+                  label={t('sharkCards.gotIt')}
+                  isDisabled={remove.isPending}
+                  aria-describedby={hintId}
+                  onClick={gotIt}
+                />
+              )}
+            </>
+          )}
+          primary={turned ? { label: t('sharkCards.gotIt'), onClick: gotIt, disabled: remove.isPending, describedBy: hintId } : undefined}
+        />
+        <p id={hintId} className="sc-deck__hint">{t('sharkCards.gotItHint')}</p>
       </section>
       {toastNode}
     </div>

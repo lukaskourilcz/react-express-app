@@ -1,0 +1,18 @@
+// The shared question parts (UX audit U2, #574). Every question screen
+// renders through these; docs/design/design-system.md#question-screens
+// documents their props and rules.
+export { QuestionShell, type QuestionShellProps } from './QuestionShell';
+export { AnswerOptionList, type AnswerOptionListProps, type AnswerGrade } from './AnswerOptionList';
+export { QuestionActions, type QuestionActionsProps, type QuestionPrimaryAction } from './QuestionActions';
+export {
+  QuestionHeader,
+  QuestionIconButton,
+  HintIcon,
+  ReportFlagIcon,
+  ExitIcon,
+  type QuestionHeaderProps,
+  type QuestionIconButtonProps,
+} from './QuestionHeader';
+export { QuestionHint, type QuestionHintProps, type QuestionHintVerb, type QuestionHintNext } from './QuestionHint';
+export { QuestionFeedback, type QuestionFeedbackProps } from './QuestionFeedback';
+export { QuestionPageHeader, type QuestionPageHeaderProps } from './QuestionPageHeader';

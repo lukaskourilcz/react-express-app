@@ -26,15 +26,6 @@
   30%, 50%, 70% { transform: translateX(-5px); }
   40%, 60% { transform: translateX(5px); }
 }
-@keyframes rmCorrectPop {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-@keyframes rmSlideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
-}
 @keyframes rmCelebrate {
   0% { transform: scale(0) rotate(-18deg); }
   60% { transform: scale(1.25) rotate(8deg); }
@@ -107,12 +98,8 @@
   pointer-events: none;
 }
 
-/* Answer feedback on the lesson options. */
+/* A wrong answer shakes the heart once. */
 .rm-shake { animation: rmShake 0.4s ease both; }
-.rm-correct-pop { animation: rmCorrectPop 0.4s ease both; }
-
-/* Feedback panel + continue button slide up. */
-.rm-feedback { animation: rmSlideUp 0.25s ease both; }
 
 /* Finish screen flourishes. */
 .rm-celebrate { animation: rmCelebrate 0.55s cubic-bezier(0.2, 0.7, 0.3, 1.4) both; }
@@ -141,8 +128,6 @@
   .rm-flow,
   .rm-shimmer::after,
   .rm-shake,
-  .rm-correct-pop,
-  .rm-feedback,
   .rm-celebrate,
   .rm-count,
   .rm-confetti i {
@@ -171,30 +156,28 @@
    `--rm-on-accent`) custom properties set inline, so hover states can be
    expressed in CSS while the colour stays data-driven. */
 
-/* Skill-check CTA — a two-line outlined pill (static brand accent). */
+/* Skill check: a secondary action beside the map (UX audit learn-04), drawn
+   as an Astryx secondary button is: a 44px muted pill with no outline of its
+   own, so the screen's one filled primary stays the SwimCta. */
 .rm-skillcheck-cta {
-  text-transform: none;
-  font-weight: 700;
-  border: 2px solid var(--brand-accent);
-  color: var(--brand-accent);
-  background: transparent;
-  border-radius: var(--radius-element);
-  padding: 8px 13px;
-  /* A page action: 44px on every pointer (UX audit learn-18). */
-  min-height: var(--ss-control-height);
-  line-height: 1.2;
-  display: flex;
-  flex-direction: row;
-  gap: 6px;
+  display: inline-flex;
   align-items: center;
-  cursor: pointer;
+  gap: 6px;
+  min-height: var(--ss-control-height);
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-background-muted);
+  color: var(--color-text-primary);
   font-family: inherit;
-  transition: all 0.15s ease;
+  font-weight: 600;
+  line-height: 1.2;
+  text-transform: none;
+  cursor: pointer;
+  transition: background-color var(--ss-motion-feedback) ease;
 }
-.rm-skillcheck-cta:hover {
-  border-color: var(--brand-accent-hover);
-  background-color: rgba(45, 122, 45, 0.06);
-}
+.rm-skillcheck-cta:hover { background: color-mix(in srgb, var(--color-background-muted) 88%, var(--color-text-primary)); }
+.rm-skillcheck-cta:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
 /* Topic selector pills — logo + label. */
 .rm-topic-pill {
@@ -334,80 +317,6 @@
 .rm-test-btn:hover { transform: scale(1.06) translateY(-1px); }
 .rm-test-btn:active { transform: translateY(3px) scale(0.98); }
 
-/* Lesson answer options. */
-.rm-option {
-  text-align: left;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 2px solid var(--color-border);
-  background-color: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font-size: 0.95rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  transition: border-color 0.12s ease, background-color 0.12s ease;
-}
-.rm-option:disabled { cursor: default; }
-.rm-option:not(:disabled):hover {
-  border-color: var(--rm-accent);
-  background-color: var(--color-background-muted);
-}
-
-/* Accent-filled action buttons (intro start, continue, finish next/retry).
-   The fill is set inline, with --rm-on-accent as its readable text colour;
-   a button on the brand accent falls back to --brand-on-accent. These, the
-   outlined retry and the text button are the level runner's page actions:
-   44px on every pointer (UX audit learn-18; they measured 41 and 34px). */
-.rm-accent-btn {
-  border: none;
-  color: var(--rm-on-accent, var(--brand-on-accent));
-  border-radius: var(--radius-element);
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 12px 20px;
-  min-height: var(--ss-control-height);
-  cursor: pointer;
-  font-family: inherit;
-  transition: filter 0.15s ease;
-}
-.rm-accent-btn:hover { filter: var(--rm-accent-hover, brightness(0.92)); }
-
-/* Outlined retry (passed) button. */
-.rm-outline-btn {
-  background: transparent;
-  border: 1px solid var(--brand-accent);
-  color: var(--brand-accent);
-  border-radius: var(--radius-element);
-  font-weight: 700;
-  font-size: 0.9rem;
-  padding: 11px 19px;
-  min-height: var(--ss-control-height);
-  cursor: pointer;
-  font-family: inherit;
-}
-.rm-outline-btn:hover { background-color: rgba(45, 122, 45, 0.06); }
-
-/* Plain text button (back to path / exit). */
-.rm-text-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: 10px 12px;
-  min-height: var(--ss-control-height);
-  cursor: pointer;
-  font-family: inherit;
-  border-radius: var(--radius-element);
-  line-height: 1;
-}
-.rm-text-btn:hover { background-color: var(--color-background-muted); }
-
 /* RoadmapTree: gentle re-animate of the path when the track changes. */
 @keyframes rmTrackIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -494,36 +403,36 @@
   padding: 10px 14px;
   margin-bottom: 14px;
   border: 1px solid var(--color-border);
-  border-left: 3px solid var(--brand-accent);
   border-radius: var(--radius-element);
   background: var(--brand-accent-soft);
   font-size: 0.85rem;
 }
-.rm-step-banner[data-dir='up'] { border-left-color: var(--ss-success); background: var(--ss-success-soft); }
-.rm-step-banner[data-dir='down'] { border-left-color: var(--ss-warning); background: var(--ss-warning-soft); }
+.rm-step-banner[data-dir='up'] { border-color: var(--ss-success); background: var(--ss-success-soft); }
+.rm-step-banner[data-dir='down'] { border-color: var(--ss-warning); background: var(--ss-warning-soft); }
 .rm-step-banner__glyph { display: inline-flex; line-height: 0; }
 .rm-step-banner[data-dir='up'] .rm-step-banner__glyph { color: var(--ss-success); }
 .rm-step-banner[data-dir='down'] .rm-step-banner__glyph { color: var(--ss-warning); }
 .rm-step-banner__hint { color: var(--color-text-secondary); }
 
-/* "I don't know yet" — a dashed, honest opt-out that reads distinct from the
-   answer options and gets a solid fill when selected. */
+/* "I don't know yet" — a dashed, honest opt-out under the answer list: one
+   answer row's height and radius, so it reads as part of the list without
+   being an answer, and a solid fill when selected. */
 .rm-idk-btn {
   width: 100%;
-  min-height: 44px;
-  margin-top: 10px;
+  min-height: var(--ss-answer-row-min, var(--ss-control-height));
   padding: 11px 16px;
-  border-radius: 8px;
-  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-element);
+  border: 1px dashed var(--color-border);
   background: transparent;
   color: var(--color-text-secondary);
-  font-weight: 650;
+  font-weight: 600;
   font-size: 0.9rem;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  transition: border-color var(--ss-motion-feedback, 0.12s) ease, background-color var(--ss-motion-feedback, 0.12s) ease, color var(--ss-motion-feedback, 0.12s) ease;
 }
 .rm-idk-btn:hover { border-color: var(--brand-accent); background: var(--color-background-muted); }
+.rm-idk-btn:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 .rm-idk-btn[data-selected='true'] {
   border-style: solid;
   border-color: var(--brand-accent);
@@ -531,8 +440,8 @@
   color: var(--color-text-primary);
 }
 .rm-idk-hint {
-  margin-top: 6px;
-  font-size: 0.75rem;
+  margin: 0;
+  font-size: var(--ss-type-meta);
   color: var(--color-text-secondary);
   text-align: center;
 }
@@ -556,7 +465,20 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rm-placement-review { margin-top: 32px; text-align: left; width: 100%; min-width: 0; }
+/* The skill check's intro line and result, inside the shared question panel
+   (UX audit learn-03). */
+.rm-placement-lead { margin: 0; font-weight: 400; color: var(--color-text-secondary); }
+.rm-placement-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  text-align: center;
+  font-weight: 400;
+}
+.rm-placement-result .rm-finish-title { margin: 0; }
+.rm-placement-review { margin-top: 16px; text-align: left; width: 100%; min-width: 0; }
 .rm-placement-review article { margin-top: 16px; overflow-wrap: anywhere; }
 
 /* ── Learn sections (components/learn/*): the switcher, the section line and

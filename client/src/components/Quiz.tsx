@@ -8,7 +8,6 @@ import { HStack } from '@astryxdesign/core/HStack';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { WaterlineProgress } from './SharkFin';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Popover } from '@astryxdesign/core/Popover';
@@ -18,10 +17,8 @@ import { CloseIcon } from './ui/icons';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { accountEpoch } from '../lib/accountData';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
-import { visuallyHidden } from '../theme/MuiTheme';
 import {
   visibleCategoryOptionsFor,
-  getCategoryHexColor,
   categoryLabelKey,
 } from '../lib/categories';
 import { getSubject, deliveryCategoriesForSubject } from '../lib/subjects';
@@ -54,6 +51,18 @@ import { ReportDialog } from './ReportDialog';
 import { capture } from '../lib/analytics';
 import { MotionPop, MotionItem } from '../lib/motion';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
+import {
+  AnswerOptionList,
+  ExitIcon,
+  HintIcon,
+  QuestionActions,
+  QuestionHeader,
+  QuestionHint,
+  QuestionIconButton,
+  QuestionPageHeader,
+  QuestionShell,
+  ReportFlagIcon,
+} from './question';
 import { queryClient } from '../lib/queryClient';
 import { profileStatsQueryKey } from '../lib/queries';
 import { useDayChangeTime } from '../lib/utcDay';
@@ -152,38 +161,6 @@ function restoredProgress(raw: unknown): RestoredProgress | null {
     start: savedStart(raw.start),
   };
 }
-
-const HintIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-  </svg>
-);
-
-const ReportFlagIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-    <line x1="4" y1="22" x2="4" y2="15" />
-  </svg>
-);
-
-// Shared style for the small icon-only action buttons in the review list
-// (bookmark / report / hint) — a MUI-free stand-in for IconButton size="small".
-// 44px square, the touch target every button gets: at 40 the hint and report
-// buttons beside the question were under it.
-const iconBtnStyle = (color: string): React.CSSProperties => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 44,
-  height: 44,
-  padding: 0,
-  margin: 0,
-  border: 'none',
-  borderRadius: 'var(--radius-inner)',
-  background: 'transparent',
-  color,
-  cursor: 'pointer',
-});
 
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   // Its own wave from the shared bank, so the review heading does not repeat
@@ -893,21 +870,17 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         : stop === 'graded'
           ? { status: 'error' as const, title: t('quiz.alreadyGradedTitle'), description: t('quiz.alreadyGradedBody') }
           : { status: 'error' as const, title: error || t('error.somethingWrong') };
+    // The task column, the message, and the shared action row: back to the
+    // settings on the left, the one way on as the primary on the right.
     return (
-      <div style={{ width: '100%', maxWidth: 560, margin: '0 auto' }}>
-        <Card padding={5} width="100%">
-          <VStack gap={3}>
-            <Banner {...banner} />
-            <HStack gap={1.5} wrap="wrap">
-              {stop === 'daily-done' ? (
-                <Button variant="primary" label={t('quiz.dailyLeaderboard')} onClick={() => navigate('/leaderboard?tab=today')} />
-              ) : (
-                <Button variant="primary" label={stop ? t('quiz.startAgainSame') : t('quiz.retry')} onClick={startAgain} />
-              )}
-              <Button variant="secondary" label={t('quiz.backToSettings')} onClick={handleRestart} />
-            </HStack>
-          </VStack>
-        </Card>
+      <div className="quiz-stop">
+        <Banner {...banner} />
+        <QuestionActions
+          secondary={<Button variant="secondary" label={t('quiz.backToSettings')} onClick={handleRestart} />}
+          primary={stop === 'daily-done'
+            ? { label: t('quiz.dailyLeaderboard'), onClick: () => navigate('/leaderboard?tab=today') }
+            : { label: stop ? t('quiz.startAgainSame') : t('quiz.retry'), onClick: startAgain }}
+        />
       </div>
     );
   }
@@ -924,16 +897,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       transition: 'border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease',
     });
     return (
-      <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
-        {/* Editorial header: kicker + wave tick + Manrope title + subline. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-          <Kicker as="h1" className="ss-section-title">
-            {t('quiz.buildTitle')}
-          </Kicker>
-          <p style={{ margin: 0, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
-        </div>
+      <div className="ss-pop quiz-setup">
+        {/* The question area's one editorial header (UX audit U2,
+            questions-19): the Page h1, so setup reads like Daily. */}
+        <QuestionPageHeader title={t('quiz.buildTitle')} lead={t('quiz.buildSubtitle')} />
 
-        <div className="ss-panel" style={{ position: 'relative', overflow: 'hidden', padding: 24, display: 'flex', flexDirection: 'column', gap: 20, borderRadius: 'var(--radius-page)' }}>
+        <div className="ss-panel quiz-setup__panel">
           {/* Categories as accent pills. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -959,14 +928,18 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 </button>
               </span>
             )}
-            <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-error)' }}>
+            {/* Takes no line until it has something to say, so the next
+                section is the panel's one 20px gap below (questions-15). */}
+            <div id="categories-error" role="alert" className="quiz-setup__error">
               {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
             </div>
           </div>
 
-          {/* Questions + Difficulty. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 20, position: 'relative' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Questions, then Difficulty: each full width, so each is one
+              row of pills under its label (questions-15). Side by side,
+              Difficulty wrapped to two rows in half the panel. */}
+          <div className="quiz-setup__settings">
+            <div className="quiz-setup__group">
               <span id="quiz-count-label" style={labelStyle}>{t('quiz.questionsLegend')}</span>
               <RadioCardGroup value={questionCount} onChange={(value) => setQuestionCount(Number(value))} labelledBy="quiz-count-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {config.quiz.countOptions.map((count, index) => (
@@ -976,7 +949,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 ))}
               </RadioCardGroup>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="quiz-setup__group">
               <span id="quiz-difficulty-label" style={labelStyle}>{t('quiz.difficulty')}</span>
               <RadioCardGroup value={difficultyMode} onChange={(value) => setDifficultyMode(value as DifficultyMode)} labelledBy="quiz-difficulty-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {DIFFICULTY_VALUES.map((value, index) => {
@@ -994,11 +967,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
           </div>
 
-          {/* Start — swim-through CTA. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', position: 'relative' }}>
+          {/* Start: the screen's one primary, SwimCta md. */}
+          <div className="quiz-setup__start">
             {/* aria-disabled, not disabled: with no category it stays in the
                 Tab order, and pressing it names what is missing. */}
-            <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} unavailable={selectedCategories.length === 0} describedBy="categories-error" size="lg" />
+            <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} unavailable={selectedCategories.length === 0} describedBy="categories-error" size="md" />
           </div>
         </div>
 
@@ -1035,12 +1008,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     const resultDifficulty = t(`difficulty.${mode === 'standard' ? difficultyMode : 'mixed'}` as TranslationKey);
     return (
       <>
-        <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
+        {/* The summary and the review share one column and both edges
+            (UX audit U2, questions-12). */}
+        <div className="ss-pop quiz-results">
           <div
-            className="ss-panel"
+            className="ss-panel quiz-results__summary"
             role="region"
             aria-labelledby="quiz-result-heading"
-            style={{ position: 'relative', overflow: 'hidden', padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, borderRadius: 'var(--radius-page)' }}
           >
             <Kicker center style={{ position: 'relative' }}>{t('quiz.complete')}</Kicker>
             <MotionPop>
@@ -1085,22 +1059,25 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </div>
             )}
 
-            <HStack gap={1.5} justify="center" wrap="wrap" style={{ position: 'relative', marginTop: 4 }}>
-              <Button variant="primary" label={t('quiz.newQuiz')} onClick={handleRestart} />
+          </div>
+          <QuestionActions
+            secondary={
               <Button
-                variant="ghost"
+                variant="secondary"
                 label={t('quiz.reviewAnswersArrow')}
                 onClick={() => {
-                  document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
+                  const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+                  document.getElementById('quiz-review')?.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
                 }}
               />
-            </HStack>
-          </div>
+            }
+            primary={{ label: t('quiz.newQuiz'), onClick: handleRestart }}
+          />
         </div>
 
-        <h3 id="quiz-review" className={`quiz-review-header ${reviewWave}`}>
+        <h2 id="quiz-review" className={`quiz-review-header ${reviewWave}`}>
           {t('quiz.reviewYourAnswers', { count: questions.length })}
-        </h3>
+        </h2>
         <div className="quiz-review-grid">
         {questions.map((question, index) => {
           const questionResult = resultsById.get(question.id);
@@ -1127,17 +1104,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     </Text>
                     <HStack gap={0.5} align="center">
                       {questionResult && !isVoided && <SaveSharkCard question={question} correctIndex={questionResult.correctAnswer} explanation={questionResult.explanation ?? ''} />}
-                      <Tooltip content={t('quiz.reportAria')}>
-                      <button
-                        type="button"
-                        aria-label={t('quiz.reportAria')}
-                        title={t('quiz.reportAria')}
+                      <QuestionIconButton
+                        label={t('quiz.reportAria')}
+                        icon={<ReportFlagIcon />}
                         onClick={() => setReportTarget({ id: question.id, version: question.review?.version })}
-                        style={iconBtnStyle('var(--color-text-secondary)')}
-                      >
-                        <ReportFlagIcon />
-                      </button>
-                      </Tooltip>
+                      />
                     </HStack>
                   </HStack>
 
@@ -1157,19 +1128,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       </Text>
                     </span>
                   )}
+                  {/* Plain secondary text under one hairline: a bordered
+                      box in every card was a panel inside a card. */}
                   {questionResult?.explanation && (
-                    <div
-                      style={{
-                        padding: '12px 14px',
-                        backgroundColor: 'var(--color-background-muted)',
-                        borderRadius: 'var(--radius-element)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                    >
-                      <Text type="body" size="sm">
-                        {questionResult.explanation}
-                      </Text>
-                    </div>
+                    <p className="quiz-review-explanation">{questionResult.explanation}</p>
                   )}
                   {/* Shark Cards (owner decision 12): keep a question to come
                       back to, with the answer and explanation graded here. */}
@@ -1204,26 +1166,78 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const progress = (answered / questions.length) * 100;
   const allAnswered = questions.every((q) => answers[q.id] !== undefined);
   const remaining = questions.length - answered;
+  const isLast = currentIndex === questions.length - 1;
+  const questionId = `question-text-${currentQuestion.id}`;
+  const hintOpen = !!revealedHints[currentQuestion.id];
+  // Submit with questions left stays pressable and says how many; pressed,
+  // it goes to the first one still open.
+  const submitPressed = () => {
+    if (!allAnswered) {
+      const open = questions.findIndex((q) => answers[q.id] === undefined);
+      if (open >= 0) setCurrentIndex(open);
+      return;
+    }
+    void handleSubmit();
+  };
+
+  const hintTool = currentQuestion.introduction ? (
+    <Popover
+      isOpen={hintOpen}
+      onOpenChange={(o) =>
+        setRevealedHints((prev) => {
+          if (o) {
+            setHintedIds((ids) =>
+              ids.includes(currentQuestion.id) ? ids : [...ids, currentQuestion.id],
+            );
+          }
+          return { ...prev, [currentQuestion.id]: o };
+        })
+      }
+      placement="below"
+      // The hint button sits at the right of the header, so the popover
+      // hangs from its right edge and opens leftwards. With
+      // `alignment="end"` the anchored area runs from the viewport's left
+      // edge to that button, and the percentage below resolves against it:
+      // 320px where there is room, and on a phone the width that fits, 16px
+      // clear of the edge. Centred at a fixed 320px it ran up to 199px off a
+      // 390px screen.
+      alignment="end"
+      width="min(320px, calc(100% - 16px))"
+      label={t('quiz.showHint')}
+      // Astryx's own close button is visually hidden until it has focus.
+      // Here the hint is plain text, so autofocus landed on that button and
+      // it surfaced as a "Close popover" label; on touch, the tap moved focus
+      // before the click arrived, the button collapsed back to one pixel, and
+      // the click missed — the label vanished and the hint stayed open. An
+      // always visible × that closes the hint replaces it.
+      hasCloseButton={false}
+      content={
+        <div className="quiz-hint">
+          <div className="quiz-hint__text">{currentQuestion.introduction}</div>
+          <Button
+            isIconOnly
+            icon={<CloseIcon size={18} />}
+            variant="ghost"
+            label={t('quiz.closeHint')}
+            onClick={() => setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: false }))}
+          />
+        </div>
+      }
+    >
+      <QuestionIconButton label={t('quiz.showHint')} icon={<HintIcon />} pressed={hintOpen} tooltip={false} />
+    </Popover>
+  ) : null;
 
   return (
-    // One-viewport question layout: the question text scrolls internally if
-    // long, and the answers + nav stay anchored at a stable position on every
-    // question. On phones the card uses the full height; on larger screens it
-    // is capped and centred so it doesn't balloon.
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        width: '100%',
-        maxWidth: 600,
-        margin: '0 auto',
-      }}
-    >
-      {error && (
-        <div style={{ marginBottom: 12, flexShrink: 0 }}>
+    <>
+      {/* One question screen from the shared parts (UX audit U2): the 640px
+          shell, the run's h1 in the header, a question block of one height
+          so the answers start at the same y on every question, and the
+          action row under the panel. */}
+      <QuestionShell
+        ref={questionTextRef}
+        questionId={questionId}
+        notice={error && (
           <Banner
             status="error"
             title={error}
@@ -1231,250 +1245,89 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             isDismissable
             onDismiss={() => setError(null)}
           />
-        </div>
-      )}
-
-      {/* Surface styled with Astryx tokens so it themes with the rest of the
-          system, while plain flex/scroll keeps the one-viewport behaviour. */}
-      <div
-        style={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          maxHeight: '82%',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--color-background-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-container)',
-          overflowY: 'auto',
-          overscrollBehavior: 'contain',
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'visible',
-            padding: 'clamp(1.25rem, 4vw, 1.75rem)',
-          }}
-        >
-          {/* Progress header */}
-          <HStack gap={1.5} align="center" style={{ flexShrink: 0, marginBottom: 16 }}>
-            <Text type="supporting" size="xsm" weight="medium">
-              {t('quiz.questionCounter', { current: currentIndex + 1, total: questions.length })}
-            </Text>
-            <div style={{ flex: 1 }}>
-              <WaterlineProgress label={t('quiz.progressAria')} value={progress} />
-            </div>
-          </HStack>
-
-          {/* Category */}
-          <HStack gap={1} align="center" wrap="wrap" style={{ flexShrink: 0, marginBottom: 12 }}>
-            <CategoryTag category={currentQuestion.category} />
-          </HStack>
-
-          <fieldset
-            style={{
-              padding: 0,
-              border: 0,
-              margin: 0,
-              flex: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-            aria-describedby={`question-text-${currentQuestion.id}`}
-          >
-            <legend style={visuallyHidden}>
-              {t('quiz.questionOf', { current: currentIndex + 1, total: questions.length })}
-            </legend>
-
-            {/* Only the question text scrolls when long — the answers below
-                keep their anchored position. */}
-            <div
-              id={`question-text-${currentQuestion.id}`}
-              ref={questionTextRef}
-              tabIndex={-1}
-              className="quiz-question-text"
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 4, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}
-            >
-              <div style={{ flex: 1 }}>
-                {renderQuestion(currentQuestion.question)}
-                {/* Beside the block, never inside an option: opening help must
-                    not select an answer, and the list is the same whichever
-                    option is right. */}
-                <TermsBar
-                  texts={[currentQuestion.question, ...currentQuestion.options]}
-                  domain={glossaryDomainFor(currentQuestion.category)}
+        )}
+        header={
+          <QuestionHeader
+            run={t('nav.quiz')}
+            title={t('quiz.questionCounter', { current: currentIndex + 1, total: questions.length })}
+            progress={{ value: progress, label: t('quiz.progressAria') }}
+            meta={<CategoryTag category={currentQuestion.category} />}
+            difficulty={currentQuestion.difficulty}
+            tools={
+              <>
+                {hintTool}
+                <QuestionIconButton
+                  label={t('quiz.reportAria')}
+                  icon={<ReportFlagIcon />}
+                  onClick={() => setReportTarget({ id: currentQuestion.id, version: currentQuestion.review?.version })}
                 />
-                {mode === 'review' && interleaved && currentIndex === 0 && (
-                  <p style={{ margin: '10px 0 0', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
-                    {t('quiz.interleavedNote')}
-                  </p>
-                )}
-                {mode === 'standard' && hardestAvailable && currentIndex === 0 && (
-                  <p style={{ margin: '10px 0 0', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
-                    {t('quiz.hardestAvailableNote')}
-                  </p>
-                )}
-              </div>
-              {currentQuestion.introduction && (
-                <Popover
-                  isOpen={!!revealedHints[currentQuestion.id]}
-                  onOpenChange={(o) =>
-                    setRevealedHints((prev) => {
-                      if (o) {
-                        setHintedIds((ids) =>
-                          ids.includes(currentQuestion.id) ? ids : [...ids, currentQuestion.id],
-                        );
-                      }
-                      return { ...prev, [currentQuestion.id]: o };
-                    })
-                  }
-                  placement="below"
-                  // The hint button sits at the right of the question, so the
-                  // popover hangs from its right edge and opens leftwards. With
-                  // `alignment="end"` the anchored area runs from the viewport's
-                  // left edge to that button, and the percentage below resolves
-                  // against it: 320px where there is room, and on a phone the
-                  // width that fits, 16px clear of the edge. Centred at a fixed
-                  // 320px it ran up to 199px off a 390px screen.
-                  alignment="end"
-                  width="min(320px, calc(100% - 16px))"
-                  label={t('quiz.showHint')}
-                  // Astryx's own close button is visually hidden until it has
-                  // focus. Here the hint is plain text, so autofocus landed on
-                  // that button and it surfaced as a "Close popover" label; on
-                  // touch, the tap moved focus before the click arrived, the
-                  // button collapsed back to one pixel, and the click missed —
-                  // the label vanished and the hint stayed open. An always
-                  // visible × that closes the hint replaces it.
-                  hasCloseButton={false}
-                  content={
-                    <div className="quiz-hint">
-                      <div className="quiz-hint__text">{currentQuestion.introduction}</div>
-                      <Button
-                        isIconOnly
-                        icon={<CloseIcon size={18} />}
-                        variant="ghost"
-                        size="sm"
-                        label={t('quiz.closeHint')}
-                        onClick={() => setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: false }))}
-                      />
-                    </div>
-                  }
-                >
-                  <button
-                    type="button"
-                    aria-label={t('quiz.showHint')}
-                    aria-pressed={!!revealedHints[currentQuestion.id]}
-                    title={t('quiz.showHint')}
-                    style={{
-                      ...iconBtnStyle(
-                        revealedHints[currentQuestion.id]
-                          ? getCategoryHexColor(currentQuestion.category)
-                          : 'var(--color-text-secondary)',
-                      ),
-                      marginTop: 1,
-                    }}
-                  >
-                    <HintIcon />
-                  </button>
-                </Popover>
-              )}
-              <button
-                type="button"
-                aria-label={t('quiz.reportAria')}
-                title={t('quiz.reportAria')}
-                onClick={() => setReportTarget({ id: currentQuestion.id, version: currentQuestion.review?.version })}
-                style={{ ...iconBtnStyle('var(--color-text-secondary)'), marginTop: 1 }}
-              >
-                <ReportFlagIcon />
-              </button>
-            </div>
-
-            {/* Answer options as radio cards (one Tab stop, arrow keys move +
-                select). Raised off the wave on phones so they sit mid-lower
-                screen. */}
-            <RadioCardGroup
-              value={answers[currentQuestion.id] ?? null}
-              onChange={(v) => handleAnswer(currentQuestion.id, v as number)}
-              labelledBy={`question-text-${currentQuestion.id}`}
-              style={{ flexShrink: 0, marginTop: 'auto' }}
-            >
-              <VStack gap={1}>
-                {currentQuestion.options.map((option, index) => {
-                  const isSelected = answers[currentQuestion.id] === index;
-                  return (
-                    <RadioCard key={index} value={index} index={index} label={option} padding={2} disabled={answersLocked}>
-                      <HStack gap={2} align="center">
-                        <span
-                          aria-hidden
-                          style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: 'var(--radius-inner)',
-                            display: 'grid',
-                            placeItems: 'center',
-                            flexShrink: 0,
-                            fontSize: 'var(--ss-type-meta)',
-                            fontWeight: 700,
-                            background: isSelected ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
-                            color: isSelected ? 'var(--color-text-accent)' : 'inherit',
-                          }}
-                        >
-                          {index + 1}
-                        </span>
-                        <Text type="body" weight={isSelected ? 'semibold' : 'normal'}>
-                          {option}
-                        </Text>
-                      </HStack>
-                    </RadioCard>
-                  );
-                })}
-              </VStack>
-            </RadioCardGroup>
-
-            <div className="quiz-keyboard-tip" style={{ marginTop: 8, flexShrink: 0 }}>
-              <Text type="supporting" size="xsm" color="secondary">
-                {t('quiz.keyboardTip', { max: currentQuestion.options.length })}
-              </Text>
-            </div>
-          </fieldset>
-        </div>
-      </div>
-
-      {/* Nav row shares the card's edges: Previous hugs the left, Next the
-          right, Exit sits on the centreline. */}
-      <div style={{ display: 'flex', alignItems: 'center', marginTop: 16, flexShrink: 0, gap: 8 }}>
-        <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-start' }}>
-          <Button
-            variant="secondary"
-            label={t('quiz.previous')}
-            onClick={handlePrevious}
-            isDisabled={currentIndex === 0}
+                <QuestionIconButton label={t('quiz.exitQuiz')} icon={<ExitIcon />} onClick={handleAbandon} />
+              </>
+            }
           />
-        </div>
-        <div style={{ flex: '0 0 auto' }}>
-          <Button variant="ghost" label={t('quiz.exitQuiz')} onClick={handleAbandon} />
-        </div>
-        <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-end' }}>
-          {currentIndex === questions.length - 1 ? (
-            <Button
-              variant="primary"
-              label={submitting ? t('quiz.submitting') : t('quiz.submitQuiz')}
-              onClick={handleSubmit}
-              isDisabled={!allAnswered || submitting}
-              isLoading={submitting}
-              tooltip={!allAnswered ? t('quiz.answerMore', { count: remaining }) : undefined}
+        }
+        question={
+          <>
+            {renderQuestion(currentQuestion.question)}
+            {/* Beside the block, never inside an option: opening help must
+                not select an answer, and the list is the same whichever
+                option is right. */}
+            <TermsBar
+              texts={[currentQuestion.question, ...currentQuestion.options]}
+              domain={glossaryDomainFor(currentQuestion.category)}
             />
-          ) : (
-            <Button variant="primary" label={t('quiz.next')} onClick={handleNext} />
-          )}
-        </div>
-      </div>
+            {mode === 'review' && interleaved && currentIndex === 0 && (
+              <p className="quiz-question-note">{t('quiz.interleavedNote')}</p>
+            )}
+            {mode === 'standard' && hardestAvailable && currentIndex === 0 && (
+              <p className="quiz-question-note">{t('quiz.hardestAvailableNote')}</p>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <QuestionActions
+              secondary={
+                <Button
+                  variant="secondary"
+                  label={t('quiz.previous')}
+                  onClick={handlePrevious}
+                  isDisabled={currentIndex === 0}
+                />
+              }
+              primary={
+                isLast
+                  ? {
+                    label: submitting ? t('quiz.submitting') : t('quiz.submitQuiz'),
+                    onClick: submitPressed,
+                    disabled: submitting,
+                    unavailable: !allAnswered,
+                    describedBy: !allAnswered ? 'quiz-submit-why' : undefined,
+                  }
+                  : { label: t('quiz.next'), onClick: handleNext }
+              }
+            />
+            {/* Why Submit reads unavailable, in sight under it: the old
+                disabled button said so in a hover tooltip. */}
+            {isLast && !allAnswered && (
+              <p id="quiz-submit-why" className="quiz-submit-why">{t('quiz.answerMore', { count: remaining })}</p>
+            )}
+          </>
+        }
+      >
+        <AnswerOptionList
+          options={currentQuestion.options}
+          value={answers[currentQuestion.id] ?? null}
+          onChange={(index) => handleAnswer(currentQuestion.id, index)}
+          labelledBy={questionId}
+          disabled={answersLocked}
+        />
+        <QuestionHint
+          max={currentQuestion.options.length}
+          verb="select"
+          next={!isLast ? 'continue' : allAnswered ? 'submit' : undefined}
+        />
+      </QuestionShell>
 
       <AppToast
         open={!!snack}
@@ -1499,7 +1352,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         onAction={confirmAbandon}
         width="min(460px, calc(100vw - 32px))"
       />
-    </div>
+    </>
   );
 }
 
