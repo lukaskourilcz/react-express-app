@@ -350,6 +350,8 @@ export async function handleOrders(
           withTimeout(supabase.from('path_reward_claims').select('order_id').eq('user_id', userId).in('order_id', ids)),
         ])
       : [{ data: [], error: null }, { data: [], error: null }];
+    // A failed read is not an order without items or a package.
+    if (items.error || claims.error) return jsonError(res, 500, 'db_error', 'Could not load your orders');
     const packages = new Set(((claims.data ?? []) as { order_id: string | null }[]).map((row) => String(row.order_id)));
     const byOrder = new Map<string, { sku: string; variant: string; quantity: number }[]>();
     for (const row of (items.data ?? []) as { order_id: string; sku: string; variant: string; quantity: number }[]) {
@@ -828,6 +830,9 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
           withTimeout(supabase.from('path_reward_claims').select('order_id').in('order_id', ids)),
         ])
       : [{ data: [], error: null }, { data: [], error: null }];
+    // A failed claims read would drop every claimed package from the picking
+    // list, and a failed items read would list parcels with nothing in them.
+    if (items.error || claims.error) return jsonError(res, 500, 'db_error', 'Could not load the queue');
     // A package is an order a path claim points at, never a guess from its id.
     const packages = new Set(((claims.data ?? []) as { order_id: string | null }[]).map((row) => String(row.order_id)));
     const orders = rows
