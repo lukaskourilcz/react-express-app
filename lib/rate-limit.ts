@@ -28,6 +28,8 @@ import { jsonError, ServiceUnavailableError, verifiedCallerId } from './http';
 interface Bucket {
   tokens: number;
   updatedAt: number;
+  /** When the bucket is full again if nothing takes from it. */
+  fullAt: number;
 }
 
 /** Per-endpoint bucket configuration. */
@@ -226,16 +228,23 @@ export const RATE_LIMITS = {
 
 const buckets = new Map<string, Bucket>();
 
-// Trim any buckets that are effectively "full again" and haven't been touched
-// recently, so a long-running instance can't slowly leak memory.
+// Trim the buckets that have refilled completely, so a long-running instance
+// can't slowly leak memory. Only a full bucket may go: a missing one starts
+// full, so dropping one still refilling would hand its caller the rest of the
+// budget early. Dropping any bucket idle ten minutes with a token left gave a
+// voucher guesser four tries every ten minutes instead of five an hour.
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 let lastCleanup = Date.now();
 function maybeCleanup(now: number): void {
   if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
   lastCleanup = now;
   for (const [k, b] of buckets) {
-    if (now - b.updatedAt > CLEANUP_INTERVAL_MS && b.tokens >= 1) buckets.delete(k);
+    if (b.fullAt <= now) buckets.delete(k);
   }
+}
+
+function storeBucket(key: string, config: RateLimitConfig, tokens: number, now: number): void {
+  buckets.set(key, { tokens, updatedAt: now, fullAt: now + ((config.capacity - tokens) / config.refillPerSecond) * 1000 });
 }
 
 /**
@@ -282,19 +291,19 @@ export function checkRateLimit(
   maybeCleanup(now);
 
   const key = `${config.key}:${config.scope === 'shared' ? 'shared' : identity ?? clientIp(req)}`;
-  const b = buckets.get(key) ?? { tokens: config.capacity, updatedAt: now };
+  const b = buckets.get(key) ?? { tokens: config.capacity, updatedAt: now, fullAt: now };
   const elapsedSeconds = (now - b.updatedAt) / 1000;
   const refilled = Math.min(config.capacity, b.tokens + elapsedSeconds * config.refillPerSecond);
 
   if (refilled < 1) {
     const retryAfter = Math.ceil((1 - refilled) / config.refillPerSecond);
-    buckets.set(key, { tokens: refilled, updatedAt: now });
+    storeBucket(key, config, refilled, now);
     res.setHeader('Retry-After', String(Math.max(1, retryAfter)));
     jsonError(res, 429, 'rate_limited', 'Too many requests. Try again shortly.');
     return false;
   }
 
-  buckets.set(key, { tokens: refilled - 1, updatedAt: now });
+  storeBucket(key, config, refilled - 1, now);
   return true;
 }
 

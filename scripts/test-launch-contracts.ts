@@ -4544,6 +4544,25 @@ async function main() {
   assert.ok(rateRes.headers.has('retry-after'));
   assert.equal(isDistributedRateLimitEnabled(), false, 'test environment exercises the safe local fallback');
 
+  // The idle sweep drops only buckets that have refilled completely. It used
+  // to drop any bucket idle ten minutes with a token left, which started it
+  // full again: four voucher guesses every ten minutes instead of five an hour.
+  {
+    const realNow = Date.now;
+    const start = realNow();
+    const voucher = { key: `sweep-${start}`, capacity: 5, refillPerSecond: 5 / 3600 };
+    const guesser = { headers: { 'x-forwarded-for': `sweep-${start}` }, socket: {} } as never;
+    try {
+      Date.now = () => start;
+      for (let n = 0; n < 4; n += 1) assert.equal(checkRateLimit(guesser, mockResponse() as never, voucher), true);
+      Date.now = () => start + 11 * 60_000;
+      assert.equal(checkRateLimit(guesser, mockResponse() as never, voucher), true, 'the token left, plus what eleven minutes refilled');
+      assert.equal(checkRateLimit(guesser, mockResponse() as never, voucher), false, 'the idle sweep must not refill a bucket that is not full');
+    } finally {
+      Date.now = realNow;
+    }
+  }
+
   // Grader limits are per task (owner decision 9, 9 October 2026). A Submit
   // takes its task's bucket, then a ceiling across every task; a refusal on
   // one task spends nothing of the ceiling. Grading in flight is counted the
