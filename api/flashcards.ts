@@ -65,6 +65,11 @@ export async function handleFlashcards(req: VercelRequest, res: VercelResponse, 
       if (!question_id || !question || !correct_answer) {
         return jsonError(res, 400, 'bad_request', 'question_id, question and correct_answer are required');
       }
+      // Postgres text cannot hold U+0000, so a card carrying one would fail
+      // the write and answer 500. It is the browser's text, refused as such.
+      if ([body.question_id, body.question, body.correct_answer, body.explanation].some((value) => typeof value === 'string' && value.includes('\u0000'))) {
+        return jsonError(res, 400, 'bad_request', 'Card text cannot contain a null character');
+      }
       const bank = await getEffectiveQuestionsById(subject);
       const source = bank.get(question_id);
       if (!source || subjectForCategory(source.category) !== subject) {

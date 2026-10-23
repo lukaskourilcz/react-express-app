@@ -310,6 +310,16 @@ async function sharkCardContracts() {
     assert.equal(calls[0].op, 'delete');
     assert.deepEqual(calls[0].filters, [['user_id', owner], ['subject', 'webdev'], ['question_id', learnQuestion.id]]);
   }
+  // Postgres text cannot hold U+0000: a card carrying one is refused before
+  // the write, which would otherwise fail and answer 500.
+  for (const field of ['question', 'correct_answer', 'explanation'] as const) {
+    const { db, calls } = flashcardsDatabase([]);
+    const res = mockResponse();
+    const card = { question_id: quizQuestion.id, question: 'Q?', correct_answer: 'A', explanation: 'Why', [field]: 'before\u0000after' };
+    await handleFlashcards(call('POST', owner, card), res as never, db);
+    assert.equal(res.statusCode, 400, `a NUL in ${field} is refused (${JSON.stringify(res.body)})`);
+    assert.equal(calls.length, 0, 'and nothing is written');
+  }
   // A read that times out is the service being unavailable: 503, which the
   // client may retry, not a 500 internal error.
   {
