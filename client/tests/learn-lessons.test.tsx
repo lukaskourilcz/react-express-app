@@ -23,7 +23,7 @@ function mount(failReading = false) {
     }
     return HttpResponse.json({ topics: [], structure: {} });
   }));
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><LanguageProvider><BigOIntroduction /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={['/learn/big-o']}><LanguageProvider><BigOIntroduction /></LanguageProvider></MemoryRouter></QueryClientProvider>);
   return reads;
 }
 describe('Learn lesson reading', () => {
@@ -36,6 +36,22 @@ describe('Learn lesson reading', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start the questions' }));
     await screen.findByText('Which count grows with the input?');
     expect(reads).toEqual(['reading', 'attempt']);
+  });
+  it('names where Back goes and ends on one row with the only primary (learn-05)', async () => {
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: '1. Complexity Basics' }));
+    await screen.findByRole('heading', { name: 'Complexity Basics', level: 1 });
+    const start = screen.getByRole('button', { name: 'Start the questions' });
+    expect(start).toHaveClass('ss-swim-cta');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    const row = start.closest('.lp-lesson-start');
+    expect(row).not.toBeNull();
+    expect(row).toContainElement(screen.getByText('Reading is optional. It records no progress and earns no XP.'));
+    const back = screen.getByRole('button', { name: 'Big O introduction' });
+    expect(back).toHaveClass('lp-lesson-back');
+    fireEvent.click(back);
+    await screen.findByRole('button', { name: '1. Complexity Basics' });
+    expect(screen.queryByRole('button', { name: 'Start the questions' })).toBeNull();
   });
   it('keeps questions available when public reading fails', async () => {
     const reads = mount(true);
