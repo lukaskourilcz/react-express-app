@@ -6263,4 +6263,3 @@ PR #571 (12 fixes) took the items the three audits above left because the file b
 - A second Run on a lesson example aborts the first; the toast's live region stays mounted; the query cache empties before the new account's first render; a second Copy of an invite link is announced again.
 
 **Checks:** ci:parity, 16 steps passed before and 9 after merging `main` (initial load 235,190 gzip bytes). Two items were not changed: the settings read already serves the last good copy, and `TRANSPILE_FAILED_MESSAGE` is not duplicated.
-
