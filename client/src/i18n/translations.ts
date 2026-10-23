@@ -826,7 +826,6 @@ export const en = {
   'roadmap.noLevelsBody': 'No levels are available for this topic yet. Choose another topic or return later.',
   'roadmap.error': 'Couldn’t load the roadmap. Please try again.',
   'roadmap.question': 'Question {current} of {total}',
-  'roadmap.keyboardTip': 'Tip: press 1–{max} to answer',
   'roadmap.correct': 'Correct',
   'roadmap.incorrect': 'Incorrect',
   'roadmap.continue': 'Continue',

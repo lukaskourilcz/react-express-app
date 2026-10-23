@@ -9,7 +9,7 @@ import { Button as AxButton } from '@astryxdesign/core/Button';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Kicker } from '../landing/LandingKit';
 import { AppToast } from '../ui/AppToast';
-import { RadioCard, RadioCardGroup } from '../ui/RadioCards';
+import { AnswerOptionList, QuestionHint } from '../question';
 import { useIsMobile } from '../../lib/useMediaQuery';
 import type { RoadmapPlayable, RoadmapQuestion, RoadmapAnswerResult } from '../../types/quiz';
 import type { LearnRepeatXp } from '../../../../shared/repeat-xp';
@@ -763,51 +763,22 @@ export function LessonRunner({
         />
       </div>
 
-      {/* Options — anchored toward the bottom, labelled by the question. */}
-      <RadioCardGroup
+      {/* The shared answer list (UX audit questions-04): 48px rows, the
+          brand accent for the selection, and the graded marks in words. A
+          press grades at once, so onActivate answers; arrow keys only browse. */}
+      <AnswerOptionList
+        options={question.options}
         value={selected}
-        onChange={(value) => setSelected(Number(value))}
-        onActivate={(value) => void choose(Number(value))}
+        onChange={setSelected}
+        onActivate={(index) => void choose(index)}
         labelledBy="lesson-question"
-        style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
-      >
-        {question.options.map((option, index) => {
-          const isCorrect = index === grade?.correctAnswer;
-          const isPicked = index === selected;
-          const overrides: CSSProperties = {};
-          let cls: string | undefined;
-          if (revealed && isCorrect) {
-            overrides.borderColor = 'var(--ss-success)'; overrides.backgroundColor = 'var(--ss-success-soft)'; overrides.color = 'var(--ss-success)'; cls = 'rm-correct-pop';
-          } else if (revealed && isPicked && !isCorrect) {
-            overrides.borderColor = 'var(--ss-error)'; overrides.backgroundColor = 'var(--ss-error-soft)'; overrides.color = 'var(--ss-error)'; cls = 'rm-shake';
-          } else if (isPicked) {
-            overrides.borderColor = accent;
-          }
-          return (
-            <RadioCard
-              key={index}
-              value={index}
-              index={index}
-              className={`rm-option${cls ? ` ${cls}` : ''}`}
-              disabled={revealed || grading}
-              tone={revealed && isCorrect ? 'success' : 'default'}
-              style={{ ['--rm-accent']: accent, ...overrides } as CSSProperties}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 4, fontSize: '0.75rem', fontWeight: 800, backgroundColor: 'var(--color-background-muted)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>
-                {index + 1}
-              </span>
-              <span style={{ flex: 1 }}>{option}</span>
-              {revealed && isCorrect && <span style={{ color: 'var(--ss-success)', display: 'inline-flex' }}><CheckIcon size={18} /></span>}
-            </RadioCard>
-          );
-        })}
-      </RadioCardGroup>
+        disabled={revealed || grading}
+        grade={revealed && grade ? { correct: grade.correctAnswer, picked: selected } : null}
+      />
 
-      {!revealed && !answerError && (
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: isMobile ? 'none' : 'block', marginTop: 12, flexShrink: 0 }}>
-          {t('roadmap.keyboardTip', { max: question.options.length })}
-        </div>
-      )}
+      {/* The keyboard hint keeps its line in every state (UX audit
+          questions-02): hiding the words after grading moves nothing. */}
+      <QuestionHint max={question.options.length} verb="answer" hidden={revealed || !!answerError} />
 
       {/* Feedback OVERLAYS the answer options — a solid card floating over
           the bottom of the lesson viewport, so the anchored options don't get
