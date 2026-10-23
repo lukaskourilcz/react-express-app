@@ -284,4 +284,8 @@ and after successful autosaves. A stage's own local or account draft takes
 priority; otherwise the prior stage's local code backs up the server's existing
 carry-forward path. The first FullStack React stage appends its scaffold to the
 API implementation. Inactive task responses are discarded so a previously
-visited stage cannot mount an obsolete starter while its draft refreshes.
+visited stage cannot mount an obsolete starter while its draft refreshes. A
+sign-out on a task reads the task again, and the editor never reopens on code
+kept from before the sign-out, so the next person on the device starts from
+the starter. A conflicting account draft that arrives after a sign-out or
+another sign-in is not opened.
