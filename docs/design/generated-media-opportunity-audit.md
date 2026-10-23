@@ -2,7 +2,7 @@
 
 Which media may be generated, and how a provider is chosen. The comparison of 12 October 2026 below chose the owner's existing Higgsfield account for the share image. Pricing, free tiers, licenses, privacy terms and model availability change, so research them again before any new generation.
 
-Agents must not buy a plan, create an external account, accept paid terms, enable auto-refill, expose credentials, or upload sensitive material without explicit owner authorization. Keep deterministic SVG marks, the SVG devShark plate, factual diagrams, and authentic interface captures regardless of provider; never use a fake placeholder.
+Agents must not buy a plan, create an external account, accept paid terms, enable auto-refill, expose credentials, or upload sensitive material without explicit owner authorization. Keep deterministic SVG marks, factual diagrams, and authentic interface captures regardless of provider; never use a fake placeholder.
 
 ## Mandatory provider research
 
@@ -28,7 +28,7 @@ Prefer a no-card free tier or low capped cost with clear commercial rights and c
 |---|---|---|
 | Fin/waterline logo, favicon, PWA icons | High-value, but deterministic | Refine existing SVG primitives; do not ship a raw raster-generated logo. |
 | devShark share image | High-value; done (October 2026) | Technical editorial environment without code text; overlay the exact logo and English text. |
-| devShark plate (`SubjectPlate`) | High-value | Keep the deterministic lightweight SVG plate; evaluate generated texture variants only when they add clear value. |
+| devShark plate (`SubjectPlate`) | Retired | The design audit (#247) deleted the decorative plate with the watermark fins; nothing replaces it. |
 | Small shared onboarding/empty-state illustration | Potentially useful | Use one reusable family only where it improves emotion or orientation. |
 | Subtle landing background loop | Potentially useful | Reject by default; require a static poster, reduced-motion fallback, and measured LCP. |
 | Topic-page covers | Potentially useful | Use sparingly for priority editorial topics, never as factual diagrams. |
