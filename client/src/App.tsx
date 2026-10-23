@@ -579,11 +579,11 @@ function App() {
                 nav drawer (not here), so they never crowd the account avatar. */}
             <div className="ss-slot ss-slot-end">
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
-                  the drawer covers them there. */}
+                  the drawer covers them there. 44×44 like every other page
+                  control, with 20px glyphs and 4px apart (UX audit
+                  shell-public-10): they were 28px ghost buttons 2px apart
+                  beside a 56px account widget. */}
               {signedIn && (
-                // 44×44 like every other page control, with 20px glyphs and
-                // 4px apart (UX audit shell-public-10): they were 28px ghost
-                // buttons 2px apart beside a 56px account widget.
                 <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 4 }}>
                   {showLeaderboardIcon && (
                     <AxIconButton
