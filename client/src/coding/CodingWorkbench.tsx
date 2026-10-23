@@ -1274,8 +1274,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {/* One note and its one decision (UX audit coding-14). Hint,
                   Solution and Report wait for the editor: without it they
                   had nothing to act on. */}
-              <div className="cd-note cd-note--warn cd-wait" role="status">
-                <p>{t('coding.pendingDesktop')}</p>
+              {/* The status is the sentence; the button beside it is not
+                  part of what a screen reader announces. */}
+              <div className="cd-note cd-note--warn cd-wait">
+                <p role="status">{t('coding.pendingDesktop')}</p>
                 <Button variant="secondary" onClick={chooseEditorHere} label={t('coding.pendingDesktopUseEditor')} />
               </div>
             </section>

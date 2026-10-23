@@ -53,6 +53,9 @@ it('waits for a bigger screen by default in one note with its one button, and ke
   const note = screen.getByText('This task works best on a bigger screen. Your code is kept.').closest('.cd-note')!;
   expect(note).toBeVisible();
   expect(note).toHaveClass('cd-note--warn');
+  // The sentence is the status; the button is not read out with it.
+  expect(screen.getByText('This task works best on a bigger screen. Your code is kept.')).toHaveAttribute('role', 'status');
+  expect(within(note as HTMLElement).queryAllByRole('status').every((el) => el.querySelector('button') === null)).toBe(true);
   // The decision sits inside the note; nothing promises an autosave.
   expect(within(note as HTMLElement).getByRole('button', { name: 'Use the editor here' })).toBeVisible();
   expect(screen.queryByText(/anything you have written is saved/)).toBeNull();
