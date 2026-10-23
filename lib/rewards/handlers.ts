@@ -536,6 +536,18 @@ export async function handleCosmetic(req: VercelRequest, res: VercelResponse, su
   if (bought.error) {
     if (isRpcMissing(bought.error)) return migrationRequired(res);
     if (/insufficient_tokens/i.test(bought.error.message ?? '')) {
+      // Two purchases at once (two tabs or devices) both pass the routine's
+      // ownership check; the second waits on the wallet lock, then sees the
+      // balance the first one spent and raises. The crown was bought once,
+      // so say so instead of "not enough coins".
+      const owned = await withTimeout(
+        supabase.from('cosmetic_entitlements').select('cosmetic_id')
+          .eq('user_id', userId).eq('cosmetic_id', 'crown').maybeSingle(),
+      );
+      if (!owned.error && owned.data) {
+        res.setHeader('Cache-Control', 'private, no-store');
+        return res.json({ owned: true, alreadyOwned: true });
+      }
       return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough coins');
     }
     return jsonError(res, 500, 'db_error', 'Could not complete the purchase');

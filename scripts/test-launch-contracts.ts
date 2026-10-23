@@ -6036,6 +6036,33 @@ async function main() {
     assert.deepEqual(called, ['purchase_cosmetic']);
   }
 
+  // ── the crown bought from two tabs at once ──────────────────────────────
+  {
+    // The second purchase waits on the wallet lock, then sees the balance the
+    // first one spent and raises insufficient_tokens. The crown is owned.
+    let owned: { cosmetic_id: string } | null = { cosmetic_id: 'crown' };
+    const db = {
+      rpc: async () => ({ data: null, error: { code: 'P0001', message: 'insufficient_tokens' } }),
+      from: (table: string) => {
+        assert.equal(table, 'cosmetic_entitlements');
+        const link = { select: () => link, eq: () => link, maybeSingle: async () => ({ data: owned, error: null }) };
+        return link;
+      },
+    };
+    const post = async () => {
+      const res = mockResponse();
+      await handleCosmetic({ method: 'POST', headers: {}, query: { op: 'cosmetic', user_id: 'contract-crown-race' }, body: { id: 'crown', user_id: 'contract-crown-race' } } as never, res as never, db as never);
+      return res;
+    };
+    const raced = await post();
+    assert.equal(raced.statusCode, 200, 'a purchase that lost the race to the same account is not "not enough coins"');
+    assert.deepEqual(raced.body, { owned: true, alreadyOwned: true });
+    owned = null;
+    const poor = await post();
+    assert.equal(poor.statusCode, 409, 'a wallet that cannot pay and owns nothing still answers insufficient_tokens');
+    assert.equal((poor.body as { error: { code: string } }).error.code, 'insufficient_tokens');
+  }
+
   // ── lesson figures (#183) ───────────────────────────────────────────────
   {
     assert.deepEqual(
