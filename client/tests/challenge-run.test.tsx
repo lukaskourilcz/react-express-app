@@ -42,6 +42,8 @@ const api = vi.hoisted(() => ({
   scores: [] as { name: string; runToken: string }[],
   /** The learner's Shark Cards (GET/POST /api/flashcards). */
   cards: [] as Record<string, unknown>[],
+  /** Question reports (POST /api/quiz/submit?resource=report). */
+  reports: [] as Record<string, unknown>[],
 }));
 
 vi.mock('../src/lib/api', async (importOriginal) => {
@@ -69,6 +71,10 @@ vi.mock('../src/lib/api', async (importOriginal) => {
       }));
       api.sessions.set(sessionId, new Set(questions.map((q) => q.id)));
       return { sessionId, runToken, questions };
+    }
+    if (parsed.pathname === '/api/quiz/submit' && parsed.searchParams.get('resource') === 'report') {
+      api.reports.push(JSON.parse(String(opts.body)) as Record<string, unknown>);
+      return { ok: true };
     }
     if (parsed.pathname === '/api/quiz/submit') {
       const body = JSON.parse(String(opts.body)) as Body;
@@ -135,14 +141,14 @@ const { default: Challenge } = await import('../src/components/Challenge');
 const PENDING = 'studyshark:pending-challenge-reward:v1';
 
 // The page holds its first draw for the board read, so it renders inside act.
-async function mount() {
+async function mount(onActiveChange?: (active: boolean) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   let view!: ReturnType<typeof render>;
   await act(async () => {
     view = render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[{ pathname: '/challenge', key: `v${Math.random()}` }]}>
-          <LanguageProvider><Challenge /></LanguageProvider>
+          <LanguageProvider><Challenge onActiveChange={onActiveChange} /></LanguageProvider>
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -191,6 +197,7 @@ beforeEach(() => {
   api.visible = false;
   api.scores.length = 0;
   api.cards.length = 0;
+  api.reports.length = 0;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -819,5 +826,63 @@ describe('a run’s rank-up', () => {
     } finally {
       stop();
     }
+  });
+});
+
+// UX audit U2, questions-07: a live run hides the site chrome as the Quiz
+// does, so the run needs its own way out and its own report.
+describe('focus mode', () => {
+  const last = (list: boolean[]) => list[list.length - 1];
+  // jsdom has no modal dialogs; Astryx opens its dialogs with showModal().
+  const dialogProto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
+  dialogProto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
+  dialogProto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
+
+  it('is on while a run is live and off on the intro, the game over and when the page goes', async () => {
+    const active: boolean[] = [];
+    const view = await mount((on) => active.push(on));
+    expect(last(active)).toBe(false);
+    await start();
+    expect(last(active)).toBe(true);
+    await strikeOutNow();
+    expect(last(active)).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
+    await screen.findByText(/^Batch \d+ question \d+\?$/);
+    expect(last(active)).toBe(true);
+    view.unmount();
+    expect(last(active)).toBe(false);
+  });
+
+  it('offers Exit, which asks first and then leaves the run without saving it', async () => {
+    const active: boolean[] = [];
+    await mount((on) => active.push(on));
+    await start();
+    await answer('right');
+    await next();
+    fireEvent.click(screen.getByRole('button', { name: 'Exit run' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('The run ends here, and its score is not saved.')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep playing' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(shownQuestion()).toBe('Batch 1 question 2?');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Exit run' }));
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Leave run' }));
+    expect(await screen.findByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(last(active)).toBe(false);
+    await settle();
+    expect(api.completions).toEqual([]);
+    expect(localStorage.getItem(PENDING)).toBeNull();
+  });
+
+  it('lets the learner report the question on screen', async () => {
+    await mount();
+    await start();
+    fireEvent.click(screen.getByRole('button', { name: 'Report this question' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Send/ }));
+    await waitFor(() => expect(api.reports).toHaveLength(1));
+    expect(api.reports[0]).toMatchObject({ question_id: 'b1-q1', reason: 'incorrect-answer' });
+    expect(await screen.findByText('Thanks, report sent')).toBeInTheDocument();
   });
 });

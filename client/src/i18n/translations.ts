@@ -967,6 +967,10 @@ export const en = {
   'challenge.nextQuestionFailed': 'Could not load the next question. Your run and score are kept.',
   'challenge.playAgain': 'Play again',
   'challenge.backToIntro': 'Back',
+  'challenge.exitRun': 'Exit run',
+  'challenge.leaveTitle': 'Leave this run?',
+  'challenge.leaveBody': 'The run ends here, and its score is not saved.',
+  'challenge.leaveConfirm': 'Leave run',
   'challenge.cta': 'Biggest Shark Challenge',
 
   // ── Category display names ────────────────────────────────────────────

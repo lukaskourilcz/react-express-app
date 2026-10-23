@@ -9,6 +9,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { AppToast } from './ui/AppToast';
 import { ApiError, apiFetch, friendlyError } from '../lib/api';
 import {
@@ -37,17 +38,22 @@ import './DeepEndScreens.css';
 import './Challenge.css';
 import {
   AnswerOptionList,
+  ExitIcon,
   QuestionActions,
   QuestionFeedback,
   QuestionHeader,
   QuestionHint,
+  QuestionIconButton,
   QuestionShell,
+  ReportFlagIcon,
 } from './question';
 import { categoryLabelKey } from '../lib/categories';
 import { CategoryTag, TopicPill } from './ui/CategoryTag';
 import ResultShareActions from './ResultShareActions';
 import ReferralMoment from './ReferralMoment';
 import { SaveSharkCard } from './SaveSharkCard';
+import { ReportDialog, type ReportReason } from './ReportDialog';
+import { reportQuestion } from '../lib/supabase';
 
 // Biggest Shark Challenge: answer as many questions as you can until you
 // collect three strikes. Each question carries its own 90-second clock —
@@ -199,7 +205,7 @@ function useBoardFirstData() {
   useFirstData(`challenge ${subject}`, () => settled([readOnce(queryClient, challengeLeaderboardQuery(subject))]));
 }
 
-export default function Challenge() {
+export default function Challenge({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
   useBoardFirstData();
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -346,6 +352,45 @@ export default function Challenge() {
   }, [lastResult, refilling]);
 
   const livesLeft = MAX_LIVES - livesLost;
+
+  // A live run hides the site chrome, as the Quiz does (UX audit U2,
+  // questions-07): the header and footer come back on the intro, the game
+  // over and an error, and when the page goes.
+  useEffect(() => {
+    onActiveChange?.(phase === 'playing' || phase === 'loading');
+  }, [phase, onActiveChange]);
+  useEffect(() => () => onActiveChange?.(false), [onActiveChange]);
+
+  // With the chrome hidden, Exit is the way out of a run. Leaving ends the
+  // run where it stands and saves nothing, as leaving the page always has.
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const leaveRun = useCallback(() => {
+    setLeaveOpen(false);
+    runGeneration.current += 1;
+    topupInFlight.current = null;
+    buffer.current = null;
+    clearStrikeRetry();
+    setCurrent(null);
+    setSelected(null);
+    setLastResult(null);
+    setRefillError(null);
+    setDeadline(0);
+    setPhase('intro');
+  }, [clearStrikeRetry]);
+
+  // Report a question from the run, as from the Quiz.
+  const [reportTarget, setReportTarget] = useState<{ id: string; version?: string } | null>(null);
+  const handleReport = useCallback(async (reason: ReportReason, detail?: string) => {
+    if (!reportTarget) return;
+    try {
+      await reportQuestion({ questionId: reportTarget.id, reason, detail, reporterSub: user?.id, contentVersion: reportTarget.version });
+      setSnack(t('quiz.reportSent'));
+    } catch {
+      setSnack(t('quiz.reportFailed'));
+    } finally {
+      setReportTarget(null);
+    }
+  }, [reportTarget, user, t]);
 
   /* ─── leaderboard ───────────────────────────────────────────── */
 
@@ -952,6 +997,16 @@ export default function Challenge() {
             }
             meta={<CategoryTag category={current.category} />}
             difficulty={current.difficulty}
+            tools={
+              <>
+                <QuestionIconButton
+                  label={t('quiz.reportAria')}
+                  icon={<ReportFlagIcon />}
+                  onClick={() => setReportTarget({ id: current.id, version: current.review?.version })}
+                />
+                <QuestionIconButton label={t('challenge.exitRun')} icon={<ExitIcon />} onClick={() => setLeaveOpen(true)} />
+              </>
+            }
           />
         }
         question={renderQuestion(current.question)}
@@ -1026,6 +1081,18 @@ export default function Challenge() {
         severity="info"
         message={snack ?? ''}
         autoHideDuration={2500}
+      />
+      <ReportDialog open={!!reportTarget} onClose={() => setReportTarget(null)} onSubmit={handleReport} />
+      <AlertDialog
+        className="ss-alert-dialog"
+        isOpen={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        title={t('challenge.leaveTitle')}
+        description={t('challenge.leaveBody')}
+        actionLabel={t('challenge.leaveConfirm')}
+        cancelLabel={t('quiz.leaveCancel')}
+        onAction={leaveRun}
+        width="min(460px, calc(100vw - 32px))"
       />
     </>
   );
