@@ -49,13 +49,16 @@ describe('BriefZone', () => {
     const toggle = screen.getByRole('button', { name: 'Show full brief' });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(toggle).toHaveAttribute('aria-controls', body.id);
+    sizes(400, 400);
     fireEvent.click(toggle);
     expect(body).toHaveAttribute('data-capped', 'false');
     expect(body).not.toHaveAttribute('tabindex');
     const less = screen.getByRole('button', { name: 'Show less' });
     expect(less).toHaveAttribute('aria-expanded', 'true');
+    sizes(400, 120);
     fireEvent.click(less);
     expect(body).toHaveAttribute('data-capped', 'true');
+    expect(body).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('button', { name: 'Show full brief' })).toBe(less);
   });
 
@@ -65,4 +68,17 @@ describe('BriefZone', () => {
     expect(css).toContain(".cd-brief__body[data-capped='true'] { max-height: var(--cd-brief-cap);");
     expect(css).toMatch(/\.cd-workbench--section \.cd-workbench__grid,\s*\.cd-workbench--lesson \.cd-workbench__grid,\s*\.cd-workbench--activity \.cd-workbench__grid \{ grid-template-rows: var\(--cd-frame-h\); \}/);
   });
+});
+
+it('keeps a full brief that still runs past the frame scrollable from the keyboard', () => {
+  sizes(900, 120);
+  const { container } = mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Show full brief' }));
+  sizes(900, 300);
+  fireEvent.click(screen.getByRole('button', { name: 'Show less' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Show full brief' }));
+  const body = container.querySelector('.cd-brief__body')!;
+  expect(body).toHaveAttribute('data-capped', 'false');
+  expect(body).toHaveAttribute('tabindex', '0');
+  expect(screen.getByRole('region', { name: 'Digit sum' })).toBe(body);
 });

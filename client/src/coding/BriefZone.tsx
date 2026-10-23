@@ -32,10 +32,11 @@ export function BriefZone({ labelledBy, label, head, children, after }: BriefZon
 
   // Measured, not guessed: a short brief gets no toggle and no fade, and a
   // brief that grows (a glossary term opened, earlier stages unfolded) gets
-  // them as soon as it no longer fits.
+  // them as soon as it no longer fits. The full brief is measured too: inside
+  // the frame it still stops where the editor's floor begins.
   useLayoutEffect(() => {
     const node = body.current;
-    if (!node || expanded) return;
+    if (!node) return;
     const measure = () => setOverflows(node.scrollHeight > node.clientHeight + 1);
     measure();
     if (typeof ResizeObserver === 'undefined') return;
@@ -46,9 +47,14 @@ export function BriefZone({ labelledBy, label, head, children, after }: BriefZon
   }, [expanded, children]);
 
   const capped = !expanded;
-  const scrolls = capped && overflows;
+  const scrolls = overflows;
   const toggle = () => {
-    if (expanded && body.current) body.current.scrollTop = 0;
+    if (expanded) {
+      if (body.current) body.current.scrollTop = 0;
+      // It overflowed the cap before it was lifted, so the toggle stays where
+      // it is (and keeps focus) while the capped body is measured again.
+      setOverflows(true);
+    }
     setExpanded(!expanded);
   };
 
@@ -70,7 +76,7 @@ export function BriefZone({ labelledBy, label, head, children, after }: BriefZon
       >
         {children}
       </div>
-      {(scrolls || expanded) && (
+      {(overflows || expanded) && (
         <Button
           className="cd-brief__toggle"
           variant="ghost"
