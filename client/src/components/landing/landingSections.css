@@ -8,10 +8,6 @@
 
 /* ── Plan table (Free and Premium) ─────────────────────────────────────── */
 
-.ss-compare-cta [role='tooltip'] {
-  white-space: pre-line;
-}
-
 /* The table lives in its OWN horizontal scroll container so a narrow viewport
    scrolls the table sideways instead of the page body. Focusable so keyboard
    users can scroll it too. */

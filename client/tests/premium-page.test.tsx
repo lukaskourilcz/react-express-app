@@ -244,18 +244,23 @@ describe('the plan table', () => {
     expect(within(table).queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
   });
 
-  it('keeps Start free disabled for Premium and explains it through a keyboard tooltip', async () => {
-    signIn(); serve({ plan: PAYING });
+  // UX audit shell-public-17: 'Start free' is for a visitor without an
+  // account. A signed-in free learner gets a secondary 'See Premium', and a
+  // Premium member no action at all.
+  it('offers Start free only when signed out', async () => {
+    signIn(); serve({ plan: FREE });
     const onStart = vi.fn();
+    const free = renderAt('/', <ComparisonTable onStart={onStart} />);
+    const premium = await screen.findByRole('link', { name: 'See Premium' });
+    expect(premium).toHaveAttribute('href', '/premium');
+    expect(premium).toHaveClass('ss-action');
+    expect(screen.queryByRole('button', { name: 'Start free' })).toBeNull();
+    free.unmount();
+    serve({ plan: PAYING });
     renderAt('/', <ComparisonTable onStart={onStart} />);
-    const button = await screen.findByRole('button', { name: 'Start free' });
-    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'));
-    fireEvent.click(button);
-    expect(onStart).not.toHaveBeenCalled();
-    act(() => button.focus());
-    // jsdom treats the native popover as hidden; the browser regression checks
-    // that keyboard focus actually opens it.
-    expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent('You are already a Premium member! Thank you! 💙');
+    await screen.findByRole('table');
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'See Premium' })).toBeNull());
+    expect(screen.queryByRole('button', { name: 'Start free' })).toBeNull();
   });
 });
 

@@ -1189,7 +1189,7 @@ export const en = {
   'landing.compare.rowLeaderboards': 'Leaderboards, streaks and friends',
   'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. It pays for the servers that grade your code. No ads on either plan.',
   'landing.compare.cta': 'Start free',
-  'premium.memberThanks': 'You are already a Premium member!\nThank you! 💙',
+  'landing.compare.seePremium': 'See Premium',
   'nav.premiumMember': 'Premium member',
 
   // ── Landing: founder note ─────────────────────────────────────────────

@@ -19,6 +19,7 @@ import type { TranslationKey } from '../../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../../shared/tiers';
 import { useLaunchOffer } from '../../lib/launchOffer';
 import { useEntitlement } from '../../lib/entitlement';
+import { useAuth } from '../../lib/auth';
 import { LaunchOfferNote, PremiumMonthlyCaption } from '../LaunchOffer';
 import { SUBJECT_SCOPE_CATALOG } from '../../../../shared/subject-catalog';
 import { Button } from '@astryxdesign/core/Button';
@@ -96,6 +97,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
   const t = useT();
   const offer = useLaunchOffer();
   const entitlement = useEntitlement();
+  const { isAuthenticated } = useAuth();
   const headingId = useId();
   const config = useGameConfig();
   const open = { paths: anyLearningPathOpen(config), redemption: redemptionOpen(config) };
@@ -174,14 +176,21 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
         {t('landing.compare.footnote')}
       </p>
 
-      {showCta && (
+      {/* 'Start free' is for a visitor without an account (UX audit
+          shell-public-17). A signed-in free learner already started: the
+          table's next step for them is Premium, as a secondary link, and a
+          Premium member needs no action here at all. */}
+      {showCta && isAuthenticated && !entitlement.loading && !entitlement.failed && entitlement.tier !== 'premium' && (
+        <div className="ss-compare-cta">
+          <Button variant="secondary" size="md" className="ss-action" as={Link} href="/premium" label={t('landing.compare.seePremium')} />
+        </div>
+      )}
+      {showCta && !isAuthenticated && (
         <div className="ss-compare-cta">
           {entitlement.loading ? (
             <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled isLoading />
           ) : entitlement.failed ? (
             <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled tooltip={t('profile.plan.failed')} />
-          ) : entitlement.tier === 'premium' ? (
-            <Button variant="primary" size="lg" className="ss-action" label={t('landing.compare.cta')} isDisabled tooltip={t('premium.memberThanks')} />
           ) : onStart ? (
             <SwimCta label={t('landing.compare.cta')} onClick={onStart} dir={1} />
           ) : (
