@@ -655,6 +655,27 @@ describe('saving a result to the account', () => {
     });
   }
 
+  it('sends a waiting result once when the browser comes back online while it is on its way', async () => {
+    signIn();
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ one: { userId: LEARNER.id, receipt: 'waiting', profile: {} } }));
+    const answers: (() => void)[] = [];
+    server.use(http.post('*/api/user/stats', () => new Promise<Response>((resolve) => {
+      answers.push(() => resolve(HttpResponse.json({ data: null, xp: null, applied: true })));
+    })));
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider><PendingQuizResults /></LanguageProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(answers).toHaveLength(1));
+    act(() => { window.dispatchEvent(new Event('online')); });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(answers).toHaveLength(1);
+    await act(async () => { answers[0](); });
+    await waitFor(() => expect(pendingStore()).toEqual({}));
+    expect(answers).toHaveLength(1);
+  });
+
   it('sends waiting results once signed in, and drops the ones too old to record', async () => {
     signIn();
     localStorage.setItem(PENDING_KEY, JSON.stringify({
