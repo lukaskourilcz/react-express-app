@@ -546,6 +546,16 @@ describe('focus', () => {
   });
 });
 
+describe('the verdict', () => {
+  it('is read from a live region that was on the page before the answer', async () => {
+    await mount();
+    await start();
+    const regions = [...document.querySelectorAll('[aria-live]')];
+    await answer('right');
+    expect(regions.some((region) => region.isConnected && region.textContent?.includes('Correct') && region.textContent.includes('Because.'))).toBe(true);
+  });
+});
+
 describe('a double press', () => {
   // Both presses land before React renders the busy button.
   it('grades the pick once, so its point counts once', async () => {

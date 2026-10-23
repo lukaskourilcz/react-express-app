@@ -1051,10 +1051,12 @@ export default function Challenge() {
       </div>
 
       {/* Feedback overlay: a floating card that sits over the answer options
-          so the grade doesn't push the layout around. */}
+          so the grade doesn't push the layout around. The live region stays
+          on the page and the card is drawn inside it: a live region drawn
+          together with its words, as the card was, is not read. */}
+      <div aria-live="assertive">
       {lastResult && (
         <div
-          aria-live="assertive"
           style={{
             position: 'absolute',
             left: isMobile ? 8 : 16,
@@ -1085,6 +1087,7 @@ export default function Challenge() {
           />
         </div>
       )}
+      </div>
 
       {!lastResult && strikeWaiting && (
         <div style={{ marginTop: 12, flexShrink: 0 }}>
