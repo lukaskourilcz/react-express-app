@@ -79,7 +79,11 @@
   border-radius: var(--radius-element, 0.75rem); cursor: pointer;
   transition: background-color var(--ss-motion-feedback, 160ms) ease;
 }
-.sc-card__turn:hover { background: var(--brand-accent-hover, var(--brand-accent)); }
+/* Hover moves the fill toward the ink, away from --brand-on-accent, so the
+   label gains contrast in both themes. --brand-accent-hover is the light
+   accent in dark mode too: under the dark label it fell below 4.5:1, and in
+   light mode it equals the accent, so the hover showed nothing. */
+.sc-card__turn:hover { background: color-mix(in srgb, var(--brand-accent) 85%, var(--ss-ink)); }
 .sc-card.is-turned .sc-card__turn { color: var(--color-text-primary); background: transparent; border-color: var(--ss-card-line); }
 .sc-card.is-turned .sc-card__turn:hover { background: var(--color-background-muted); }
 

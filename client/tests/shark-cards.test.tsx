@@ -271,6 +271,13 @@ describe('the Shark Card layout', () => {
     expect(rule('.sc-card.is-turned .sc-card__turn')).toContain('background: transparent');
     expect(rule('.sc-deck__actions .sc-deck__got-it')).toContain('margin-inline-start: auto');
   });
+
+  it('darkens the filled turn button toward the ink on hover, never to the light accent under the dark label', () => {
+    // --brand-accent-hover is the light accent in dark mode as well, where the
+    // label is the dark --brand-on-accent: that pair falls below 4.5:1.
+    expect(rule('.sc-card__turn:hover')).toContain('color-mix(in srgb, var(--brand-accent) 85%, var(--ss-ink))');
+    expect(css).not.toContain('--brand-accent-hover');
+  });
 });
 
 describe('/collection', () => {
