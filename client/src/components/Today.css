@@ -4,15 +4,10 @@
 
 .today-page { padding-top: 0; }
 
-/* The h1 with the day's count on its row, then the bar and the day change
-   (UX audit U2, questions-13). No panel of its own. */
-.today-heading { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-.today-heading__row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.today-heading__title {
-  margin: 0;
-  font: 800 var(--ss-type-title)/1.08 var(--font-family-heading);
-  letter-spacing: -0.03em;
-}
+/* The shared PageHeader with the day's count on the h1's row, then the bar
+   and the day change (UX audit U2, questions-13). No panel of its own. */
+.today-page > .ss-page-header { margin-bottom: 24px; }
+.today-page > .ss-page-header > .today-progress__track { align-self: stretch; }
 .today-heading__count {
   font-weight: 750;
   font-size: 0.95rem;

@@ -15,4 +15,3 @@ export {
 } from './QuestionHeader';
 export { QuestionHint, type QuestionHintProps, type QuestionHintVerb, type QuestionHintNext } from './QuestionHint';
 export { QuestionFeedback, type QuestionFeedbackProps } from './QuestionFeedback';
-export { QuestionPageHeader, type QuestionPageHeaderProps } from './QuestionPageHeader';

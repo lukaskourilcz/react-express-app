@@ -41,12 +41,12 @@ import {
   QuestionHeader,
   QuestionHint,
   QuestionIconButton,
-  QuestionPageHeader,
   QuestionShell,
   ReportFlagIcon,
 } from './question';
 import { categoryLabelKey } from '../lib/categories';
 import { CategoryTag, TopicPill } from './ui/CategoryTag';
+import { PageHeader } from './ui/PageHeader';
 import ResultShareActions from './ResultShareActions';
 import ReferralMoment from './ReferralMoment';
 import { SaveSharkCard } from './SaveSharkCard';
@@ -810,7 +810,7 @@ export default function Challenge({ onActiveChange }: { onActiveChange?: (active
       // the h1 and lead above one panel of topic pills and Start, and the top
       // scores as a short list under it instead of a half-empty side column.
       <div className="ss-pop challenge-setup">
-        <QuestionPageHeader title={t('challenge.title')} lead={t('challenge.description')} titleRef={introHeadingRef} />
+        <PageHeader title={t('challenge.title')} lead={t('challenge.description')} titleRef={introHeadingRef} />
 
         <div className="ss-panel challenge-setup__panel">
           <div className="challenge-setup__group">

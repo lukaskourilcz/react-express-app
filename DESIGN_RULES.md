@@ -323,8 +323,14 @@ coming back. The tokens and the map are in
   left, the field and a secondary button beside it.
 - **One operational header.** An operational page's title is the shared
   `PageHeader` (`components/ui/PageHeader.tsx`): optional `<Kicker>`, an ink
-  `h1` at `display-3`, one lead line, 8px apart. Do not hand-build an `h1`
-  with its own size, weight or gap.
+  `h1` at `display-3`, one lead line, 8px apart. `/collection`, `/cards`,
+  `/leaderboard`, `/play`, the Quiz and Challenge setups and `/today` use it;
+  `titleRef` makes the `h1` a focus target and `aside` puts a short status on
+  its row. Do not hand-build an `h1` with its own size, weight or gap, and do
+  not add a second header component. A public page keeps the editorial `Page`
+  header, and so does `/daily`, whose header the build also writes into the
+  static HTML; a Learn-area page uses `LearnPageHeader`, which is the same
+  frame with the Learn title.
 - **The scope sentence is the page lead.** An operational page says what it
   shows under the `h1`, and its controls sit right on what they filter.
 - **Icon buttons are 44×44** with a 20px glyph and keep their tooltip and

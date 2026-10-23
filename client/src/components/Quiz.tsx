@@ -59,7 +59,6 @@ import {
   QuestionHeader,
   QuestionHint,
   QuestionIconButton,
-  QuestionPageHeader,
   QuestionShell,
   ReportFlagIcon,
 } from './question';
@@ -68,6 +67,7 @@ import { profileStatsQueryKey } from '../lib/queries';
 import { useDayChangeTime } from '../lib/utcDay';
 import './Quiz.css';
 import { CategoryTag, TopicPill } from './ui/CategoryTag';
+import { PageHeader } from './ui/PageHeader';
 
 type QuizMode = 'standard' | 'daily' | 'review';
 const QUIZ_MODES: readonly string[] = ['standard', 'daily', 'review'];
@@ -898,9 +898,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     });
     return (
       <div className="ss-pop quiz-setup">
-        {/* The question area's one editorial header (UX audit U2,
-            questions-19): the Page h1, so setup reads like Daily. */}
-        <QuestionPageHeader title={t('quiz.buildTitle')} lead={t('quiz.buildSubtitle')} />
+        {/* The one operational page header (UX audit U2, questions-19). */}
+        <PageHeader title={t('quiz.buildTitle')} lead={t('quiz.buildSubtitle')} />
 
         <div className="ss-panel quiz-setup__panel">
           {/* Categories as accent pills. */}
