@@ -473,6 +473,23 @@ async function main() {
     assert.equal(reads('/rest/v1/question_reports').filter((one) => one.method === 'DELETE').length, 1, 'a report id is dismissed');
     console.log('PASS verified caller: dismissing a report refuses an id that is not a UUID');
 
+    // Every write the console makes leaves an audit line naming the admin.
+    const realLog = console.log;
+    const audit: string[] = [];
+    console.log = (line: unknown) => { audit.push(String(line)); };
+    try {
+      assert.equal((await admin('delete', { method: 'POST', body: { id: 'rm-js-1' } })).statusCode, 200);
+      assert.equal((await admin('reset', { method: 'POST', body: { id: 'rm-js-1' } })).statusCode, 200);
+      assert.equal((await admin('bulkhide', { method: 'POST', body: { maxImportance: 1 } })).statusCode, 200);
+    } finally {
+      console.log = realLog;
+    }
+    for (const op of ['delete', 'reset', 'bulkhide']) {
+      const line = audit.map((one) => JSON.parse(one) as Row).find((one) => one.route === 'admin' && one.op === op);
+      assert.equal(line?.by, ROLE_ADMIN.id, `op=${op} logs the admin who made it (${JSON.stringify(line)})`);
+    }
+    console.log('PASS verified caller: an admin write logs the admin account that made it');
+
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
       ['stats', await user('stats', { account: A })],

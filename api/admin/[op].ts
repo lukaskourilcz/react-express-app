@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { createServiceClient, jsonError, createLogger, ServiceUnavailableError, withTimeout, withRequestContext } from '../../lib/http';
-import { requireAdmin } from '../../lib/admin-auth';
+import { adminSubject, requireAdmin } from '../../lib/admin-auth';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
   listAdminQuestions,
@@ -28,6 +28,11 @@ const MAX_TAG = 60;
 const MAX_TAGS = 20;
 const MAX_OPTIONS = 8;
 const MIN_OPTIONS = 2;
+
+/** Who made a change, for the audit trail every console write leaves in the
+ * logs: the verified admin account, or the legacy password, which names
+ * nobody. */
+const actor = (req: VercelRequest): string => adminSubject(req) ?? 'legacy-password';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -172,7 +177,7 @@ async function qualityOp(req: VercelRequest, res: VercelResponse) {
       if (result.error) return jsonError(res, 500, 'db_error', 'Could not store quality suggestions');
       stored += batch.length;
     }
-    log({ op: 'quality', status: 200, scanned: questions.length, issues: issues.length, stored });
+    log({ op: 'quality', status: 200, by: actor(req), scanned: questions.length, issues: issues.length, stored });
     return res.json({ enabled, scanned: questions.length, issues, stored });
   }
 
@@ -257,7 +262,7 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
     difficulty,
     importance,
   });
-  log({ op: 'save', status: 200, id: saved.id });
+  log({ op: 'save', status: 200, by: actor(req), id: saved.id, created: !id });
   return res.json({ ok: true, id: saved.id });
 }
 
@@ -272,7 +277,7 @@ async function deleteQuestionOp(req: VercelRequest, res: VercelResponse) {
   // `deleted: false` restores a soft-deleted base question; default is delete.
   const deleted = b.deleted === false ? false : true;
   await setQuestionDeleted(id, deleted);
-  log({ op: 'delete', status: 200, id, deleted });
+  log({ op: 'delete', status: 200, by: actor(req), id, deleted });
   return res.json({ ok: true });
 }
 
@@ -288,7 +293,7 @@ async function bulkHideOp(req: VercelRequest, res: VercelResponse) {
       : null;
   if (max === null) return jsonError(res, 400, 'bad_request', 'maxImportance must be an integer 1–10');
   const hidden = await bulkHideByImportance(max);
-  log({ op: 'bulkhide', status: 200, max, hidden });
+  log({ op: 'bulkhide', status: 200, by: actor(req), max, hidden });
   return res.json({ ok: true, hidden });
 }
 
@@ -301,7 +306,7 @@ async function resetQuestionOp(req: VercelRequest, res: VercelResponse) {
   const id = boundedString(b.id, 64);
   if (!id) return jsonError(res, 400, 'bad_request', 'id is required');
   await resetQuestion(id);
-  log({ op: 'reset', status: 200, id });
+  log({ op: 'reset', status: 200, by: actor(req), id });
   return res.json({ ok: true });
 }
 
@@ -318,7 +323,7 @@ async function reportsOp(req: VercelRequest, res: VercelResponse) {
     const id = typeof b.id === 'string' && UUID.test(b.id) ? b.id : null;
     if (!id) return jsonError(res, 400, 'bad_request', 'id must be a report id');
     await dismissReport(id);
-    log({ op: 'reports', status: 200, dismissed: id });
+    log({ op: 'reports', status: 200, by: actor(req), dismissed: id });
     return res.json({ ok: true });
   }
   res.setHeader('Allow', 'GET, POST');
@@ -345,7 +350,7 @@ async function settingsOp(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     const b = (req.body || {}) as { settings?: unknown };
     const settings = await saveGameSettings(b.settings ?? b);
-    log({ op: 'settings', status: 200 });
+    log({ op: 'settings', status: 200, by: actor(req) });
     return res.json({ settings });
   }
   res.setHeader('Allow', 'GET, POST');
