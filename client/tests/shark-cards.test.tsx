@@ -261,6 +261,9 @@ describe('the Shark Card layout', () => {
 
   it('hugs its content with no 300px floor, and keeps three lines for the question so a short one leaves the actions at one y (questions-14)', () => {
     expect(rule('.sc-card')).not.toMatch(/min-height/);
+    // The card takes .ss-raised's edge like every card, with no accent top edge.
+    expect(rule('.sc-card')).not.toMatch(/border-top/);
+    expect(css).not.toMatch(/\.sc-card\.is-turned\s*\{/);
     expect(css).not.toMatch(/min-height:\s*(300|260)px/);
     expect(rule('.sc-card__question')).toContain('min-height: calc(3 * 1.55em)');
   });

@@ -42,15 +42,15 @@
 
 /* The card hugs its content: no 300px floor, which left 160px empty under a
    one-line question. The question keeps three lines, so a short question
-   leaves the turn button and the action row at one y from card to card. */
+   leaves the turn button and the action row at one y from card to card.
+   The edge is .ss-raised's, as on every card: no accent top edge, which the
+   design's raised-card rule overrode anyway, so it never drew. */
 .sc-card {
   display: flex; flex-direction: column; gap: 1rem;
   padding: 1.25rem 1.25rem 1rem;
   background: var(--color-background-surface);
   border-radius: var(--radius-container);
-  border-top: 4px solid var(--brand-accent);
 }
-.sc-card.is-turned { border-top-color: var(--ss-success-strong, var(--ss-success)); }
 .sc-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .sc-card__position { flex: none; margin-inline-start: auto; font-size: var(--ss-type-meta); font-weight: 700; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .sc-card__question { min-height: calc(3 * 1.55em); font-weight: 600; line-height: 1.55; overflow-wrap: anywhere; }
