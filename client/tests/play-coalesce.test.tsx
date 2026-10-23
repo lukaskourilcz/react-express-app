@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -70,6 +70,81 @@ describe('coalesceReads', () => {
     expect(read).toHaveBeenCalledTimes(1);
     await reader.request();
     expect(read).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A stand-in for the loaded Supabase client's Realtime part. Like
+// realtime-js it hands a join of a topic the channel it is still leaving,
+// and a subscribe on a channel that is leaving does nothing.
+const sb = vi.hoisted(() => {
+  type Binding = { event: string; fn: (message: { event: string; payload: unknown }) => void };
+  type Fake = { topic: string; state: 'new' | 'joined' | 'leaving'; bindings: Binding[]; on: unknown; subscribe: unknown; send: unknown };
+  const channels = new Map<string, Fake>();
+  const leaves: Array<() => void> = [];
+  const client = {
+    channel: (topic: string) => {
+      const existing = channels.get(topic);
+      if (existing) return existing;
+      const made: Fake = {
+        topic, state: 'new', bindings: [],
+        on: (_type: string, filter: { event: string }, fn: Binding['fn']) => { made.bindings.push({ event: filter.event, fn }); return made; },
+        subscribe: (fn: (status: string) => void) => {
+          if (made.state === 'new') { made.state = 'joined'; fn('SUBSCRIBED'); }
+          return made;
+        },
+        send: async ({ event, payload }: { event: string; payload: unknown }) => {
+          made.bindings.forEach((binding) => { if (binding.event === '*' || binding.event === event) binding.fn({ event, payload }); });
+        },
+      };
+      channels.set(topic, made);
+      return made;
+    },
+    removeChannel: (channel: Fake) => {
+      channel.state = 'leaving';
+      return new Promise<string>((done) => { leaves.push(() => { channels.delete(channel.topic); done('ok'); }); });
+    },
+  };
+  return { client: null as typeof client | null, fake: client, channels, leaves };
+});
+vi.mock('../src/lib/supabaseClient', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../src/lib/supabaseClient')>(),
+  loadedSupabase: () => sb.client,
+}));
+
+describe('a match channel', () => {
+  beforeEach(() => {
+    sb.client = sb.fake;
+    sb.channels.clear();
+    sb.leaves.length = 0;
+  });
+  afterEach(() => { sb.client = null; });
+  const real = () => vi.importActual<typeof import('../src/lib/realtime')>('../src/lib/realtime');
+
+  it('stops calling a listener once it unsubscribes', async () => {
+    const { joinMatchChannel } = await real();
+    const channel = joinMatchChannel('ROOM01');
+    const heard: unknown[] = [];
+    const stop = channel.subscribe('match_updated', (payload) => heard.push(payload));
+    await channel.send('match_updated', 1);
+    stop();
+    await channel.send('match_updated', 2);
+    expect(heard).toEqual([1]);
+  });
+
+  it('connects a room reopened while its last channel is still being left, once the leave is done', async () => {
+    const { joinMatchChannel } = await real();
+    joinMatchChannel('ROOM02').unsubscribe();
+    await flush();
+    const again = joinMatchChannel('ROOM02');
+    const statuses: string[] = [];
+    again.onStatus((status) => statuses.push(status));
+    const heard: unknown[] = [];
+    again.subscribe('participant_joined', (payload) => heard.push(payload));
+    sb.leaves.forEach((leave) => leave());
+    await flush();
+    expect(statuses).toEqual(['CONNECTING', 'SUBSCRIBED']);
+    await again.send('participant_joined', { sub: 'student' });
+    expect(heard).toEqual([{ sub: 'student' }]);
   });
 });
 

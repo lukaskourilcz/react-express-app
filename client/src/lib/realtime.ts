@@ -18,6 +18,13 @@ export interface RealtimeChannel {
 
 const noop = () => undefined;
 
+// A room's channel still being left, per topic. Supabase hands a new join of
+// a topic the channel it is still leaving (until the server acknowledges the
+// leave), and a subscribe on that channel does nothing: reopening a room just
+// left (Back, then the same code) got a channel that never connected and
+// never heard a broadcast. A new join of that topic waits for the leave.
+const leaving = new Map<string, Promise<unknown>>();
+
 export function joinMatchChannel(code: string): RealtimeChannel {
   const client = loadedSupabase();
   if (!client) {
@@ -32,26 +39,47 @@ export function joinMatchChannel(code: string): RealtimeChannel {
     };
   }
 
-  const channel = client.channel(`match:${code}`, {
-    config: { broadcast: { self: true } },
-  });
-
-  let currentStatus = 'CONNECTING';
+  const topic = `match:${code}`;
+  // Each caller's listeners live here, so each subscribe has a real
+  // unsubscribe, and the channel carries one binding for all of them.
+  const listeners = new Map<string, Set<Listener>>();
   const statusListeners = new Set<Listener<string>>();
-  channel.subscribe((status) => {
-    currentStatus = status;
-    statusListeners.forEach((listener) => listener(status));
-  });
+  let currentStatus = 'CONNECTING';
+  let closed = false;
+  let channel: ReturnType<typeof client.channel> | null = null;
+
+  const open = () => {
+    if (closed) return;
+    const opened = client.channel(topic, {
+      config: { broadcast: { self: true } },
+    });
+    opened.on('broadcast', { event: '*' }, (message: { event: string; payload: unknown }) => {
+      if (closed) return;
+      listeners.get(message.event)?.forEach((listener) => listener(message.payload));
+    });
+    opened.subscribe((status) => {
+      if (closed) return;
+      currentStatus = status;
+      statusListeners.forEach((listener) => listener(status));
+    });
+    channel = opened;
+  };
+  const previous = leaving.get(topic);
+  const ready: Promise<void> = previous ? previous.then(open, open) : Promise.resolve(open());
 
   return {
     send: async (event, payload) => {
+      await ready;
+      if (closed || !channel) return;
       await channel.send({ type: 'broadcast', event, payload });
     },
     subscribe: <T,>(event: string, fn: Listener<T>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (channel as any).on('broadcast', { event }, (msg: { payload: T }) => fn(msg.payload));
+      const set = listeners.get(event) ?? new Set<Listener>();
+      listeners.set(event, set);
+      const listener = fn as Listener;
+      set.add(listener);
       return () => {
-        /* channel-wide unsubscribe via unsubscribe() below */
+        set.delete(listener);
       };
     },
     onStatus: (fn) => {
@@ -60,8 +88,17 @@ export function joinMatchChannel(code: string): RealtimeChannel {
       return () => statusListeners.delete(fn);
     },
     unsubscribe: () => {
+      if (closed) return;
+      closed = true;
       statusListeners.clear();
-      client.removeChannel(channel);
+      listeners.clear();
+      const left: Promise<unknown> = ready
+        .then(() => (channel ? client.removeChannel(channel) : undefined))
+        .catch(noop);
+      leaving.set(topic, left);
+      void left.then(() => {
+        if (leaving.get(topic) === left) leaving.delete(topic);
+      });
     },
   };
 }
