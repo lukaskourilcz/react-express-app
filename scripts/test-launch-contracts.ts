@@ -1834,7 +1834,7 @@ async function voucherContracts() {
   assert.deepEqual(form({}), { ok: true, value: { note: 'For Pavel', premiumDays: null, maxRedemptions: 1, redeemableUntil: null, code: null } }, 'no days means no end; one use by default');
   assert.equal(form({ premiumDays: 30, maxRedemptions: 25, code: 'shark-camp-2026' }).ok, true);
   for (const bad of [{ note: '' }, { note: 'x'.repeat(501) }, { premiumDays: 0 }, { premiumDays: 1831 }, { premiumDays: '30' }, { maxRedemptions: 0 }, { maxRedemptions: 10001 },
-    { redeemableUntil: '2026-09-25' }, { redeemableUntil: '2040-01-01' }, { code: 'abc' }, { code: 'no_underscores' }]) {
+    { redeemableUntil: '2026-09-25' }, { redeemableUntil: '2040-01-01' }, { code: 'abc' }, { code: 'no_underscores' }, { note: 'For\u0000Pavel' }]) {
     assert.equal(form(bad).ok, false, `${JSON.stringify(bad)} is refused`);
   }
 

@@ -159,6 +159,8 @@ export function parseVoucherForm(body: Record<string, unknown>, now: number = Da
   if (note.length === 0 || note.length > MAX_NOTE) {
     return { ok: false, message: 'A note of up to 500 characters is required: who the code is for and why' };
   }
+  // Postgres text cannot hold U+0000: the routine call answered 500.
+  if (note.includes('\u0000')) return { ok: false, message: 'The note cannot contain a null character' };
   const days = body.premiumDays;
   if (days !== undefined && days !== null && !(Number.isInteger(days) && (days as number) >= 1 && (days as number) <= MAX_PREMIUM_DAYS)) {
     return { ok: false, message: 'premiumDays is a whole number of days up to five years, or null for no end' };
