@@ -357,7 +357,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
 
 /* ── requests waiting for an answer ─────────────────────────────────────── */
 
-function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChanged: () => void }) {
+function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChanged: () => Promise<void> }) {
   const t = useT();
   const titleId = useId();
   const answering = useInFlight();
@@ -365,7 +365,9 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
 
   const answer = (handle: string, accept: boolean) => answering.run(handle, async () => {
     setError(null);
-    try { await respondFriend(handle, accept); onChanged(); }
+    // The row stays busy until the read that removes it lands: re-enabled
+    // before, a third press sent the answer again.
+    try { await respondFriend(handle, accept); await onChanged(); }
     catch (err) { setError(friendlyError(err)); }
   });
 
@@ -402,7 +404,7 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
 
 /* ── the list ───────────────────────────────────────────────────────────── */
 
-function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasHandle: boolean; onChanged: () => void }) {
+function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasHandle: boolean; onChanged: () => Promise<void> }) {
   const t = useT();
   const titleId = useId();
   const removing = useInFlight();
@@ -410,7 +412,7 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
 
   const drop = (handle: string) => removing.run(handle, async () => {
     setError(null);
-    try { await removeFriend(handle); onChanged(); }
+    try { await removeFriend(handle); await onChanged(); }
     catch (err) { setError(friendlyError(err)); }
   });
 

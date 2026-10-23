@@ -213,6 +213,39 @@ describe('double presses on a request', () => {
   });
 });
 
+describe('a request answered while its re-read is on the way', () => {
+  it('keeps the row busy until the read that removes it lands', async () => {
+    const answered: string[] = [];
+    let reads = 0;
+    let releaseRead!: () => void;
+    const readGate = new Promise<void>((done) => { releaseRead = done; });
+    let pending = [{ handle: 'mucho-chomp-shark', displayName: 'Dee Example', direction: 'incoming' }];
+    server.use(
+      http.get('*/api/user/friends-handle', () => HttpResponse.json({ handle: 'thirsty-sharkie', discoverable: true, country: null, canChangeAt: null })),
+      http.get('*/api/user/friends-list', async () => {
+        reads += 1;
+        const snapshot = { friends: [], requests: [...pending] };
+        if (reads === 2) await readGate;
+        return HttpResponse.json(snapshot);
+      }),
+      http.post('*/api/user/friends-respond', async ({ request }) => {
+        answered.push((await request.json() as { handle: string }).handle);
+        pending = [];
+        return HttpResponse.json({ state: 'accepted' });
+      }),
+    );
+    renderPanel();
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept Dee Example' }));
+    await waitFor(() => expect(reads).toBe(2));
+    await act(async () => { await new Promise((done) => setTimeout(done, 30)); });
+    expect(screen.getByRole('button', { name: 'Accept Dee Example' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Accept Dee Example' }));
+    releaseRead();
+    await waitFor(() => expect(screen.queryByText('Dee Example')).toBeNull());
+    expect(answered).toEqual(['mucho-chomp-shark']);
+  });
+});
+
 describe('the discoverable switch', () => {
   it('shows each new value while it saves, and stores the last one', async () => {
     serve();
