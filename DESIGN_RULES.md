@@ -279,6 +279,10 @@ coming back. The tokens and the map are in
   `app-shell.css`. Only controls inside `.ss-compact` (a component's own
   toolbar) are `--ss-control-height-compact` (36px) on a fine pointer, and
   each keeps a 44px hit area. Never size a button page by page.
+- **A small control still takes a 44px press.** A control the app draws
+  itself (a map cell, a part cell) may look smaller than 44px, but a
+  transparent layer inside it extends its target to 44px on every pointer
+  (see "Hit areas" in `docs/design/design-system.md`).
 - **Page actions share one type.** 44px, 20px inline padding, 16px/600 text,
   pill: `.ss-action`, or any button in `.ss-info-actions` /
   `.ss-auth__actions`. The primary is never the smallest control in its row.
