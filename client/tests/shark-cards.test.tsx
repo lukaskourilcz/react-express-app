@@ -112,10 +112,41 @@ describe('the Shark Cards deck', () => {
     const left = row!.querySelector('.ss-question-actions__secondary')!;
     expect(left).toContainElement(previous);
     expect(left).toContainElement(screen.getByRole('button', { name: 'Next' }));
-    expect(row!.querySelector('.ss-question-actions__primary')).toContainElement(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.getByRole('button', { name: 'Got it' })).toHaveAccessibleDescription(
       'Got it takes the card out of your deck. The arrow keys move between cards.',
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Show the answer' }));
+    expect(row!.querySelector('.ss-question-actions__primary')).toContainElement(screen.getByRole('button', { name: 'Got it' }));
+  });
+
+  it('makes Show the answer the one filled primary face down, and Got it the one turned (social-account-19)', async () => {
+    signIn();
+    serveDeck([LEARN_CARD, QUIZ_CARD]);
+    await mount(<Flashcards />);
+    const card = await screen.findByRole('article');
+    // Face down: the card's turn button is the next step; Got it is a
+    // secondary at the right end of the row, and no SwimCta is drawn.
+    expect(card).toHaveAttribute('data-side', 'front');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(0);
+    const gotIt = screen.getByRole('button', { name: 'Got it' });
+    expect(gotIt).toHaveClass('sc-deck__got-it');
+    expect(gotIt).not.toHaveClass('ss-swim-cta');
+    expect(screen.getAllByRole('button', { name: 'Got it' })).toHaveLength(1);
+
+    // Turned: Got it is the one SwimCta, still described by the hint.
+    fireEvent.click(screen.getByRole('button', { name: 'Show the answer' }));
+    expect(card).toHaveAttribute('data-side', 'back');
+    const primaries = document.querySelectorAll('.ss-swim-cta');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveAccessibleName('Got it');
+    expect(primaries[0]).toHaveAccessibleDescription('Got it takes the card out of your deck. The arrow keys move between cards.');
+    expect(screen.getAllByRole('button', { name: 'Got it' })).toHaveLength(1);
+
+    // Got it from the turned card takes it out and the next card opens face down.
+    fireEvent.click(primaries[0]);
+    expect(await screen.findByText('Card 1 of 1')).toBeInTheDocument();
+    expect(screen.getByRole('article')).toHaveAttribute('data-side', 'front');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Show the answer' })).toHaveFocus());
   });
 
   it('announces the new position from the card as the deck steps (questions-14)', async () => {
@@ -232,6 +263,13 @@ describe('the Shark Card layout', () => {
     expect(rule('.sc-card')).not.toMatch(/min-height/);
     expect(css).not.toMatch(/min-height:\s*(300|260)px/);
     expect(rule('.sc-card__question')).toContain('min-height: calc(3 * 1.55em)');
+  });
+
+  it('fills the face-down turn button with the accent and quiets it once turned (social-account-19)', () => {
+    expect(rule('.sc-card__turn')).toContain('background: var(--brand-accent)');
+    expect(rule('.sc-card__turn')).toContain('color: var(--brand-on-accent)');
+    expect(rule('.sc-card.is-turned .sc-card__turn')).toContain('background: transparent');
+    expect(rule('.sc-deck__actions .sc-deck__got-it')).toContain('margin-inline-start: auto');
   });
 });
 

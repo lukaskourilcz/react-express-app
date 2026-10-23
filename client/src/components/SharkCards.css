@@ -34,6 +34,10 @@
    questions-14): Previous and Next together on the left, Got it on the right;
    under 560px Got it is the last row at full width (question.css). */
 .sc-deck__body { display: flex; flex-direction: column; gap: 16px; }
+/* Face down, Got it is a secondary at the primary's place: the right end of
+   the row, or the full-width last row under 560px. */
+.sc-deck__actions .ss-question-actions__secondary { flex: 1 1 auto; }
+.sc-deck__actions .sc-deck__got-it { margin-inline-start: auto; }
 .sc-deck__hint { margin: 0; font-size: var(--ss-type-meta); color: var(--color-text-secondary); }
 
 /* The card hugs its content: no 300px floor, which left 160px empty under a
@@ -65,14 +69,19 @@
   color: var(--color-text-accent, var(--brand-accent)); font-weight: 700; text-decoration: underline; text-underline-offset: 3px;
 }
 .sc-card__study:focus-visible, .sc-card__turn:focus-visible, .sc-toast__undo:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+/* Face down, turning the card is the next step and the screen's one filled
+   primary; turned, it steps back to a quiet outline and Got it below takes
+   the fill (UX audit social-account-19). */
 .sc-card__turn {
   margin-top: auto; align-self: stretch; min-height: 44px;
-  font: inherit; font-weight: 700; color: var(--color-text-primary);
-  background: var(--brand-accent-soft); border: 1px solid var(--ss-card-line); border-bottom-width: 2px;
+  font: inherit; font-weight: 700; color: var(--brand-on-accent);
+  background: var(--brand-accent); border: 1px solid transparent; border-bottom-width: 2px;
   border-radius: var(--radius-element, 0.75rem); cursor: pointer;
   transition: background-color var(--ss-motion-feedback, 160ms) ease;
 }
-.sc-card__turn:hover { background: var(--color-background-muted); }
+.sc-card__turn:hover { background: var(--brand-accent-hover, var(--brand-accent)); }
+.sc-card.is-turned .sc-card__turn { color: var(--color-text-primary); background: transparent; border-color: var(--ss-card-line); }
+.sc-card.is-turned .sc-card__turn:hover { background: var(--color-background-muted); }
 
 .sc-toast { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
 .sc-toast__undo {
@@ -84,6 +93,7 @@
 
 @media (max-width: 559px) {
   .sc-card { padding: 1rem; }
+  .sc-deck__actions .sc-deck__got-it { grid-column: 1 / -1; margin-inline-start: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

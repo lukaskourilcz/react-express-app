@@ -12,6 +12,8 @@
 // questions-14): the Page header on /cards (h1 and one lead line, no kicker),
 // the card's position in its meta row, and the one QuestionActions row under
 // it, Previous and Next together on the left and Got it on the right.
+// Face down the card's Show the answer is the one filled primary; turned, Got
+// it is (social-account-19).
 //
 // Rendered at /cards and as the first tab of /collection (`embedded`). The
 // collectible card packs this name once meant are retired; nothing here opens
@@ -242,15 +244,29 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
           </button>
         </article>
 
+        {/* One filled primary (UX audit social-account-19): face down it is
+            Show the answer, in the card, and Got it is a secondary; turned, Got
+            it is the SwimCta. Got it keeps one place, on the right of the row
+            (a full-width last row on a phone), so only its fill changes. */}
         <QuestionActions
           className="sc-deck__actions"
           secondary={(
             <>
               <Button variant="secondary" label={t('sharkCards.previous')} isDisabled={at === 0} onClick={() => go(at - 1)} />
               <Button variant="secondary" label={t('sharkCards.next')} isDisabled={at >= count - 1} onClick={() => go(at + 1)} />
+              {!turned && (
+                <Button
+                  variant="secondary"
+                  className="sc-deck__got-it"
+                  label={t('sharkCards.gotIt')}
+                  isDisabled={remove.isPending}
+                  aria-describedby={hintId}
+                  onClick={gotIt}
+                />
+              )}
             </>
           )}
-          primary={{ label: t('sharkCards.gotIt'), onClick: gotIt, disabled: remove.isPending, describedBy: hintId }}
+          primary={turned ? { label: t('sharkCards.gotIt'), onClick: gotIt, disabled: remove.isPending, describedBy: hintId } : undefined}
         />
         <p id={hintId} className="sc-deck__hint">{t('sharkCards.gotItHint')}</p>
       </section>
