@@ -41,7 +41,9 @@
   align-items: stretch;
 }
 .lp-head__text { min-width: 0; }
-.lp-head__actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; max-width: 100%; }
+/* 44px even while it waits for the account's enrollment or progress, so the
+   page does not move down when the primary arrives. */
+.lp-head__actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; max-width: 100%; min-height: 44px; }
 /* An open activity's own header keeps its title and Close on one row. */
 .lp-workspace > .lp-head { flex-direction: row; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start; justify-content: space-between; }
 .lp-workspace > .lp-head > .lp-head__text { flex: 1 1 380px; }

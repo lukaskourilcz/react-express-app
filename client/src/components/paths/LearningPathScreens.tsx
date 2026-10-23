@@ -131,6 +131,10 @@ const ROW_STATE_GLYPH: Record<Exclude<EvidenceState, 'not_started'>, string> = {
   needs_revision: '↻',
 };
 
+// The module page's next row title, which describes a primary whose label cut
+// the title short (UX audit learn-13). One module page shows at a time.
+const NEXT_TITLE_ID = 'lp-module-next-title';
+
 function ActivityRow({
   pathId,
   moduleId,
@@ -158,7 +162,7 @@ function ActivityRow({
   const body = (
     <>
       <span className="lp-activity__kind">{kind}</span>
-      <span className="lp-activity__title">{titleWithoutKind(activity.title, kind)}</span>
+      <span className="lp-activity__title" id={next ? NEXT_TITLE_ID : undefined}>{titleWithoutKind(activity.title, kind)}</span>
       <span className="lp-activity__minutes">{t('paths.minutes', { minutes: activity.estimatedMinutes })}</span>
       {/* 'Not started' is every row's default and goes unsaid; any other
           state is a glyph beside the minutes, its words read aloud. */}
@@ -364,6 +368,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
       <Button key="pause" variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
     ),
   ].filter(Boolean);
+  // While a signed-in learner's enrollments load, the row keeps its 44px, so
+  // the page below does not move down when Start, Resume or Continue arrives.
+  const actionsPending = isAuthenticated && open && enrollments.isPending;
 
   return (
     <div className="lp-page">
@@ -398,7 +405,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
             </li>
           </ul>
         </div>
-        {actions.length > 0 && <div className="lp-head__actions">{actions}</div>}
+        {(actions.length > 0 || actionsPending) && (
+          <div className="lp-head__actions" aria-busy={actions.length === 0 || undefined}>{actions}</div>
+        )}
       </header>
 
       {enrollError && (
@@ -1004,8 +1013,11 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // neither passed nor self-reviewed, 'Start module' while nothing is recorded
   // and 'Continue: <title>' after. It shows while the list is the screen; an
   // open activity carries its own primary.
+  // It waits for the recorded progress: before it arrives, a learner part-way
+  // through would read 'Start module' aimed at the first row. Until then the
+  // row keeps its 44px, so the list does not move when the primary arrives.
   const started = Boolean(moduleProgress?.activities.some((one) => one.state !== 'not_started'));
-  const target = reachable
+  const target = reachable && progress.data
     ? module.activities.find((one) => {
         const state = states.get(one.id) ?? 'not_started';
         return state !== 'verified_pass' && state !== 'self_reviewed';
@@ -1013,9 +1025,12 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     : undefined;
   const targetLocked = target ? activityLock(target.id, states.get(target.id) ?? 'not_started') : false;
   const targetTitle = target ? titleWithoutKind(target.title, t(`paths.kind.${target.kind}` as never)) : '';
+  const targetCut = targetTitle.length > 32;
   const ctaLabel = started
-    ? pathCopy['paths.action.continueTo'].replace('{title}', targetTitle.length > 32 ? `${targetTitle.slice(0, 31).trimEnd()}…` : targetTitle)
+    ? pathCopy['paths.action.continueTo'].replace('{title}', targetCut ? `${targetTitle.slice(0, 31).trimEnd()}…` : targetTitle)
     : pathCopy['paths.action.startModule'];
+  const ctaPending = !target && isAuthenticated && !enrollments.error && !progress.error
+    && (enrollments.isPending || (reachable && !progress.data));
 
   return (
     <div className="lp-page">
@@ -1042,14 +1057,16 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             ))}
           </ul>
         </div>
-        {target && !activityId && (
-          <div className="lp-head__actions">
-            <SwimCta
+        {!activityId && (target || ctaPending) && (
+          <div className="lp-head__actions" aria-busy={!target || undefined}>
+            {target && <SwimCta
               label={ctaLabel}
+              // A title cut at 32 characters is read whole from the marked row.
+              describedBy={targetCut ? NEXT_TITLE_ID : undefined}
               onClick={() => (targetLocked
                 ? openUpgradeSheet({ kind: 'learning-path-activity', ref: `${pathId}:${target.id}` })
                 : navigate(activityHref(pathId, module.id, target.id)))}
-            />
+            />}
             {targetLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
           </div>
         )}

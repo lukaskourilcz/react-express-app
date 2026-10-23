@@ -666,9 +666,22 @@ describe('the module page primary', () => {
   };
   const cta = () => document.querySelector('.lp-head__actions .ss-swim-cta') as HTMLButtonElement | null;
 
+  it('waits for recorded progress, holding the row, before it names a target', async () => {
+    await mount(null);
+    await screen.findByRole('heading', { level: 1, name: 'M01' });
+    // Without progress a learner part-way through would read 'Start module'
+    // aimed at the first row; the empty row keeps its place instead.
+    expect(cta()).toBeNull();
+    expect(document.querySelector('.lp-head__actions')).toHaveAttribute('aria-busy', 'true');
+    expect(document.querySelector('.lp-activity--next')).toBeNull();
+  });
+
   it('says Start module before anything is recorded, marks the first row and opens it', async () => {
+    recorded({});
     await mount(null);
     await waitFor(() => expect(cta()).not.toBeNull());
+    expect(document.querySelector('.lp-head__actions')).not.toHaveAttribute('aria-busy');
+    expect(cta()).not.toHaveAttribute('aria-describedby');
     expect(cta()).toHaveAccessibleName('Start module');
     expect(document.querySelectorAll('.lp-page .ss-swim-cta')).toHaveLength(1);
     const next = document.querySelector('.lp-activity--next') as HTMLElement;
@@ -699,6 +712,8 @@ describe('the module page primary', () => {
       const label = cta()!.textContent!.replace(/^Continue: /, '');
       expect(label).toBe('Write the incident handoff for…');
       expect(label.length).toBeLessThanOrEqual(32);
+      // The whole title is read from the marked row it describes.
+      expect(cta()).toHaveAccessibleDescription('Write the incident handoff for the on-call engineer');
     } finally {
       activity.title = title;
     }
@@ -709,6 +724,7 @@ describe('the module page primary', () => {
     await mount(null);
     await screen.findByRole('heading', { level: 1, name: 'M01' });
     expect(cta()).toBeNull();
+    expect(document.querySelector('.lp-head__actions')).toBeNull();
     expect(document.querySelector('.lp-activity--next')).toBeNull();
   });
 });

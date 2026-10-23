@@ -304,6 +304,9 @@ describe('the path page', () => {
     state.enrollmentsRead = 'loading';
     await overview('fde');
     expect(screen.queryByRole('button', { name: 'Start this path' })).toBeNull();
+    // The stacked hero keeps its action row meanwhile, so the page below does
+    // not move down when Start or Continue arrives.
+    expect(document.querySelector('.lp-head > .lp-head__actions')).toHaveAttribute('aria-busy', 'true');
   });
 
   it('a double click on Start sends one enrollment', async () => {
