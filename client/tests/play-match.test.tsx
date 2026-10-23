@@ -921,6 +921,28 @@ describe('the lobby (social-account-14, -15)', () => {
     expect(within(footer as HTMLElement).getAllByRole('button').map((b) => b.textContent)).toEqual(['Start (10 questions)']);
   });
 
+  it('makes the host\'s Start the one 44px primary, on the right and full width on a phone, beside a 44px code badge', async () => {
+    const lobby = lobbyOf();
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    const start = await screen.findByRole('button', { name: 'Start (10 questions)' });
+    expect(start).toHaveClass('ss-swim-cta', 'ss-swim-cta--md');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(start.parentElement).toHaveClass('play-lobby__start');
+    const css = readFileSync(new URL('../src/components/Play.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.play-lobby__start \{ display: flex; justify-content: flex-end; \}/);
+    expect(css).toMatch(/@media \(max-width: 599\.95px\) \{\s*\.play-lobby__start \{ display: grid; \}/);
+    // The badge takes the default size, so the shared floor makes it 44px.
+    expect(screen.getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
+    const source = readFileSync(new URL('../src/components/Play.tsx', import.meta.url), 'utf8');
+    const codeBadge = source.slice(source.indexOf('const CodeBadge'), source.indexOf('function Lobby'));
+    expect(codeBadge).toContain('<Button');
+    expect(codeBadge).not.toContain('size="sm"');
+    fireEvent.click(start);
+    expect(api.controlMatch).toHaveBeenCalled();
+  });
+
   it('tells a guest to wait, with no Start', async () => {
     const lobby = lobbyOf({ host_id: 'host-1' });
     api.joinMatch.mockResolvedValue(lobby);

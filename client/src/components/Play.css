@@ -82,3 +82,10 @@
 @media print {
   .play-lobby__qr { width: 240px; height: 240px; border: 0; }
 }
+
+/* Start (social-account-15): alone on the footer row, on the right from
+   600px, the full width of the panel below it. */
+.play-lobby__start { display: flex; justify-content: flex-end; }
+@media (max-width: 599.95px) {
+  .play-lobby__start { display: grid; }
+}

@@ -962,7 +962,6 @@ const CodeBadge = ({ code }: { code: string }) => {
   return (
     <Button
       variant="secondary"
-      size="sm"
       label={`${code} — ${status}`}
       onClick={() => {
         void copyText(code).then((ok) => {
@@ -1069,13 +1068,14 @@ function Lobby({
         <p className="play-lobby__empty">{t('play.noPlayers')}</p>
       )}
 
+      {/* The host's Start is the screen's one primary (SwimCta md, 44px):
+          right-aligned on its own row, full width on a phone, never a
+          wrapped afterthought under the share buttons (social-account-15). */}
       {isHost && (
         <div className="play-lobby__start">
-          <Button
-            variant="primary"
-            size="lg"
+          <SwimCta
             label={t('play.startWithCount', { count: questionCountOf(match) })}
-            isDisabled={participants.length < 1 || startPending}
+            disabled={participants.length < 1 || startPending}
             onClick={onStart}
           />
         </div>
