@@ -912,7 +912,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           always "Learn", the switcher below is the one place the section is
           named, and the section line under it is the one supporting line. */}
       <header className="rm-journey-heading">
-        <Kicker as="h1" className="ss-section-title">{t('nav.learn')}</Kicker>
+        <Kicker as="h1" className="ss-section-title">{t('roadmap.title')}</Kicker>
       </header>
 
       {retired && (
