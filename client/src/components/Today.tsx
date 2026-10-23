@@ -223,8 +223,17 @@ export default function Today() {
   const { items, startHereId, unfinishedCount, reviewCount, newCount, target, completedToday } = plan;
   const hasPlan = items.length > 0;
 
+  // The backlog line says only what the cards do not (questions-13): the
+  // non-zero counts, and only when there is more to do than the plan shows.
+  const backlog = [
+    unfinishedCount > 0 ? t('today.summaryUnfinished', { n: unfinishedCount }) : null,
+    reviewCount > 0 ? t('today.summaryReview', { n: reviewCount }) : null,
+    newCount > 0 ? t('today.summaryNew', { n: newCount }) : null,
+  ].filter(Boolean).join(' · ');
+  const moreThanShown = unfinishedCount + reviewCount + newCount > items.length;
+
   return (
-    <TodayShell t={t}>
+    <TodayShell t={t} progress={hasPlan && !completedToday ? { done, target } : undefined}>
       {fetchError && (
         <div style={{ marginBottom: 16 }}>
           <Banner
@@ -237,33 +246,30 @@ export default function Today() {
         </div>
       )}
 
-      {completedToday ? (
-        <DonePanel t={t} />
-      ) : hasPlan ? (
-        <ProgressPanel done={done} target={target} t={t} />
-      ) : null}
+      {completedToday && <DonePanel t={t} />}
 
       {hasPlan ? (
         <>
           {SECTION_ORDER.map((kind) => {
             const group = items.filter((item) => item.kind === kind);
             if (group.length === 0) return null;
+            // The reason line only when it tells the items apart: one line
+            // repeated on every card said nothing (questions-13).
+            const showReason = new Set(group.map((item) => item.reason)).size > 1;
             return (
               <section key={kind} className="today-section" aria-label={t(SECTION_TITLE[kind])}>
                 <h2 className="today-section__title">{t(SECTION_TITLE[kind])}</h2>
                 <ul className="today-list">
                   {group.map((item) => (
                     <li key={item.id}>
-                      <TodayCard item={item} isStartHere={item.id === startHereId} t={t} />
+                      <TodayCard item={item} isStartHere={item.id === startHereId} showReason={showReason} t={t} />
                     </li>
                   ))}
                 </ul>
               </section>
             );
           })}
-          <p className="today-summary">
-            {t('today.summary', { unfinished: unfinishedCount, review: reviewCount, new: newCount })}
-          </p>
+          {moreThanShown && backlog && <p className="today-summary">{backlog}</p>}
         </>
       ) : !completedToday ? (
         plan.premiumNext ? <PremiumEmptyState item={plan.premiumNext} t={t} /> : <EmptyState t={t} />
@@ -280,42 +286,39 @@ export default function Today() {
   );
 }
 
-/* ── shell: editorial header + page frame ─────────────────────────────────── */
+/* ── shell: the h1, the day's progress, and the page ───────────────────────── */
 
-function TodayShell({ t, children }: { t: TFn; children: ReactNode }) {
+// One visible h1 with the day's count on its row, and the bar and the day
+// change under it (UX audit U2, questions-13): the h1 was screen-reader only
+// and the page opened on a kicker inside a panel of its own.
+function TodayShell({ t, progress, children }: { t: TFn; progress?: { done: number; target: number }; children: ReactNode }) {
+  const label = progress ? t('today.progress', progress) : '';
+  const pct = progress && progress.target > 0 ? Math.round((progress.done / progress.target) * 100) : 0;
   return (
-    <div className="de-page today-page" style={{ maxWidth: 760 }}>
+    <div className="de-page today-page">
       <header className="today-heading">
-        <h1 className="ss-sr-only">{t('today.title')}</h1>
+        <div className="today-heading__row">
+          <h1 className="today-heading__title">{t('today.title')}</h1>
+          {progress && <span className="today-heading__count">{label}</span>}
+        </div>
+        {progress && (
+          <>
+            <div
+              className="today-progress__track"
+              role="progressbar"
+              aria-label={label}
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div className="today-progress__fill" style={{ width: `${pct}%` }} />
+            </div>
+            <DayChangeNote />
+          </>
+        )}
       </header>
       {children}
     </div>
-  );
-}
-
-/* ── progress toward the daily target ─────────────────────────────────────── */
-
-function ProgressPanel({ done, target, t }: { done: number; target: number; t: TFn }) {
-  const pct = target > 0 ? Math.round((done / target) * 100) : 0;
-  const label = t('today.progress', { done, target });
-  return (
-    <section className="today-progress ss-panel">
-      <div className="today-progress__head">
-        <Kicker>{t('today.targetLabel')}</Kicker>
-        <span className="today-progress__count">{label}</span>
-      </div>
-      <div
-        className="today-progress__track"
-        role="progressbar"
-        aria-label={label}
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div className="today-progress__fill" style={{ width: `${pct}%` }} />
-      </div>
-      <div className="today-progress__note"><DayChangeNote /></div>
-    </section>
   );
 }
 
@@ -340,7 +343,7 @@ function DonePanel({ t }: { t: TFn }) {
 
 /* ── one plan item, deep-linking into its Learn level ─────────────────────── */
 
-function TodayCard({ item, isStartHere, t }: { item: TodayItem; isStartHere: boolean; t: TFn }) {
+function TodayCard({ item, isStartHere, showReason, t }: { item: TodayItem; isStartHere: boolean; showReason: boolean; t: TFn }) {
   const topicLabel = t(item.topicLabelKey);
   const meta = t('today.itemMeta', { topic: topicLabel, level: item.level });
   const color = getCategoryHexColor(item.topic);
@@ -359,9 +362,13 @@ function TodayCard({ item, isStartHere, t }: { item: TodayItem; isStartHere: boo
         <CategoryGlyph category={item.topic} color={color} size={22} />
       </span>
       <span className="today-card__body">
-        {isStartHere && <span className="today-card__chip">{t('today.startHere')}</span>}
-        <span className="today-card__meta">{meta}</span>
-        <span className="today-card__reason">{t(item.reason)}</span>
+        {/* Start here is a tag after the title, not a row above it, so this
+            card is as tall as the others. */}
+        <span className="today-card__title">
+          <span className="today-card__meta">{meta}</span>
+          {isStartHere && <span className="today-card__chip">{t('today.startHere')}</span>}
+        </span>
+        {showReason && <span className="today-card__reason">{t(item.reason)}</span>}
       </span>
       <span className="today-card__action" aria-hidden="true">
         <span className="today-card__action-label">{actionLabel}</span>

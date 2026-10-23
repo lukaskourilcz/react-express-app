@@ -4,29 +4,27 @@
 
 .today-page { padding-top: 0; }
 
-.today-heading { margin-bottom: 20px; }
-.today-heading .ss-kicker { margin-bottom: 8px; }
-
-/* Loading — a few paper placeholders while the structure resolves. */
-.today-loading { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
-.today-loading__label { margin-top: 4px; text-align: center; font-size: 0.85rem; color: var(--color-text-secondary); }
-
-/* Progress toward the daily target. */
-.today-progress { padding: 16px 18px; margin-bottom: 20px; }
-.today-progress__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
+/* The h1 with the day's count on its row, then the bar and the day change
+   (UX audit U2, questions-13). No panel of its own. */
+.today-heading { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.today-heading__row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.today-heading__title {
+  margin: 0;
+  font: 800 var(--ss-type-title)/1.08 var(--font-family-heading);
+  letter-spacing: -0.03em;
 }
-.today-progress__count {
+.today-heading__count {
   font-weight: 750;
   font-size: 0.95rem;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
 }
+
+/* Loading — a few paper placeholders while the structure resolves. */
+.today-loading { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.today-loading__label { margin-top: 4px; text-align: center; font-size: 0.85rem; color: var(--color-text-secondary); }
+
+/* Progress toward the daily target, under the h1. */
 .today-progress__track {
   height: 10px;
   border-radius: 99px;
@@ -42,7 +40,6 @@
 @media (prefers-reduced-motion: reduce) {
   .today-progress__fill { transition: none; }
 }
-.today-progress__note { margin-top: 8px; }
 
 /* Target reached. */
 .today-done {
@@ -136,9 +133,10 @@
   flex-shrink: 0;
 }
 .today-card__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+/* The title with Start here as a tag after it, on one line while it fits. */
+.today-card__title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
 .today-card__chip {
-  align-self: flex-start;
-  margin-bottom: 2px;
+  flex: none;
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--brand-accent);

@@ -1073,7 +1073,6 @@ export const en = {
 
   // ── Today queue (one daily plan per subject) ──────────────────────────
   'today.title': 'Today',
-  'today.kicker': 'Daily plan',
   'today.subtitle': 'Your plan for today: a little unfinished work, a little review, a little new.',
   'today.startHere': 'Start here',
   'today.startHereAria': 'Start here: {label}',
@@ -1087,7 +1086,9 @@ export const en = {
   'today.continue': 'Continue',
   'today.start': 'Start',
   'today.review': 'Review',
-  'today.summary': '{unfinished} to finish · {review} to review · {new} new',
+  'today.summaryUnfinished': '{n} to finish',
+  'today.summaryReview': '{n} to review',
+  'today.summaryNew': '{n} new',
   'today.dueSection': 'Due for review',
   'today.dueReason': '{n} concepts, about {minutes} min.',
   'today.dueConceptsMore': '{list} and {n} more',
@@ -1096,7 +1097,6 @@ export const en = {
   'today.runDue': 'Due now',
   'today.runActive': '{done} of {total} done',
   'today.runStart': 'Start',
-  'today.targetLabel': 'Today’s target',
   // Days are UTC days on the server; {time} is when one ends on the learner's clock.
   'dayChange.note': 'Days change at {time} your time.',
   'today.progress': '{done}/{target} done',
