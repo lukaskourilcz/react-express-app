@@ -724,6 +724,34 @@ describe('signing out', () => {
     expect(kept(localStorage, DRAFTS)).toEqual([]);
   });
 
+  it('forgets the account’s data when another account’s session replaces it without a sign-out', async () => {
+    // An email link of another account opened in this browser: supabase-js
+    // saves its session over the stored one and announces only SIGNED_IN.
+    const reports = recordSignInReports();
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, { ...ACCOUNT_LOCAL, ...DEVICE_LOCAL });
+    seed(sessionStorage, ACCOUNT_SESSION);
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    const { accountEpoch } = await import('../src/lib/accountData');
+    const before = accountEpoch();
+    // This tab reported a sign-in of the account here earlier.
+    sessionStorage.setItem('devquiz:auth-reported', '1');
+    await signIn('user-other');
+    expect(screen.getByTestId('auth')).toHaveTextContent('user:user-other');
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+    expect(kept(sessionStorage, ACCOUNT_SESSION)).toEqual([]);
+    expect(kept(localStorage, DEVICE_LOCAL)).toEqual(Object.keys(DEVICE_LOCAL));
+    // Work still out for the account that left writes nothing.
+    expect(accountEpoch()).toBeGreaterThan(before);
+    // The arriving account's sign-in is reported, even after one earlier in this tab.
+    await waitFor(() => expect(reports).toEqual(['Bearer user-other-token']));
+    // The same account again (a token refresh) forgets nothing.
+    seed(localStorage, ACCOUNT_LOCAL);
+    await signIn('user-other');
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual(Object.keys(ACCOUNT_LOCAL));
+  });
+
   it('opens nothing kept for the account to a guest', async () => {
     await sessionEnds();
     expect((await openTask()).code).toBeNull();

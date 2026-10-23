@@ -249,7 +249,18 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   // account are deleted unread; its own learning-path drafts go back in place
   // now, and its coding drafts come back when it opens a coding task
   // (coding/drafts.ts).
+  //
+  // An email link or another tab can replace the session of one account with
+  // another's without a SIGNED_OUT in between (supabase-js saves the link's
+  // session over the stored one). The account that was here leaves the same
+  // way a Log out would make it leave: its progress, coins and waiting results
+  // must not be merged into the one arriving, and that sign-in is reported.
   function signedIn(id: string) {
+    if (accountSignedIn && accountId !== null && accountId !== id) {
+      clearSignInReport();
+      clearAccountData();
+      setPasswordRecovery(false);
+    }
     accountSignedIn = true;
     accountId = id;
     forgetOthersKeptDrafts(id);
