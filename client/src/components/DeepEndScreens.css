@@ -26,6 +26,12 @@
 .de-setting-row__title{margin:0;font:650 1rem/1.4 var(--font-family-body);letter-spacing:0}
 .de-setting-row>:last-child{flex:none}
 @media (max-width:600px){.de-setting-row{flex-direction:column;align-items:flex-start}}
+/* A quiet disclosure inside a Profile card (the GitHub garden's 'How it
+   works', social-account-22): a 44px summary with the native marker, the
+   detail under it. */
+.de-disclosure>:not(summary){margin-top:6px}
+.de-disclosure>summary{min-height:var(--ss-control-height);padding:10px 0;box-sizing:border-box;cursor:pointer;font:600 var(--ss-type-compact)/24px var(--font-family-body);color:var(--color-text-primary)}
+.de-disclosure>summary:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px;border-radius:var(--radius-inner)}
 @media(max-width:820px){.de-challenge-grid{grid-template-columns:1fr}.de-page{padding-top:0}.de-hero-panel{padding:20px}.de-card-grid{grid-template-columns:1fr}.de-mode-card{padding:14px}.de-stat-row{gap:16px}}
 @media(prefers-reduced-motion:reduce){.de-flashcard__answer{transform:none}.de-mode-card,.de-flashcard__answer{transition:none}}
 /* Play's time limit: the Astryx group is one inline row, which at 320px ran

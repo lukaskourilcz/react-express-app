@@ -181,9 +181,11 @@ export function GithubGardenCard() {
   } else if (data.status === 'not_connected') {
     body = (
       <>
-        <Text type="supporting" size="sm" color="secondary">{t('github.introOne')}</Text>
-        <Text type="supporting" size="sm" color="secondary">{t('github.introTwo')}</Text>
-        <HStack justify="end">
+        {/* The tagline says what the garden does; one line says what it may
+            touch, then the action, on the left. The rest of the permissions
+            story waits in 'How it works' (UX audit social-account-22). */}
+        <Text type="supporting" size="sm" color="secondary">{t('github.introShort')}</Text>
+        <HStack justify="start">
           <Button
             variant="primary"
             label={busy === 'connect' ? t('github.connecting') : t('github.connect')}
@@ -191,6 +193,11 @@ export function GithubGardenCard() {
             onClick={() => void connect()}
           />
         </HStack>
+        <details className="de-disclosure">
+          <summary>{t('github.howItWorks')}</summary>
+          <Text type="supporting" size="sm" color="secondary" display="block">{t('github.layoutNote')}</Text>
+          <Text type="supporting" size="sm" color="secondary" display="block">{t('github.introTwo')}</Text>
+        </details>
       </>
     );
   } else if (data.status === 'pending_repo') {
