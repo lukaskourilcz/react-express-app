@@ -2,16 +2,15 @@
 //
 // A graded quiz hands back a sealed receipt; POST /api/user/stats records it,
 // once per attempt however often it is sent. When that write fails the
-// receipt waits here and is sent again later (PendingQuizResults, when the
-// learner is signed in and when the browser comes back online). A receipt
+// receipt waits here and is sent again later (pendingQuizReplay.ts, which
+// PendingQuizResults loads when the learner is signed in and has one waiting,
+// and again when the browser comes back online). A receipt
 // lives for an hour on the server: one it refuses as expired or invalid can
 // never be recorded, so it is dropped rather than resent forever, and the
 // caller says so. One entry per attempt, so a second failure does not
 // overwrite the first.
 import { ApiError } from './api';
-import { accountEpoch } from './accountData';
 import { readJSON, removeStored, writeJSON } from './storage';
-import { recordQuizResult, type UserStats } from './supabase';
 
 const STORE_KEY = 'devshark:pending-quiz-receipts:v2';
 /** The single slot used before results were kept per attempt. */
@@ -69,52 +68,3 @@ export function pendingReceiptsFor(userId: string): [string, PendingReceipt][] {
  * account's. Resending it cannot help. */
 export const isReceiptRefused = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 400 && error.code === 'invalid_receipt';
-
-// The replay under way. Coming back online while one runs started a second
-// that sent every waiting result again.
-let replaying: { userId: string; run: Promise<{ recorded: number; refused: number }> } | null = null;
-
-/** Send every waiting result of this learner again. Recorded ones and ones
- * the server refuses leave the queue; anything else (offline, a server
- * error) stays for the next try. A call while this learner's results are
- * already on their way waits for that replay and counts nothing itself. The
- * replay stops when the account signs out: the rest are no longer this
- * browser's to send, and a refusal then is no news for whoever is here. */
-export function replayPendingReceipts(
-  userId: string,
-  onRecorded?: (data: UserStats | null) => void,
-): Promise<{ recorded: number; refused: number }> {
-  if (replaying?.userId === userId) return replaying.run.then(() => ({ recorded: 0, refused: 0 }));
-  const run = sendPending(userId, onRecorded);
-  const entry = { userId, run };
-  replaying = entry;
-  const done = () => { if (replaying === entry) replaying = null; };
-  run.then(done, done);
-  return run;
-}
-
-async function sendPending(
-  userId: string,
-  onRecorded?: (data: UserStats | null) => void,
-): Promise<{ recorded: number; refused: number }> {
-  const epoch = accountEpoch();
-  let recorded = 0;
-  let refused = 0;
-  for (const [key, pending] of pendingReceiptsFor(userId)) {
-    if (accountEpoch() !== epoch) break;
-    try {
-      const saved = await recordQuizResult(pending.receipt, pending.profile);
-      if (accountEpoch() !== epoch) break;
-      dropPendingReceipt(key);
-      recorded++;
-      onRecorded?.(saved.data);
-    } catch (error) {
-      if (accountEpoch() !== epoch) break;
-      if (isReceiptRefused(error)) {
-        dropPendingReceipt(key);
-        refused++;
-      }
-    }
-  }
-  return { recorded, refused };
-}
