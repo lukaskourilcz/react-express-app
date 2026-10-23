@@ -713,10 +713,62 @@ async function main() {
     }
     delete INSTALLED.create_premium_voucher;
     delete INSTALLED.revoke_premium_voucher;
+
+    // The fulfilment queue's order changes: the routines' own refusals
+    // answer as what they are, anything else is a safe 500 with no SQL text,
+    // and a carrier or tracking reference is cut by code point and refused
+    // when it holds U+0000, which Postgres text cannot store.
+    {
+      const orderId = 'order-trace-0123456789';
+      let address = 50;
+      const fulfil = (body: Record<string, unknown>) => captureLogs(async () => {
+        const done = mockResponse();
+        address += 1;
+        await userOps({ method: 'POST', headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'x-forwarded-for': `10.20.0.${address}` }, query: { op: 'fulfilment' }, url: '/api/user/fulfilment', body } as never, done as never);
+        return done;
+      });
+      const raise = (message: string) => ({ status: 400, body: { code: 'P0001', message, details: null, hint: null } });
+      const cases: [string, Record<string, unknown>, string, number, string][] = [
+        ['cancel_merch_order', { op: 'cancel', orderId }, 'unknown_order', 404, 'not_found'],
+        ['cancel_merch_order', { op: 'cancel', orderId }, 'order_not_cancellable', 409, 'not_cancellable'],
+        ['cancel_merch_order', { op: 'cancel', orderId }, 'deadlock detected on relation merch_orders', 500, 'db_error'],
+        ['advance_merch_order', { op: 'ship', orderId }, 'unknown_order', 404, 'not_found'],
+        ['advance_merch_order', { op: 'ship', orderId }, 'order_not_paid', 409, 'invalid_transition'],
+        ['advance_merch_order', { op: 'submit', orderId }, 'duplicate key value violates unique constraint "merch_orders_pkey"', 500, 'db_error'],
+      ];
+      for (const [routine, body, message, status, code] of cases) {
+        RPC_ERRORS[routine] = raise(message);
+        const done = await fulfil(body);
+        assert.deepEqual([done.statusCode, done.body?.error?.code], [status, code], `${routine} raising ${message} (${JSON.stringify(done.body)})`);
+        assert.ok(!JSON.stringify(done.body).includes(message), `${routine}: the answer carries no raw database text`);
+        delete RPC_ERRORS[routine];
+      }
+      INSTALLED.cancel_merch_order = 'cancelled';
+      logged.length = 0;
+      assert.equal((await fulfil({ op: 'cancel', orderId })).statusCode, 200);
+      assert.equal(logged.find((one) => one.kind === 'order_cancelled_by_admin')?.by, ADMIN.id, 'a cancel names the admin');
+      INSTALLED.advance_merch_order = true;
+      calls.length = 0; logged.length = 0;
+      const longCarrier = `${'a'.repeat(59)}\u{1F69A}tail`;
+      const shipped = await fulfil({ op: 'ship', orderId, carrier: longCarrier, trackingRef: `${'7'.repeat(119)}\u{1F4E6}more` });
+      assert.equal(shipped.statusCode, 200, JSON.stringify(shipped.body));
+      const advanceArgs = calls.find((call) => call.name === 'advance_merch_order')!.args;
+      assert.equal(advanceArgs.p_carrier, `${'a'.repeat(59)}\u{1F69A}`, 'the carrier is cut by code point, so an emoji stays whole');
+      assert.equal(advanceArgs.p_tracking, `${'7'.repeat(119)}\u{1F4E6}`, 'and so is the tracking reference');
+      assert.equal(logged.find((one) => one.kind === 'order_advanced')?.by, ADMIN.id, 'a shipment names the admin');
+      for (const field of ['carrier', 'trackingRef']) {
+        calls.length = 0;
+        const nul = await fulfil({ op: 'ship', orderId, [field]: 'DHL\u0000' });
+        assert.deepEqual([nul.statusCode, nul.body?.error?.code], [400, 'bad_request'], `${field} holding U+0000 is refused`);
+        assert.ok(!calls.some((call) => call.name === 'advance_merch_order'), `${field}: before the routine is asked`);
+      }
+      delete INSTALLED.cancel_merch_order;
+      delete INSTALLED.advance_merch_order;
+    }
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the name and picture of the Google identity and ignores the body and user_metadata, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; a finished challenge run sends its answers from 052 and only its breakdown before; from 060 a quiz result and a challenge run pass on the answers the question hour held back, and before 060 fall back to the routines of 058; the streak shield returns every shielded date and answers 409 shield_would_end_streak when the routine refuses; admin voucher and order writes name the admin; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the name and picture of the Google identity and ignores the body and user_metadata, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; a finished challenge run sends its answers from 052 and only its breakdown before; from 060 a quiz result and a challenge run pass on the answers the question hour held back, and before 060 fall back to the routines of 058; the streak shield returns every shielded date and answers 409 shield_would_end_streak when the routine refuses; admin voucher and order writes name the admin, and the fulfilment queue maps routine refusals to 404 and 409 and anything else to a safe 500; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {
