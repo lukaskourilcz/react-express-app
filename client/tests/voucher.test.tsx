@@ -253,6 +253,19 @@ describe('/premium while checkout is off', () => {
     expect(screen.getByRole('button', { name: 'Sign in to redeem' })).toBeInTheDocument();
   });
 
+  it('closes "Premium is open" and empties the field when the account changes', async () => {
+    signIn();
+    serve();
+    redeemAnswers(() => HttpResponse.json({ status: 'redeemed', validUntil: null }));
+    const view = mountVoucher();
+    await typeAndRedeem('K7Q2-ABCD-1234');
+    expect(await screen.findByRole('heading', { name: 'Premium is open' })).toBeInTheDocument();
+    auth.value = { user: { id: 'user-2' }, isAuthenticated: true, isLoading: false };
+    view.rerender();
+    expect(screen.queryByRole('heading', { name: 'Premium is open' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: /Voucher code/ })).toHaveValue('');
+  });
+
   it('refuses an empty or impossible code without spending an attempt', async () => {
     signIn();
     serve();

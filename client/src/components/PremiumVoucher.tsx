@@ -81,6 +81,19 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
   // together sent the code twice, and the second answer ("already redeemed")
   // replaced the first one's "Premium is open".
   const redeeming = useRef(false);
+  // What one account typed or opened is not the next one's: a sign-out, or a
+  // different account signing in, empties the field and closes "Premium is
+  // open". Signing in from signed out keeps the code (the way back from a
+  // voucher link).
+  const accountId = user?.id ?? null;
+  const [shownFor, setShownFor] = useState(accountId);
+  if (shownFor !== accountId) {
+    setShownFor(accountId);
+    if (shownFor !== null) {
+      setCode('');
+      setStep({ kind: 'form' });
+    }
+  }
   const input = useRef<HTMLInputElement | null>(null);
   const doneHeading = useRef<HTMLHeadingElement>(null);
   const section = useRef<HTMLElement>(null);
