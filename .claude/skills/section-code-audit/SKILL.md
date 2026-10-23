@@ -84,7 +84,7 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - An offline copy belongs to its own tab or board, never the previous one.
 
 **Client: focus and accessibility**
-- No page-wide `aria-live` (screen readers re-read everything). A live region mounted with its words is not announced: keep it on the page and change its text.
+- No page-wide `aria-live` (screen readers re-read everything). A live region mounted with its words is not announced: keep it on the page and change its text. If the region wraps a visible card, let the region carry the card's styles while it has words (an empty wrapper around an absolutely positioned card has no box, and browser checks see it as hidden; this broke the Challenge release spec once).
 - Move focus to the opened item, each revealed hint, each new question and the verdict. When a control disables or re-inserts itself (Next on the last step, a moved list item, Submit replaced by the verdict, an answer at time up), move focus to the nearest control that still works.
 - Destructive buttons ask first: Reset uses the workbench's inline confirmation and returns focus to Reset; Remove friend uses `BrandedConfirmDialog` and moves focus to the list heading.
 - Every button is at least 44px tall. Tabs take one Tab stop and arrow keys. Enter in a lone input submits, as a form would.
