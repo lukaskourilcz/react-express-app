@@ -297,6 +297,19 @@ describe('the Rewards screen', () => {
     expect(await screen.findByText('Server error. Try again in a moment.')).toBeInTheDocument();
   });
 
+  it('reports a refused purchase as an error', async () => {
+    signIn();
+    routes();
+    server.use(http.post('*/api/user/protection', () => HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 })));
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    const message = await screen.findByText('Server error. Try again in a moment.');
+    expect(message.closest('[role]')).toHaveAttribute('role', 'alert');
+  });
+
   it('says nothing about a purchase that answers after the account signed out', async () => {
     signIn();
     routes();

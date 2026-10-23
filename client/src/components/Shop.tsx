@@ -802,7 +802,7 @@ function Shop() {
       <AppToast
         open={!!toast}
         onClose={() => setToast(null)}
-        severity={toast?.ok ? 'success' : 'info'}
+        severity={toast?.ok ? 'success' : 'error'}
         autoHideDuration={4000}
         message={toast?.msg ?? ''}
       />
