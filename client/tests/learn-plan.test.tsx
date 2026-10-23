@@ -21,6 +21,7 @@ import {
   unlockExtraTopics,
 } from '../src/lib/roadmap';
 import { closeUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
+import { clearAccountData } from '../src/lib/accountData';
 import { setTrackValue } from '../src/lib/tracks';
 import { masteryDayKey } from '../../shared/mastery';
 import type { RoadmapStructure } from '../src/types/quiz';
@@ -305,6 +306,23 @@ describe('the account’s record', () => {
     await waitFor(() => expect(screen.queryByText(/could not be saved to your account/)).toBeNull());
     fireEvent.click(screen.getByRole('button', { name: 'Back to paths' }));
     expect(getExtraUnlocks()).toEqual(['typescript']);
+  });
+
+  // Back to paths after a sign-out on the result screen wrote the unlocks the
+  // account that left had earned into this browser for whoever came next.
+  it('opens nothing on this device from a placement of an account that has signed out', async () => {
+    signInAs(BACKEND);
+    answer({
+      placement: { done: true, correct: 20, total: 20, difficulty: 5, unlockedPreview: ['typescript'], resultReceipt: 'receipt-1' },
+      skillCheck: () => HttpResponse.json({ applied: true, unlocked: ['typescript'] }),
+    });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    const back = await screen.findByRole('button', { name: 'Back to paths' }, { timeout: 3000 });
+    act(() => { clearAccountData(); });
+    fireEvent.click(back);
+    expect(getExtraUnlocks()).toEqual([]);
   });
 
   // Next disables itself on the question it opens, so focus fell to the page.

@@ -1573,7 +1573,11 @@ function SkillCheckRunner({
     setPhase('result');
   }, [isAuthenticated, applyReceipt]);
 
+  // The account the placement ran for. Its result opens nothing on this
+  // device once another account (or nobody) is signed in here.
+  const epochRef = useRef(accountEpoch());
   const start = useCallback(async () => {
+    epochRef.current = accountEpoch();
     setPhase('loading');
     setError(null);
     setVerifiedUnlocks(undefined);
@@ -1707,7 +1711,7 @@ function SkillCheckRunner({
           {unapplied && (
             <AxButton variant="primary" label={t('roadmap.retry')} isDisabled={applying} onClick={() => void applyReceipt(unapplied)} />
           )}
-          <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
+          <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, accountEpoch() === epochRef.current ? verifiedUnlocks : [])} />
           <AxButton variant="secondary" label={learnText('placement.retry')} onClick={() => void start()} />
         </div>
         <section className="rm-placement-review" aria-label={learnText('placement.review')}>
