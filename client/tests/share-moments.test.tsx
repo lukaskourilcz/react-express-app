@@ -74,6 +74,19 @@ describe('the invite link at a moment of success', () => {
     expect(analytics.capture).toHaveBeenCalledWith('share_initiated', { kind: 'referral', source: 'challenge', method: 'copy' });
   });
 
+  it('says Link copied again on a second Copy, by emptying the status line first', async () => {
+    referral();
+    render(<ReferralMoment signedIn source="challenge" />, { wrapper });
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy invite link' }));
+    const line = await screen.findByText('Link copied.');
+    const heard: string[] = [];
+    const watch = new MutationObserver(() => heard.push(line.textContent ?? ''));
+    watch.observe(line, { childList: true, characterData: true, subtree: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invite link' }));
+    await waitFor(() => expect(heard).toEqual(['', 'Link copied.']));
+    watch.disconnect();
+  });
+
   it('opens the share sheet where the platform has one', async () => {
     const share = vi.fn(async (_data: ShareData) => undefined);
     Object.defineProperty(navigator, 'share', { configurable: true, value: share });
