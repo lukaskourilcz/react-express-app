@@ -16,7 +16,8 @@ import LoadingScreen from './LoadingScreen';
 // Static, not lazy: the Shark Cards tab is what /collection opens on, and a
 // lazy deck drew the page first, then a loader in its body, then the cards.
 import Flashcards from './Flashcards';
-import { Kicker } from './landing/LandingKit';
+import { PageHeader } from './ui/PageHeader';
+import { StatePanel } from './ui/StatePanel';
 import '../coding/Coding.css';
 
 function SavedChallenges() {
@@ -27,7 +28,11 @@ function SavedChallenges() {
   // While the session is restored the learner is not known to be signed out:
   // a sign-in prompt here flashed before the saved list, as the deck's did not.
   if (authLoading && !isAuthenticated) return <LoadingScreen label={t('common.loading')} />;
-  if (!isAuthenticated) return <div className="cd-note"><p>{t('coding.signInHint')}</p><Button variant="secondary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} /></div>;
+  // The same gate as the Shark Cards tab: the shared StatePanel under the
+  // page header, with one primary (social-account-16).
+  if (!isAuthenticated) return <StatePanel level={2} title={t('collection.signInTitle')} body={t('collection.signInBody')}>
+    <Button variant="primary" label={t('collection.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
+  </StatePanel>;
   if (query.isPending) return <LoadingScreen label={t('common.loading')} />;
   if (query.isError) return <div role="alert"><p>{t('coding.saved.loadFailed')}</p><Button variant="secondary" label={t('coding.retry')} onClick={() => void query.refetch()} /></div>;
   return <section aria-label={t('collection.challenges')}>
@@ -75,12 +80,14 @@ export default function Collection() {
   // tab, and the nav calls it Shark Cards.
   const cards = selected === 'questions';
   return <div className="cd-page ss-pop">
-    <header>
-      <Kicker>{t(cards ? 'sharkCards.kicker' : 'collection.heading')}</Kicker>
-      <h1>{t(cards ? 'sharkCards.title' : 'collection.challengesTitle')}</h1>
-      <p className="cd-lead">{t(cards ? 'sharkCards.lead' : 'collection.subtitle')}</p>
-    </header>
-    <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <Button key={tab} variant={selected === tab ? 'primary' : 'secondary'} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })} label={t(`collection.${tab}`)} />)}</nav>
+    {/* The shared operational header (social-account-11). No kicker: the
+        tabs under it already say which shelf is open (social-account-10). */}
+    <PageHeader title={t(cards ? 'sharkCards.title' : 'collection.challengesTitle')} lead={t(cards ? 'sharkCards.lead' : 'collection.subtitle')} />
+    {/* The open shelf is secondary with aria-current and the other ghost:
+        a filled tab would be a second primary beside the shelf's own action,
+        the gate's Sign in or the empty shelf's Take a quiz (one primary per
+        screen). */}
+    <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <Button key={tab} variant={selected === tab ? 'secondary' : 'ghost'} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })} label={t(`collection.${tab}`)} />)}</nav>
     {selected === 'questions' ? <Flashcards embedded /> : <SavedChallenges />}
   </div>;
 }

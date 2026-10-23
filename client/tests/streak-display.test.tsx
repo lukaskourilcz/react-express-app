@@ -144,6 +144,8 @@ const protectionIs = (state: Partial<StreakProtection>) =>
     remaining: 2, period: new Date().toISOString().slice(0, 7), used: [], shieldUntil: null, shieldDays: [], shieldSupported: true, ...state,
   })));
 const currentStreak = () => within(screen.getByRole('group', { name: 'Current streak' }));
+// The shield sits under the two tiles in a group of its own (social-account-17).
+const protection = async () => within(await screen.findByRole('group', { name: 'Streak protection' }));
 
 describe('the Profile streak card', () => {
   // Until migration 052 this card offered the shield here, and pressing it
@@ -152,23 +154,28 @@ describe('the Profile streak card', () => {
   it('keeps the count a protection still covers, and says to learn today rather than spend that protection', async () => {
     protectionIs({ remaining: 1 });
     render(<LanguageProvider><StreakCard stats={account(12, 2)} /></LanguageProvider>);
-    expect(await currentStreak().findByText('Learn today to keep your streak')).toBeVisible();
+    expect((await protection()).getByText('Learn today to keep your streak')).toBeVisible();
     expect(currentStreak().getByText('12')).toBeVisible();
-    expect(currentStreak().queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
   });
 
   it('does not offer a shield that two missed days would need both protections for', async () => {
     protectionIs({ remaining: 2 });
     render(<LanguageProvider><StreakCard stats={account(12, 3)} /></LanguageProvider>);
-    expect(await currentStreak().findByText('Learn today to keep your streak')).toBeVisible();
-    expect(currentStreak().queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
+    expect((await protection()).getByText('Learn today to keep your streak')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
   });
 
   it('offers the shield when a protection is spare after the missed day', async () => {
     protectionIs({ remaining: 2 });
     render(<LanguageProvider><StreakCard stats={account(12, 2)} /></LanguageProvider>);
-    expect(await currentStreak().findByRole('button', { name: 'Protect today and tomorrow' })).toBeVisible();
+    const shield = (await protection()).getByRole('button', { name: 'Protect today and tomorrow' });
+    expect(shield).toBeVisible();
     expect(currentStreak().getByText('12')).toBeVisible();
+    // Under the pair, not inside the current tile, so the tiles share a height.
+    expect(currentStreak().queryByRole('button')).toBeNull();
+    expect(shield.closest('[role="group"][aria-label="Streak protection"]')!.parentElement)
+      .toBe(screen.getByRole('group', { name: 'Longest streak' }).parentElement!.parentElement);
   });
 
   it('says what the server says when it refuses the shield', async () => {
@@ -177,14 +184,14 @@ describe('the Profile streak card', () => {
       { error: { code: 'shield_would_end_streak', message: 'Learn today to keep your streak' } }, { status: 409 },
     )));
     render(<LanguageProvider><StreakCard stats={account(12, 1)} /></LanguageProvider>);
-    fireEvent.click(await currentStreak().findByRole('button', { name: 'Protect today and tomorrow' }));
-    expect(await currentStreak().findByRole('alert')).toHaveTextContent('Learn today to keep your streak');
+    fireEvent.click((await protection()).getByRole('button', { name: 'Protect today and tomorrow' }));
+    expect(await (await protection()).findByRole('alert')).toHaveTextContent('Learn today to keep your streak');
   });
 
   it('keeps a streak two shields in a row cover', async () => {
     protectionIs({ remaining: 0, shieldUntil: utcMidnight(0), shieldDays: [utcDate(4), utcDate(3), utcDate(2), utcDate(1)] });
     render(<LanguageProvider><StreakCard stats={account(12, 4)} /></LanguageProvider>);
-    expect(await currentStreak().findByText('No protection left this month')).toBeVisible();
+    expect((await protection()).getByText('No protection left this month')).toBeVisible();
     expect(currentStreak().getByText('12')).toBeVisible();
   });
 
@@ -215,7 +222,7 @@ describe('the Profile streak card', () => {
   it('shows 0 once nothing covers the gap, and offers no shield', async () => {
     protectionIs({ remaining: 0 });
     render(<LanguageProvider><StreakCard stats={account(12, 3)} /></LanguageProvider>);
-    expect(await currentStreak().findByText('No protection left this month')).toBeVisible();
+    expect((await protection()).getByText('No protection left this month')).toBeVisible();
     expect(currentStreak().getByText('0')).toBeVisible();
   });
 
@@ -228,7 +235,7 @@ describe('the Profile streak card', () => {
     render(<LanguageProvider><StreakCard stats={account(0, null)} /></LanguageProvider>);
     await vi.waitFor(() => expect(asked).toBe(1));
     expect(currentStreak().getByText('0')).toBeVisible();
-    expect(currentStreak().queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
   });
 
   it('says what makes a streak day and when a day ends on the learner’s clock', async () => {
@@ -241,6 +248,6 @@ describe('the Profile streak card', () => {
   it('still shows a shield that is already running', async () => {
     protectionIs({ remaining: 1, shieldUntil: new Date(Date.now() + 30 * 3_600_000).toISOString() });
     render(<LanguageProvider><StreakCard stats={account(0, null)} /></LanguageProvider>);
-    expect(await currentStreak().findByText(/^Protected · \d+ h \d+ m left$/)).toBeVisible();
+    expect((await protection()).getByText(/^Protected · \d+ h \d+ m left$/)).toBeVisible();
   });
 });

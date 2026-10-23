@@ -52,8 +52,10 @@ describe('pages fill the route width', () => {
     expect(play).toMatch(/maxWidth: 'var\(--ss-width-task\)'/);
   });
 
-  it('the Shark Card sign-in, empty and error states use the same 640px task column, not 560 or 520px (social-account-01)', () => {
-    expect(rule(source('components/SharkCards.css'), '.sc-state')).toContain('max-width: var(--ss-width-task)');
+  it('the Shark Card sign-in, empty and error states use the same 640px task column, not 560 or 520px (social-account-01, -16)', () => {
+    // The states are the shared StatePanel, which sits in the task column.
+    expect(rule(source('components/ui/StatePanel.css'), '.ss-state-panel')).toContain('max-width: var(--ss-width-task)');
+    expect(source('components/SharkCards.css')).not.toMatch(/\.sc-state\b/);
     const cards = source('components/Flashcards.tsx');
     expect(cards).not.toMatch(/maxWidth: 520\b/);
     expect(cards).toContain("maxWidth: 'var(--ss-width-task)'");

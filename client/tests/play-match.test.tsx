@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
 import { DEFAULT_CONFIG, GAME_CONFIG_KEY } from '../src/lib/gameConfig';
 import type { Match, ScoreboardEntry } from '../src/lib/play';
+import { readFileSync } from 'node:fs';
 import { addSheet } from './css';
 
 // A live room as one player sees it, with the play API and the Realtime
@@ -103,6 +104,14 @@ async function mountWithRerender() {
   return { rerender: () => view.rerender(tree()) };
 }
 
+/** Play's own stylesheet in the test document (Vitest drops CSS imports). */
+function playSheet(): HTMLStyleElement {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(new URL('../src/components/Play.css', import.meta.url), 'utf8');
+  document.head.append(style);
+  return style;
+}
+
 const settle = () => act(async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); });
 
 beforeEach(() => {
@@ -129,15 +138,77 @@ describe('the Play page (social-account-12)', () => {
     expect(join().className).not.toBe(secondary);
   });
 
+  it('says the scoring rule once and frames the join code once, spacing only its value (social-account-20)', async () => {
+    const sheet = playSheet();
+    await mount('/play');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    expect(screen.getByText('Everyone races to answer.')).toBeInTheDocument();
+    expect(document.body.textContent?.match(/speed bonus/g)).toHaveLength(1);
+    expect(screen.getByText('Anyone with the code can join; you play too.')).toBeInTheDocument();
+
+    const field = screen.getByLabelText('Match code');
+    expect(field.closest('.play-code')).not.toBeNull();
+    // No dashed, tinted box between the card and the field.
+    for (let node = field.parentElement; node && !node.classList.contains('ss-raised'); node = node.parentElement) {
+      expect(node.getAttribute('style') ?? '').not.toMatch(/dashed/);
+    }
+    expect(getComputedStyle(field).letterSpacing).not.toMatch(/^(normal|0px)?$/);
+    expect(getComputedStyle(screen.getByText('Match code')).letterSpacing).toMatch(/^(normal|0px)?$/);
+    sheet.remove();
+  });
+
+  it('opens on the shared operational header: a Play live kicker over an ink h1 and one lead (social-account-11)', async () => {
+    await mount('/play');
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    expect(h1).toHaveTextContent('Race or teach live');
+    const header = h1.closest('header.ss-page-header')!;
+    expect(header).not.toBeNull();
+    // The kicker is context, not the heading.
+    const kicker = header.querySelector('.ss-kicker')!;
+    expect(kicker.tagName).toBe('SPAN');
+    expect(kicker).toHaveTextContent('Play live');
+    expect(header.querySelector('.ss-page-header__lead')).toHaveTextContent('Everyone in the room sees the same question at the same time.');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
   it('labels the question count above its toggles, like the time limit', async () => {
     await mount('/play');
     await screen.findByRole('button', { name: 'Create multiplayer match' });
-    for (const name of ['Questions', 'Time limit']) {
-      const group = screen.getByRole('group', { name });
-      // The visible label is the line right above the group's own box.
-      const box = group.closest('.play-time-limit') ?? group;
-      expect(box.previousElementSibling).toHaveTextContent(name);
-    }
+    // The visible label is the line right above each control.
+    expect(screen.getByRole('group', { name: 'Questions' }).previousElementSibling).toHaveTextContent('Questions');
+    expect(screen.getByLabelText('Time limit').previousElementSibling).toHaveTextContent('Time limit');
+  });
+
+  it('keeps the topic pills open on a wide screen, and folds them behind one 44px "Topics: all" row on a phone (social-account-13)', async () => {
+    await mount('/play');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    expect(document.querySelector('details.play-topics')).toBeNull();
+    expect(screen.getByRole('group', { name: 'Topics' })).toBeVisible();
+    cleanup();
+
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query.includes('max-width: 599'), media: query, onchange: null,
+      addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+    }));
+    const sheet = playSheet();
+    await mount('/play');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    const fold = document.querySelector('details.play-topics') as HTMLDetailsElement;
+    expect(fold.open).toBe(false);
+    const summary = fold.querySelector('summary')!;
+    expect(summary).toHaveTextContent('Topics: all');
+    expect(getComputedStyle(summary).minHeight).toBe('var(--ss-control-height)');
+    // The fold holds the same pills, and names the choice once one is made.
+    fold.open = true;
+    fireEvent.click(within(fold).getByRole('button', { name: 'JavaScript' }));
+    expect(summary).toHaveTextContent('Topics: 1 selected');
+    expect(within(fold).getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+    // The row shows it opens: the select's chevron, drawn on its own element
+    // (a shorthand naming the missing --color-background dropped it).
+    const css = sheet.textContent ?? '';
+    expect(css).toMatch(/\.play-topics__summary::after \{[^}]*background: var\(--ss-select-arrow\)/);
+    expect(css).not.toContain('var(--color-background)');
+    sheet.remove();
   });
 });
 
@@ -838,6 +909,92 @@ describe('the questions a player holds', () => {
   });
 });
 
+describe('the lobby (social-account-14, -15)', () => {
+  const people = [
+    { user_id: USER.id, display_name: 'Test Learner', joined_at: '2026-10-23T10:00:00Z' },
+    { user_id: 'p2', display_name: 'Harbour reader', joined_at: '2026-10-23T10:00:01Z' },
+  ];
+  const lobbyOf = (over: Partial<Match> = {}) => running({ status: 'lobby', started_at: null, host_id: USER.id, questions: [], question_count: 10, ...over });
+
+  it('is one panel with plain player rows, and says the code only in the header badge', async () => {
+    const lobby = lobbyOf();
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    const heading = await screen.findByRole('heading', { name: 'Lobby' });
+    const panel = heading.closest('section')!;
+    expect(panel).toHaveClass('ss-panel', 'play-invite');
+    // canvas -> one panel -> rows: no raised card or Astryx card inside it.
+    expect(panel.querySelector('.ss-raised, .ss-panel')).toBeNull();
+    const rows = within(screen.getByRole('list', { name: 'Players' })).getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent)).toEqual(['TLTest LearnerHost', 'HRHarbour reader']);
+    expect(screen.getByText('Share the code, then press Start when everyone has joined.')).toBeInTheDocument();
+    // The code is in the header's copy badge, not in the instruction.
+    expect(screen.getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
+    expect(panel.querySelector('.play-lobby__head')!.textContent).not.toContain('ABC123');
+    // Copy link and Print invite sit with the share text, so the footer holds only Start.
+    const share = panel.querySelector('.play-lobby__share')!;
+    expect(within(share as HTMLElement).getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+    expect(within(share as HTMLElement).getByRole('button', { name: 'Print invite' })).toBeInTheDocument();
+    const footer = panel.querySelector('.play-lobby__start')!;
+    expect(within(footer as HTMLElement).getAllByRole('button').map((b) => b.textContent)).toEqual(['Start (10 questions)']);
+  });
+
+  it('makes the host\'s Start the one 44px primary, on the right and full width on a phone, beside a 44px code badge', async () => {
+    const lobby = lobbyOf();
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    const start = await screen.findByRole('button', { name: 'Start (10 questions)' });
+    expect(start).toHaveClass('ss-swim-cta', 'ss-swim-cta--md');
+    expect(document.querySelectorAll('.ss-swim-cta')).toHaveLength(1);
+    expect(start.parentElement).toHaveClass('play-lobby__start');
+    const css = readFileSync(new URL('../src/components/Play.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.play-lobby__start \{ display: flex; justify-content: flex-end; \}/);
+    // Full width on a phone: a grid whose one track is not shrunk by the
+    // wide screen's flex-end (at 390 it stayed a 180px button on the right).
+    const phone = css.slice(css.indexOf('@media (max-width: 599.95px)'));
+    expect(phone).toMatch(/\.play-lobby__start \{ display: grid; justify-content: normal; \}/);
+    // The badge takes the default size, so the shared floor makes it 44px.
+    expect(screen.getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
+    const source = readFileSync(new URL('../src/components/Play.tsx', import.meta.url), 'utf8');
+    const codeBadge = source.slice(source.indexOf('const CodeBadge'), source.indexOf('function Lobby'));
+    expect(codeBadge).toContain('<Button');
+    expect(codeBadge).not.toContain('size="sm"');
+    fireEvent.click(start);
+    expect(api.controlMatch).toHaveBeenCalled();
+  });
+
+  it('heads the room with the shared header and the code badge beside it (social-account-11)', async () => {
+    const lobby = lobbyOf();
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    const h1 = await screen.findByRole('heading', { level: 1, name: 'Multiplayer' });
+    const header = h1.closest('header.ss-page-header')!;
+    expect(header.querySelector('.ss-kicker')).toHaveTextContent('Play live');
+    expect(header.querySelector('.ss-page-header__lead')).toHaveTextContent('Hosted by Hana');
+    expect(header.parentElement).toHaveClass('play-room__head');
+    expect(within(header.parentElement as HTMLElement).getByRole('button', { name: /^ABC123/ })).toBeInTheDocument();
+    // The badge stays beside the title on a phone: the row does not wrap and
+    // the badge keeps its size, so the title column wraps instead.
+    const css = readFileSync(new URL('../src/components/Play.css', import.meta.url), 'utf8');
+    const head = css.match(/\.play-room__head \{[^}]*\}/)?.[0] ?? '';
+    expect(head).toContain('display: flex');
+    expect(head).not.toContain('flex-wrap: wrap');
+    expect(css).toMatch(/\.play-room__head > :last-child \{ flex: none; \}/);
+  });
+
+  it('tells a guest to wait, with no Start', async () => {
+    const lobby = lobbyOf({ host_id: 'host-1' });
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue({ match: lobby, participants: people, scoreboard: [] });
+    await mount();
+    expect(await screen.findByText('Share the code, then wait for the host to start.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Start/ })).toBeNull();
+  });
+});
+
 describe('the Play switch', () => {
   it('shows live games as switched off on every Play page', async () => {
     await mount('/play/ABC123', false);
@@ -867,17 +1024,37 @@ describe('narrow screens and headings', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Play live');
   });
 
-  // At 320px the time limit's one row ran 53px past the "Host a game" card.
-  it('lets the time limit wrap, and gives a category chip a 44px floor on touch', async () => {
+  // At 320px the time limit's one row ran 53px past the "Host a game" card,
+  // and at 390 it dropped "No limit" onto a row of its own: it is one 44px
+  // select now (social-account-13).
+  it('draws the time limit as one 44px select, and gives a category chip a 44px floor on touch', async () => {
     const sheet = addSheet('deepEnd');
     await mount('/play');
-    const group = await screen.findByRole('group', { name: 'Time limit' });
-    expect(getComputedStyle(group).flexWrap).toBe('wrap');
+    await screen.findByRole('button', { name: 'Create multiplayer match' });
+    const select = screen.getByLabelText('Time limit');
+    expect(select.tagName).toBe('SELECT');
+    expect(select).toHaveClass('ss-select');
+    expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['30s', '1 min', '2 min', '5 min', 'No limit']);
+    fireEvent.change(select, { target: { value: '0' } });
+    expect(select).toHaveValue('0');
     const chip = screen.getByRole('button', { name: 'JavaScript' });
     expect(chip).toHaveClass('ss-topic-pill');
     expect(chip).toHaveAttribute('aria-pressed');
     addSheet('appShell');
     expect(getComputedStyle(chip).minHeight).toBe('44px');
+    expect(getComputedStyle(select).minHeight).toBe('44px');
     sheet.ownerNode?.remove();
+  });
+
+  it('creates the room with the time limit the select holds', async () => {
+    api.createMatch.mockResolvedValue({ id: 'm1', code: 'ABC123', mode: 'multiplayer', status: 'lobby' });
+    await mount('/play');
+    const create = await screen.findByRole('button', { name: 'Create multiplayer match' });
+    const select = screen.getByLabelText('Time limit');
+    expect(select).toHaveValue(String(DEFAULT_CONFIG.play.defaultDurationS));
+    expect(document.querySelector(`label[for="${select.id}"]`)).toHaveClass('play-field-label');
+    fireEvent.change(select, { target: { value: '300' } });
+    await act(async () => { fireEvent.click(create); });
+    expect(api.createMatch).toHaveBeenCalledWith(expect.objectContaining({ duration_s: 300 }));
   });
 });
