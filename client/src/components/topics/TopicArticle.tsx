@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, type MouseEventHandler } from 'react';
 import type { TopicLandingDefinition } from '../../lib/topicCatalog';
 import { takePublicGuide } from '../../lib/publicGuideHandoff';
-export const topicLabels = { home: 'Home', kicker: 'Quick guide', example: 'How it works', misconception: 'Common misconception', practice: 'Quick practice', cta: 'Practice in a quiz', reference: 'Read the documentation', related: 'More guides' };
+export const topicLabels = { allGuides: 'All guides', kicker: 'Quick guide', example: 'How it works', misconception: 'Common misconception', practice: 'Quick practice', cta: 'Practice in a quiz', reference: 'Read the documentation', related: 'More guides' };
 export function topicPath(slug: string) { return `/topics/${slug}`; }
 /** Identical, escaped React markup for build-time HTML and the live route.
  * Only the public teaching catalogue enters this view; never scored answers. */
@@ -27,8 +27,11 @@ export function TopicArticle({ topic, brand, related, onPractice, onNavigate }: 
     });
   }, [topic.slug]);
   return <article ref={articleRef} data-topic-guide={topic.slug} className="ss-info-page ss-topic-article" lang="en">
-    <nav className="ss-topic-nav" aria-label={copy.home}>
-      <a href="/" onClick={onNavigate}>{brand} · {copy.home}</a>
+    {/* Back to every guide, not 'devShark · Home' right above the
+        'devShark · Quick guide' kicker: the header logo already goes home
+        (UX audit shell-public-12). */}
+    <nav className="ss-topic-nav" aria-label={copy.allGuides}>
+      <a href="/learn" onClick={onNavigate}><span aria-hidden="true">←</span> {copy.allGuides}</a>
     </nav>
     <header className="ss-info-page__header"><span className="ss-info-page__kicker"><span className="ss-brand-name">{brand}</span> · {copy.kicker}</span><h1>{topic.title}</h1><p>{topic.description}</p></header>
     {topic.explanation && <section><h2>{copy.example}</h2><p>{topic.explanation}</p>{topic.example && <pre tabIndex={0} aria-label={copy.example}><code>{topic.example}</code></pre>}{topic.reference && <a href={topic.reference}>{copy.reference}</a>}</section>}

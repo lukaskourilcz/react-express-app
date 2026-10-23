@@ -781,13 +781,49 @@
 .ss-topic-article h2 { margin: 0; font-family: var(--font-family-heading); }
 .ss-topic-article p { max-width: 68ch; margin: 0; }
 .ss-topic-article pre { max-width: 100%; overflow-x: auto; padding: 1rem; border-radius: var(--radius-inner); background: var(--color-background-muted); font-size: var(--ss-type-compact); }
+/* The guide's links take the app's accent link style, not the browser's blue
+   (UX audit shell-public-12), and its one action is the pill page action. */
 .ss-topic-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
 .ss-topic-nav a, .ss-topic-links a, .ss-topic-article summary { min-height: 44px; align-content: center; }
 .ss-topic-links { display: grid; gap: 0.5rem; padding-left: 1.5rem; }
 .ss-topic-links a { display: inline-block; }
+.ss-topic-article a:not(.ss-topic-cta) {
+  color: var(--brand-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.ss-topic-nav a { display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none !important; }
+.ss-topic-nav a:hover { text-decoration: underline !important; }
 .ss-topic-article summary:focus-visible, .ss-topic-article a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; }
 .ss-topic-article .topic-practice p { margin-top: 1rem; }
-.ss-topic-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.75rem 1rem; background: var(--brand-accent); color: var(--brand-on-accent); border-radius: var(--radius-element); font-weight: 700; text-decoration: none; }
+/* The practice questions open with a '+' like the /premium FAQ, not the
+   browser's triangle. */
+.ss-topic-article .topic-practice summary { display: flex; align-items: center; gap: 0.75rem; list-style: none; }
+.ss-topic-article .topic-practice summary::-webkit-details-marker { display: none; }
+.ss-topic-article .topic-practice summary::after {
+  content: '+';
+  margin-left: auto;
+  font: 700 1.1rem/1 var(--font-family-heading);
+  color: var(--color-text-secondary);
+}
+.ss-topic-article .topic-practice[open] summary::after { content: '−'; }
+.ss-topic-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ss-control-height);
+  padding: 0 20px;
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ss-topic-cta:hover { background: color-mix(in srgb, var(--brand-accent) 88%, black); }
+.ss-topic-cta:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 3px; }
 
 /* Keep scrollbar geometry stable; only the thumb's paint follows activity. */
 * { --ss-scrollbar-thumb: transparent; scrollbar-width: thin; scrollbar-color: var(--ss-scrollbar-thumb) transparent; }
