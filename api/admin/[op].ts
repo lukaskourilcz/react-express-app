@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { isRetiredTopic } from '../../shared/retired-content';
-import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, ServiceUnavailableError, withTimeout, withRequestContext } from '../../lib/http';
 import { requireAdmin } from '../../lib/admin-auth';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
@@ -72,10 +72,18 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
-    log({ op, status: 500, error: message });
+    // A Supabase call that timed out (lib/http.ts `UpstreamTimeoutError`) is
+    // the database busy for a moment, which the console may retry: 503 with
+    // its code, as every handler answers it, never 500.
+    if (err instanceof ServiceUnavailableError) {
+      log({ op, status: 503, error: message });
+      return jsonError(res, 503, err.code, err.message);
+    }
     if (message === 'not_configured') {
+      log({ op, status: 503, error: message });
       return jsonError(res, 503, 'not_configured', 'Admin backend (Supabase) is not configured');
     }
+    log({ op, level: 'error', status: 500, error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }

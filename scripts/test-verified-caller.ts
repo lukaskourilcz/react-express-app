@@ -82,6 +82,8 @@ let claimFails = false;
 /** Token checks Supabase Auth answered, so a test can count a request's. */
 let authChecks = 0;
 const SLOW_REPORT = 'stand-in: answer after the timeout';
+// An admin question save with this text answers after the timeout too.
+const SLOW_QUESTION = 'stand-in: save after the timeout';
 // A topic board asked with this minimum answers after the timeout too.
 const SLOW_BOARD_MIN_ATTEMPTS = 97;
 const upstashCommands: string[] = [];
@@ -137,6 +139,10 @@ async function startStandIns() {
     const body = raw ? JSON.parse(raw) as unknown : undefined;
     // A database too slow to answer within lib/http.ts's five seconds.
     if (url.pathname === '/rest/v1/question_reports' && (body as Row | undefined)?.detail === SLOW_REPORT) {
+      setTimeout(() => send(201, [body]), 5_500);
+      return;
+    }
+    if (url.pathname === '/rest/v1/question_edits' && (body as Row | undefined)?.question === SLOW_QUESTION) {
       setTimeout(() => send(201, [body]), 5_500);
       return;
     }
@@ -254,6 +260,7 @@ async function main() {
       { default: questions },
       reportsStore,
       questionsStore,
+      { default: adminOps },
     ] = await Promise.all([
       import('../api/user/[op]'),
       import('../api/quiz/roadmap'),
@@ -270,6 +277,7 @@ async function main() {
       import('../api/quiz/questions'),
       import('../lib/reports-store'),
       import('../lib/questions-store'),
+      import('../api/admin/[op]'),
     ]);
 
     type Handler = (req: never, res: never) => unknown;
@@ -411,6 +419,17 @@ async function main() {
     assert.deepEqual(gate.slice(0, -1).filter((status) => status !== 403), [], `the gate refuses a caller without a session (${gate.join(',')})`);
     assert.equal(gate.at(-1), 429, 'and the admin bucket runs out before the gate is asked again');
     console.log('PASS verified caller: the fulfilment op is rate-limited before its admin gate');
+
+    // ── the admin console's API ──────────────────────────────────────────
+    const admin = (op: string, input: Omit<Parameters<typeof call>[1], 'query'> & { query?: Record<string, string> }) =>
+      call(adminOps as Handler, { account: ROLE_ADMIN, ...input, query: { op, ...(input.query ?? {}) } });
+    const question = { question: 'Which hook keeps state?', options: ['useState', 'useRef'], correctIndex: 0, category: 'react', tags: ['hooks'], difficulty: 2 };
+    // A save the database is too slow to take is the database busy, which the
+    // console may retry: 503 upstream_timeout, not 500.
+    const slowSave = await admin('save', { method: 'POST', body: { ...question, question: SLOW_QUESTION } });
+    assert.equal(slowSave.statusCode, 503, `a timed-out admin save answers 503 (${JSON.stringify(slowSave.body)})`);
+    assert.equal(errorCode(slowSave), 'upstream_timeout');
+    console.log('PASS verified caller: an admin op whose database call times out answers 503');
 
     // ── nothing about one person in a shared cache ──────────────────────
     const personal: [string, Response][] = [
