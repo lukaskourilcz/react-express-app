@@ -244,6 +244,20 @@ describe('the path page', () => {
     expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path-activity', ref: 'fde:fde-m02-l1-read' });
   });
 
+  it('says Premium once on a module whose every activity Premium opens, in its head, not on each row', async () => {
+    state.tier = 'free'; state.enrollments = [enrolled('fde')]; state.secondModule = true;
+    await overview('fde');
+    const second = screen.getByRole('link', { name: 'Module two' }).closest('section') as HTMLElement;
+    expect(second.querySelector('.lp-module__meta')!.textContent).toBe('Premium 10 min');
+    const link = within(second).getByRole('link', { name: /fde second lesson/ });
+    // The row keeps the word for a screen reader, and draws no label of its own.
+    expect(link).toHaveAccessibleName(/Premium$/);
+    expect(link.querySelector('.ss-premium-label')).toBeNull();
+    // The open first module says nothing about Premium.
+    const first = screen.getByRole('link', { name: 'Module one' }).closest('section') as HTMLElement;
+    expect(within(first).queryByText('Premium')).toBeNull();
+  });
+
   it('starting the role specialization records the base track it sits above', async () => {
     const { setTrackValue } = await import('../src/lib/tracks');
     setTrackValue('backend');

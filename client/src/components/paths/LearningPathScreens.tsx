@@ -136,9 +136,13 @@ function ActivityRow({
   locked = false,
   compact = false,
   next = false,
+  premiumSaid = false,
 }: {
   pathId: LearningPathId;
   locked?: boolean;
+  /** The module's head already says Premium for every row: the row keeps
+   * the word for screen readers only. */
+  premiumSaid?: boolean;
   moduleId: string;
   activity: ActivitySummary;
   state: EvidenceState;
@@ -164,7 +168,7 @@ function ActivityRow({
           <span className="ss-sr-only">{t(`paths.state.${state}` as never)}</span>
         </span>
       )}
-      {locked && <span className="ss-premium-label">{t('premium.badge')}</span>}
+      {locked && <span className={premiumSaid ? 'ss-sr-only' : 'ss-premium-label'}>{t('premium.badge')}</span>}
       {!compact && <p className="lp-activity__summary">{activity.summary}</p>}
     </>
   );
@@ -196,6 +200,10 @@ function ModuleCard({
   activityLock: (activityId: string, state: EvidenceState) => boolean;
 }) {
   const t = useT();
+  // A module whose every activity Premium opens says Premium once, in its
+  // head, instead of on each row (as the Learn map does, UX audit learn-22).
+  const lockedRows = module.activities.map((activity) => activityLock(activity.id, states.get(activity.id) ?? 'not_started'));
+  const allLocked = lockedRows.length > 0 && lockedRows.every(Boolean);
   const className = [
     'lp-module',
     completed ? 'lp-module--done' : '',
@@ -213,7 +221,7 @@ function ModuleCard({
           {interactive ? <Link to={moduleHref(pathId, module.id)}>{module.title}</Link> : module.title}
         </h2>
         <span className="lp-module__meta">
-          {module.shelf && <><span className="ss-premium-label">{t('premium.badge')}</span>{' '}</>}
+          {(module.shelf || allLocked) && <><span className="ss-premium-label">{t('premium.badge')}</span>{' '}</>}
           {t('paths.minutes', { minutes: module.estimatedMinutes })}
           {completed ? ` · ${t('paths.module.complete')}` : ''}
         </span>
@@ -224,13 +232,14 @@ function ModuleCard({
         ))}
       </ul>
       <ul className="lp-activities">
-        {module.activities.map((activity) => (
+        {module.activities.map((activity, position) => (
           <ActivityRow
             key={activity.id}
             pathId={pathId}
             moduleId={module.id}
             activity={activity}
-            locked={activityLock(activity.id, states.get(activity.id) ?? 'not_started')}
+            locked={lockedRows[position]}
+            premiumSaid={allLocked}
             state={states.get(activity.id) ?? 'not_started'}
             interactive={interactive}
             compact
