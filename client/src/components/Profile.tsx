@@ -30,8 +30,6 @@ import { renderQuestion } from './CodeBlock';
 import { useT, useLanguage } from '../i18n/LanguageContext';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
-import { useColorMode } from '../theme/ColorModeContext';
-import { useSettings } from '../lib/settings';
 // The friends tab keeps its code out of the profile until it opens, with a
 // boundary of its own: when that code does not load, the tab says so with a
 // Retry and the rest of the profile stays.
@@ -40,7 +38,7 @@ import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import { lazyShellPart } from '../lib/routeRecovery';
-import { ShieldIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
+import { ShieldIcon, TrophyIcon, TargetIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
@@ -56,43 +54,6 @@ import './DeepEndScreens.css';
 // the waterline tick beneath (the "dive marker" that starts every section).
 function SectionLabel({ children }: { children: ReactNode }) {
   return <Kicker as="h2">{children}</Kicker>;
-}
-
-// Appearance and sound ride along in the identity banner. They are the only
-// account-wide switches on this screen and the banner had the room, so they
-// need no card, headings or help text of their own: each button states the
-// action it performs as its accessible name and its tooltip, and shows the
-// state it switches to (the moon while in light mode).
-function IdentitySettings() {
-  const { t } = useLanguage();
-  const { mode, toggle } = useColorMode();
-  const [settings, updateSettings] = useSettings();
-
-  const modeLabel = t(mode === 'light' ? 'common.darkMode' : 'common.lightMode');
-  const soundLabel = t(settings.soundEffects ? 'common.soundOff' : 'common.soundOn');
-
-  return (
-    <div className="de-identity-settings" role="group" aria-label={t('profile.preferences')}>
-      <button
-        type="button"
-        className="de-identity-settings__button"
-        onClick={toggle}
-        aria-label={modeLabel}
-        title={modeLabel}
-      >
-        {mode === 'light' ? <MoonIcon size={18} /> : <SunIcon size={18} />}
-      </button>
-      <button
-        type="button"
-        className="de-identity-settings__button"
-        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-        aria-label={soundLabel}
-        title={soundLabel}
-      >
-        {settings.soundEffects ? <SoundOffIcon size={18} /> : <SoundOnIcon size={18} />}
-      </button>
-    </div>
-  );
 }
 
 // Reads the cards need, started with the stats read while the page waits
@@ -235,8 +196,10 @@ function ProfileBody({
   return (
     <div className="de-page">
       <VStack gap={2}>
-        {/* Identity header — subject-accented top edge, avatar and name on the
-            left, the three account switches on the right. */}
+        {/* Identity header — subject-accented top edge, avatar and name, then
+            the plan in one row. Appearance and sound live in the footer on
+            every route, so the banner does not repeat them next to the name
+            (UX audit social-account-08). */}
         <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
           <div className="de-profile-identity" style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 'var(--radius-container)', width: '100%', position: 'relative', overflow: 'hidden' }}>
             <Card variant="default" padding={4} width="100%">
@@ -267,7 +230,6 @@ function ProfileBody({
                     </div>
                   </div>
                 </HStack>
-                <IdentitySettings />
               </div>
               <PlanLine />
             </Card>
