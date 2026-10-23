@@ -267,3 +267,33 @@ it('keeps the launch campaign label on a /premium link', async () => {
   expect(analytics.campaignFrom(new URL(link).search)).toEqual({ utm_source: 'instagram', utm_medium: 'post', utm_campaign: 'launch-55' });
   expect(analytics.scrubUrl(link, true)).toBe('https://devshark.app/premium?utm_source=instagram&utm_medium=post&utm_campaign=launch-55');
 });
+
+it('sends nothing after a withdrawal, not even an event captured just before it', async () => {
+  // The real posthog-js with the app's settings: an event must leave when it
+  // is captured, because neither reset() nor an opt-out empties PostHog's
+  // send queue, and a batched event went out after the visitor said no.
+  const sent: number[] = [];
+  let withdrawnAt = Number.POSITIVE_INFINITY;
+  vi.stubGlobal('fetch', vi.fn(async () => { sent.push(Date.now()); return new Response('{}', { status: 200 }); }));
+  const beacon = Object.getOwnPropertyDescriptor(navigator, 'sendBeacon');
+  Object.defineProperty(navigator, 'sendBeacon', { configurable: true, value: () => { sent.push(Date.now()); return true; } });
+  try {
+    const { PostHog } = await vi.importActual<typeof import('posthog-js')>('posthog-js');
+    const { posthogConfig } = await import('../src/lib/posthogClient');
+    const ph = new PostHog().init('phc_withdrawal_test', { ...posthogConfig('https://posthog.invalid'), advanced_disable_flags: true }, 'withdrawal-test')!;
+    ph.opt_in_capturing({ captureEventName: false });
+    ph.capture('quiz_started');
+    // The visitor withdraws a moment later, as analytics.ts does it.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    withdrawnAt = Date.now();
+    ph.reset();
+    ph.opt_out_capturing();
+    ph.capture('quiz_finished');
+    await new Promise((resolve) => setTimeout(resolve, 3500));
+    expect(sent.filter((at) => at >= withdrawnAt)).toEqual([]);
+  } finally {
+    vi.unstubAllGlobals();
+    if (beacon) Object.defineProperty(navigator, 'sendBeacon', beacon);
+    else delete (navigator as { sendBeacon?: unknown }).sendBeacon;
+  }
+}, 15_000);
