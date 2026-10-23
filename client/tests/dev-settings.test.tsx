@@ -2,7 +2,7 @@
 // shows none of them, and a save sends every section back without a `support`
 // block, even when the stored settings still carried one.
 import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -31,8 +31,7 @@ const LEGACY_SUPPORT = {
   publicThanksEnabled: true,
 };
 
-function renderSettings() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+function renderSettings(client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/dev?section=settings']}>
@@ -70,4 +69,19 @@ describe('/dev → Settings', () => {
       expect(sent.coins).toEqual(SETTINGS.coins);
     });
   }
+
+  it('keeps unsaved edits when the settings are read again', async () => {
+    server.use(http.get('*/api/admin/settings', () => HttpResponse.json({ settings: SETTINGS })));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderSettings(client);
+    const tips = await screen.findByRole('textbox', { name: /Dev tips/ });
+    fireEvent.change(tips, { target: { value: 'Remember to code.\nRead the docs.' } });
+    // Another write lands (a reconnect re-read, the Merchandise tab saving).
+    await act(async () => {
+      client.setQueryData(['admin', 'settings'], { settings: { ...SETTINGS, ownerEmail: 'new@example.invalid' } });
+      // React Query tells its observers on the next tick.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.getByRole('textbox', { name: /Dev tips/ })).toHaveValue('Remember to code.\nRead the docs.');
+  });
 });
