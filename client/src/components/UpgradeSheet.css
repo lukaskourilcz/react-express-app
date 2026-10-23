@@ -1,0 +1,8 @@
+/* The upgrade sheet (UpgradeSheet.tsx). Its title started 74px under the
+   dialog's top edge with nothing above it: the Deep End dialog header's 28px
+   and the browser's 0.83em h2 margins on top of the dialog's own padding.
+   Here the title starts about 24px under the edge, the body's rhythm, and
+   the body follows it without the h2's bottom margin (UX audit money-11).
+   The close button keeps its 44px floor. */
+dialog.astryx-dialog.ss-upgrade-sheet .astryx-layout-header { padding-top: 0; }
+dialog.astryx-dialog.ss-upgrade-sheet .astryx-layout-header h2 { margin: 0; }

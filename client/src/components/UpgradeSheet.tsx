@@ -19,6 +19,8 @@ import { premiumIncludes, premiumVars } from './PremiumFacts';
 import { redemptionOpen, useGameConfig } from '../lib/gameConfig';
 import { useLaunchOffer } from '../lib/launchOffer';
 import { LaunchOfferNote, PremiumPriceSentence } from './LaunchOffer';
+import { Kicker } from './landing/LandingKit';
+import './UpgradeSheet.css';
 
 export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
   const t = useT();
@@ -40,15 +42,21 @@ export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
       width="min(480px, calc(100vw - 32px))"
       className="ss-upgrade-sheet"
     >
+      {/* The title alone in the header, which starts at the body's 24px
+          rhythm (UpgradeSheet.css). The sentence that frames the list is body
+          text at full width, not a 13px subtitle squeezed beside the close
+          button (UX audit money-11): title, what you keep, what Premium adds,
+          the price, the actions. */}
       <DialogHeader
         title={t('premium.sheet.title')}
-        subtitle={t('premium.sheet.subtitle', { level: vars.freeLevel })}
         onOpenChange={(open) => { if (!open) closeUpgradeSheet(); }}
       />
       <VStack gap={3} padding={4} width="100%">
         {reason && <Text type="body">{reason}</Text>}
+        <Text type="body">{t('premium.sheet.subtitle', { level: vars.freeLevel })}</Text>
         <div>
-          <p className="ss-kicker ss-upgrade-sheet__kicker">{t('premium.sheet.includesTitle')}</p>
+          {/* The shared kicker, so it takes its own wave (DESIGN_RULES 4a). */}
+          <Kicker as="h3" className="ss-upgrade-sheet__kicker">{t('premium.sheet.includesTitle')}</Kicker>
           <ul className="ss-upgrade-sheet__list">
             {premiumIncludes(redemptionOpen(config)).map((key) => <li key={key}>{t(key, vars)}</li>)}
           </ul>
