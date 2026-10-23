@@ -191,8 +191,9 @@ export function setTrackValue(next: Track): void {
   trackStore.emit();
 }
 
-/** Live, persisted roadmap track plus a setter. Shared across the page. */
+/** Live, persisted roadmap track plus a setter. Shared across the page. The
+ * setter is the same function every render, so a callback that lists it in
+ * its dependencies (LearningPathsCard's apply) is not rebuilt each time. */
 export function useTrack(): [Track, (next: Track) => void] {
-  const track = useStore(trackStore);
-  return [track, (next: Track) => setTrackValue(next)];
+  return [useStore(trackStore), setTrackValue];
 }
