@@ -464,6 +464,16 @@ function Shop() {
   const order = useOrderMutation();
 
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  // Set at the press, not from isPending: the mutation's state reaches React a
+  // task after the click, so a double click on Buy sent two purchases and a
+  // streak protection charged its coins twice. Held until the wallet re-read
+  // lands, so the row stays busy while it still shows the old balance.
+  const spending = useRef(false);
+  const spend = (run: () => Promise<unknown>) => {
+    if (spending.current) return;
+    spending.current = true;
+    void run().finally(() => { spending.current = false; });
+  };
   const [checkout, setCheckout] = useState<{ sku: MerchSku; variant: string } | null>(null);
   const [address, setAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
   const checkoutHeading = useRef<HTMLHeadingElement>(null);
@@ -509,21 +519,54 @@ function Shop() {
 
   const submitOrder = (paymentKind: 'tokens' | 'cash') => {
     if (!checkout) return;
-    order.mutate(
-      { items: [{ ...checkout, quantity: 1 }], address, paymentKind },
-      {
-        onSuccess: (result) => {
-          closeCheckout();
-          setAddress(EMPTY_ADDRESS);
-          setToast({
-            msg: result.state === 'paid' ? t('shop.orderPlaced') : t('shop.orderAwaitingPayment'),
-            ok: true,
-          });
-        },
-        onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
-      },
-    );
+    const items = [{ ...checkout, quantity: 1 }];
+    spend(async () => {
+      try {
+        const result = await order.mutateAsync({ items, address, paymentKind });
+        closeCheckout();
+        setAddress(EMPTY_ADDRESS);
+        setToast({
+          msg: result.state === 'paid' ? t('shop.orderPlaced') : t('shop.orderAwaitingPayment'),
+          ok: true,
+        });
+      } catch (error) {
+        setToast({ msg: friendlyError(error), ok: false });
+      }
+    });
   };
+
+  const buyCrown = () => spend(async () => {
+    try {
+      await cosmetic.mutateAsync({ op: 'buy' });
+      setToast({ msg: t('shop.crownBought'), ok: true });
+    } catch (error) {
+      setToast({ msg: friendlyError(error), ok: false });
+    }
+  });
+
+  const wearCrown = (op: 'equip' | 'unequip') => spend(async () => {
+    try {
+      await cosmetic.mutateAsync({ op });
+    } catch {
+      // The wallet re-read says what the crown is now; nothing else to say.
+    }
+  });
+
+  const buyProtection = () => spend(async () => {
+    try {
+      const result = await protection.mutateAsync();
+      setToast({
+        // At the cap nothing was charged, and saying "bought" would be a lie
+        // about a balance that did not move.
+        msg: result.bought
+          ? t('shop.protectionBought', { n: result.remaining })
+          : t('shop.protectionAtCap', { n: result.remaining }),
+        ok: true,
+      });
+    } catch (error) {
+      setToast({ msg: friendlyError(error), ok: false });
+    }
+  });
 
   return (
     <VStack gap={5} width="100%" maxWidth={1080}>
@@ -564,17 +607,14 @@ function Shop() {
                           variant="secondary"
                           label={t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
                           isDisabled={cosmetic.isPending}
-                          onClick={() => cosmetic.mutate({ op: wearingCrown ? 'unequip' : 'equip' })}
+                          onClick={() => wearCrown(wearingCrown ? 'unequip' : 'equip')}
                         />
                       ) : (
                         <Button
                           variant="primary"
                           label={t('shop.buy')}
                           isDisabled={!isAuthenticated || cosmetic.isPending || balance < shop.data.crown.tokenPrice}
-                          onClick={() => cosmetic.mutate({ op: 'buy' }, {
-                            onSuccess: () => setToast({ msg: t('shop.crownBought'), ok: true }),
-                            onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
-                          })}
+                          onClick={buyCrown}
                         />
                       )}
                     </HStack>
@@ -607,17 +647,7 @@ function Shop() {
                         variant="primary"
                         label={t('shop.buy')}
                         isDisabled={!isAuthenticated || protection.isPending || balance < shop.data.protection.tokenPrice}
-                        onClick={() => protection.mutate(undefined, {
-                          onSuccess: (result) => setToast({
-                            // At the cap nothing was charged, and saying "bought"
-                            // would be a lie about a balance that did not move.
-                            msg: result.bought
-                              ? t('shop.protectionBought', { n: result.remaining })
-                              : t('shop.protectionAtCap', { n: result.remaining }),
-                            ok: true,
-                          }),
-                          onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
-                        })}
+                        onClick={buyProtection}
                       />
                     </HStack>
                   </div>

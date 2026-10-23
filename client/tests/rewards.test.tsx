@@ -232,6 +232,24 @@ describe('the Rewards screen', () => {
     expect(screen.getByText('Streak milestones')).toBeInTheDocument();
   });
 
+  it('buys one streak protection for a double click on Buy', async () => {
+    signIn();
+    routes();
+    const bought: string[] = [];
+    server.use(http.post('*/api/user/protection', () => {
+      bought.push('protection');
+      return HttpResponse.json({ bought: true, remaining: 1, period: '2026-10' });
+    }));
+    await mountShop();
+    await screen.findByText('1,240');
+    const buy = (await screen.findAllByRole('button', { name: 'Buy' }))[1];
+    await waitFor(() => expect(buy).toBeEnabled());
+    fireEvent.click(buy);
+    fireEvent.click(buy);
+    expect(await screen.findByText('Bought. You have 1 this month.')).toBeInTheDocument();
+    expect(bought).toEqual(['protection']);
+  });
+
   it('offers a retry when the coins cannot load', async () => {
     signIn();
     routes({ wallet: { error: { code: 'db_error' } }, walletStatus: 500 });
