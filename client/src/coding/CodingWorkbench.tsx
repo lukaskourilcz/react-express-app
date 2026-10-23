@@ -10,6 +10,7 @@ import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { workbenchCopy } from '../i18n/translations.workbench';
+import { openSignIn } from '../lib/signInDialog';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
@@ -1050,7 +1051,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       ) : (
         !isReact && verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>
       )}
-      {verdict.verdict === 'passed' && !verdict.progress && !verdict.puzzle && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
+      {/* Signed out, a pass says here, where it matters, that it needs an
+          account, with the way to get one (UX audit coding-10). */}
+      {verdict.verdict === 'passed' && !verdict.progress && !verdict.puzzle && (signedIn
+        ? <p className="cd-verdict__row">{t('coding.verdict.notRecorded')}</p>
+        : <p className="cd-verdict__row cd-verdict__signin">{t('coding.verdict.signIn')} <Button variant="secondary" aria-haspopup="dialog" onClick={() => openSignIn()} label={workbenchCopy('coding.verdict.signInAction')} /></p>)}
       {verdict.github && verdict.github.status !== 'not_connected' && (
         <p className="cd-verdict__row">
           {verdict.github.status === 'committed' && verdict.github.url ? <a className="cd-link" href={verdict.github.url} target="_blank" rel="noreferrer">{t('coding.github.committed', { repo: verdict.github.url.replace(/^https:\/\/github\.com\//, '').split('/').slice(0, 2).join('/') })}</a>
@@ -1150,9 +1155,6 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <TermsBar texts={[task.prompt, task.title]} domain={glossaryDomainFor(task.track)} />
       {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
       {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{task.api.note}</p>}
-      {/* Not while the task waits for a bigger screen: there is nothing to
-          run there yet (UX audit coding-14). */}
-      {!signedIn && mode === 'section' && !pendingOnDesktop && <p className="cd-note">{t('coding.signInHint')}</p>}
     </BriefZone>
   );
 
@@ -1239,6 +1241,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {
     return <div className={`cd-workbench cd-workbench--${mode}`}><CodingCompletion
       xp={verdict.xpAwarded} complexity={verdict.complexity} sectionRef={verdictRef}
+      signInToRecord={!signedIn && !verdict.progress}
       onNext={mode === 'lesson' ? onContinue : undefined} nextHref={nextHref ?? undefined}
       backHref={backHref ?? (mode === 'lesson' ? '/learn' : `/coding/${task.track}`)} /></div>;
   }

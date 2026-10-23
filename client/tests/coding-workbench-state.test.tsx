@@ -9,6 +9,7 @@ import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { revealCoding, submitCoding, useCodingApproaches } from '../src/coding/api';
 import { runCodeTests, type RunOutcome } from '../src/coding/runner/run-tests';
 import { skipTask } from '../src/coding/practice';
+import { openSignIn } from '../src/lib/signInDialog';
 import { ApiError } from '../src/lib/api';
 import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import type { CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
@@ -21,6 +22,7 @@ vi.mock('../src/coding/Editor', () => ({
 }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: vi.fn(() => ({ data: undefined })), submitCoding: vi.fn(), revealCoding: vi.fn() }));
 vi.mock('../src/coding/practice', () => ({ skipTask: vi.fn() }));
+vi.mock('../src/lib/signInDialog', () => ({ openSignIn: vi.fn() }));
 vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/coding/runner/run-tests')>(),
   runCodeTests: vi.fn(),
@@ -345,8 +347,9 @@ function climbTheLadder() {
 // later", which nothing does; and its way out said "Try again".
 it('tells a signed-out visitor what a reveal really does, and Keep trying returns focus', () => {
   mount({ signedIn: false });
-  // The note beside the brief no longer says any task runs without an account.
-  expect(screen.getByText(/^Sign in to keep your progress\./)).toHaveTextContent('Signed out, you can run and check the free tasks, but no pass is recorded.');
+  // UX audit coding-10: the brief carries no sign-in note; a pass says it
+  // needs an account, where it matters (the next test).
+  expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
   climbTheLadder();
   const solution = screen.getByRole('button', { name: 'Solution' });
   fireEvent.click(solution);
@@ -563,4 +566,28 @@ it('lets long code tokens in the brief, the hints and the notes wrap', () => {
     expect(declared(rules, selector, 'overflow-wrap'), selector).toBe('anywhere');
   }
   style.remove();
+});
+
+// UX audit coding-10: signed out, the brief says nothing about an account; the
+// pass says it was not recorded and offers Sign in, the moment it matters.
+it('tells a signed-out visitor at the pass, with Sign in, that it needs an account', async () => {
+  vi.mocked(openSignIn).mockClear();
+  vi.mocked(submitCoding).mockResolvedValueOnce(verdict({ progress: null, firstPass: false, xpAwarded: 0 }));
+  mount({ signedIn: false });
+  expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
+  const line = screen.getByText(/^Sign in to record this pass\./);
+  const signIn = within(line).getByRole('button', { name: 'Sign in' });
+  expect(signIn).toHaveAttribute('aria-haspopup', 'dialog');
+  fireEvent.click(signIn);
+  expect(openSignIn).toHaveBeenCalledTimes(1);
+});
+
+it('says a signed-in pass that was not recorded without offering Sign in', async () => {
+  vi.mocked(submitCoding).mockResolvedValueOnce(verdict({ progress: null, firstPass: false, xpAwarded: 0 }));
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
 });

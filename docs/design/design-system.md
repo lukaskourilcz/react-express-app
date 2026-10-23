@@ -105,7 +105,7 @@ The Coding home, the FullStack page and each track page (UX audit U3, #575). The
 - **Task rows.** One 48px hairline line each: the title, the level as quiet meta, any tag, the status at the end. Two columns from 1024px.
 - **Challenge run.** Collapsed, a hairline row of 64px: the title and one line on what a run is, with "Plan a run" (Astryx secondary, `aria-expanded`) at its end.
 - **Filters.** One row from 1024px: the search, then one 44px select per filter (technique, difficulty, length, format, and status with Saved when signed in). Under 760px a 2-column grid with the search across both. "Showing N of M" speaks only once a filter narrows the list; its live region stays in place.
-- **Signed out.** The page says once, as a line under its lead, that a pass needs an account.
+- **Signed out.** A list page says once, as a line under its lead, that a pass needs an account. A task's brief says nothing about it; a pass says 'Sign in to record this pass.' with a 44px secondary Sign in, on the completion screen and in the verdict. The run planner keeps its own note, because it gates that form.
 
 ## Layout and density
 

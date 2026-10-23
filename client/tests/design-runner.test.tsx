@@ -3,7 +3,7 @@
 // until a pass, and the runner does not invent them. A pass shows the whole
 // walkthrough.
 import { expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { DesignRunner } from '../src/coding/DesignRunner';
@@ -242,4 +242,18 @@ it('keeps focus with a sequence step as it moves', () => {
   expect(screen.getByRole('button', { name: 'Move down: Build' })).toBeDisabled();
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move up: Build' }));
   expect(screen.getByText('Build moved to position 3 of 3')).toBeInTheDocument();
+});
+
+// UX audit coding-10: signed out, the walkthrough opens with no sign-in note;
+// a pass says it was not recorded and offers Sign in, the moment it matters.
+it('tells a signed-out visitor at the pass, with Sign in, that it needs an account', async () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockResolvedValue(verdict({
+    verdict: 'passed', design: [{ correct: true, given: 0 }, { correct: true, given: 0 }, { correct: true, given: 0 }], firstPass: false, xpAwarded: 0, progress: null,
+  }));
+  render(<MemoryRouter><LanguageProvider><DesignRunner task={task} session="design-session" locked={null} signedIn={false} mode="section" onRetry={vi.fn()} /></LanguageProvider></MemoryRouter>);
+  expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
+  await answerAndSubmit();
+  const line = screen.getByText(/^Sign in to record this pass\./);
+  expect(within(line).getByRole('button', { name: 'Sign in' })).toHaveAttribute('aria-haspopup', 'dialog');
 });

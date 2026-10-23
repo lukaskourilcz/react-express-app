@@ -17,6 +17,7 @@ export const workbenchEn = {
   'coding.types.compilerErrors': '{n} compiler errors',
   'coding.types.checkFails': '{failing} of {total} type check fails',
   'coding.types.checksFail': '{failing} of {total} type checks fail',
+  'coding.verdict.signInAction': 'Sign in',
 } as const;
 
 export type WorkbenchKey = keyof typeof workbenchEn;
