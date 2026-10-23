@@ -92,7 +92,7 @@ In English, at desktop width and a narrow phone width:
 6. Delete a disposable account and confirm the auth identity and owned rows are gone. `scripts/check-live-accounts.mjs` deletes its two test accounts and checks that their tokens stop working.
 7. Request `/api/health`. It answers 200 only when the database check and the service-role check pass, and reports `rateLimiter: configured`; a 503 is an alert.
 8. With a free account, and again signed out, confirm React level 13, a Premium coding challenge and the stage after a project's free stages each open the upgrade sheet.
-9. With `LEARNING_PATH_FDE_ENABLED` set on the preview, walk the FDE path: read the outline signed out, sign in, start the path, open an activity, submit a wrong and a right answer, close the tab mid-draft and reopen it, then send the same idempotency key twice and confirm the second call replays the stored result. A free account opens the diagnostic and the first module and meets the upgrade sheet after that. A paused path keeps its evidence and leaves the queue, and removing the FDE specialization pauses it without deleting anything.
+9. With `LEARNING_PATH_FDE_ENABLED` set on the preview, walk the FDE path: read the outline signed out, sign in, start the path, open an activity, submit a wrong and a right answer, close the tab mid-draft and reopen it, then send the same idempotency key twice and confirm the second call replays the stored result. A free account opens the diagnostic and the first module and meets the upgrade sheet after that. A paused path keeps its evidence and leaves the queue, and removing the FDE specialization pauses it without deleting anything. While it is paused, the overview and module pages list the activities without links, the module page offers Resume, and a deep link to an activity starts nothing (the server refuses one with 409 `enrollment_paused`). On a code activity whose code differs from the starter, Reset asks before it replaces that code.
 10. With the switch unset, confirm Learn levels, checkpoints, Coding, Today, Profile, XP and account deletion still work and the path says it is previewable.
 
 ## Operator smoke scripts
@@ -122,7 +122,7 @@ SMOKE_BASE_URL=<deployment> node node_modules/.cache/shark/grading-load.mjs
 
 ## Release and observation
 
-Merge only after preflight and the smoke checks the change needs pass. After the deploy, watch Vercel function errors and latency, `/api/health`, Supabase database and Realtime health, 429 volume, sign-in failures, quiz submit failures, multiplayer reconnects and account deletion errors for at least 30 minutes. Never put access tokens, emails, answer tokens or submitted answers in logs.
+Merge only after preflight and the smoke checks the change needs pass. After the deploy, watch Vercel function errors and latency, `/api/health`, Supabase database and Realtime health, 429 volume, 503 `upstream_timeout` answers (a Supabase call that outlasted `withTimeout` in `lib/http.ts`, logged at level error), sign-in failures, quiz submit failures, multiplayer reconnects and account deletion errors for at least 30 minutes. Never put access tokens, emails, answer tokens or submitted answers in logs.
 
 Two scheduled workflows watch production:
 
