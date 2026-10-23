@@ -122,6 +122,9 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const baselineRef = useRef('');
+  // `saving` reaches handleSave only after a render, so a double click on
+  // Save for a new question created it twice. The ref holds from the first.
+  const savingRef = useRef(false);
 
   // Re-seed the form whenever the dialog opens for a different question.
   useEffect(() => {
@@ -158,11 +161,13 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return;
     const validationError = validate();
     if (validationError) {
       setError(validationError);
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     const payload: QuestionPayload = {
@@ -187,6 +192,7 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
     } catch (err) {
       setError(friendlyError(err));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
