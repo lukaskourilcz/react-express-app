@@ -22,7 +22,7 @@ The V9 brand kit lives in `client/public/brand/v9/`, with the rules in `docs/bra
 
 Search before creating. Reuse Astryx, existing `client/src/components/ui/`, landing primitives, Shark fins/waterlines, glyphs, hooks, dialogs, toasts, tokens, and translation keys. Deep End v2 uses ocean ink, tactile paper, editorial type, disciplined accents, restrained motion, visible focus, and purpose-built density—never glass, neon, generic AI imagery, or excessive cards/pills.
 
-Page widths and control heights are shared tokens chosen once (`DESIGN_RULES.md` §10): the route shell picks each route's width from `client/src/components/ui/pageWidth.ts`, every control is 44px on every pointer (36px only inside `.ss-compact` toolbars), and a page never sets its own page `max-width` or button size.
+Every screen follows one design system (`DESIGN_RULES.md` §10–11, catalogue in `docs/design/design-system.md`): the route shell picks the width from `client/src/components/ui/pageWidth.ts`, so a page sets no page `max-width`; buttons and controls are 44px, 36px only inside an `.ss-compact` toolbar; one `SwimCta` md is the screen's single primary; reuse `PageHeader`, `StatePanel`, the `components/question/` parts and the coding workbench instead of drawing your own. `npm run check:design` (in `check:public`) enforces the widths, button sizes and the "Sign in" verb.
 
 Handle relevant loading, empty, error, offline/reconnect, auth/permission, disabled, success, destructive, expired/stale, long-content, and narrow states. Validate keyboard/focus, non-color status, reduced motion, 44px targets, zoom/reflow, fixed-shell clearance, light/dark, and representative widths.
 
