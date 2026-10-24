@@ -895,12 +895,25 @@ remembers its last topic (`devquiz:roadmap:section-topic`). The sections
 share one route box (`routeBoxKey`), so a switch keeps the page mounted, and
 a level or the skill check stays open while the address changes.
 
-The map holds its first draw for the structure and, signed in, the plan.
+The map holds its first draw for the structure and, signed in, the plan
+and the account's progress sync (`useRoadmapStructureFirst`,
+`client/src/lib/queries.ts`; capped at 1.2 s like every first-data hold).
 Its other reads start in the render that hold suspends, without being
-waited for (`components/learn/mapReads.ts`, #587 C07): the account's
-progress and XP sync, and, on the FDE section or while the settings may
-have the path open, the path catalogue and the account's enrollments. They
-used to leave one round trip after the map had drawn. The map syncs once per
+waited for (`components/learn/mapReads.ts`, #587 C07): the XP sync, and,
+on the FDE section or while the settings may have the path open, the path
+catalogue and the account's enrollments. They used to leave one round trip
+after the map had drawn. The progress sync is the same request the map
+starts beside the hold; the hold waits for it because the map picks its
+topic on its first draw from the progress the device holds, so a signed-in
+deep link to a topic that progress opens (`?topic=dsa-advanced`) lands
+there. The hold can only wait for an account auth has restored, and the
+map's public reads no longer wait for supabase-js (#587 C10), so the map can
+still draw before the account's plan or progress is in. A `?topic` the first
+draw could not open then opens as soon as they open it, together with its
+`?level`, unless the learner has picked a topic, switched section, opened a
+step or joined first (`lateDeepLink` in `Roadmap.tsx`). Before #587 the
+account's data was in by the first draw, and the map landed on the link at
+once. The map syncs once per
 mount and again on a sign-in or sign-out while it is mounted; a section
 switch syncs nothing new.
 

@@ -5,7 +5,7 @@
 // useEffect + AbortController + loading/error state each screen used to carry.
 
 import { keepPreviousData, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchRoadmapStructure } from './roadmap';
+import { fetchRoadmapStructure, syncProgressWithServer } from './roadmap';
 import { useAuth } from './auth';
 import { entitlementQuery } from './entitlement';
 import { HELD_READ, readOnce, settled, useFirstData } from './routeData';
@@ -32,14 +32,25 @@ export function useRoadmapStructure() {
 
 /** Hold a page drawn from the roadmap structure until the structure (and,
  * with `plan`, a signed-in account's plan, which decides the Premium marks) is
- * in the cache, so it draws its path once instead of a skeleton first. */
-export function useRoadmapStructureFirst({ plan }: { plan: boolean }) {
+ * in the cache, so it draws its path once instead of a skeleton first.
+ *
+ * With `progress`, a signed-in account's progress sync is in the same wait.
+ * The Learn map picks its topic on its first draw from the progress this
+ * device holds, so a deep link to a topic that progress opens (?topic=dsa-
+ * advanced) needs the account's record merged by then. It always was in
+ * practice: the sign-in sync answered before the map drew. Once the map drew
+ * without React's reveal throttle (perf baseline #587 C04), it could draw
+ * first and land on the section's first topic. The sync is the one the map
+ * starts beside this hold (learn/mapReads.ts), not a second read, and the
+ * wait keeps its cap (lib/routeData.ts FIRST_DATA_WAIT_MS). */
+export function useRoadmapStructureFirst({ plan, progress = false }: { plan: boolean; progress?: boolean }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const account = plan ? user : null;
   useFirstData(`structure ${account?.id ?? ''}`, () => settled([
     readOnce(queryClient, roadmapStructureQuery),
     account ? readOnce(queryClient, entitlementQuery(account.id)) : null,
+    progress && user ? syncProgressWithServer() : null,
   ]));
 }
 

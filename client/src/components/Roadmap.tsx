@@ -324,7 +324,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   // The account's progress and XP, and the path reads where they count,
   // start beside the hold rather than after the first draw (#587 C07, C08).
   useMapReadsBesideHold();
-  useRoadmapStructureFirst({ plan: true });
+  useRoadmapStructureFirst({ plan: true, progress: true });
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const progress = useRoadmapProgress();
@@ -418,6 +418,19 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     const chosen = firstSelectable(initial, [fromUrl, readSectionTopic(resolved.section), readString(TOPIC_KEY), TOPICS[0]]);
     return (chosen ?? initial[0]?.topic ?? TOPICS[0]) as RoadmapTopic;
   });
+  // A deep link's ?topic the first draw could not open: signed in, the
+  // account's plan and progress can still be on their way when the map
+  // draws, now that its public reads no longer wait for supabase-js and the
+  // session (perf baseline #587 C10) and it draws without React's reveal
+  // throttle (C04). It opens once they open it (the effect after landOn),
+  // unless the learner has moved on first: picked a topic, switched section,
+  // opened a step or joined. Before #587 the account's data was in by the
+  // first draw, and the map landed on it at once.
+  const lateDeepLink = useRef<string | null | undefined>(undefined);
+  if (lateDeepLink.current === undefined) {
+    const asked = new URLSearchParams(window.location.search).get('topic');
+    lateDeepLink.current = asked && asked !== topic ? asked : null;
+  }
   // Which of the topic's PARTS_PER_TOPIC parts is open in the path view.
   const [part, setPart] = useState<number>(() => {
     const fromUrl = parseInt(new URLSearchParams(window.location.search).get('part') ?? '', 10);
@@ -504,6 +517,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const selectTopic = (next: RoadmapTopic) => {
     // Locked and dimmed topics aren't tabbable; ignore if somehow invoked.
     if (!entries.some((entry) => entry.topic === next && entry.state === 'open')) return;
+    lateDeepLink.current = null;
     landOn(next, section);
   };
 
@@ -518,10 +532,29 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     if (next) landOn(next as RoadmapTopic, null);
   }, [section, entries]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The deep link's topic, once the account's plan and progress open it
+  // (lateDeepLink above). It lands as the first draw would have: the part
+  // the address or this device named is kept where it opens, and nothing is
+  // remembered, as for any ?topic on arrival. A switch to another section
+  // drops it.
+  const arrivalSection = useRef(section);
+  useEffect(() => {
+    const asked = lateDeepLink.current;
+    if (!asked) return;
+    if (section !== arrivalSection.current) {
+      lateDeepLink.current = null;
+      return;
+    }
+    if (active || !entries.some((entry) => entry.topic === asked && entry.state === 'open')) return;
+    lateDeepLink.current = null;
+    setTopic(asked as RoadmapTopic);
+  }, [section, entries, active]);
+
   /** Open another section, optionally on one of its topics. The old query is
    * dropped, so a ?topic of the section left behind cannot send the learner
    * back. */
   const switchSection = (id: LearnSectionId, nextTopic?: RoadmapTopic) => {
+    lateDeepLink.current = null;
     if (nextTopic) landOn(nextTopic, id);
     navigate({ pathname: `/learn/${id}`, search: nextTopic ? `?topic=${nextTopic}` : '' });
   };
@@ -568,6 +601,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const runJoin = async (id: LearnSectionId) => {
     if (!user || !profile || join?.status === 'saving' || joiningRef.current) return;
     joiningRef.current = true;
+    lateDeepLink.current = null;
     const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
     const started = { section: id, status: 'saving' as const };
     const epoch = accountEpoch();
@@ -630,6 +664,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   );
 
   const open = (a: Active, questions = false) => {
+    lateDeepLink.current = null;
     preloadLessonRunner();
     const lessonId = a.kind === 'level' && !questions ? levels.find((level) => level.level === a.ref)?.lessonId : undefined;
     setReadingLessonId(lessonId ?? null);
@@ -709,12 +744,15 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     const params = new URLSearchParams(window.location.search);
     const levelRaw = params.get('level');
     if (!levelRaw) return;
-    autoOpenedRef.current = true;
     // Never open a level of a topic other than the one on screen, nor of one
     // the rail does not show as open: with nothing open in the section (a
     // fresh device on /learn?topic=dsa&level=1), `topic` is the section's
-    // first, locked entry and the map says what opens it.
+    // first, locked entry and the map says what opens it. A topic the
+    // account's data may still open (lateDeepLink) keeps the level for its
+    // landing.
     const urlTopic = params.get('topic');
+    if (urlTopic && urlTopic !== topic && lateDeepLink.current === urlTopic) return;
+    autoOpenedRef.current = true;
     if (urlTopic && urlTopic !== topic) return;
     if (!entries.some((entry) => entry.topic === topic && entry.state === 'open')) return;
     const lvl = parseInt(levelRaw, 10);

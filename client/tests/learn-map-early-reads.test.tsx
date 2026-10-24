@@ -30,14 +30,18 @@ const TOPICS = ['javascript', 'dsa', 'ai-llms'];
 const STRUCTURE = { topics: TOPICS, structure: Object.fromEntries(TOPICS.map((topic) => [topic, { levels: Array.from({ length: 6 }, (_, i) => level(i + 1)), checkpoints: [] }])) };
 const PREMIUM = { tier: 'premium', source: 'stripe', currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 
-function answer(structureDelay: number) {
+function answer(structureDelay: number, progressDelay = 0) {
   const log: string[] = [];
   server.use(
     http.get('*/api/quiz/roadmap', async ({ request }) => {
       const resource = new URL(request.url).searchParams.get('resource') ?? 'structure';
       log.push(resource);
       if (resource === 'learning-path-catalog') return HttpResponse.json({ versions: {}, paths: [] });
-      if (resource === 'progress') return HttpResponse.json({ data: {}, extra: { unlocked: [] } });
+      if (resource === 'progress') {
+        await delay(progressDelay);
+        log.push('progress answered');
+        return HttpResponse.json({ data: {}, extra: { unlocked: [] } });
+      }
       await delay(structureDelay);
       log.push('structure answered');
       return HttpResponse.json(STRUCTURE as never);
@@ -104,5 +108,21 @@ describe('the Learn map’s reads', () => {
     const log = answer(0);
     await mount('web-developer');
     await waitFor(() => expect(log.filter((one) => one === 'xp')).toHaveLength(1));
+  });
+
+  // The map picks its topic on its first draw from the progress the device
+  // holds, so a signed-in deep link to a topic progress opens needs the
+  // account's record merged by then. The hold waits for the sync the map
+  // started beside it, and does not read progress a second time.
+  it('draws once the account’s progress sync has answered, and reads progress once', async () => {
+    const log = answer(0, 400);
+    await mount('web-developer');
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 200)); });
+    expect(log).toContain('structure answered');
+    expect(log).not.toContain('progress answered');
+    expect(screen.queryByRole('radiogroup', { name: 'Choose a topic' })).toBeNull();
+    await screen.findByRole('radiogroup', { name: 'Choose a topic' }, { timeout: 3000 });
+    expect(log).toContain('progress answered');
+    expect(log.filter((one) => one === 'progress')).toHaveLength(1);
   });
 });
