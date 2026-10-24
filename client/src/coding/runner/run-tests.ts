@@ -133,6 +133,12 @@ interface Compiler {
   /** The job using the worker now. */
   job: ((message: WorkerMessage) => void) | null;
   fail: ((event: ErrorEvent) => void) | null;
+  /** How far the job is: loading the compiler, or checking code. */
+  stage: 'loading' | 'checking' | null;
+  /** End the job and drop the worker. */
+  abandon: (() => void) | null;
+  /** Settles when the job's check starts. */
+  checking: Promise<void>;
   /** Settles when the job in progress, if any, has. */
   idle: Promise<void>;
   release: number | undefined;
@@ -141,6 +147,10 @@ interface Compiler {
 /** How long a loaded compiler outlives the last screen that held it, so the
  * next TypeScript task (Next, a stage of a project) finds it loaded. */
 export const COMPILER_KEEP_MS = 30_000;
+/** How long a Run waits for a check an earlier Run left behind before it
+ * drops that worker and starts a fresh one: a task's checks take well under a
+ * second, and a runaway one would hold the next Run for its whole 8 s. */
+export const ABANDONED_CHECK_GRACE_MS = 1_000;
 
 let compiler: Compiler | null = null;
 /** Task screens holding a compiler (holdCompiler), whichever worker it is:
@@ -171,7 +181,7 @@ function sharedCompiler(warm: boolean): Compiler | null {
   } catch {
     return null;
   }
-  const created: Compiler = { worker, job: null, fail: null, idle: Promise.resolve(), release: undefined };
+  const created: Compiler = { worker, job: null, fail: null, stage: null, abandon: null, checking: Promise.resolve(), idle: Promise.resolve(), release: undefined };
   worker.onmessage = (event: MessageEvent<WorkerMessage & { ready?: boolean }>) => {
     if (event.data?.phase === 'warm') {
       // The compiler did not download: this worker keeps that failure.
@@ -231,6 +241,8 @@ function compileShared(which: Compiler, input: RunInput, onPhase: (phase: RunPha
       window.clearTimeout(timer);
       which.job = null;
       which.fail = null;
+      which.stage = null;
+      which.abandon = null;
       if (keep) scheduleRelease(which);
       else dropCompiler(which);
       resolve(result);
@@ -240,6 +252,10 @@ function compileShared(which: Compiler, input: RunInput, onPhase: (phase: RunPha
       timer = window.setTimeout(() => end({ outcome }, false), ms);
     };
     arm(COMPILE_TIMEOUT_MS, UNAVAILABLE);
+    which.stage = 'loading';
+    which.abandon = () => end({ outcome: { codeError: 'Cancelled' } }, false);
+    let checkStarted: () => void = () => {};
+    which.checking = new Promise<void>((resolve) => { checkStarted = resolve; });
     which.job = (message) => {
       started = true;
       if (message.phase === 'compiling') {
@@ -248,6 +264,8 @@ function compileShared(which: Compiler, input: RunInput, onPhase: (phase: RunPha
         return;
       }
       if (message.phase === 'checking') {
+        which.stage = 'checking';
+        checkStarted();
         onPhase('checking');
         arm(TYPE_CHECK_TIMEOUT_MS, { timedOut: true, codeError: TYPE_CHECK_STOPPED_MESSAGE });
         return;
@@ -287,10 +305,17 @@ async function runTypeScript(input: RunInput, budget: number): Promise<RunOutcom
   let live = true;
   const onPhase = (phase: RunPhase) => { if (live) input.onPhase?.(phase); };
   onPhase('starting');
-  // A check an earlier Run abandoned finishes first (its own clock bounds
-  // it), and the compiler it loaded is then this Run's.
+  // A job an earlier Run left behind finishes first, and the compiler it
+  // loaded is then this Run's: a download is waited for, a check only for
+  // ABANDONED_CHECK_GRACE_MS, after which its worker is dropped.
   while (compiler?.job) {
-    if (await Promise.race([compiler.idle.then(() => 'idle' as const), cancelled]) === 'cancelled') return stopped;
+    const busy = compiler;
+    const next = busy.stage === 'checking'
+      ? new Promise<'late'>((resolve) => { window.setTimeout(() => resolve('late'), ABANDONED_CHECK_GRACE_MS); })
+      : busy.checking.then(() => 'checking' as const);
+    const outcome = await Promise.race([busy.idle.then(() => 'idle' as const), cancelled, next]);
+    if (outcome === 'cancelled') return stopped;
+    if (outcome === 'late' && busy.job) busy.abandon?.();
   }
   const shared = sharedCompiler(false);
   if (!shared) return { ...EMPTY, ...UNAVAILABLE };

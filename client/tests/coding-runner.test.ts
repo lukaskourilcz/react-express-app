@@ -3,7 +3,7 @@
 // keeps the checker busy is stopped within seconds and named as a type
 // problem; only a run that started and did not finish is a loop.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { runCodeTests, warmRunner, holdCompiler, compilerStarted, TYPE_CHECK_TIMEOUT_MS, COMPILE_TIMEOUT_MS, COMPILER_KEEP_MS } from '../src/coding/runner/run-tests';
+import { runCodeTests, warmRunner, holdCompiler, compilerStarted, TYPE_CHECK_TIMEOUT_MS, COMPILE_TIMEOUT_MS, COMPILER_KEEP_MS, ABANDONED_CHECK_GRACE_MS } from '../src/coding/runner/run-tests';
 import type { RunnerRequest } from '../src/coding/runner/worker';
 import { RUN_TIMEOUT_MS, TIMEOUT_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 
@@ -179,6 +179,33 @@ it('keeps the compiler a cancelled Run was loading for the next Run', async () =
   expect(workers.filter((worker) => worker.requests.some((request) => request.compileOnly))).toHaveLength(1);
   expect(workers[0].terminated).toBe(false);
   expect(await next).toMatchObject({ results: [{ pass: true }] });
+  await settleCompiler();
+});
+
+// A Submit's browser preview is cancelled once the server answers. Its check
+// went on in the shared compiler, and a runaway one held the next Run for its
+// whole 8 s before that Run could start its own.
+it('waits a moment for a check a cancelled Run left behind, then drops it and starts afresh', async () => {
+  let first = true;
+  script = (worker, request) => {
+    if (request.compileOnly && first) { first = false; worker.post({ phase: 'compiling' }); worker.post({ phase: 'checking' }); return; }
+    typescript(worker, request);
+  };
+  workers.length = 0;
+  const controller = new AbortController();
+  const cancelled = typed(controller.signal);
+  await vi.advanceTimersByTimeAsync(0);
+  controller.abort();
+  expect(await cancelled).toMatchObject({ codeError: 'Cancelled' });
+  let settled = false;
+  const next = typed().then((outcome) => { settled = true; return outcome; });
+  await vi.advanceTimersByTimeAsync(ABANDONED_CHECK_GRACE_MS - 1);
+  expect(settled).toBe(false);
+  expect(workers[0].terminated).toBe(false);
+  await vi.advanceTimersByTimeAsync(2);
+  expect(workers[0].terminated).toBe(true);
+  expect(await next).toMatchObject({ results: [{ pass: true }] });
+  expect(ABANDONED_CHECK_GRACE_MS).toBeLessThan(TYPE_CHECK_TIMEOUT_MS);
   await settleCompiler();
 });
 

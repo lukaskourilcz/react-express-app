@@ -703,7 +703,12 @@ shown once it has loaded.
   never runs the learner's code; each Run's JavaScript still runs in a fresh
   worker with the grader's realm, so no Run sees another's. A check that ran
   past its 8 s, out of stack, or a compiler that did not load drops the
-  worker, as the server's type-check pool drops its thread. Before, the
+  worker, as the server's type-check pool drops its thread. A Run that finds
+  the worker still checking code an earlier Run left behind (a Submit's
+  preview cancelled by the server's answer) waits at most 1 s
+  (`ABANDONED_CHECK_GRACE_MS`) and then drops it, so a runaway type holds no
+  later Run for its whole 8 s; a compiler still downloading is waited for.
+  Before, the
   compiler downloaded as the task opened and every Run evaluated it again in
   a new worker (C01). Trade-off: a reader who goes offline before touching
   the code or Run has no compiler for that Run (the runner says it could not
