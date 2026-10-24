@@ -38,6 +38,7 @@ Protect these constraints in every recommendation:
 - Server-authoritative answers, scores, product scope, and subject scope are not negotiable design tradeoffs.
 - The footer keeps its legal links and appearance and sound controls, and the fixed shell keeps its bottom-waterline clearance.
 - Deep End v2 is editorial, tactile, restrained, and anti-slop; it does not become neon, glassy, childish, or card-heavy.
+- The Epic U system (`DESIGN_RULES.md` §10–11) is the baseline to audit against: one width per route from `pageWidth.ts` and no page `max-width`; 44px controls, 36px only in `.ss-compact`; one `SwimCta` md per screen; `PageHeader`, `StatePanel`, the shared question parts and the coding workbench frame rather than hand-built equivalents; each fact said once and "Sign in" as the verb. Run `npm run check:design` and cite any failure. Recommend reusing the catalogue in `docs/design/design-system.md` before any new component.
 
 ## Report
 

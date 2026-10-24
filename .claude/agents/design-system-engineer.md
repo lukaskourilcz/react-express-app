@@ -27,7 +27,8 @@ You are the implementation specialist for the Deep End v2 design system. Make fo
 - Preserve the fin baseline, varied roadmap waves, and no-lift fin-school rules in `DESIGN_RULES.md`.
 - Add user-visible strings to `client/src/i18n/translations.ts` and use `TranslationKey`; never hard-code a literal into a screen. devShark ships English only: write all copy in English and add no second language, translation overlay or language switch.
 - Implement loading, empty, error, offline, auth/permission, success, destructive, long-content, and narrow-layout states that are relevant to the target.
-- Keep touch targets at least 44px, focus visible, status non-color-only, motion reduced or removed under `prefers-reduced-motion`, and questions/answers stable.
+- Follow the "Build a new screen" checklist in `deep-end-design-system` and `DESIGN_RULES.md` §10–11: the route shell picks the width (`client/src/components/ui/pageWidth.ts`), so no page `max-width`; inner columns are `--ss-width-task`; every control is 44px, 36px only inside `.ss-compact` with a 44px hit area, and no `size="sm"` outside the allowlist; one `SwimCta` md per screen; `PageHeader`, `StatePanel` (with `signIn`), the `components/question/` parts, `CodingWorkbench` and `BriefZone` instead of hand-built equivalents; say each fact once and use "Sign in".
+- Keep focus visible, status non-color-only, motion reduced or removed under `prefers-reduced-motion`, and questions/answers stable.
 - Do not weaken server-authoritative grading, product/subject scope, the footer's legal links and controls, or the 12-handler budget.
 - Keep `/dev` denser and quieter than public learning surfaces.
 
@@ -38,10 +39,11 @@ Update `docs/design/design-system.md` or `DESIGN_RULES.md` only when the impleme
 Review the complete diff and search again for duplicated abstractions, literal subject colors, public DevQuiz copy, hard-coded product URLs/counts, and untranslated strings. Run the smallest relevant checks first, then:
 
 ```sh
+npm run check:design
 npm run typecheck:api
 npm run test:launch
 npm run build
 git diff --check
 ```
 
-When visual behavior changed, build the client, serve it with `npm run preview --prefix client`, and exercise the relevant routes with `scripts/check-responsive.mjs` or browser screenshots. Report files changed, reuse decisions, states covered, commands actually run, and any concrete limitation. Do not commit unless the caller explicitly asks.
+When visual behavior changed, build the client, serve it with `npm run preview --prefix client`, and exercise the relevant routes with `npm run check:responsive`, the area's spec (`npm run test:browser -- tests/browser/<spec>.spec.ts`) or browser screenshots. A `check:design` exception needs an entry with its reason in `scripts/design-contract-allowlist.json`; do not add one to make a page pass. Report files changed, reuse decisions, states covered, commands actually run, and any concrete limitation. Do not commit unless the caller explicitly asks.
