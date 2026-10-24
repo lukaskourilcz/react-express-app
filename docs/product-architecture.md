@@ -1756,6 +1756,44 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   for it. Edits reach every instance within about
   15 seconds plus one request. `npm run test:performance`
   (`scripts/test-questions-cache.ts`) pins each bound.
+- **Coding reads and Submit round trips** (#587, server items 9 and 10). The
+  task page reads the account's passed task ids and its own progress row,
+  not every row in full, and `roadmap_progress` only as
+  `data->javascript->levels` (PostgREST JSON path selection); coding-progress
+  and the practice gates read the levels the same way. A verified pass
+  reads its progress row once, after `record_coding_verdict`: on a database
+  before migration 058 the forfeit claim comes from that row's reveal
+  count, which the routine leaves alone. The XP coin credit and the
+  milestone settlement run together, both awaited. A Submit asks the plan
+  (Premium content) and reads the Learn level attempt (a linked session)
+  as soon as the token check answers, beside the per-task and ceiling
+  buckets, and a stage Submit reads its passed stages while the code is
+  graded; every gate still decides in its order on what was read, and
+  nothing is written before it. The trade-off, for the owner to accept: a
+  Submit one of those two buckets refuses has spent an `is_premium` call
+  and a `roadmap_attempts` read, from a signed-in caller its address bucket
+  (`codingSubmitAddress`) already bounds; a session bound to another
+  account is refused before anything is read. `npm run test:coding-auth`
+  and `npm run test:grading-integrity` pin the reads and the overlaps.
+- **Work after the answer** (#587, server items 14 and 28).
+  `lib/coding/after-response.ts` hands work whose result the answer does
+  not use to the request context's `waitUntil`, the hook
+  `@vercel/functions` wraps, read without that dependency: the React VM's
+  stop call, sent the moment the verdict is read, and the garden's retry of
+  older queued rows after a pass's own commit. The function stays alive for
+  them after it answers, within its `maxDuration`; where the runtime offers
+  no hook they are awaited as before. A garden pass still reports its own
+  delivery: answering `queued` before the commit would make "Commit queued;
+  it will be retried" say something else. The React grader bundle is read
+  from the deployment once per instance and uploaded unchanged on every run.
+- **Grader warm-up** (#587, server item 30). A page of a JavaScript,
+  TypeScript or Algorithms task that can be submitted loads one QuickJS
+  grader thread on an empty program when the instance has none loaded, none
+  warming and no run in flight, and leaves it idle, as a run does. It takes
+  a slot like a run, so the pool stays at four threads, and a warm-up that
+  fails is not counted as a failed start. The cost: one idle thread on an
+  instance that serves task pages and never grades. The TypeScript
+  checker's thread still loads on its first check.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which
