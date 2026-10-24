@@ -481,10 +481,17 @@ function App() {
     // the head does not pull focus away from the current control.
     if (startupGuidePath.current !== location.pathname) startupGuidePath.current = null;
     const preserveStartupFocus = startupGuidePath.current !== null;
+    // The visit's first location (React Router keys it 'default').
+    const firstPage = location.key === 'default';
     const timer = window.setTimeout(() => {
       // The public guide's native interaction owns focus during cold startup.
       // Once navigation leaves it, ordinary route focus resumes.
       if (preserveStartupFocus) return;
+      // The first page of a visit can draw inside this delay now that it
+      // renders in a transition and a level opens without a minimum loader
+      // (perf baseline #587 C04, C05): a control the learner or the page has
+      // focused by then keeps the focus, as it did when the page drew later.
+      if (firstPage && document.activeElement && document.activeElement !== document.body) return;
       // A page that focused the target its hash names keeps that focus.
       if (location.hash && document.activeElement?.id === location.hash.slice(1)) return;
       const main = document.getElementById('main-content');

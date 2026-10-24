@@ -1985,7 +1985,11 @@ analytics and the privacy policy".
   hand (#587 C04). What shows is unchanged: nothing for 200 ms, then the
   loader, then the page. `main.tsx` starts the first page's chunk
   (`preloadPath`) before anything renders, so the transition finds the import
-  already running.
+  already running. The shell's route focus moves to `<main>` 230 ms after
+  the route box changes; on the visit's first location it now leaves a
+  control the learner or the page focused by then where it is, because a
+  page that draws sooner can be in use inside that delay. When nothing holds
+  the focus, the first page still moves it to `<main>`.
 - **The document head.** `lib/routeHead.ts` (titles, descriptions,
   canonical links, structured data), with the public pages' metadata and the
   topic catalogue it reads, is its own chunk: `App.tsx` starts it as it
