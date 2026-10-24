@@ -671,11 +671,24 @@ shown once it has loaded.
   on a task link starts both. A narrow screen that shows the puzzle or the
   "bigger screen" note fetches no editor until the learner chooses it there;
   from then on it stays mounted, hidden after a resize, as before. Where the
-  editor is not in yet (a Learn level's coding step, the choice on a phone)
-  its box holds the place and the brief and controls are already drawn; an
-  editor that fails to load offers Try again in that box alone. The editor's
-  code is evaluated in a task of its own, apart from the workbench's (C12,
-  C21).
+  editor is not in yet (the choice on a phone) its box holds the place and
+  the brief and controls are already drawn; an editor that fails to load
+  offers Try again in that box alone. The editor's code is evaluated in a
+  task of its own, apart from the workbench's (C12, C21).
+- **A Learn level's coding step** starts loading the workbench, and the
+  editor where it will show, on the level's last question
+  (`preloadTaskWorkbench`, `client/src/coding/loadWorkbench.ts`), and draws
+  it from state, as the task screen does (`useWorkbench`), not through
+  Suspense. With the step asking for its code only when it began and React's
+  300 ms hold on a suspended reveal, the editor showed about 360 ms (guest)
+  and 500 ms (signed in, after the draft read) after Finish with local
+  assets; it now shows about 60 ms and 200 ms after it (#587 paths walk). The
+  step's opening line takes focus, as every other screen of the level does.
+- **Approach comparisons** (`coding-approaches`) are read only while the
+  workbench's tabs can show them: for a task passed before, or a pass gone
+  stale. A pass made on the screen shows the completion, which offers Next
+  and Back only, so the read that followed every signed-in pass was never
+  seen (#587 paths walk).
 - **The first page of a visit** to a task address asks for the task, and
   fetches the workbench and editor, as the section's chunk evaluates, before
   the screen renders (`client/src/coding/earlyTaskRead.ts`); the screen's
@@ -964,7 +977,10 @@ out the figure waits for it, and when they failed the catalogue decides, as
 before. The settings are cached by the CDN for 15 s and kept for the tab's
 life, so a path switched on shows in a tab opened before the switch only
 after a reload. The FDE section still reads the catalogue for its path
-shelf.
+shelf. Today's path rows follow the same verdict: while the settings say no
+path is open, its first-data hold and its path section read neither the
+catalogue nor the enrollments, since a closed path offers no row (#587 paths
+walk).
 
 Today keeps unfinished → review → new priority, orders within those buckets by
 `planTopics(profile)`, and exposes one `startHereId`; joining a section adds
@@ -974,7 +990,9 @@ the structure is in, and the FDE group's figure reads "Loading…" in its own
 line until the path catalogue and the enrollments land, which start beside
 the structure while the path may be open (#587 C25). The Skill Check
 (placement) returns its review after the server accepts each round, in the
-shuffled order the learner saw.
+shuffled order the learner saw. It replaces the map, so its intro's title
+takes focus as it opens, and Cancel or the result's way back return focus to
+the control that opened it (the row's Skill check or the gate's).
 
 ### DSA in Learn
 
@@ -1096,7 +1114,12 @@ code when a link to them is pointed at, focused or pressed, once the FDE
 section's path shelf or Today's path section has loaded
 (`preloadPathPagesWithLinks` in `client/src/lib/learningPathWorkspace.ts`,
 #587 C27); an enrollment's progress and an activity's start still wait for
-the enrollment id, which they need. The overview shows a
+the enrollment id, which they need. A code exercise's editor (CodeMirror)
+starts loading as soon as the catalogue says the open activity is code,
+beside the start, and an editor already in is drawn with the brief rather
+than through Suspense; a direct open showed the editor about 690 ms after
+navigation with local assets and 120 ms answers, and now about 390 ms (#587
+paths walk). The overview shows a
 competency board and the five delivery phases. Phase membership is manifest
 metadata (`deliveryPhase`) carried through the source, merge and public
 projection, and a validator rejects unknown phases and missing phases on
