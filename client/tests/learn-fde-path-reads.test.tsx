@@ -109,6 +109,19 @@ describe('the FDE path reads on a Learn section', () => {
     expect(asked).toContain('learning-path-enrollment');
   });
 
+  it('lets the catalogue decide, as before, when the settings read failed', async () => {
+    const asked = answer();
+    server.use(http.get('*/api/settings', () => {
+      asked.push('settings');
+      return HttpResponse.json({ error: { code: 'unavailable', message: 'Unavailable' } }, { status: 503 });
+    }));
+    await renderSection(newClient());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 120)); });
+    expect(asked).toContain('settings');
+    expect(asked).toContain('learning-path-catalog');
+    expect(asked).toContain('learning-path-enrollment');
+  });
+
   it('still reads the catalogue on the FDE section, whose path shelf shows it', async () => {
     const asked = answer();
     const client = newClient();
