@@ -1018,8 +1018,9 @@ same way). Migration 026's path tables and their old rows stay.
   its own module (`components/learn/BigOIntroduction.tsx`), which imports
   nothing of the Learn map (#587 C17), and its route loads that module
   alone (App.tsx `loadBigOIntroduction`; the Learn sections' loader leaves
-  `/learn/big-o` out), about 43 KB gzip of JavaScript less than with the
-  map's chunk it came with before (309 against 266 KB, signed out). The module imports the map's `Roadmap.css` and
+  `/learn/big-o` out). Signed out the page fetches 266 KB gzip of JavaScript,
+  against 345 KB before #587 and 309 KB while it still came with the map's
+  chunk. The module imports the map's `Roadmap.css` and
   `DeepEndScreens.css` itself, ahead of its own styles, because the reader
   and the runner draw with them. `Roadmap.tsx` still re-exports it.
 - **DSA Advanced** (`dsa-advanced`, opt-in through Software Engineer) has
@@ -1351,7 +1352,9 @@ Premium opens through a manual grant or a voucher.
 ### Enforcement
 
 - **`lib/access.ts`** resolves the tier once per request (`resolveTier`, one
-  `is_premium` call, only when the content is Premium), and `assertOpen`
+  `is_premium` call, only when the content is Premium; a level or part-test
+  open starts it beside the learner's record, and a Premium level's answers
+  may trust a Premium answer from the last minute, "Learn tier reads"), and `assertOpen`
   throws `PremiumRequiredError` for locked content; `refuseLocked` is the
   handler form. A tier the database cannot read answers 503
   `entitlement_unavailable`, and so does a cleared-content read that fails
@@ -1820,7 +1823,7 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   to its expiry, a malformed session, blocked storage or a page that opened on
   an OAuth return asks supabase-js as before, which refreshes or removes the
   session. The trade-off is bounded by the token's own expiry: the server
-  verifies it on every request exactly as before.
+  checks it as it checks any token ("Token checks across requests").
 - **The plan read** (`useEntitlement`, `lib/entitlement.ts`). A returning
   learner's plan is asked as the app starts (`prefetchStoredAccountPlan` in
   `main.tsx`), for the stored session's account and only with a token
