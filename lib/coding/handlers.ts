@@ -85,6 +85,9 @@ interface ProgressRow {
   best_passed_at: string | null;
 }
 const PROGRESS_FIELDS = 'task_id,track,status,passes,review_stage,next_review_at,reveal_count,best_passed_at';
+/** PostgREST's JSON path selection: only `data.javascript.levels` of the
+ * roadmap row, as the column `levels` (null when the row has none). */
+export const JAVASCRIPT_LEVELS_SELECT = 'levels:data->javascript->levels';
 
 const toProgress = (row: ProgressRow): CodingTaskProgress => ({
   status: row.status,
@@ -110,17 +113,32 @@ async function loadProgressRow(supabase: SupabaseClient, userId: string, taskId:
   return data ? toProgress(data as ProgressRow) : null;
 }
 
+/** The ids of the account's passed tasks. The tier ladder, the evolving gate
+ * and review of cleared content need nothing else of the rows, so the task
+ * page and a stage Submit read these instead of every row in full (#587,
+ * server item 9): a learner who touched most of the catalogue had up to 769
+ * rows of eight columns sent for a set of ids. */
+async function loadPassedTaskIds(supabase: SupabaseClient, userId: string): Promise<Set<string>> {
+  const { data, error } = await withTimeout(
+    supabase.from('coding_progress').select('task_id,status').eq('user_id', userId).eq('status', 'passed'),
+  );
+  if (error) throw new Error('db_error');
+  return new Set(((data ?? []) as { task_id: string; status: string }[]).filter((row) => row.status === 'passed').map((row) => row.task_id));
+}
+
 /** Highest contiguous cleared `javascript` Learn level, from the roadmap blob.
  * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`).
- * Throws when the row cannot be read, as a timeout already did: read as 0, a
- * failed read locked tier 3 for a learner who had opened it, and the task
- * page then sealed no session for it. A caller for which fewer cleared levels
- * only narrows what it offers catches it. */
+ * Only the JavaScript levels are read (`data->javascript->levels`): the rest
+ * of the blob, every other topic with its pass days, used to travel with
+ * every task page and coding-progress read for this one count (#587, server
+ * item 9). Throws when the row cannot be read, as a timeout already did: read
+ * as 0, a failed read locked tier 3 for a learner who had opened it, and the
+ * task page then sealed no session for it. A caller for which fewer cleared
+ * levels only narrows what it offers catches it. */
 export async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { data, error } = await withTimeout(supabase.from('roadmap_progress').select('data').eq('user_id', userId).maybeSingle());
+  const { data, error } = await withTimeout(supabase.from('roadmap_progress').select(JAVASCRIPT_LEVELS_SELECT).eq('user_id', userId).maybeSingle());
   if (error) throw new Error('db_error');
-  if (!data?.data) return 0;
-  const levels = ((data.data as Record<string, { levels?: Record<string, { passed?: boolean }> }>).javascript?.levels) ?? {};
+  const levels = ((data as { levels?: Record<string, { passed?: boolean }> | null } | null)?.levels) ?? {};
   let cleared = 0;
   while (levels[String(cleared + 1)]?.passed === true) cleared++;
   return cleared;
@@ -261,15 +279,15 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
     // request remembers (a failure is asked again there and answered 503).
     if (contentTier(gated, serverContentIndex()) === 'premium') void resolveTier(userId).catch(() => undefined);
     try {
-      const [rows, cleared, draftRow] = await Promise.all([
-        loadProgressRows(supabase, userId),
+      // The passed ids and this task's own row, not every row in full.
+      const [passed, mine, cleared, draftRow] = await Promise.all([
+        loadPassedTaskIds(supabase, userId),
+        loadProgressRow(supabase, userId, task.id),
         javascriptLevelsCleared(supabase, userId),
         withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', task.id).maybeSingle()),
       ]);
-      const passed = new Set(rows.filter((row) => row.status === 'passed').map((row) => row.task_id));
       passedIds = passed;
-      const mine = rows.find((row) => row.task_id === task.id);
-      progress = mine ? toProgress(mine) : null;
+      progress = mine;
       // An unreadable draft is not "no draft": the page would open the
       // starter (or an evolving stage's previous code) over the account's
       // saved code, which a stage Submit then overwrites. The previous
@@ -824,8 +842,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (userId) {
     if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
     if (evolvingStage(task.id)) {
-      const rows = await loadProgressRows(supabase, userId);
-      const passed = new Set(rows.filter(row => row.status === 'passed').map(row => row.task_id));
+      const passed = await loadPassedTaskIds(supabase, userId);
       if (!evolvingUnlocked(task.id, passed)) return jsonError(res, 403, 'stage_locked', 'Complete earlier stages first');
       // Persist the exact submitted code before publishing completion. A next
       // stage can then resume from this draft even on another device. It is

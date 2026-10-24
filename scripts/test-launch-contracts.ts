@@ -5863,9 +5863,12 @@ async function main() {
       const levels = Object.fromEntries(Array.from({ length: CODING_FOUNDATION_LEVELS }, (_, index) => [String(index + 1), { passed: true }]));
       const started: Record<string, unknown>[] = [];
       const from = (table: string) => {
+        let columns = '';
         const chain = {
-          select: () => chain, eq: () => chain, in: () => chain, order: () => chain, limit: () => chain,
-          maybeSingle: () => Promise.resolve({ data: table === 'roadmap_progress' ? { data: { javascript: { levels } } } : null, error: null }),
+          select: (asked: string) => { columns = asked; return chain; }, eq: () => chain, in: () => chain, order: () => chain, limit: () => chain,
+          // As PostgREST answers: the whole blob for `data`, the levels alone
+          // for the JSON path the coding handlers ask for (#587 item 9).
+          maybeSingle: () => Promise.resolve({ data: table === 'roadmap_progress' ? (columns === 'levels:data->javascript->levels' ? { levels } : { data: { javascript: { levels } } }) : null, error: null }),
           then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...passedIds].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
         };
         return chain;
