@@ -22,3 +22,6 @@ try {
  assert.match(nested.headers['Server-Timing'],/db_http;dur=[\d.]+;desc="1 calls"/);
  console.log('PASS timing: overlapping request isolation, concurrent spans, response-before-send, no query/payload identifiers, method restoration');
 }finally{globalThis.fetch=fetch;}
+// What a fresh instance evaluates before it answers (#587): heavy modules
+// load behind dynamic import() in the ops that need them.
+await (await import('./cold-start-contracts')).coldStartContracts();
