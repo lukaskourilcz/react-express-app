@@ -20,7 +20,8 @@
  *  - api/user/[op].ts loads its op families on first call (server item 3):
  *    a fresh instance evaluates no grader, no TypeScript, no Stripe and no
  *    coding catalogue before it answers, and an op that needs them loads them
- *    and answers;
+ *    and answers; the wallet loads the tier gate without the coding
+ *    catalogue, which lib/access.ts reads on first use;
  *  - api/quiz/roadmap.ts does the same for its coding and learning-path
  *    resources, the tier check and a code level's tasks (server item 4);
  *  - only the roadmap function ships the compiler's lib files and the grader
@@ -44,10 +45,14 @@ interface Loaded {
 
 /** Bundle `entry` as @vercel/node would ship it and require it in a fresh
  * process. `probe` is a JavaScript expression evaluated in that process with
- * `mod` bound to the module's exports, after the require. */
-export async function loadFresh(entry: string, probe = 'null', extraEnv: Record<string, string> = {}): Promise<Loaded> {
+ * `mod` bound to the module's exports, after the require. Each repository
+ * file named in `markers` records itself in `globalThis.__evaluated` when it
+ * evaluates, so a probe can tell whether a module of our own (which has no
+ * package to look for) ran. */
+export async function loadFresh(entry: string, probe = 'null', extraEnv: Record<string, string> = {}, markers: string[] = []): Promise<Loaded> {
   mkdirSync(out, { recursive: true });
-  const outfile = join(out, `${entry.replace(/[/[\]]/g, '_').replace(/\.ts$/, '')}.cjs`);
+  const outfile = join(out, `${entry.replace(/[/[\]]/g, '_').replace(/\.ts$/, '')}${markers.length ? '-marked' : ''}.cjs`);
+  const { readFile } = await import('node:fs/promises');
   await build({
     entryPoints: [join(root, entry)],
     bundle: true,
@@ -57,6 +62,17 @@ export async function loadFresh(entry: string, probe = 'null', extraEnv: Record<
     outfile,
     logLevel: 'warning',
     absWorkingDir: root,
+    plugins: markers.length ? [{
+      name: 'evaluation-markers',
+      setup(plugin) {
+        const wanted = new Set(markers.map((file) => join(root, file)));
+        plugin.onLoad({ filter: /\.ts$/ }, async (args) => {
+          if (!wanted.has(args.path)) return undefined;
+          const marker = `(globalThis.__evaluated ??= []).push(${JSON.stringify(args.path.slice(root.length + 1))});\n`;
+          return { contents: marker + await readFile(args.path, 'utf8'), loader: 'ts' };
+        });
+      },
+    }] : [],
   });
   const code = [
     `const mod = require(${JSON.stringify(outfile)});`,
@@ -157,6 +173,27 @@ export async function coldStartContracts(): Promise<void> {
       return { before, after: loaded(), status: res.statusCode, code: res.body && res.body.error && res.body.error.code };
     })()`, { SUPABASE_URL: 'http://127.0.0.1:9', SUPABASE_ANON_KEY: 'cold-start-anon', SUPABASE_SERVICE_ROLE_KEY: 'cold-start-service' });
     assert.deepEqual(called.probe, { before: false, after: true, status: 401, code: 'missing_token' }, 'a coding op loads its handlers on first call and answers');
+    // The wallet, read on every signed-in page, loads the rewards handlers
+    // and the tier gate (lib/access.ts) but not the coding catalogue, which
+    // the gate reads only for a coding task.
+    const wallet = await loadFresh('api/user/[op].ts', `(async () => {
+      const res = { statusCode: 200, headers: {}, body: undefined, headersSent: false,
+        setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; }, getHeader(k) { return this.headers[k.toLowerCase()]; },
+        status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; this.headersSent = true; return this; }, end() { this.headersSent = true; return this; } };
+      await mod.default({ method: 'GET', headers: { 'x-forwarded-for': '198.51.100.9' }, query: { op: 'wallet' }, url: '/api/user/wallet', socket: {} }, res);
+      return { evaluated: globalThis.__evaluated ?? [], status: res.statusCode };
+    })()`, { SUPABASE_URL: 'http://127.0.0.1:9', SUPABASE_ANON_KEY: 'cold-start-anon', SUPABASE_SERVICE_ROLE_KEY: 'cold-start-service' },
+    ['lib/rewards/handlers.ts', 'lib/access.ts', 'lib/coding/active.ts']);
+    assert.deepEqual(wallet.probe, { evaluated: ['lib/access.ts', 'lib/rewards/handlers.ts'], status: 401 }, 'the wallet loads the tier gate without the coding catalogue');
+    // The gate still reads the catalogue's free flags the moment a coding
+    // task is asked about.
+    const gated = await loadFresh('lib/access.ts', `(() => {
+      const before = (globalThis.__evaluated ?? []).includes('lib/coding/active.ts');
+      const index = mod.serverContentIndex();
+      const free = index.coding.find((task) => task.free === true);
+      return { before, after: (globalThis.__evaluated ?? []).includes('lib/coding/active.ts'), free: Boolean(free), same: index.coding === mod.serverContentIndex().coding };
+    })()`, {}, ['lib/coding/active.ts']);
+    assert.deepEqual(gated.probe, { before: false, after: true, free: true, same: true }, 'the content index loads the coding summaries on first read, once');
     console.log('PASS cold start: api/user/[op].ts loads no grader, TypeScript, Stripe or coding catalogue before its first answer');
   }
 

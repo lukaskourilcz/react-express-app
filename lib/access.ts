@@ -35,7 +35,6 @@ import {
 } from './http';
 import { contentTier, type ContentIndex, type GatedContent, type Tier } from '../shared/tiers';
 import { EVOLVING_CHALLENGES } from '../shared/evolving';
-import { CODING_SUMMARIES } from './coding/active';
 import { ROADMAP_TOPICS, topicLevelCount } from './roadmap';
 
 export { PremiumRequiredError };
@@ -52,13 +51,29 @@ export class EntitlementUnavailableError extends Error {
   }
 }
 
+/** The issuable coding summaries, loaded when a gate first asks about a
+ * coding task. `./coding/active` evaluates the whole coding catalogue with
+ * its reference solutions and the eligibility gate (about 170 ms and 20 MB
+ * of heap, measured offline), and every importer of this module paid it at
+ * load: the wallet read on every signed-in page among them, through
+ * lib/rewards/handlers.ts (#587, server item 3). A Learn level, a learning
+ * path or the merchandise gate never reads them. A plain `require` keeps the
+ * load synchronous, as `contentTier` is, and is what @vercel/node's file
+ * tracer follows. */
+let codingSummaries: ContentIndex['coding'] | null = null;
+function loadCodingSummaries(): ContentIndex['coding'] {
+  codingSummaries ??= (require('./coding/active') as typeof import('./coding/active')).CODING_SUMMARIES;
+  return codingSummaries;
+}
+
 let index: ContentIndex | null = null;
 /** The server's `ContentIndex`: the issuable coding summaries with their
- * projected `free` flags, evolving registry, authored level counts and path manifests. */
+ * projected `free` flags (read on first use), evolving registry, authored
+ * level counts and path manifests. */
 export function serverContentIndex(): ContentIndex {
   index ??= {
     levelCounts: Object.fromEntries(ROADMAP_TOPICS.map((topic) => [topic, topicLevelCount(topic)])),
-    coding: CODING_SUMMARIES,
+    get coding() { return loadCodingSummaries(); },
     learningPaths: LEARNING_PATHS,
     evolving: EVOLVING_CHALLENGES,
   };

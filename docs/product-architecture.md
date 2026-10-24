@@ -1963,6 +1963,20 @@ switches and integrations:
 - `DEVSHARK_MARKETING_EXPORT_SECRET` for the marketing source export; no
   environment sets it.
 
+What a new function instance evaluates before its first answer (#587): the
+user and roadmap routers load their heavy op families (coding, learning
+paths, rewards, billing, the tier check) on first call (`lazyExport` in
+`lib/http.ts`); TypeScript loads on the first complexity estimate or
+in-thread check; the coding source versions are hashed on first read;
+`/api/settings` publishes the path capability from
+`lib/learning-paths/capability.ts` without the path handlers; and
+`lib/access.ts` reads the coding catalogue's free flags on the first gate
+that asks about a coding task, so the wallet and the Learn and path gates do
+not evaluate the catalogue with its reference solutions (about 170 ms
+measured offline). The first request of an op still pays for its own
+family. `npm run test:performance` (`scripts/cold-start-contracts.ts`) pins
+what each function loads.
+
 The footer carries the legal links, devShark's own social profiles, and the
 appearance and sound controls, and promotes no other product.
 
