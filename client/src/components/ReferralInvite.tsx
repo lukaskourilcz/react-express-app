@@ -112,7 +112,9 @@ export function ReferralInvite({ signedIn, restoring = false }: { signedIn: bool
                 aria-describedby={statusId}
                 onFocus={(event) => event.currentTarget.select()}
               />
-              <Button variant="primary" label={t('rewards.invite.copy')} onClick={() => void onCopy()} />
+              {/* A utility beside its field, not the page's task: secondary,
+                  so /shop keeps its filled buttons for buying. */}
+              <Button variant="secondary" label={t('rewards.invite.copy')} onClick={() => void onCopy()} />
             </div>
             <p id={statusId} className="rw-invite__status" role="status" aria-live="polite">
               {!spoken ? '' : copy === 'copied' ? t('rewards.invite.copied') : copy === 'failed' ? t('rewards.invite.copyFailed') : ''}
