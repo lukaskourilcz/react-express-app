@@ -37,6 +37,7 @@ interface Account {
   email: string;
   confirmed: boolean;
   appMetadata?: Record<string, unknown>;
+  userMetadata?: Record<string, unknown>;
   identities?: Record<string, unknown>[];
 }
 const A: Account = { id: '1a2b3c4d-0000-4000-8000-00000000000a', token: 'caller-a', email: 'a@example.invalid', confirmed: true };
@@ -89,7 +90,21 @@ const JWT_DELETED = jwtAccount(5);
 const JWT_OUTAGE = jwtAccount(6);
 const JWT_WRITER = jwtAccount(7);
 const JWT_ACCOUNTS = [JWT_LEARNER, JWT_TOGETHER, JWT_SHORT, JWT_ADMIN, JWT_DELETED, JWT_OUTAGE, JWT_WRITER];
-const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE, ...JWT_ACCOUNTS];
+// An account whose saved learner profile Supabase Auth returns with the
+// token check, as it returns every account's user_metadata.
+const PROFILED: Account = {
+  id: '1a2b3c4d-0000-4000-8000-000000000013',
+  token: 'profiled-learner',
+  email: 'profiled@example.invalid',
+  confirmed: true,
+  userMetadata: {
+    devquiz_learner_profile_v2: {
+      schemaVersion: 2, baseTrack: 'backend', specialization: null, sections: ['software-engineer'],
+      goals: ['level-up'], experience: 'some', studyTime: '30-60', updatedAt: '2026-09-01T00:00:00Z',
+    },
+  },
+};
+const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE, PROFILED, ...JWT_ACCOUNTS];
 /** Tokens the stand-in now refuses (a session ended elsewhere), and tokens
  * for which it answers 500, as Supabase Auth does when it is down. */
 const revokedTokens = new Set<string>();
@@ -162,7 +177,7 @@ async function startStandIns() {
         email: account.email,
         ...(account.confirmed ? { email_confirmed_at: '2026-09-01T00:00:00Z' } : {}),
         app_metadata: account.appMetadata ?? {},
-        user_metadata: {},
+        user_metadata: account.userMetadata ?? {},
         identities: account.identities ?? [],
       });
     }
@@ -171,6 +186,12 @@ async function startStandIns() {
     if (adminUser && req.method === 'DELETE') {
       seen.push({ method: 'DELETE', path: url.pathname, filters: {}, body: await readBody(req).then((raw) => raw ? JSON.parse(raw) as unknown : undefined) });
       return send(200, {});
+    }
+    // The admin API saving an account's user_metadata (a learning preference).
+    if (adminUser && req.method === 'PUT') {
+      const saved = await readBody(req).then((raw) => raw ? JSON.parse(raw) as Row : {});
+      seen.push({ method: 'PUT', path: url.pathname, filters: {}, body: saved });
+      return send(200, { id: adminUser[1], aud: 'authenticated', user_metadata: saved.user_metadata ?? {} });
     }
     const raw = req.method === 'GET' ? '' : await readBody(req);
     const body = raw ? JSON.parse(raw) as unknown : undefined;
@@ -710,11 +731,30 @@ async function main() {
     // Supabase Auth is asked once for both.
     authChecks = 0;
     const preferenceSave = await user('learning-preference', { method: 'PUT', account: A, body: { schemaVersion: 1, baseTrack: 'frontend', specialization: null } });
-    // The stand-in stores nothing, so the op stops after its first read; the
-    // caller was verified by then.
+    // The account carries no saved answers, so the save writes the track
+    // alone; the caller was verified by then.
     assert.notEqual(preferenceSave.statusCode, 401, JSON.stringify(preferenceSave.body));
     assert.equal(authChecks, 1, 'a learning-preference write asks Supabase Auth once, for the rate limit and the op alike');
     console.log('PASS verified caller: a learning-preference write verifies its token once');
+
+    // The write merges with the answers Supabase Auth returned with that
+    // token check (#587, server item 23): no admin re-read of the account.
+    // A PUT never trusts an earlier acceptance, so the record is this
+    // request's own.
+    seen.length = 0;
+    authChecks = 0;
+    const partialSave = await user('learning-preference', { method: 'PUT', account: PROFILED, body: { schemaVersion: 1, baseTrack: 'frontend', specialization: null } });
+    assert.equal(partialSave.statusCode, 200, JSON.stringify(partialSave.body));
+    assert.equal(authChecks, 1, 'the preference write asks Supabase Auth once');
+    assert.equal(seen.filter((one) => one.method === 'GET' && one.path === `/auth/v1/admin/users/${PROFILED.id}`).length, 0,
+      'and does not read the account again through the admin API');
+    const adminWrites = seen.filter((one) => one.method === 'PUT' && one.path === `/auth/v1/admin/users/${PROFILED.id}`);
+    assert.equal(adminWrites.length, 1, 'the preference is written once, for the verified account');
+    const writtenProfile = (adminWrites[0].body as { user_metadata?: Record<string, Row> }).user_metadata?.devquiz_learner_profile_v2;
+    assert.equal(writtenProfile?.baseTrack, 'frontend', 'the save changes the track it sent');
+    assert.deepEqual([writtenProfile?.goals, writtenProfile?.experience, writtenProfile?.studyTime, writtenProfile?.sections],
+      [['level-up'], 'some', '30-60', ['software-engineer']], 'and keeps the saved answers the token check returned');
+    console.log('PASS verified caller: a learning-preference write merges with the verified account, without an admin re-read');
 
     // A board routine that does not answer in time is the database busy, not
     // a fault: 503, which the client may retry, rather than 500.

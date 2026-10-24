@@ -1661,6 +1661,15 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   redemption, and a deleted account's token is forgotten at once on the
   instance that deleted it (`forgetVerifiedToken`). `npm run test:launch`
   (verified-caller suite) pins each bound.
+- **Learning-preference save** (#587, server item 23). A PUT merges the new
+  answers with the `user_metadata` Supabase Auth returned for the request's
+  own token check (a PUT never trusts an earlier acceptance, so it is the
+  account as Auth holds it now), then writes once with `updateUserById`: one
+  admin API round trip where there were two. Only a verified result without
+  `user_metadata` (the local development fallback) still reads the account
+  through `getUserById`. The GET keeps `getUserById`: a GET may trust an
+  acceptance up to a minute old, whose metadata can predate a save made in
+  that minute.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which

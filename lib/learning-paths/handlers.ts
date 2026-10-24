@@ -313,6 +313,14 @@ function recommendedBridges(path: MergedPath, competencies: CompetencyResult[], 
 
 /* ── preference ───────────────────────────────────────────────────────── */
 
+/** The `user_metadata` of a user record Supabase Auth returned for the
+ * token, or null when the verified result carries none (lib/auth.ts's local
+ * development fallback is `{ sub }` alone). */
+function verifiedUserMetadata(payload: Record<string, unknown>): Record<string, unknown> | null {
+  const metadata = payload.user_metadata;
+  return metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? (metadata as Record<string, unknown>) : null;
+}
+
 /** GET/PUT /api/user/[op]?op=learning-preference */
 export async function handleLearningPreference(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!pathsAvailable()) return notAvailable(res);
@@ -373,13 +381,25 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
 
     // Read what the account already holds so a partial save — the Profile's
     // track toggle, which sends no profile answers — keeps the rest.
-    const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
-    // Without the saved answers a partial save would write empty goals,
-    // experience and study time over them, so nothing is written.
-    if (existingRead.error) {
-      return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
+    // The token check above already returned the account (#587, server item
+    // 23): a PUT never trusts an earlier acceptance (lib/auth.ts, "Reads
+    // only"), so `auth.payload` is Supabase Auth's answer for this very
+    // request, the same user record getUserById would fetch a moment later.
+    // Only a payload without `user_metadata` (the local development fallback)
+    // still asks the admin API.
+    const verifiedMeta = verifiedUserMetadata(auth.payload);
+    let existingMeta: Record<string, unknown>;
+    if (verifiedMeta) {
+      existingMeta = verifiedMeta;
+    } else {
+      const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
+      // Without the saved answers a partial save would write empty goals,
+      // experience and study time over them, so nothing is written.
+      if (existingRead.error) {
+        return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
+      }
+      existingMeta = (existingRead.data?.user?.user_metadata ?? {}) as Record<string, unknown>;
     }
-    const existingMeta = (existingRead.data?.user?.user_metadata ?? {}) as Record<string, unknown>;
     const existing = parseLearnerProfile(existingMeta[LEARNER_PROFILE_META_KEY])
       ?? profileFromPreference(parseLearningPreference(existingMeta[LEARNING_PREFERENCE_META_KEY]));
 
