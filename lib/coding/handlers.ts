@@ -586,16 +586,6 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   // task) records the attempt and the progress row with no XP, so no coins.
   const xp = input.verified ? codingPassXp(input.complexity) : 0;
   const roadmapAttemptId = input.verified ? session.roadmapAttemptId ?? null : null;
-  // Whether the solution was revealed before this pass, read before the pass
-  // is written, for a database without migration 058, whose routine says it
-  // itself. Only a pass can forfeit XP, so nothing else pays for the read.
-  let revealedBefore = false;
-  if (input.verdict === 'passed') {
-    try {
-      const before = await loadProgressRow(supabase, userId, task.id);
-      revealedBefore = before !== null && before.status !== 'passed' && before.revealCount > 0;
-    } catch { /* unknown: the verdict then claims no forfeit */ }
-  }
   const saved = await withTimeout(
     supabase.rpc('record_coding_verdict', {
       p_user_id: userId,
@@ -654,6 +644,14 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   if (credited.status === 'rejected') throw credited.reason;
   if (read.status === 'rejected') throw read.reason;
   const progress = read.value;
+  // Whether a reveal came before this pass, for a database without migration
+  // 058, whose routine does not say it itself. Its first pass is the row's
+  // first (`passes` was 0, so the row did not read 'passed'), and the verdict
+  // routine leaves reveal_count alone, so the row read back above tells what
+  // a read before the write did (#587, server item 10). That read used to
+  // run before every pass, also on 058 and later, where its answer went
+  // unused.
+  const revealedBefore = (progress?.revealCount ?? 0) > 0;
   return {
     progress,
     firstPass: data.firstPass === true,
@@ -667,7 +665,7 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     // cost it the XP (C1-7).
     xpForfeited: typeof data.xpForfeited === 'boolean'
       ? data.xpForfeited && data.applied === true && !xpAwarded && xp > 0
-      : revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
+      : revealedBefore && input.verdict === 'passed' && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
     repeatXp: repeatXpOf(data.repeatXp),
     applied: data.applied === true,
     codeChanged: data.codeChanged === true,

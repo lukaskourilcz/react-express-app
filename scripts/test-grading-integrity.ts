@@ -163,6 +163,8 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const xp = new Set<string>();
   const attemptIds: string[] = [];
   const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+  // Every read and routine call in the order the handler made it.
+  const events: string[] = [];
   const result = (data: unknown) => Promise.resolve({ data, error: null });
   const progressRow = (taskId: unknown, row: ProgressFake) => ({
     task_id: taskId, track: 'javascript', status: row.status, passes: row.passes,
@@ -175,6 +177,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
       eq: (column: string, value: unknown) => { filters[column] = value; return chain; },
       in: () => chain,
       maybeSingle: () => {
+        events.push(`read:${table}`);
         if (table === 'roadmap_attempts') return result(levels.get(String(filters.attempt_id)) ?? null);
         if (table === 'coding_progress') {
           const row = progress.get(`${filters.user_id}:${filters.task_id}`);
@@ -183,17 +186,18 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
         return result(null);
       },
       // A list read of coding_progress returns the account's rows.
-      then: (resolve: (value: unknown) => unknown) => resolve({
+      then: (resolve: (value: unknown) => unknown) => (events.push(`list:${table}`), resolve({
         data: table === 'coding_progress'
           ? [...progress].filter(([key]) => key.startsWith(`${filters.user_id}:`)).map(([key, row]) => progressRow(key.slice(key.indexOf(':') + 1), row))
           : [],
         error: null,
-      }),
+      })),
     };
     return chain;
   };
   const rpc = (name: string, args: Record<string, unknown>) => {
     rpcCalls.push({ name, args });
+    events.push(`rpc:${name}`);
     if (name === 'record_coding_reveal') {
       const key = `${args.p_user_id}:${args.p_task_id}`;
       const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
@@ -233,7 +237,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     }
     return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass, ...(options.firstVerifiedPass ? { xpForfeited } : {}) });
   };
-  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls, levels };
+  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls, levels, events };
 }
 
 {
@@ -424,7 +428,14 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const run = play(after048, learner);
   await run.reveal();
   assert.equal(after048.progress.get(`${learner}:js-double-numbers`)?.status, 'revealed');
+  const readsBefore = after048.events.length;
   const forfeited = await run.submit(reference.solution);
+  // #587 server item 10: the pass reads its progress row once, after the
+  // verdict is written; no read before the write, which only a pre-058
+  // database needed and which the row read back now answers.
+  const passEvents = after048.events.slice(readsBefore);
+  assert.deepEqual(passEvents.filter((event) => event === 'read:coding_progress' || event === 'rpc:record_coding_verdict'), ['rpc:record_coding_verdict', 'read:coding_progress'],
+    `a pass reads its progress row only after the verdict is written (${passEvents.join(', ')})`);
   assert.equal(forfeited.verdict, 'passed');
   assert.equal(forfeited.firstPass, true);
   assert.equal(forfeited.xpAwarded, 0, 'migration 048 pays nothing for a first pass after a reveal');
@@ -489,7 +500,10 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
 
   const revealed = 'user-legacy-0002';
   db.progress.set(`${revealed}:${id}`, { status: 'passed', passes: 1, revealCount: 1, verified: false });
+  const readsBefore = db.events.length;
   const forfeited = await submit(revealed, reference.solution);
+  assert.deepEqual(db.events.slice(readsBefore).filter((event) => event === 'read:coding_progress' || event === 'rpc:record_coding_verdict'), ['rpc:record_coding_verdict', 'read:coding_progress'],
+    'on 058 a pass reads its progress row once, after the verdict (#587 item 10)');
   assert.equal(forfeited.xpAwarded, 0, 'a reveal before the first verified pass still costs its XP');
   assert.equal(forfeited.xpForfeited, true, 'and the verdict says so, though the row already read passed');
   assert.equal(coinCredits(revealed).length, 0, 'no coins either');
