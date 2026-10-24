@@ -12,7 +12,9 @@
  *  - a read that fails in that minute keeps the good set (a hidden question
  *    stays hidden); past the minute a request waits for the read, and a
  *    failure there serves the bank alone, as before;
- *  - a read begun before an admin save does not become the cached set.
+ *  - a read begun before an admin save does not become the cached set;
+ *  - a background read cut off by a frozen instance is not waited for and
+ *    never becomes the cached set.
  * Run as its own process by scripts/test-request-timing.ts. Nothing leaves
  * the machine. */
 
@@ -135,7 +137,34 @@ try {
   served = await store.getEffectiveQuestionsById('webdev');
   assert.equal(served.has(hidden), false, 'and the read begun before it did not replace it');
   console.log('PASS questions cache: a read begun before an admin save does not become the cached set');
+
+  // A background read cut off by an instance frozen after its response is
+  // left behind: the request that wakes it reads for itself, and the answer
+  // read before the freeze never replaces what that request read.
+  offset += 20_000;
+  rows = [];
+  held = true;
+  served = await store.getEffectiveQuestionsById('webdev');
+  assert.equal(served.has(hidden), false, 'the good set is served while the background read runs');
+  await settle();
+  const stuck = selects.length;
+  offset += 70_000;
+  held = false;
+  rows = [hide, edit];
+  const thawed = store.getEffectiveQuestionsById('webdev');
+  assert.equal(await settlesSoon(thawed), true, 'the request after the freeze does not wait for the read left behind');
+  served = await thawed;
+  assert.equal(selects.length, stuck + 1, 'it starts a read of its own');
+  assert.equal(served.get(edited)?.explanation, 'Edited in the console.', 'and is served what that read found');
+  releases.splice(0).forEach((release) => release());
+  await settle();
+  served = await store.getEffectiveQuestionsById('webdev');
+  assert.equal(served.has(hidden), false, 'the read from before the freeze does not unhide a question');
+  assert.equal(served.get(edited)?.explanation, 'Edited in the console.', 'nor replace the set read after it');
+  assert.equal(selects.length, stuck + 1, 'and nothing else is read');
+  console.log('PASS questions cache: a read cut off by a frozen instance is left behind, not waited for or cached');
 } finally {
+  releases.splice(0).forEach((release) => release());
   Date.now = realNow;
   server.close();
 }

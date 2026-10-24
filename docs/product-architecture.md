@@ -1750,7 +1750,10 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   instance); past the minute a failure serves the bank alone, as before. The
   read names the twelve columns the store uses instead of `*`, which also
   sent the retired cs_* text. A read begun before an admin save never
-  becomes the cached set after it. Edits reach every instance within about
+  becomes the cached set after it, and neither does a background read still
+  unsettled after five seconds (cut off by an instance frozen once its
+  response went out): the next request reads for itself instead of waiting
+  for it. Edits reach every instance within about
   15 seconds plus one request. `npm run test:performance`
   (`scripts/test-questions-cache.ts`) pins each bound.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that

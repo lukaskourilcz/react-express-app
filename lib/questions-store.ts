@@ -202,12 +202,25 @@ let overrideInflight: Promise<Map<string, QuestionEditRow> | null> | null = null
  * must not become the cached set after it. */
 let overrideGeneration = 0;
 
+/** `withTimeout` ends a live read at four seconds, so a read still unsettled
+ * after this long was cut off by an instance frozen once its response went
+ * out: the read the stale path below starts in the background, which no
+ * response waits for. It is left behind. The next request starts a read of
+ * its own instead of waiting for it, and its answer, read before the freeze
+ * (or a failure on waking), never becomes the cached set. */
+const READ_ABANDON_MS = 5_000;
+let overrideInflightAt = 0;
+/** The latest read started: an older one that settles later caches nothing. */
+let overrideReadSeq = 0;
+
 /** Read the override rows, one read at a time per instance. */
 function refreshOverrides(): Promise<Map<string, QuestionEditRow> | null> {
-  if (overrideInflight) return overrideInflight;
+  if (overrideInflight && Date.now() - overrideInflightAt < READ_ABANDON_MS) return overrideInflight;
   if (!supabase) return Promise.resolve(null);
   const client = supabase;
   const generation = overrideGeneration;
+  const seq = ++overrideReadSeq;
+  const startedAt = Date.now();
   const previous = overrideCache;
   const loading: Promise<Map<string, QuestionEditRow> | null> = (async () => {
     let value: Map<string, QuestionEditRow> | null;
@@ -217,7 +230,9 @@ function refreshOverrides(): Promise<Map<string, QuestionEditRow> | null> {
     } catch {
       value = null;
     }
-    if (generation !== overrideGeneration) return value;
+    // An admin save since it began, a newer read, or a freeze: the read
+    // answers its own callers and caches nothing.
+    if (generation !== overrideGeneration || seq !== overrideReadSeq || Date.now() - startedAt >= READ_ABANDON_MS) return value;
     if (!value && previous?.value && Date.now() - previous.at < STALE_SERVE_MS) return previous.value;
     overrideCache = { at: Date.now(), value };
     return value;
@@ -225,6 +240,7 @@ function refreshOverrides(): Promise<Map<string, QuestionEditRow> | null> {
     if (overrideInflight === loading) overrideInflight = null;
   });
   overrideInflight = loading;
+  overrideInflightAt = startedAt;
   return loading;
 }
 
