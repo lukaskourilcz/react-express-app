@@ -1695,6 +1695,21 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   beside the enrollment read; the plan check still runs on the path the
   enrollment names, after ownership is proven, and a free activity asks for
   no tier.
+- **Wallet read settlements** (#587, server item 7). A wallet GET runs
+  `grant_signup_tokens`, `settle_month_top3`, `settle_coin_milestones` and
+  `credit_referral` before it reads. A warm instance skips, for an account and
+  at most ten minutes, the two that answered a state no later call can
+  change: the welcome grant once it answered at all (`signup:<account>` is in
+  the ledger), and the account's own invitation once it is credited
+  (`already`, `credited`, `capped`, `orphaned`) or absent past the sign-up
+  window plus an hour (`none` when `record_referral` can no longer bind one).
+  The month already had its per-instance memory, and the milestones always
+  run because the screen shows their report. A miss only costs the call; the
+  database stays the authority and nothing is granted from memory. The bound
+  for the owner: should an erasure remove the ledger while the sign-in
+  identity survives (the deletion's Auth step failed), that instance skips a
+  welcome grant the database would pay again for up to ten minutes. At most
+  5,000 accounts per instance. `npm run test:launch` pins it.
 - **Learn completion round trips** (#587, server item 5). A completion reads
   the attempt, the graded answers, the served set and, on a code level, the
   coding rows together, with the tier gate of a Premium level: one wave where

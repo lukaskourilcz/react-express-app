@@ -35,7 +35,7 @@ import {
 } from '../lib/quiz-tokens';
 import { addressKey, checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
-import { handleCosmetic, handlePaymentWebhook, handleWallet, webhookDecision } from '../lib/rewards/handlers';
+import { forgetWalletSettlements, handleCosmetic, handlePaymentWebhook, handleWallet, referralFinal, webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
 import roadmapHandler from '../api/quiz/roadmap';
@@ -6125,6 +6125,73 @@ async function main() {
     failing.add('cosmetic_entitlements');
     const broken = await read();
     assert.equal(broken.statusCode, 500, 'a failed cosmetics read is an error, not an empty list');
+  }
+
+  // ── the wallet read skips the settlements it has seen final ──────────────
+  // #587, server item 7: once grant_signup_tokens has answered (the
+  // `signup:<account>` event is in the ledger) and credit_referral has
+  // answered a state no later call can change, a warm instance skips them for
+  // that account. Every other answer, and every error, is asked again, and
+  // the milestone settlement (whose report the screen shows) always runs.
+  {
+    const called: { fn: string; user: unknown }[] = [];
+    const answers: Record<string, (user: string) => { data: unknown; error: unknown }> = {
+      grant_signup_tokens: (user) => (user.endsWith('broken') ? { data: null, error: { code: '57014', message: 'timeout' } } : { data: !user.endsWith('again'), error: null }),
+      credit_referral: (user) => ({ data: user.includes('waiting') ? 'waiting' : user.includes('uninvited') ? 'none' : 'already', error: null }),
+    };
+    const db = {
+      rpc: async (fn: string, params: Record<string, unknown>) => {
+        const user = String(params.p_user_id ?? params.p_invitee ?? '');
+        called.push({ fn, user });
+        return answers[fn]?.(user) ?? { data: null, error: null };
+      },
+      from: () => {
+        const link = {
+          select: () => link, eq: () => link, order: () => link, limit: () => link,
+          maybeSingle: async () => ({ data: { balance: 0 }, error: null }),
+          then: <A>(resolve: (value: { data: unknown[]; error: null }) => A) => resolve({ data: [], error: null }),
+        };
+        return link;
+      },
+    };
+    const read = async (user: string) => {
+      called.length = 0;
+      const res = mockResponse();
+      await handleWallet({ method: 'GET', headers: {}, query: { op: 'wallet', user_id: user } } as never, res as never, db as never);
+      assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      return { body: res.body as { welcome: { granted: boolean } }, fns: called.map((one) => one.fn) };
+    };
+    forgetWalletSettlements();
+    const first = await read('contract-wallet-settled');
+    assert.ok(first.fns.includes('grant_signup_tokens') && first.fns.includes('credit_referral'), `the first read settles: ${first.fns.join(', ')}`);
+    assert.equal(first.body.welcome.granted, true, 'the read that granted says so');
+    const second = await read('contract-wallet-settled');
+    assert.ok(!second.fns.includes('grant_signup_tokens'), 'a granted welcome is not asked again on this instance');
+    assert.ok(!second.fns.includes('credit_referral'), 'a settled invitation is not asked again on this instance');
+    assert.ok(second.fns.includes('settle_coin_milestones'), 'the milestones still settle on every read');
+    assert.equal(second.body.welcome.granted, false, 'and a later read reports nothing granted, as the routine would');
+    // "Already granted" is as final as "granted now".
+    await read('contract-wallet-again');
+    assert.ok(!(await read('contract-wallet-again')).fns.includes('grant_signup_tokens'), 'an already-granted welcome is not asked again');
+    // An error, and an invitation still waiting for a passed level, are asked again.
+    await read('contract-wallet-waiting-broken');
+    const retried = await read('contract-wallet-waiting-broken');
+    assert.ok(retried.fns.includes('grant_signup_tokens'), 'a welcome grant that failed is asked again');
+    assert.ok(retried.fns.includes('credit_referral'), 'an invitation still waiting is asked again');
+    forgetWalletSettlements('contract-wallet-settled');
+    assert.ok((await read('contract-wallet-settled')).fns.includes('grant_signup_tokens'), 'a forgotten account is asked again');
+    // `none` is final only when record_referral could no longer bind an
+    // invitation: the account is past the sign-up window (with an hour of
+    // margin), or Auth reported no creation time.
+    const now = Date.parse('2026-10-24T12:00:00Z');
+    const hoursAgo = (hours: number) => new Date(now - hours * 3_600_000).toISOString();
+    assert.equal(referralFinal('none', hoursAgo(1), now), false, 'a new account can still be invited');
+    assert.equal(referralFinal('none', hoursAgo(48.5), now), false, 'the margin keeps the window open a little longer');
+    assert.equal(referralFinal('none', hoursAgo(50), now), true, 'an account past the window cannot be invited any more');
+    assert.equal(referralFinal('none', null, now), true, 'nor one Auth reported no creation time for');
+    for (const status of ['already', 'credited', 'capped', 'orphaned'] as const) assert.equal(referralFinal(status, hoursAgo(1), now), true, status);
+    for (const status of ['waiting', 'off', null] as const) assert.equal(referralFinal(status, hoursAgo(100), now), false, String(status));
+    forgetWalletSettlements();
   }
 
   // ── the crown: only no op buys it ───────────────────────────────────────
