@@ -136,6 +136,31 @@ function LessonRunner(props: RunnerProps) {
   return Loaded ? <Loaded {...props} /> : <LazyLessonRunner {...props} />;
 }
 
+/** A step a press opens: an enabled level or part test on the map, or the
+ * next-step card's action. A Premium node opens the upgrade sheet instead. */
+const STEP_CONTROL = '.rm-path-canvas button:not([disabled]):not([aria-disabled="true"]), .rm-overview-card button';
+const savesData = (): boolean => (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+/**
+ * The runner's code starts loading when the learner shows they are about to
+ * open a step (perf baseline #587 C28): a mouse resting on it, keyboard focus,
+ * or a press. It used to start on the click, beside the level's own request.
+ * A visitor who asked the browser to save data loads it on the press only, as
+ * the route preloads do (lib/routePreload.ts).
+ */
+function warmRunnerOnIntent(event: { type: string; target: EventTarget | null; nativeEvent: Event }): void {
+  if (!(event.target instanceof Element) || !event.target.closest(STEP_CONTROL)) return;
+  const press = event.type === 'pointerdown' || event.type === 'touchstart';
+  if (event.type === 'pointerover' && (event.nativeEvent as PointerEvent).pointerType !== 'mouse') return;
+  if (!press && savesData()) return;
+  preloadLessonRunner();
+}
+const RUNNER_INTENT = {
+  onPointerOver: warmRunnerOnIntent,
+  onFocus: warmRunnerOnIntent,
+  onPointerDown: warmRunnerOnIntent,
+  onTouchStart: warmRunnerOnIntent,
+} as const;
+
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
 type Active = { kind: 'level' | 'test'; ref: number };
@@ -967,7 +992,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
 
       {/* Keyed by section: a switch fades the section in (rmTrackIn, none
           under reduced motion) and re-measures the map. */}
-      <div key={section} ref={sectionBodyRef} className="rm-track-in rm-section-body">
+      <div key={section} ref={sectionBodyRef} className="rm-track-in rm-section-body" {...RUNNER_INTENT}>
         <SectionHeader
           section={section}
           name={sectionName}

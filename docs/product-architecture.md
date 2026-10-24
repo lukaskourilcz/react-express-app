@@ -744,7 +744,12 @@ at once and never shows it. It used to hold the loader at least 1.2 s
 answered in 120 ms opened after about 1.8 s (#587 C05). The screen waits for
 the runner's code as well as the level, and a runner whose code is already
 here draws without suspending, so React's 300 ms reveal hold on a boundary
-that showed its fallback does not apply.
+that showed its fallback does not apply. The runner's code starts loading
+when a mouse rests on an open step of the map or the next-step card, when one
+takes keyboard focus, or on a press (#587 C28); a visitor who asked the
+browser to save data loads it on the press only. Prism, which the first code
+question loads, is not warmed yet: `CodeBlock.tsx` would have to export its
+loader.
 
 ## Learn sections
 
