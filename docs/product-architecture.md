@@ -663,8 +663,7 @@ shown once it has loaded.
   starter as authored or from what the last press produced, and a press that
   changes nothing turns it off until the next edit. Code Prettier cannot read
   says why in the notes beside the editor and turns Format off until the next
-  edit. Before,
-  the page formatted the whole program 350 ms after it opened and after every
+  edit. Before, the page formatted the whole program 350 ms after it opened and after every
   typing pause to decide whether Format was on (C02, C24).
 - **The editor** (CodeMirror, about 170 KB gzip of the workbench's 190) is
   its own chunk (`client/src/coding/loadEditor.ts`). A task screen fetches it
@@ -708,8 +707,10 @@ shown once it has loaded.
   preview cancelled by the server's answer) waits at most 1 s
   (`ABANDONED_CHECK_GRACE_MS`) and then drops it, so a runaway type holds no
   later Run for its whole 8 s; a compiler still downloading is waited for.
-  Before, the
-  compiler downloaded as the task opened and every Run evaluated it again in
+  A check whose Run was cancelled or whose task was left gets the same 1 s
+  and is then dropped even when no Run waits, so a runaway type does not
+  keep a core busy in the background (a Run's own worker used to be stopped
+  at once). Before, the compiler downloaded as the task opened and every Run evaluated it again in
   a new worker (C01). Trade-off: a reader who goes offline before touching
   the code or Run has no compiler for that Run (the runner says it could not
   load, never a failed attempt); the runner's own script still loads while

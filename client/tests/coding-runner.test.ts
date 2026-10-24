@@ -209,6 +209,61 @@ it('waits a moment for a check a cancelled Run left behind, then drops it and st
   await settleCompiler();
 });
 
+// A Run's own worker used to be stopped the moment the Run was cancelled or
+// its task left. The shared compiler's check goes on alone, so a runaway one
+// is dropped after the same grace, not left to spin for its whole 8 s.
+it('drops a check its cancelled Run left behind after the grace, with no next Run waiting', async () => {
+  for (const abortWhile of ['checking', 'loading'] as const) {
+    let check: (() => void) | null = null;
+    script = (worker, request) => {
+      if (!request.compileOnly) { typescript(worker, request); return; }
+      worker.post({ phase: 'compiling' });
+      check = () => worker.post({ phase: 'checking' });
+      if (abortWhile === 'checking') check();
+    };
+    workers.length = 0;
+    const controller = new AbortController();
+    const cancelled = typed(controller.signal);
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort();
+    expect(await cancelled).toMatchObject({ codeError: 'Cancelled' });
+    // A cancelled download goes on: the next Run wants that compiler.
+    if (abortWhile === 'loading') {
+      await vi.advanceTimersByTimeAsync(ABANDONED_CHECK_GRACE_MS * 3);
+      expect(workers[0].terminated).toBe(false);
+      check!();
+    }
+    await vi.advanceTimersByTimeAsync(ABANDONED_CHECK_GRACE_MS - 1);
+    expect(workers[0].terminated).toBe(false);
+    await vi.advanceTimersByTimeAsync(2);
+    expect(workers[0].terminated).toBe(true);
+    expect(compilerStarted()).toBe(false);
+  }
+});
+
+it('keeps the compiler when a cancelled Run\'s check finishes within the grace', async () => {
+  let finish: (() => void) | null = null;
+  script = (worker, request) => {
+    if (!request.compileOnly) { typescript(worker, request); return; }
+    worker.post({ phase: 'compiling' });
+    worker.post({ phase: 'checking' });
+    finish = () => worker.post({ phase: 'compiled', js: `${request.code};`, check: { codeErrors: [], typeTests: [] } });
+  };
+  workers.length = 0;
+  const controller = new AbortController();
+  const cancelled = typed(controller.signal);
+  await vi.advanceTimersByTimeAsync(0);
+  controller.abort();
+  await cancelled;
+  await vi.advanceTimersByTimeAsync(ABANDONED_CHECK_GRACE_MS / 2);
+  finish!();
+  await vi.advanceTimersByTimeAsync(ABANDONED_CHECK_GRACE_MS);
+  expect(workers[0].terminated).toBe(false);
+  expect(compilerStarted()).toBe(true);
+  await settleCompiler();
+  expect(workers[0].terminated).toBe(true);
+});
+
 it('holds the compiler while a TypeScript task is open, and lets it go after the screen leaves', async () => {
   script = typescript;
   workers.length = 0;

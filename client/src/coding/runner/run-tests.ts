@@ -239,6 +239,7 @@ function compileShared(which: Compiler, input: RunInput, onPhase: (phase: RunPha
       if (ended) return;
       ended = true;
       window.clearTimeout(timer);
+      input.signal?.removeEventListener('abort', orphan);
       which.job = null;
       which.fail = null;
       which.stage = null;
@@ -247,10 +248,22 @@ function compileShared(which: Compiler, input: RunInput, onPhase: (phase: RunPha
       else dropCompiler(which);
       resolve(result);
     };
+    let deadline = 0;
     const arm = (ms: number, outcome: Partial<RunOutcome>) => {
       window.clearTimeout(timer);
+      deadline = Date.now() + ms;
       timer = window.setTimeout(() => end({ outcome }, false), ms);
     };
+    // A check its Run no longer waits for (the Run was cancelled, or the task
+    // left) has ABANDONED_CHECK_GRACE_MS to finish, then its worker is
+    // dropped: a runaway type no longer spins in the background for the rest
+    // of its 8 s, where a Run's own worker used to be stopped at once. A
+    // compiler still downloading is kept for the next Run.
+    function orphan(): void {
+      if (ended || which.stage !== 'checking' || deadline - Date.now() <= ABANDONED_CHECK_GRACE_MS) return;
+      arm(ABANDONED_CHECK_GRACE_MS, { codeError: 'Cancelled' });
+    }
+    input.signal?.addEventListener('abort', orphan, { once: true });
     arm(COMPILE_TIMEOUT_MS, UNAVAILABLE);
     which.stage = 'loading';
     which.abandon = () => end({ outcome: { codeError: 'Cancelled' } }, false);
@@ -268,6 +281,7 @@ function compileShared(which: Compiler, input: RunInput, onPhase: (phase: RunPha
         checkStarted();
         onPhase('checking');
         arm(TYPE_CHECK_TIMEOUT_MS, { timedOut: true, codeError: TYPE_CHECK_STOPPED_MESSAGE });
+        if (input.signal?.aborted) orphan();
         return;
       }
       if (message.phase === 'compiled' && typeof message.js === 'string' && message.check) {
