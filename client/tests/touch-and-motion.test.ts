@@ -117,6 +117,16 @@ describe('control heights on every pointer', () => {
     expect(declared(mediaRules(sheet, 'pointer: coarse'), '.ss-footer-settings button', 'min-height')).toBe('44px');
   });
 
+  // The glossary chips ("Terms in this question") were 32px on every pointer.
+  it('puts the glossary term chips on the button scale: 44px, or 36px with a 44px hit area in .ss-compact', () => {
+    expect(declared(topLevel, '.ss-term__button', 'min-height')).toBe('var(--ss-control-height)');
+    expect(declared(topLevel, '.ss-term__button', 'position')).toBe('relative');
+    expect(declared(fine, '.ss-compact .ss-term__button', 'min-height')).toBe('var(--ss-control-height-compact)');
+    expect(declared(fine, '.ss-compact .ss-term__button::before', 'inset')).toBe(
+      'calc((var(--ss-control-height-compact) - var(--ss-control-height)) / 2)',
+    );
+  });
+
   it('keeps a 44px hit area around a compact control', () => {
     expect(declared(fine, '.ss-compact .astryx-button::before', 'position')).toBe('absolute');
     expect(declared(fine, '.ss-compact .astryx-button::before', 'inset')).toBe(

@@ -140,7 +140,7 @@ test('phone: the drawer groups its links and keeps the toggles at its bottom', a
   await expect(practice.getByRole('link', { name: 'Coding' })).toBeVisible();
   await expect(you.getByRole('link', { name: 'Premium' })).toBeVisible();
   await expect(practice.getByRole('link', { name: 'Premium' })).toHaveCount(0);
-  const dark = drawer.getByRole('button', { name: 'Switch to dark mode' });
+  const dark = drawer.getByRole('button', { name: 'Dark mode', exact: true });
   const box = await dark.boundingBox();
   const panel = await page.locator('.ss-drawer-panel').boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(44);
@@ -149,5 +149,5 @@ test('phone: the drawer groups its links and keeps the toggles at its bottom', a
   expect(panel!.y + panel!.height - (sound!.y + sound!.height)).toBeLessThan(24);
   // A toggle keeps the drawer open.
   await dark.click();
-  await expect(drawer.getByRole('button', { name: 'Switch to light mode' })).toBeVisible();
+  await expect(drawer.getByRole('button', { name: 'Light mode', exact: true })).toBeVisible();
 });

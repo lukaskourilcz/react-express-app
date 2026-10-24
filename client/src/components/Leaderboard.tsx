@@ -11,9 +11,10 @@
 // their ranks; the all-time and Today boards arrive in order, and this screen
 // numbers them so equal results share a rank, as the others' do.
 //
-// The server supplies the chosen account name or shark nickname and the
-// optional photo. The Profile card owns those preferences; this screen reads
-// them only to show the learner's own row as everybody else sees it.
+// The server supplies the chosen name (the Sharkname or the account name)
+// and the optional photo. The Profile's 'Your name' panel owns those
+// preferences ('Leaderboards show'); this screen reads them only to show the
+// learner's own row as everybody else sees it.
 //
 // A rank is always the number as text. The top three get a heavier ink ring,
 // never a fill or a medal colour, so the order reads the same without colour. Nothing

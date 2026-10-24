@@ -2,5 +2,10 @@
    display-3 and one lead, 8px apart, on the column's left edge. It sets no
    width: the route shell picks the column, and only the lead keeps a measure. */
 .ss-page-header { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin: 0; }
-.ss-page-header > h1 { margin: 0; }
+.ss-page-header h1 { margin: 0; }
+/* A title the screen focuses (titleRef) shows no ring for scripted focus. */
+.ss-page-header h1:focus { outline: none; }
+.ss-page-header h1:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+/* The h1 with a short status at the end of its row (aside). */
+.ss-page-header__row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-self: stretch; }
 .ss-page-header__lead, .ss-page-header > p { margin: 0; max-width: 68ch; color: var(--color-text-secondary); line-height: 1.5; text-wrap: pretty; }

@@ -1,18 +1,236 @@
 # Deep End design system
 
-The runtime source of truth is `client/src/styles/astryx-theme.css`, layered over Astryx. `DESIGN_RULES.md` is the behavioral contract.
+This is the reference for building a devShark screen. The tokens live in `client/src/styles/astryx-theme.css` and the shared floors in `client/src/styles/app-shell.css`, layered over Astryx. `DESIGN_RULES.md` holds the enforceable rules and names the check behind each one. Epic U (#572, the UX audit of 23 October 2026 in `docs/design/ux-audit.md`) set the current system: one button scale, one page width per route, and shared question, coding, header and state components.
+
+A new screen takes its width from the route shell, its controls from the 44px scale, its one primary from `SwimCta` md, and its parts from the catalogue below. The short checklist is in `.claude/skills/deep-end-design-system/SKILL.md`.
+
+## Tokens
+
+### Page widths
+
+Set in `astryx-theme.css` (UX audit U1, #573). A page never writes its own page `max-width`.
+
+| Token | Width | Use |
+|---|---|---|
+| `--ss-width-task` | 640px | The task column inside a page: question screens, the auth (`.ss-auth-page`), billing (`.ss-billing-card`) and checkout (`.ss-checkout-card`) cards, `StatePanel`, the Play lobby and gates, the `/daily` column. Never a route width. |
+| `--ss-width-narrow` | 800px | The route default. |
+| `--ss-width-standard` | 1000px | Two-column pages. |
+| `--ss-width-wide` | 1200px | Operational screens with an editor. |
+| `--ss-width-chrome` | 1168px | The floating header and the footer, on every route, so neither moves when the route width changes. |
+
+A component may cap its own text measure (`max-width: 68ch` on a paragraph). Anything that sizes a column inside a page uses `--ss-width-task`.
+
+### Control heights
+
+| Size | Token | Height | Use |
+|---|---|---|---|
+| Default | `--ss-control-height` | 44px | Every page action and form control on every pointer: `.astryx-button`, `.astryx-segmented-control-item`, `.astryx-text-input` and its input. |
+| Compact | `--ss-control-height-compact` | 36px | Only controls inside an element with class `ss-compact` (a component's own toolbar), on a fine pointer, each with a 44px hit area drawn by `::before`. On a coarse pointer they stay 44px. |
+
+The floor in `app-shell.css` is a `min-height`/`min-width` with `!important`, because Astryx's StyleX rules cannot be reached by a class selector otherwise. It is the only place that does this.
+
+### Spacing
+
+| Token | Value | Use |
+|---|---|---|
+| `--ss-space-gutter` | 16px to 32px (`clamp`) | Page side gutter: 16px on a phone, 24px on a tablet, up to 32px on a desktop. |
+| `--ss-space-section` | 32px to 64px (`clamp`) | Space between page sections. |
+
+Inside a component the steps are 8px (a header's title and lead, answer rows), 16px (a panel to its action row, rows in a settings list) and 24px (panel padding, a page header to its first panel). The question panel's padding drops to 16px under 560px.
+
+### Type sizes
+
+| Token | Value | Use |
+|---|---|---|
+| `--ss-type-display` | clamp, about 2.8rem to 4.2rem | The public hero only. |
+| `--ss-type-title` | clamp, about 2rem to 3.5rem | Large public titles. |
+| `--ss-type-body` | 1rem to 1.125rem | Reading text. |
+| `--ss-type-large` | 1.125rem | A large lead. |
+| `--ss-type-compact` | .875rem | Compact body and controls. |
+| `--ss-type-meta` | .8rem | Meta lines, eyebrows. |
+| `--ss-type-label` | .72rem | Labels. |
+
+Fixed sizes on top of these: the operational `h1` is Astryx `display-3`; a public section `h2` is `.ss-section-title` (800 weight, 1.75rem, 1.5rem under 600px, -0.015em tracking, in `components/landing/landingSections.css`); a question run's `h1` is `--ss-question-title-size` (1.25rem/700); a coding task's `h1` is 1.35rem/700. A page action's text is 16px/600.
+
+### Radii
+
+`--radius-page` (2rem) for page features, `--radius-container` (1.5rem) for panels and cards, `--radius-element` (.85rem) for controls, inputs and selects, `--radius-inner` (.65rem) for inner tiles and chips. The pill shape (`999px`) is for buttons (`.astryx-button`, `.ss-fin-button`), header nav links (`.ss-navlink`), tags (`.ss-tag`), compact filters such as the topic pills (`.ss-topic-pill`), small inline toggles (glossary terms, figure buttons) and compact segmented controls. Cards, panels, inputs, selects, radio cards, drawer links and dialogs use the radius tokens.
+
+### Motion
+
+`--ss-motion-feedback` (160ms; 100ms under the Apple layer), `--ss-motion-reveal` (350ms), `--ss-motion-ambient` (2400ms) and the two `--ss-motion-swim-*` tokens. Route fade about 140ms with no blank exit; selection and button response 120 to 180ms; fin reveals by opacity only. Every non-essential motion stops under `prefers-reduced-motion: reduce`, and dense admin screens carry no decorative animation.
+
+## Page widths
+
+The route shell in `client/src/App.tsx` reads the one map, `pageMaxWidth` in `client/src/components/ui/pageWidth.ts`, writes the result to `--ss-page-width`, and the keyed route box (`.ss-route`) takes it as its `max-width`.
+
+| Route | Width |
+|---|---|
+| `/`, `/profile`, `/play`, `/play/:code` | `--ss-width-standard` (1000px) |
+| `/coding` and `/coding/*` | `--ss-width-wide` (1200px) |
+| `/dev` | uncapped |
+| Every other route | `--ss-width-narrow` (800px) |
+
+A part that needs the wide page while it is mounted (a Learn level's or a path's coding phase) puts the class `ss-wide-page` on its root: `.ss-route:has(.ss-wide-page)` widens the route box to `--ss-width-wide` for as long as the part is there, with no state and no extra render. To give a new route a width, add it to the map and to `client/tests/page-width.test.tsx`.
+
+The shared page roots (`.de-page`, `.cd-page`, `.lb`, `.ss-info-page`) and a page's own top stack fill the column, so the header, the controls and the content share one left edge (`client/tests/page-own-width.test.ts`). The `Page` layout always draws its kicker line (empty and `aria-hidden` when a page passes no kicker), so every `Page` h1 sits at one x and one y.
+
+## Buttons
+
+**The scale.** 44px for everything; 36px only inside `.ss-compact` with a 44px hit area. Never size a button page by page and never pass `size="sm"` to an Astryx `Button` or `IconButton` on a page: the floor lifts it anyway and `check:design` fails it. An in-row utility (a Retry inside a banner, a Remove on a list row) is the one small button, and each is listed in `scripts/design-contract-allowlist.json` with its reason.
+
+**Page actions.** 44px, 20px inline padding, 16px/600 text, pill. `.ss-action` applies that type through Astryx's own variables (`--spacing-3`, `--text-label-size`, `--font-weight-medium`). Every button in `.ss-info-actions`, `.ss-auth__actions` and `.ss-state-panel__actions` gets it without a class; elsewhere pass `className="ss-action"`.
+
+**One primary per screen.** `SwimCta` md (44px, `components/landing/LandingKit.tsx`) is the single filled primary on a screen; every other action is an Astryx `secondary` or `ghost` at 44px. The primary is never the smallest control in its row. A second task's button turns primary only once its own input is complete (on `/play`, Create is the `SwimCta` and Join stays secondary until the field holds a whole six-character code). A row of buttons that switches the view is not an action and is never filled: the open view is secondary with `aria-current="page"`, the rest ghost (the `/collection` shelf tabs). `FadeFinCta` is the quieter fin for a list row's action (Start, Continue or Review by progress). Keyboard focus gets the same fin as hover; disabled buttons get none.
+
+**Card actions.** Every action in a card is the default size, so a card's primary is never smaller than its secondaries.
+
+**Icon buttons.** 44×44 with a 20px glyph, an `aria-label` and a tooltip. A dialog's close button is the Astryx one, which the floor makes 44px (its glyph stays 16px). Icons in one row share one drawing: the header's Leaderboard, Premium and Coins are stroke icons in the text colour (`TrophyIcon`, the Premium diamond, `CoinsIcon` from `components/ui/icons.tsx`); the filled `CoinIcon` stays for the Coins page balance.
+
+**Hit areas.** A control the app draws itself that keeps a smaller look still takes a 44px press: a transparent, `aria-hidden` layer inside it, positioned absolutely and reaching past its edges by `calc((100% - var(--ss-control-height)) / 2)`. The roadmap's 31px part cells do this (`.rm-part-pill__hit` in `RoadmapTree.tsx`). A control whose size is its look is drawn at 44px or more (the Learn map's levels are 44px, 50px when current). The footer's appearance and sound toggles are compact pills with the same hit area; each label says what pressing it does ('Dark mode', 'Turn sound on') and is its whole accessible name. The glossary term chips (`.ss-term__button`) are 44px pills, 36px with the hit area inside `.ss-compact`.
+
+**Form controls.** A control group (`ToggleButtonGroup`, `SegmentedControl`, a `select`) takes its label above it, never as a suffix, at the default size, so one form has one control height. Two short groups may sit side by side from 900px. A control with more options than one phone row holds becomes one control: on `/play` the time limit is one 44px `.ss-select`, and the topic pills fold below 600px behind a 44px `<details>` whose summary names the choice ('Topics: all').
+
+## Shared components
+
+Search here before you build anything. Each entry is the one component for its job.
+
+| Component | File | Use it for |
+|---|---|---|
+| `PageHeader` | `client/src/components/ui/PageHeader.tsx` | The title of an operational page. |
+| `Page` | `client/src/components/PublicInfoPages.tsx` | The editorial header and body of a public page (legal, auth, `/premium` steps, `/classroom`, 404). |
+| `LearnPageHeader` | `client/src/components/learn/LearnPageHeader.tsx` | A Learn-area page that is not a section: `/roadmap`, `/big-o`, `/learn/big-o`. |
+| `StatePanel` | `client/src/components/ui/StatePanel.tsx` | Any state with nothing else to show, and every signed-out block (`inline`). |
+| `QuestionShell`, `QuestionHeader`, `AnswerOptionList`, `QuestionHint`, `QuestionFeedback`, `QuestionActions` | `client/src/components/question/` (import from `index.ts`) | Every question screen. |
+| `CodingWorkbench`, `BriefZone` | `client/src/coding/CodingWorkbench.tsx`, `client/src/coding/BriefZone.tsx` | Every place a coding task opens. |
+| `SwimCta`, `FadeFinCta`, `Kicker`, `WaterlineRule` | `client/src/components/landing/LandingKit.tsx` | The one primary, a quiet row action, a kicker with its wave, a rule. |
+| `.ss-panel`, `.ss-raised`, `.ss-lift` | `astryx-theme.css` | A panel, a read-only raised card, a clickable card that lifts. |
+| `.de-setting-row` | `client/src/components/DeepEndScreens.css` | One account action per row. |
+| `RadioCardGroup`, `RadioCard` | `client/src/components/ui/RadioCards.tsx` | A single choice from cards. `CheckCard` for several. |
+| `BrandedConfirmDialog` | `client/src/components/ui/BrandedConfirmDialog.tsx` | A destructive confirmation. |
+| `LoadingScreen`, `QuoteLoader`, `ErrorRetry` | `client/src/components/LoadingScreen.tsx`, `client/src/components/ErrorRetry.tsx` | Page loading and a failed part. |
+| `SharkFin`, `BrandLogo`, `CategoryGlyph` | `SharkFin.tsx`, `BrandLogo.tsx`, `ui/techIcons.tsx` | The fin, the wordmark, topic logos. Never redraw the fin. |
+
+### Page headers
+
+**`PageHeader`** is the only operational header: an optional `<Kicker>`, the route's one `h1` in ink at Astryx `display-3`, one lead line (at most 68ch), 8px apart, on the column's left edge. `titleRef` makes the `h1` a focus target (`tabIndex` -1, a ring only for keyboard focus). `aside` puts a short status at the end of the `h1`'s row; pass it (null while empty) for as long as the header shows, so the `h1` does not remount when the status arrives. Children sit under the lead as a status line. Users: `/collection`, `/cards`, `/leaderboard`, `/play`, the Quiz and Challenge setups and `/today`. Leave the kicker out when tabs or the title already say it. The lead is the scope sentence, and the one control row sits right on the list it filters (the Leaderboard: period control left, topic filter right, then the board).
+
+**`Page`** keeps the editorial header for public pages. `/daily` keeps its markup through `DailyHeader` (`DailyStaticArticle.tsx`), which the build also writes into the static HTML; its kicker is the day.
+
+**Area titles.** The Learn and Coding areas title themselves with `<Kicker as="h1" className="ss-section-title">` (accent, 800 weight, the wave under it): `/learn` in `Roadmap.tsx`, the Coding home and track pages in `CodingSection.tsx`, and `LearnPageHeader`, which puts that title on the `PageHeader` frame with one supporting line and at most one small `context` link above it (its press reaches 44px through padding pulled back by a negative margin). A link in the Learn area is `.learn-link`: `--color-text-accent` with a 1px underline, never the browser's blue. A heading that links stays in the text colour with an accent arrow (`::after`, `content: '→' / ''`).
+
+### StatePanel and signed-out blocks
+
+`StatePanel` is one component with two looks.
+
+- **Panel** (default): the state is the whole screen, or the whole section under a page header. Centred in `--ss-width-task`, an optional icon and `<Kicker>`, one heading (`level` 1 when it is the page, 2 under a page header), one body line (`live` makes it a polite status) and its actions, the primary first, all 44px. Users: the Shark Cards states on `/cards` and `/collection`, the sign-in gates on `/play` and `/play/:code`, Play's "Live games are switched off", and every phase of `/settings/github`.
+- **`inline`**: one part of a screen that otherwise draws waits for sign-in. One sentence in secondary text and its action, with no heading, card, border, background or padding. Users: `/shop` and its invite section, `/premium/checkout`.
+
+`signIn` draws the one "Sign in" first in the row (44px, `aria-haspopup="dialog"`, opens the sign-in dialog). Pass `signIn={{ returnTo }}` when the next step lives elsewhere, `label` when the step needs its own verb ("Sign in to continue"), and `emphasis: 'secondary'` on a second block, so the screen keeps one filled primary. No screen builds its own sign-in button or gate card. A block stands in place of what a visitor cannot see yet: no placeholder number ("—") for a balance. A button the visitor cannot use yet says so ("Sign in to buy") and opens sign-in instead of sitting disabled.
+
+### Question screens
+
+Every question screen draws through `client/src/components/question/` (UX audit U2, #574). Sizes are tokens in `question.css`; words are `question.*` keys in `client/src/i18n/translations.question.ts`, which only the question chunks load (`client/tests/question-copy.test.ts`).
+
+| Token | Value | Use |
+|---|---|---|
+| `--ss-question-block-min` | 200px | The question block's reserved height, so the answers start at one y. |
+| `--ss-question-block-max` | 40vh | Past this the block scrolls inside itself. |
+| `--ss-answer-row-min` | 48px | One answer row. |
+| `--ss-answer-gap` | 8px | Between answer rows. |
+| `--ss-answer-chip` | 26px | The number chip. |
+| `--ss-question-title-size` | 1.25rem | The run's `h1`. |
+| `--ss-question-tags-min` | 56px | Under 560px, the header's tag row: two lines, so a wrapping topic name does not move the answers. |
+
+A run, top to bottom: `QuestionShell` › `QuestionHeader` › question block › `AnswerOptionList` › `QuestionHint` › `QuestionFeedback` (once graded), then `QuestionActions` under the panel. `Quiz.tsx` is the reference.
+
+- **`QuestionShell`**: the `--ss-width-task` column with one `.ss-panel` (24px padding, 16px under 560px, no accent edge) and the actions 16px under it. Props: `header`, `question`, `questionId`, `children`, `actions`, `notice`, `stable` (default `true`; `false` for one question on its own page), `focusable`, `className`, `labelledBy`. The ref is the question block. A runner sets no width, card or `flex: 1` of its own.
+- **`QuestionHeader`**: row 1 the run's `h1` ("Quiz · Question 3 of 10", `run` muted before `title`) and `WaterlineProgress`, run status on the right; row 2 tags, the difficulty badge and the tools. Tools are `QuestionIconButton`s: 44×44, 20px stroke glyph (`HintIcon`, `ReportFlagIcon`, `ExitIcon`), `aria-label` and tooltip. Every runner can report; Exit asks first in an `AlertDialog`.
+- **`AnswerOptionList`**: a vertical `RadioCardGroup` of 48px rows 8px apart with a 26px chip; the selection is `--brand-accent`, never a track colour. Props: `options`, `value`, `onChange`, `onActivate` (a press commits at once), `labelledBy`, `disabled`, `grade` (`{ correct, picked }`), `renderOption`, `className`. Graded rows show ✓ or ✕ in a 20px slot every row keeps, with "Correct answer" and "Your pick" in the accessible name, and a hidden semibold copy of each row's words reserves its height, so grading never rewraps or moves a row. Number keys belong to the runner.
+- **`QuestionHint`**: "Press 1–{max} to {select|answer} · Enter to {continue|submit}" under the answers, only with a fine pointer from 600px. `hidden` hides the words and keeps the line.
+- **`QuestionFeedback`**: the verdict as an Astryx `Banner` in normal flow under the list and hint, inside the panel. It takes focus (`autoFocus`, default `true`); pass `false` when `QuestionActions focusPrimary` moves focus to Continue. Nothing sits over the answers.
+- **`QuestionActions`**: one 44px row; secondaries left, the one `SwimCta` md `primary` (`{ label, onClick, disabled, unavailable, describedBy }`) right. Under 560px the primary is the last row at full width and the secondaries share the row above. `focusPrimary` scrolls the least that shows the button and never past the top of the answers. `unavailable` keeps it focusable with `aria-disabled` and a reason.
+
+How each runner uses them:
+
+- **Quiz and Challenge**: a live run hides the site header and footer through `onActiveChange`; setup, result and error screens bring them back. The Challenge's status is the score, the clock (error colour under 15 seconds) and the fins. Its setup is the Quiz setup's layout: `PageHeader`, one panel with the topic pills and a Select all / Deselect all link on their label row, then the `SwimCta`, with up to five top scores under the panel.
+- **Daily**: `stable={false}` in the `--ss-width-task` column; no hint (no number keys). Check answer, then Practice, with Share as the secondary.
+- **Learn level and skill check** (`learn/LessonRunner.tsx`, `SkillCheckRunner` in `Roadmap.tsx`): the `h1` is "Level 1 · Values & Math" (or "Find your level · Round 1 of 4"), a press on an answer grades at once (`verb="answer"`), then Continue, Finish, See the result or Try again is the one `SwimCta` with `focusPrimary`. The intro, the result and every restart screen render inside `QuestionShell` so the exit button does not move. A track colour may tint confetti and the result's icon tile, never text or a button.
+- **Shark Cards deck** (`Flashcards.tsx`, `SharkCards.css`): keeps the route's 800px column so the header, tabs and card share one edge; one `QuestionActions` row with Previous and Next together on the left. Face down the primary is "Show the answer"; turned, Got it is the `SwimCta` in the same place.
+
+### Coding frame
+
+One frame wherever a task opens (UX audit U3, #575): `/coding/<track>/<task>` (`CodingWorkbench`, `mode="section"`), a Learn level's coding phase (`mode="lesson"`) and a path's code activity (`CodeActivity` in `ActivityViews.tsx`, `.cd-workbench--activity`). The Learn and path hosts put `ss-wide-page` on their root; on a path module only the frame takes that width. Rules: `client/src/coding/Coding.css`.
+
+| Token | Value | Use |
+|---|---|---|
+| `--cd-frame-h` | `clamp(600px, calc(100dvh - 7rem - 48px), 900px)` | The frame's one row from 1024px. |
+| `--cd-brief-cap` | 120px | The brief's body under its heading, about five lines. |
+| `--cd-editor-min` | 280px below 1024px, 200px from 1024px | The editor's floor at every call site. |
+
+- **Code pane**: `BriefZone` (eyebrow over the 1.35rem `h1` with the difficulty beside it; a longer body scrolls as a named, focusable region with a ghost "Show full brief"), then the editor filling the rest, then one 44px action row at its foot. When the content above outgrows its share the pane scrolls; the action row is never covered.
+- **Actions**: Run (Astryx secondary, `.ss-action`) and Submit (`SwimCta` md) lead the row with their words at every width. Format and Reset are the editor's `.ss-compact` toolbar (36px icon buttons with tooltips). From 1024px Hint, Solution and Skip are ghost buttons and Report the flag at the far right; below 1024px they fold into one 44×44 "More actions" `DropdownMenu`. Nothing in the workbench uses `SwimCta` sm. Reset confirms in an inline `role="alertdialog"` note under the action row.
+- **Columns**: from 1024px the learner's split (58% by default) with a 1px `--ss-card-line` separator that turns a 3px accent on hover and focus; below 1024px the panes stack.
+- **Results pane**: tabs in one order on every track (Results, Console, Types or Preview, Resources, then Solution and Approaches); the strip scrolls rather than shrinking a tab. A count is said once, on the tab's badge.
+- **Checks**: one divided list of hairline rows with a 3rem status column saying Pass or Fail in words and colour, the call in mono with "→ expected" and "· got actual".
+
+**Coding lists** (`/coding`, FullStack, track pages; `client/tests/coding-lists-layout.test.ts`): one `SwimCta` per screen (the next challenge's Continue); a row's action is `FadeFinCta`. The Premium rule is said once under a list's lead; a row keeps only its "Premium" badge. Task rows are 48px hairline lines (`.cd-row`), two columns from 1024px. A list of more than five projects shows five and a ghost "Show all N challenges". Filters are one row of 44px selects from 1024px. Signed out, a list page says once under its lead that a pass needs an account.
+
+### Profile cards and settings rows
+
+- **Card stock**: every Profile card is `.ss-panel` with 24px padding and a `<Kicker as="h2">` on the plain surface. No `.ss-raised` around an Astryx Card. The learning column (Career, Track, the GitHub garden) is on the left; the study advisor, saved questions, 'Your name' and Account are on the right. The identity banner carries the name and plan; appearance and sound stay in the footer.
+- **Settings row** (`.de-setting-row`): one row per account action, an `h3` title and a one-line description on the left, its 44px button on the right, a hairline between rows, stacking below 600px. The title names what the action reaches ('All devices'), never the button's words.
+- **Name panel** (`SharknameCard`): every name a learner shows is set in one 'Your name' panel: the sharkname field with Generate and Save, then 'Friends see' and 'Leaderboards show' side by side from 400px of panel width (a container query on `.sn-card`). The two settings save on their own.
+- **Card disclosure**: a native `<details>` with a 44px `summary` (`.de-disclosure`) for detail a card needs only on request, such as the GitHub garden's 'How it works'.
+
+### Hairline list rows
+
+A list of like items is rows divided by `1px solid var(--ss-card-line)`, never a card per row and never a nested scroll box. A row is one line of 44 to 56px: the title on the left, quiet meta after it, one status or action at the end. Users: coding task rows (`.cd-row`, 48px), the check list, path activity rows (`.lp-activity`, 48px), the Play lobby's players (56px), the `/shop` ledger and offers, the roadmap topic rows (44px), and settings rows. A recorded state is a glyph with its words for a screen reader; a row in its default state says nothing about it.
+
+A short form that is not the page's task (the voucher on `/premium` while checkout is on) is one row without a card: its `h2` on the left, the field (at most 320px) and a secondary button beside it, stacking below 600px.
+
+A summary a learner needs only on request goes below the content it sums up as one closed `<details>` with a 56px `summary` holding the section's `h2` and its count, between hairlines (`.lp-disclosure`, the FDE path's competency evidence).
+
+### Learn section page
+
+`client/src/components/Roadmap.tsx` and `components/learn/*` (UX audit U4, #576).
+
+- **Header**: one in every auth state: the Learn `<Kicker as="h1">` ('Learn'), the section switcher (the only place the section is named), then one supporting line with the section's one action on its right from 768px (`.rm-section-header`). Under 640px the switcher is a list of full-width 44px rows.
+- **Topic rail**: at most five tiles a row, shared evenly (`railColumns` sets `--rm-rail-cols`), never narrower than 148px. A locked tile carries one signal: the lock glyph, plus 'Premium' only where Premium opens it, and 'Locked' in its accessible name.
+- **Next step**: one 72px row: the fin, 'Level 1 of 25 · Values & Math' with a 4px bar, and the `SwimCta` 'Continue'. When Premium opens that level the line reads '<Topic> is part of Premium' and the button 'See Premium'. Premium is said once per topic, on its tile and in this row.
+- **Empty section**: no `StatePanel`; it sits on the column's left edge with an `h2`, one line and one action row.
+- **One primary**: while the header offers the join ('Add it to your plan'), the join is the `SwimCta` and every action under it is a 44px secondary.
+- **Learning paths** (`components/paths/`): headers stack, the text over one left-aligned action row with the `SwimCta`; the row keeps its 44px (`aria-busy`) while progress loads. The next activity row has a 3px accent edge; a module that Premium opens says 'Premium' once, in its head.
+- **Roadmap** (`CareerRoadmap.tsx`, `RoadmapTree.tsx`): the track segment is the page's one track label; each section is one compact list in one `.ss-panel`, a topic listed under its first section only. The map is one row per stage, numbered as drawn.
+
+### Other shared patterns
+
+- **Panel hierarchy**: canvas › one panel › rows. No panel inside a card inside a card.
+- **Destructive confirmation**: `BrandedConfirmDialog` (Astryx `AlertDialog`) with a product-specific title, body, cancel and confirm. It runs the confirmed action once. Removing a friend and deleting an account ask through it.
+- **Loading**: `LoadingScreen` with the swimming fin, visible status text and one polite live region; never an unlabelled spinner or a fake percentage. A navigation never blanks the page (`DESIGN_RULES.md` §8).
+- **Feedback**: semantic tokens plus text or an icon, never colour alone.
+- **Empty, error, loading**: one cause, one next action, a stable layout.
+
+## Copy rules
+
+- **Say each fact once per screen.** A count lives on its badge or in its lead, not in both; the Premium rule once per list or topic; the section's name once, in the switcher.
+- **The sign-in verb is "Sign in"**, never "Log in" (`check:design` fails a 'Log in' string in `client/src/i18n`).
+- **No kicker that repeats the `h1`**, and no lead that repeats the kicker. Leave the kicker out when tabs or the title already say it.
+- **A row title never repeats its button.**
+- **The lead is the scope sentence**: what the page shows, in one line under the `h1`.
+- All reusable copy is an English key in `client/src/i18n/translations.ts`, or in the route's own dictionary beside it (`translations.learn.ts`, `translations.paths.ts`, `translations.question.ts` and the others) so it stays off the first download. devShark ships English only.
+- Public facts come from the registries, not literals. Curated explanations are authoritative; devShark ships no AI feature. Never generate product screens, scores, users, testimonials or factual teaching diagrams.
 
 ## Apple layer
 
-`client/src/main.tsx` sets `data-design="apple"` on `<html>` before the first paint. No code removes or changes it, so every page renders with the layer. Its rules sit under `:root[data-design='apple']`:
+`client/src/main.tsx` sets `data-design="apple"` on `<html>` before the first paint, so every page renders with the layer. Its rules sit under `:root[data-design='apple']`:
 
-- Tokens (`client/src/styles/astryx-theme.css`): the system font stack for body and headings, neutral text and surface colours through `light-dark()`, larger radii (`--radius-page` 2rem, `--radius-container` 1.5rem, `--radius-element` .85rem, `--radius-inner` .65rem), larger display and title sizes, a 100ms feedback duration and two-layer shadows. Dark mode keeps the Deep End blue-green background.
-- Chrome (`client/src/styles/app-shell.css`): a floating, rounded, translucent header with backdrop blur; pill-shaped nav links at least 44px tall, with an accent ring on the active link; a translucent drawer panel with a rounded outer edge; translucent dialogs over a darker backdrop.
-- Surfaces and controls: panels and raised cards take a 1px border in place of the 2px paper edge, buttons become pills, inputs and selects take .85rem corners, and radio cards sit on the muted background. Buttons, nav links, radio cards and strip tiles scale to 97% while pressed.
-- Home: wider hero spacing, a two-column hero from 1024px, tighter heading tracking and a three-column stat row.
-- User preferences: reduced motion drops the press scale, reduced transparency swaps the blurred materials for solid surfaces, and `prefers-contrast: more` gives the header, drawer, dialogs, panels and radio cards a solid surface with a text-coloured border.
+- Tokens: the system font stack, neutral text and surface colours through `light-dark()`, the radii above, larger display and title sizes, a 100ms feedback duration and two-layer shadows. Dark mode keeps the Deep End blue-green background.
+- Chrome (`app-shell.css`): a floating, rounded, translucent header with backdrop blur; pill nav links at least 44px tall with an accent ring on the active one; a translucent drawer; translucent dialogs over a darker backdrop.
+- Surfaces and controls: panels and raised cards take a 1px border, buttons are pills, inputs take `--radius-element`, radio cards sit on the muted background. Buttons, nav links, radio cards and strip tiles scale to 97% while pressed.
+- Preferences: reduced motion drops the press scale, reduced transparency swaps blur for solid surfaces, and `prefers-contrast: more` gives the header, drawer, dialogs, panels and radio cards a solid surface with a text-coloured border.
 
-The accent, status colours and brand geometry still come from their own sources. The production CSS purge keeps `data-design` selectors, and the build fails if the `:root[data-design='apple']` token block goes missing (`client/vite.config.ts`).
+The production CSS purge keeps `data-design` selectors, and the build fails if the `:root[data-design='apple']` token block goes missing (`client/vite.config.ts`).
 
 ## Semantic layers
 
@@ -20,198 +238,16 @@ The accent, status colours and brand geometry still come from their own sources.
 - Text: primary, secondary, disabled, on-accent.
 - Structure: border, strong border, card line, tactile card edge.
 - Interaction: focus, hover, selected, disabled.
-- Feedback: success, warning, error, info, each with strong and soft variants where needed.
+- Feedback: success, warning, error, info, with strong and soft variants where needed.
 - Brand: accent, accent-soft, accent-contrast, waterline, grain, wave.
-- Depth: low/medium/high elevation, overlay scrim.
+- Depth: low, medium and high elevation, overlay scrim.
 
-Do not use a semantic name that is not defined. Do not move unique, factual visualization colors into the subject accent system.
+Use only defined semantic names, and keep factual visualization colours out of the accent system.
 
-## Typography roles
+## Layout and accessibility
 
-| Role | Intent |
-|---|---|
-| Display hero | Public positioning only; compact line length. |
-| Page title | One `h1` per route. |
-| Section / card title | Scannable editorial hierarchy. A public page's section `h2` (home's topic picker, roadmap panel, FDE section and plan table; on `/premium` Choose a plan, the plan table, Have a voucher? after the plans, and Questions) is `.ss-section-title` in `components/landing/landingSections.css` (the landing kit sheet Home and `/premium` load, so the first download does not carry it): 800 weight, 1.75rem, 1.5rem under 600px, -0.015em tracking. One size, never set inline. The same class beside `.ss-kicker` (`astryx-theme.css`) is the kicker-style page `h1` on Quiz, Coding, Challenge, Play and the Learn map; that compound rule outranks this one, so neither changes the other. |
-| Question / answer | High-legibility body scale; stable wrapping. |
-| Body / compact body | Reading and operational density. |
-| Metadata / kicker / label | Short context; not long copy. |
-| Numeric score | Tabular or stable-width numerals where possible. |
-| Code | Monospace, labelled language, horizontal scroll. |
-
-## Page widths
-
-Five tokens in `client/src/styles/astryx-theme.css` (UX audit U1, #573): four page widths and the chrome box. The route shell in `client/src/App.tsx` picks one route width per route from the one map in `client/src/components/ui/pageWidth.ts` (`pageMaxWidth`), writes it to `--ss-page-width`, and the keyed route box (`.ss-route`) takes it as its `max-width`. A page never sets its own page `max-width`: it fills the column and sizes only what sits inside it.
-
-| Token | Width | Used by |
-|---|---|---|
-| `--ss-width-task` | 640px | The task column inside a page: question screens, and the auth (`.ss-auth-page`), billing (`.ss-billing-card`) and checkout (`.ss-checkout-card`) cards; the `Page` lead above one of these cards wraps at the same width (`text-wrap: pretty`), so header and card share both edges. Never a route width. |
-| `--ss-width-narrow` | 800px | The route default: every route not listed below, including all `Page` screens (404, auth, `/premium` and its steps, `/privacy`, `/terms`, `/classroom`), `/shop`, `/collection`, `/leaderboard`, Learn and the question screens. |
-| `--ss-width-standard` | 1000px | Two-column pages: home (`/`), `/profile`, `/play` and `/play/:code`. |
-| `--ss-width-wide` | 1200px | Operational screens: `/coding` and `/coding/*`, and a Learn or FDE coding phase while its editor is mounted. |
-| `--ss-width-chrome` | 1168px | The floating header and the footer. Both keep this box on every route, so neither moves when the route width changes. |
-
-`/dev` is uncapped. A part that needs the wide page while it is mounted (a Learn or FDE coding phase) puts the class `ss-wide-page` on its root: `.ss-route:has(.ss-wide-page)` widens the route box to `--ss-width-wide` for as long as the part is there, with no state and no extra render. To give a new route a width, add it to the map and its test (`client/tests/page-width.test.tsx`); do not write a `max-width` on the page.
-
-What used to set its own width and now fills the column: `/shop` (was 1080px), the Leaderboard `.lb` (was 1200px, or 1000px only once another page had loaded `DeepEndScreens.css`), `.cd-page` (was 1200px; it is the coding pages and `/collection`), the shared `.de-page` (was 1000px), `/profile` (an inline 1000px) and the Shark Card deck `.sc-deck` (was 720px, and 800px on `/cards` only), so a page's header, controls and content share one left edge. Inside a page, the Play lobby (`/play/:code`), Play's sign-in and error gates and the Shark Card states without cards (sign in, empty, error; `.sc-state`) are the `--ss-width-task` column. `client/tests/page-own-width.test.ts` pins these. A component may cap its own text measure (`max-width: 68ch` on a paragraph), never the page.
-
-The shared `Page` layout (`PublicInfoPages.tsx`, `.ss-info-page`) fills the column, so every `Page` h1 starts at the same x. Its kicker line is always drawn (empty and `aria-hidden` when a page passes no kicker), so the h1 also sits at one y.
-
-## Control heights
-
-Two tokens, and one floor in `client/src/styles/app-shell.css`:
-
-| Size | Token | Height | Used for |
-|---|---|---|---|
-| Default | `--ss-control-height` | 44px | Every page action and form control, on every pointer: `.astryx-button`, `.astryx-segmented-control-item`, `.astryx-text-input` and its input. |
-| Compact | `--ss-control-height-compact` | 36px | Only controls inside an element with class `ss-compact` (a component's own toolbar, such as the coding editor's Format and Reset), on a fine pointer, each with a 44px hit area drawn by `::before`. On a coarse pointer they stay 44px. |
-
-The floor is a `min-height`/`min-width` with `!important`, because Astryx's StyleX rules cannot be reached by a class selector otherwise; it is the only place that does this. Do not size buttons page by page, and do not pass `size="sm"` to make a page action smaller: the floor lifts it anyway. The footer's appearance and sound toggles are the compact size, as pills, with the same hit area.
-
-**Hit areas for app-drawn controls.** A control that is not an Astryx one and keeps a smaller look takes a 44px press all the same: a transparent, `aria-hidden` layer inside the control, positioned absolutely and reaching past its edges by half the difference (`calc((100% - var(--ss-control-height)) / 2)`), so a press on it is a press on the control. The career roadmap's 31px part cells do this (`.rm-part-pill__hit` in `RoadmapTree.tsx`). Do not grow the visual for this, and do not leave the target at the visual's size on a mouse. A control whose size is its look is drawn at 44px or more: the Learn map's levels are 44px (50px when current) and its part tests 52px. The lesson runner's close and flag buttons are full 44px icon buttons, not compact ones: close is the only way out of a level.
-
-**Page actions.** A page action is 44px with 20px inline padding and 16px/600 text on a pill. `.ss-action` applies that type through Astryx's own variables (`--spacing-3`, `--text-label-size`, `--font-weight-medium`). Every button in `.ss-info-actions` and `.ss-auth__actions` gets it without a class; elsewhere pass `className="ss-action"`. A small in-row utility, such as a Retry inside a note, does not take it.
-
-**One primary per screen.** `SwimCta` (md, 44px) is the single filled primary on a screen; every other action is an Astryx secondary or ghost at 44px. A second task's button may turn primary only once its own input is complete, so it never competes with the page's primary while it cannot act: on `/play`, Create is the `SwimCta` and Join stays secondary until the code field holds a whole six-character code. A row of buttons that switches the view is not an action and is never filled: on `/collection` the open shelf's tab is secondary with `aria-current="page"` and the other is ghost, so the shelf's own primary (the gate's Sign in, the empty shelf's Take a quiz) stays the only filled button.
-
-**Card actions.** Every action in a card is the default size (no `size="sm"`), so a card's primary is never smaller than its secondaries: the Profile's GitHub, sharkname, path and account cards all stand at 44px. Only an in-row utility (a Retry inside a banner, a Remove on a list row) stays small.
-
-**Form controls with a label.** A control group (`ToggleButtonGroup`, `SegmentedControl`, a `select`) takes its label above it, never as a suffix after it, and the default size, so one form has one control height. Two short groups may sit side by side from 900px (the question count and time limit on `/play`). A control with more options than one row holds on a phone takes one control instead: the time limit on `/play` is one 44px `.ss-select`, and its 18 topic pills fold below 600px behind one 44px native `<details>` whose summary names the choice ("Topics: all", "Topics: 3 selected"); from 600px the pills stay open (UX audit social-account-13). Icon-only buttons are 44×44 with a 20px glyph (the header's Leaderboard, Premium and Coins; a dialog's close keeps its 16px glyph in a 44px button). Icons that sit side by side share one drawing language: the header's three are stroke icons in the text colour (`TrophyIcon`, the Premium diamond, `CoinsIcon` from `components/ui/icons.tsx`); the filled accent `CoinIcon` stays for the Coins page's balance, where it is large enough to read as a coin.
-
-## Coding frame
-
-One frame for every place a coding task opens (UX audit U3, #575): `/coding/<track>/<task>` (`CodingWorkbench`, `mode="section"`), a Learn level's coding phase (`mode="lesson"`, inside `LessonRunner`) and a path's code activity (`CodeActivity` in `ActivityViews.tsx`, `.cd-workbench--activity`). The Learn and path hosts put `ss-wide-page` on their root, so the route box is `--ss-width-wide` while the editor is mounted. On a path module only the frame uses that width: the module's head, its activity list and the open activity's heading stay in the centred `--ss-width-narrow` column, so opening an activity moves nothing above the editor. The rules are in `client/src/coding/Coding.css`.
-
-| Token | Value | Used for |
-|---|---|---|
-| `--cd-frame-h` | `clamp(600px, calc(100dvh - 7rem - 48px), 900px)` | The frame's one row from 1024px: the page's header clearance and 48px under it are left out. Run and Submit sit at the pane's foot on every task. |
-| `--cd-brief-cap` | 120px | The brief's body under its two-line heading, about five lines of prompt. |
-| `--cd-editor-min` | 280px below 1024px, 200px from 1024px | The editor's floor at every call site (`Editor` without a `minHeight`). Stacked, the editor grows with the code from it; in the frame it takes what the brief and the action bar leave, and 200px is only what a 600px frame leaves. |
-
-- **Columns.** From 1024px `.cd-workbench__grid` is the learner's split (58% by default), a 12px separator column with 2px either side, and the rest. The separator is a 1px `--ss-card-line` that turns a 3px accent line on hover and keyboard focus. A path activity leaves the separator column empty. Below 1024px the panes stack.
-- **Code pane.** `BriefZone` (`client/src/coding/BriefZone.tsx`), then the editor (`Editor fill`), then the action row. The brief's heading is an eyebrow (where the task sits, 0.8rem/600 secondary) over the `h1` (1.35rem/700) with the difficulty beside it. The body is capped; a longer one scrolls inside as a focusable region named by the title, fades over its last 24px and gets a ghost "Show full brief" toggle, which lifts the cap to what the editor's floor leaves. When what sits above the editor still outgrows its share (a lock note or a path's fixture note under a long brief on a 600px frame), the editor keeps its floor and the code pane scrolls, so the action row is never covered or cut off.
-- **Actions.** Run (Astryx secondary, `.ss-action`) and Submit (`SwimCta` md) lead the row with their words at every width. Format and Reset are the editor's own toolbar above the code: 36px icon buttons with tooltips in `.ss-compact`. When the brief ends with its "Show full brief" toggle, the toolbar sits at the end of the toggle's 44px row rather than on a row of its own, which starts the editor 56px higher; a lock note under the brief keeps the toolbar on its own row. From 1024px Hint, Solution and Skip are ghost buttons and Report the flag at the far right; below 1024px they are items of one 44×44 "More actions" Astryx `DropdownMenu`, whose items keep the reason an action is unavailable as their description. Waiting for a bigger screen, the pane is one warning note with "Use the editor here" inside it and no action row. A path's code activity has the same Submit (`SwimCta` md, unavailable rather than disabled while it cannot submit) beside a ghost Reset and its draft status.
-- **Results pane.** Tabs in one order on every track: Results, Console, the track's tab (Types or Preview), Resources, then Solution and Approaches when they exist. A tab never shrinks; the strip scrolls with a 16px fade at its far edge, and below 600px Resources drops its count. React opens on Results, and Preview takes over after the first Run that renders; before it, Preview is one line and its frame takes no room. A count is said once: the tab's badge (Results and Types both read checks passed of checks), with the Types panel counting compiler errors and failing type checks apart ("1 compiler error · 4 of 5 type checks fail").
-- **Checks.** One divided list, not a card per check: hairline rows, a 3rem status column saying Pass, Fail or a dash in words and colour, the call in mono followed by "→ expected" and after a run "· got actual", the description as a quiet second line and one small `edge` tag. "Expected" is not printed; a screen reader hears it in place of the arrow.
-
-## Coding lists
-
-The Coding home, the FullStack page and each track page (UX audit U3, #575). The rules are in `client/src/coding/Coding.css` and pinned by `client/tests/coding-lists-layout.test.ts`.
-
-- **One SwimCta.** On `/coding` it is the next challenge's Continue. A project or path row's action is `FadeFinCta` labelled by progress: Start at none, Continue when part done, Review when complete. The run planner's actions are Astryx secondary.
-- **The Premium rule once per list.** A list's intro says it under the lead ("Level 1 of every path, and stages 1 and 2 of every project, come with the free plan. Premium opens the rest."); a row keeps only its "Premium" badge beside its progress line. The task screen's stage list keeps its own note.
-- **Long lists fold.** A list of more than five projects shows five and a ghost "Show all N challenges"; it opens the rest in place, moves focus to row six and turns into "Show fewer". No list scrolls inside the page.
-- **Tracks.** Four in one row from 1051px, 2x2 down to 701px, one column below. The technique groups are a 3x3 grid from 1051px.
-- **Task rows.** One 48px hairline line each: the title, the level as quiet meta, any tag, the status at the end. Two columns from 1024px.
-- **Challenge run.** Collapsed, a hairline row of 64px: the title and one line on what a run is, with "Plan a run" (Astryx secondary, `aria-expanded`) at its end.
-- **Filters.** One row from 1024px: the search, then one 44px select per filter (technique, difficulty, length, format, and status with Saved when signed in). Under 760px a 2-column grid with the search across both. "Showing N of M" speaks only once a filter narrows the list; its live region stays in place.
-- **Signed out.** A list page says once, as a line under its lead, that a pass needs an account. A task's brief says nothing about it; a pass says 'Sign in to record this pass.' with a 44px secondary Sign in, on the completion screen and in the verdict. The run planner keeps its own note, because it gates that form.
-## Question screens
-
-Every question screen draws through the shared parts in `client/src/components/question/` (UX audit U2, #574), imported from its `index.ts`. Their sizes are tokens on `:root` in `client/src/components/question/question.css`, and their words are `question.*` keys in `client/src/i18n/translations.question.ts` (`questionText`), not in `astryx-theme.css` and `translations.ts`: only the question screens' lazy chunks load them, so the app shell carries none (`client/tests/question-copy.test.ts`). A runner's own words (`quiz.*`, `challenge.*`) stay where they are.
-
-| Token | Value | Used by |
-|---|---|---|
-| `--ss-question-block-min` | 200px | The question block's reserved height, so the answers start at one y on every question. |
-| `--ss-question-block-max` | 40vh | Past this the question block scrolls inside itself. |
-| `--ss-answer-row-min` | 48px | One answer row. |
-| `--ss-answer-gap` | 8px | The gap between answer rows. |
-| `--ss-answer-chip` | 26px | The number chip at the start of a row. |
-| `--ss-question-title-size` | 1.25rem | The run's `h1` in the QuestionHeader. |
-| `--ss-question-tags-min` | 56px | Under 560px, the QuestionHeader's second row when it holds a tag and the difficulty badge: two lines of tags, so a long topic name that wraps beside the icon buttons does not move the answers. |
-
-**QuestionShell** (`QuestionShell.tsx`). The `--ss-width-task` (640px) column, centred, with one `.ss-panel` surface (24px padding, 16px under 560px, `--radius-container`, no accent edge) and the actions 16px under it. Props: `header` (a QuestionHeader), `question` (the text, code and notes), `questionId` (the block's id, which names the answer list), `children` (the answer list, hint and feedback, under the block), `actions` (a QuestionActions row), `notice` (an error banner above the panel), `stable` (default `true`: the block keeps `--ss-question-block-min` and scrolls past `--ss-question-block-max`; `false` for one question on its own page), `focusable` (default `true`: the block takes `tabIndex -1`), `className`, `labelledBy`. The forwarded ref is the question block, for moving focus to it when a run starts or moves on. A runner sets no width, card or `flex: 1` of its own: the shell is top-anchored and as tall as its content.
-
-**AnswerOptionList** (`AnswerOptionList.tsx`). The one answer list: a `RadioCardGroup` (vertical, so Left/Right stay free for moving between questions) of `RadioCard` rows, `--ss-answer-row-min` tall and `--ss-answer-gap` apart, each with a `--ss-answer-chip` number chip (`--radius-inner`) and body text that turns semibold when selected. The selection is `var(--brand-accent)` with `var(--brand-accent-soft)`, never a track colour. Props: `options` (strings, also each row's accessible name), `value`, `onChange(index)`, `onActivate(index)` (a click or Enter/Space, not arrow browsing, for a runner where a press commits at once), `labelledBy` (the question block's id), `disabled`, `grade` (`{ correct, picked }`), `renderOption(option, index)`, `className`. Graded, the right answer takes the success tone, a check and "Correct answer" (`question.correctAnswer`), and a wrong pick the error tone (`RadioCard tone="error"`), a cross and "Your pick" (`question.yourPick`). The glyph is drawn in a 20px slot every row keeps at its end (`padding-inline-end`), graded or not, and the words are visually hidden (`.ss-answer-option__mark-text`): beside the text they rewrapped a 44–62 character answer at 590px and a short one at 320px, which moved the rows below at the moment of grading. The wrong pick has its number chip filled in `--ss-error-text` under `--ss-on-error-text` (6.47:1 light, about 11:1 dark) so the pick does not keep the selection green on a red row; both words are in the row's accessible name. Rows never move or grow when graded or selected: only the tone, the chip and the glyph change, and each row's text cell holds a hidden semibold copy of its words (`data-reserve`, drawn by `::after` in the same grid cell), so a line that wraps once it turns semibold already has its height. Number keys are the runner's own (a digit selects in Quiz and Challenge and grades in Learn), so the list does not bind them.
-
-**QuestionActions** (`QuestionActions.tsx`). The one action row, 16px under the panel (the shell's gap), every control 44px. Props: `primary` (`{ label, onClick, disabled, unavailable, describedBy }`, drawn as the screen's one `SwimCta` md on the right), `secondary` (Astryx `secondary` or `ghost` buttons on the left: Previous, Share, Review answers), `focusPrimary` (when it turns true, focus moves to the primary, as after grading; the page scrolls only as far as the button needs, never centring it, and then back up if that took the shell's answer list off the top, so the pick and the right answer stay in sight with the verdict; the list's `scroll-margin-top: 6rem` keeps it clear of the site header), `label` (names the row as a group), `className`. Under 560px the primary is the last row at full width, in the thumb zone, and the secondaries share a two-column row above it. `unavailable` keeps the primary focusable with `aria-disabled` and a reason in `describedBy`; `disabled` is for busy.
-
-**QuestionHeader** (`QuestionHeader.tsx`). The first thing inside the panel. Row 1: the run's `h1` at `--ss-question-title-size` (1.25rem/700) and the `WaterlineProgress` on the left, run status (timer, fins, hearts) on the right. Row 2, drawn only when it has content: tags (the `CategoryTag`, a level pill) and the difficulty badge on the left, icon buttons (hint, report, exit) on the right. Props: `title` (the h1's own words, "Question 3 of 10"), `run` (the run's name before it, muted, "Quiz · "), `titleRef` (makes the h1 a focus target), `progress` (`{ value, label }`), `status`, `meta`, `difficulty` (1–5, one neutral badge, `question.difficultyLevel`), `tools`. The h1 is the counter, so no visually hidden legend repeats it. Icon buttons are `QuestionIconButton` (`label`, `icon`, `onClick`, `pressed` for a toggle, `tooltip`): 44×44 with a 20px stroke glyph (`HintIcon`, `ReportFlagIcon`, `ExitIcon`), an `aria-label` and an Astryx tooltip; its ref reaches the native button, so a Popover can hang from it. Every runner shows the difficulty badge when its question has one, and every runner can report.
-
-**QuestionHint** (`QuestionHint.tsx`). The one keyboard hint, directly under the answer list: "Press 1–{max} to {verb} · Enter to {next}" (`question.keysHint`), or "Press 1–{max} to {verb}" when Enter does nothing (`question.keysHintShort`). Props: `max`, `verb` (`'select'` where a digit only picks, as in Quiz and Challenge; `'answer'` where it grades at once, as in Learn), `next` (`'continue'` or `'submit'`, what Enter does now), `hidden`. Its line is reserved in every state: `hidden` keeps the height and hides the words (after grading, say), so nothing moves. It is drawn only on a desktop with a fine pointer; a coarse pointer or a layout under 600px has no such keys, and there the line is not drawn on any question. A runner without number keys shows no hint.
-
-**QuestionFeedback** (`QuestionFeedback.tsx`). The graded verdict: an Astryx `Banner` (`status` success, error or info; `title` the verdict in words; `description` the explanation) in normal flow directly under the answer list and the hint, inside the panel, never positioned over the answers and with no shadow of its own. `children` sit under the verdict (Save as Shark Card). It takes focus when it appears (`autoFocus`, default `true`), so a screen reader reads it; pass `autoFocus={false}` when the runner moves focus to its Continue with `QuestionActions focusPrimary`. The ref is the feedback block. The answers do not move, because content is only added below them; a long explanation scrolls the page.
-
-**QuestionPageHeader** (`QuestionPageHeader.tsx`). The editorial header of a question area's setup or info screen (Quiz setup, Challenge setup, Shark Cards): the `Page` header markup (`.ss-info-page__header`: fin, kicker line drawn even when empty, `h1` at `--ss-type-title`, one lead line), so these screens share one h1 size and position with every `Page`. Props: `kicker`, `title`, `lead`, `titleRef`. A live run has no editorial header: its `h1` is the QuestionHeader's. /daily draws the same markup without the fin through `DailyHeader` (`DailyStaticArticle.tsx`), which the build's static body renders too, so the swap to the running page does not move it; its kicker is the day (a `<time>`). /today's h1 shares its row with the day's count (`.today-heading`), with the progress bar and the day-change note under it.
-
-A run's composition, top to bottom: `QuestionShell` › `QuestionHeader` › question block › `AnswerOptionList` › `QuestionHint` › `QuestionFeedback` (once graded), then `QuestionActions` under the panel. Quiz (`client/src/components/Quiz.tsx`) is the reference.
-
-The runners on it:
-
-- **Challenge** (`Challenge.tsx`, `Challenge.css`). The run's `h1` is "Biggest Shark Challenge"; its status is the score, the clock (`.challenge-run__clock`, the error colour under 15 seconds) and the fins, and the first header row wraps on a narrow phone so the h1 keeps whole words. No countdown bar: the clock says the time. Report and Exit are the header's tools; Exit asks first and leaves the run unsaved, as leaving the page does. A live run hides the site chrome (`onActiveChange`, as the Quiz). Submit, then Next question, See result or Retry, is the one primary; the verdict takes the focus, and Enter on it goes on. The setup is the Quiz setup's layout (`.challenge-setup`): the `--ss-width-task` column, QuestionPageHeader, one panel with the topic pills, a Select all / Deselect all link and Start, then up to five top scores under the panel. The game over and error screens use the same column (`.challenge-end`); the game over ends on `QuestionActions` with Play again as the one SwimCta md and Back as the secondary.
-- **Daily** (`DailyQuestionPage.tsx`). `QuestionShell` with `stable={false}`; the page is the `--ss-width-task` column (`.ss-daily`), so the header, the question and its states share both edges. The header slot holds the tag and difficulty only (the page's h1 is above). No QuestionHint: Daily has no number keys. The primary is Check answer, then Practice (it navigates to the Quiz on the day's track), with Share as the secondary; the share status under the row takes no space while it is empty.
-
-**The Learn runner and the skill check** (`client/src/components/learn/LessonRunner.tsx`, `SkillCheckRunner` in `client/src/components/Roadmap.tsx`) follow the same composition. A level's `h1` is "Level 1 · Values & Math" (a checkpoint's "Checkpoint · …"), its progress the waterline, its status the heart meter (a checkpoint's score), and its second row "Question 3 of 8" with report and exit. A press on an answer grades at once, so the hint says "answer" (`verb="answer"`) and there is no primary until the verdict is in. While a question is on screen the level reports `onActiveChange(true)` (through `Roadmap` and `BigOIntroduction`), so the site header and footer step aside as for a Quiz or Challenge run; the intro, the results and the coding phase keep them. Then Continue, Finish, See the result or Try again is the one `SwimCta` and takes focus (`focusPrimary`). Each new screen of a level (the intro, a question, a result) takes focus on its `h1` or question block without the browser's own scroll and, when its top is out of sight (the page scrolled to reach Continue under a long verdict), opens at its top under the site header (`.ss-question` has `scroll-margin-top: 6rem`). The intro ("Before you start", with exit only) and the results (`LessonResult`: the outcome as the `h1`, then one primary, with Try again as a secondary and Back to path as a ghost) render inside `QuestionShell` with `stable={false}`; their own rules live in `client/src/components/learn/LessonRunner.css`. The skill check names its round in the `h1` ("Find your level · Round 1 of 4"), keeps the stepping banner inside the question block so the answers keep their y, and draws "I don't know yet" under the list at one answer row's height with a dashed border.
-
-**The Shark Cards deck** (`client/src/components/Flashcards.tsx`, `SharkCards.css`) takes the parts that fit a card. It keeps the route's 800px column instead of the 640px shell, so on `/collection` the page header, the tabs and the card share one left edge (social-account-05). On `/cards` its header is `QuestionPageHeader` with no kicker and one lead line. The card's meta row holds the topic and "Card 1 of 4" (the deck's live region and its name); no side label repeats "Question". The card has no height floor: the question keeps three lines (`min-height: calc(3 * 1.55em)`), so a short question leaves the turn button and the action row at one y. Under it is one `QuestionActions` row with Previous and Next together on the left. One filled primary per side: face down it is the card's "Show the answer" (accent fill), and Got it is an Astryx secondary at the primary's place (the right end, or the full-width last row under 560px); turned, Got it is the `SwimCta` and "Hide the answer" is a quiet outline (questions-14, social-account-19).
-
-## Layout and density
-
-- Mobile gutter: 16px; tablet: 24px; desktop: 24–32px.
-- Page widths: the four tokens above, one per route, chosen by the shell.
-- Page sections: 32–64px according to public vs operational context.
-- Preserve fixed header, internal main scroll, persistent waterline, and at least 44px bottom-ocean clearance.
-- Quiz answers remain in a stable region; long question/answer content scrolls without moving actions unpredictably.
-
-## Shapes and surfaces
-
-- Page features: `--radius-page`.
-- Panels/cards: `--radius-container`.
-- Controls: `--radius-element`.
-- Inner tiles: `--radius-inner`.
-- Pill shape (`border-radius: 999px`) only for buttons (`.astryx-button`, `.ss-fin-button`), the header nav links (`.ss-navlink`), tags (`.ss-tag`), compact filters such as the topic pills (`.ss-topic-pill`), small inline toggles (glossary terms, figure buttons) and compact segmented controls. Cards, panels, inputs, selects, radio cards, drawer links and dialogs use the radius tokens above.
-- Default content hierarchy is canvas → one panel → rows. Avoid panel-inside-card-inside-card.
-
-## Shared component patterns
-
-- Editorial header: kicker, `h1`, concise supporting text, optional single action.
-- Operational header: `PageHeader` (`client/src/components/ui/PageHeader.tsx`): an optional `<Kicker>`, the route's one `h1` in ink at Astryx `display-3`, and one lead line (at most 68ch), 8px apart, on the column's left edge; a status line that belongs to the header goes in as its child. `/collection`, `/cards` and `/leaderboard` use it (UX audit social-account-11). Leave the kicker out when tabs or the title already say it. The scope sentence is the lead under the `h1`, and the one control row sits right on the table or list it filters (the Leaderboard: period control left, topic filter right, both 44px, then the board). A public page keeps the editorial `Page` header; a state with nothing else to show is a `StatePanel`, not a header.
-- Learn section page (`client/src/components/Roadmap.tsx`, `components/learn/*`, UX audit U4): one header in every auth state, the Learn `<Kicker as="h1">` ('Learn'), then the section switcher, the one place the section is named, then one supporting line, the section line, with the section's one action on its right from 768px (`.rm-section-header`, a `1fr auto` grid; stacked below) and a visitor's device-only note as the small status under both. Nothing under the switcher repeats the section's name: the actions say 'Sign in to add it to your plan' and 'Add it to your plan', and the path card is titled 'Guided path' or 'Guided path outline', with the path's name in its link's accessible name. Under 640px the switcher is a vertical list of full-width 44px rows, name left and percent right (each item keeps 'Web Developer · 8%' as its accessible name; Up and Down move as Left and Right do). The topic rail has at most five tiles a row at 800px and shares them evenly across the rows five a row needs (`railColumns` sets `--rm-rail-cols`: ten tiles are 5 + 5, eight 4 + 4, six 3 + 3, so no last row is half empty); a tile is never narrower than 148px, so a phone shows two a row, and a locked tile carries one lock signal: the lock glyph on its second line, beside a sentence-case 'Premium' only where Premium opens it, with 'Locked' in its accessible name and no dashed edge or fade. How many topics are still locked, and how to open them, is said once, in the skill-check row beside the skill check (`LockedNote`). The next-step card is one 72px row: the fin, the next level ('Level 1 of 25 · Values & Math') with the topic's 4px bar under it at the text's width, and the `SwimCta` 'Continue' (on a phone, a full-width row of its own); when Premium opens that level the line reads '<Topic> is part of Premium' (or 'From level 13, React is part of Premium' where the topic's first levels are free) and the button 'See Premium'. Premium is said once per topic, on its tile and in that card: the map's Premium nodes keep the lock, the dashed edge and 'Premium' in their accessible name, and draw no label. A section with nothing open is not a `StatePanel`: it sits in the column on its left edge with no card, an `h2`, one line and one action row ('Go to <topic>' as the `SwimCta`, 'Take the skill check' as a 44px secondary), and the separate skill-check row is not drawn in that state. A signed-in learner's join ('Add it to your plan', 'Start the FDE path') is the `SwimCta` md; while the header offers it, it is the screen's one primary, so 'Go to' and the next-step card's 'Continue' or 'See Premium' (a topic the section shares with the learner's plan stays open in it) are 44px secondaries.
-- Learn page header: `LearnPageHeader` (`client/src/components/learn/LearnPageHeader.tsx`, UX audit learn-15) for a Learn-area page that is not a section: `/roadmap`, `/big-o` and `/learn/big-o`. It is the `PageHeader` frame (`.ss-page-header`: left edge, 8px apart, the lead at most 68ch) with the Learn title, the `<Kicker as="h1" className="ss-section-title">` that `/learn` uses (green, 800 weight, the wave under it), and one supporting line. `context` puts one small uppercase link above the title, as the FDE module page's kicker does ('Big O guide' over 'Big O introduction'); its press reaches 44px through padding pulled back by a negative margin, so the title does not move. The Learn link rule is `.learn-link` (and the context link): `--color-text-accent` with a 1px underline. The `/roadmap` section headings ('Web Developer') link to their section in the text colour, with the accent arrow drawn by `::after` (`content: '→' / ''`, so the heading's name is the section's name) and a 44px press. None of these pages sets its own width: CareerRoadmap's 780px box and Big O's 800px cap are gone.
-- Big O pages (UX audit learn-19): `/big-o` ends on one row, not a card: the `h2` 'Two free lessons' on the left and the one `SwimCta` md 'Start lesson 1' on the right, which opens lesson 1's reading directly (`/learn/big-o?lesson=1`; the introduction drops the parameter once the lesson is open, so Back and a reload land on the introduction). `/learn/big-o` (`BigOLessons`, `client/src/components/learn/BigOLessons.tsx`) is the Learn page header with 'Big O guide' as its context link and one line (free, no Skill Check), then the two lessons in one row, 'Complexity Basics' as the `SwimCta` md and 'Big O and Growth' as a 44px secondary (the audit's "secondary lg" is the shared 44px default), each with 'Lesson 1 of 2' under it. Neither page repeats the other's paragraph.
-- Career roadmap sections (`CareerRoadmap.tsx`, `CareerRoadmap.css`, UX audit learn-16): the track segment is the page's one track label (no badge, no "on the Fullstack track" in the progress line, no "Choose Frontend, Backend or Fullstack" in the map's intro). Under the map each section is one compact list in one `.ss-panel`: its pillar groups two to a row from about 640px, `align-items: start` so each group is as tall as its rows, each a pillar `h3` with its percent and one 44px row per topic (dot, name, a 72px bar, '2/6 levels' in tabular numerals) with a hairline between rows; the rows share the group's columns (`grid-template-columns: subgrid`), so every bar in a group starts at the same x whatever its count reads. A topic is listed only under the first section that holds it, with 'Also in: Software Engineer' as one meta line under its name, inside the name's column (plain text, not a pill: it is a list of places, not a status word, and wraps there instead of running under the bar); the section's own progress line still counts all its topics. A section whose topics are all listed above says so in one line. The pillar intros and per-topic blurbs are gone: the map above already gives each topic its one-line detail.
-- Career roadmap map (`RoadmapTree.tsx`, `RoadmapTree.css`, UX audit learn-17): one row per stage, a 180px label column (the stage's number in the accent dot, its name, and a 2px connector line down to the next stage) beside its topic cards in columns of at least 160px, so a one-topic stage is one card tall. Stages are numbered as drawn (1, 2, 3), never by their place in the full track. The map sizes by its own width (`container-type: inline-size`): below 520px the label sits over its cards, the connector is not drawn and the cards take columns of at least 140px.
-- Secondary path: a short form that is not the page's task (the voucher on `/premium` while checkout is on) is one row without a card: its `h2` on the left, the field (at most 320px) and a secondary button beside it, stacking below 600px. It keeps its card only while it is the page's way in.
-- Settings row: one row per account action, its `h3` title and a one-line description on the left and its 44px button on the right, with a hairline between rows, stacking below 600px (`.de-setting-row`, the Profile's Account card). The row title names what the action reaches ('All devices'), never the button's own words.
-- Profile cards: every card on the Profile overview is `.ss-panel` with 24px padding, a `<Kicker as="h2">` and the plain surface; no `.ss-raised` around an Astryx Card, no muted override. The learning column (Career, Track and sections, the GitHub garden) is on the left and the right column holds the study advisor, saved questions, 'Your name' and Account, so both end within about 20px of each other at 1280 (with the advisor on the left the right column ended 411px short). The identity banner carries the name and the plan on one row (on a phone the plan name and its summary run on as one text of at most two lines); appearance and sound stay in the footer. The two streak tiles stay side by side down to 320px.
-- Name panel: every name a learner shows is set in one 'Your name' panel (`SharknameCard`): the sharkname field with Generate and Save on one row (the field alone above the two buttons below 600px), then 'Friends see' and 'Leaderboards show' side by side when the panel itself is at least 400px wide inside its padding (a container query on `.sn-card`, since the panel sits in one of the Profile's two columns), stacked otherwise and below 600px of viewport. Each column has the same Sharkname / Account name choice and its own photo switch with a 44px hit area, and saves its own setting, so the two stay independent. The field shows the sharkname (a numbered one ends in its number after the field); no option, plate or hint repeats it.
-- Disclosure inside a card: a native `<details>` with a 44px `summary` (`.de-disclosure`) holds detail a card needs only on request, such as the GitHub garden's 'How it works'.
-- Section disclosure: a summary a learner needs only on request, below the content it sums up, is one native `<details>` with a 56px `summary` that holds the section's `h2` and its count ('Competency evidence · 12 areas'), between hairlines, closed by default (`.lp-disclosure`). Each row inside is its own 56px `<details>`: title and a one-line summary on the left (the whole line once open), one labelled count on the right ('0 of 24 verified', plus self-reviewed work when there is any), the list behind it. Rows with nothing to list are left out, and an activity in a row's list shows its state only once one is recorded. The FDE path page uses it (UX audit learn-11).
-- Learning-path pages (`components/paths/`, UX audit U4): the path and module headers stack in every state, the text over one left-aligned action row with `SwimCta` md as the one primary (a guest on an open path gets 'Sign in to start'); the row keeps its 44px (`aria-busy`) while the account's enrollment or progress loads, so nothing below moves when the primary arrives. A module page's primary waits for recorded progress, then opens the first activity that is neither passed nor self-reviewed ('Start module', then 'Continue: <title>' cut at 32 characters, described by the marked row's full title) and steps aside while an activity is open; the module's state is a small badge beside the kicker, and the next row has a 3px accent edge. An activity row shows a recorded state as one glyph beside its minutes (words for a screen reader) and nothing while it is not started; on the path page a row is one 48px line (kind, title, minutes), and under 30rem every row puts kind, minutes and state on its first line and the title under them, and a title's prefix that repeats the kind column ('Read:') is dropped at render time, never in the reviewed content. A module whose every activity Premium opens says 'Premium' once, in its head beside the minutes; its rows keep the word in their accessible name and draw no label of their own. The delivery loop counts each phase as '0 / 3' under its one-line title, in columns of at least 140px.
-- Panel: `.ss-panel`; clickable lift only with `.ss-lift`; read-only raised card with `.ss-raised`.
-- Choice: `RadioCardGroup`/`RadioCard` or `CheckCard`, not checkbox-emitting cards for radio jobs.
-- Feedback: shared semantic tokens plus text/icon, never color alone.
-- Empty/error/loading: one cause, one next action, stable layout.
-- Destructive confirmation: `BrandedConfirmDialog` (Astryx `AlertDialog`) with a product-specific title, body, cancel and confirm; the Astryx dialog owns focus and restoration. It runs the confirmed action once, even when a second press lands before it re-renders. Removing a friend and deleting an account ask through it. Reset in the coding workbench and in a path's code activity asks in an inline `role="alertdialog"` note in the row under the coding frame instead; keeping the code returns focus to Reset, and in a path activity a confirmed Reset does too.
-- Signed out: `SignedOutBlock` (`components/SignedOutBlock.tsx`) on every money screen (`/shop`, `/premium/checkout`). One sentence in secondary text, then one "Sign in" page action (44px, `aria-haspopup="dialog"`) that opens the sign-in dialog, with a `returnTo` when the next step lives elsewhere. It stands in place of the content a visitor cannot see yet and adds no card, border or background. No placeholder number ("—") stands in for a balance. The first block on a screen is the primary; a second one passes `emphasis="secondary"`, so the screen keeps one filled primary. An action a visitor cannot take yet says so on its own button ("Sign in to buy") and opens sign-in instead of sitting disabled.
-- State panel: `StatePanel` (`client/src/components/ui/StatePanel.tsx`) is the one panel for a state with nothing else to show: every sign-in gate, an empty shelf, a callback's progress or failure. It sits centred in the `--ss-width-task` column (the audit asked for 560px; the shared task width is 640px), takes an optional icon and `<Kicker>`, one heading (`level` 1 when it is the page, 2 under a page header), one body line (`live` makes it a polite status for a state that changes in place) and its actions, the one primary first, all at 44px. A sign-in gate's primary says "Sign in", and every button in the action row takes the page-action type without a class. Users: the Shark Cards states on `/cards` and `/collection` (both tabs), the sign-in gate on `/play` and `/play/:code` and Play's "Live games are switched off" state (an h1, since each is the page), and every phase of the GitHub callback `/settings/github`, an operational page, so no display hero or fin; when a failure leaves nothing to retry or reconnect, "Back to profile" is its primary. Do not hand-build another gate card.
-- Destructive confirmation: `BrandedConfirmDialog` (Astryx `AlertDialog`) with a product-specific title, body, cancel and confirm; the Astryx dialog owns focus and restoration. It runs the confirmed action once, even when a second press lands before it re-renders. Removing a friend and deleting an account ask through it. Reset in the coding workbench and in a path's code activity asks in an inline `role="alertdialog"` note under the action bar instead; keeping the code returns focus to Reset, and in a path activity a confirmed Reset does too.
-
-## Motion
-
-- Route fade: ~140ms, no exit blank.
-- Selection/button response: 120–180ms.
-- Fin reveal: opacity only; base stays on the waterline.
-- Swim-through: reserved CTA translation.
-- Success: brief, no answer reflow.
-- All non-essential motion respects `prefers-reduced-motion: reduce`.
-- Dense admin surfaces do not use decorative animation.
-
-## Accessibility
-
-- Visible, theme-safe focus on links, buttons, cards, inputs, dialogs, tables and editors.
-- Real heading/landmark structure and one route `h1`.
-- Radio groups use roving focus and Arrow/Home/End behavior.
-- Status uses text/icon plus semantic color.
-- Timers announce only meaningful thresholds.
-- Dialog/drawer focus traps, Escape, close button and restoration are mandatory.
-- Validate at 400% reflow, 360px width and both themes.
-
-## Content rules
-
-- All reusable UI copy uses translation keys in `client/src/i18n/translations.ts`, or in the chunk files beside it (`translations.learn.ts`, `translations.paths.ts`, `translations.privacy.ts`, `translations.codingLists.ts` and the rest) that only their routes load.
-- devShark ships English only: write all copy in English and add no second language, translation overlay or language switch.
-- Public facts come from registries/content, not repeated literals.
-- Curated explanations are authoritative. devShark ships no AI feature.
-- Never generate product screens, scores, users, testimonials or factual teaching diagrams.
-
+- Keep the fixed header, the internal main scroll, the persistent waterline and at least 44px of bottom-ocean clearance.
+- One `h1` per route, real landmarks, visible theme-safe focus on every interactive element.
+- Radio groups use roving focus and Arrow/Home/End. Dialogs and the drawer trap focus, close on Escape, have a close button and restore focus.
+- Status uses text or an icon plus semantic colour; timers announce only meaningful thresholds.
+- Validate at 360px, at 400% reflow and in both themes.

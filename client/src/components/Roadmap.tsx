@@ -1489,7 +1489,7 @@ function LessonStage({ onExit, t, children }: { onExit: () => void; t: TFn; chil
 
 function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry: () => void; onExit: () => void; t: TFn }) {
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', marginTop: 32 }}>
+    <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', textAlign: 'center', marginTop: 32 }}>
       <div style={{ color: 'var(--ss-error)', marginBottom: 16 }} role="alert">{message}</div>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
         <AxButton variant="primary" label={t('roadmap.retry')} onClick={onRetry} />

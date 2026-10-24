@@ -1,0 +1,34 @@
+{
+  "$comment": "Exceptions to scripts/check-design-contract.mjs. Each entry covers violations of `rule` in `file` whose text contains `match` (every one in the file when `match` is left out). Every entry needs a reason, and an entry that matches nothing fails the check, so remove it when its code goes.",
+  "entries": [
+    { "rule": "page-width", "file": "client/src/og/ogImages.ts", "match": "maxWidth: 1000", "reason": "Lays out text on the 1200x630 share image the build renders; it is not a page." },
+    { "rule": "page-width", "file": "client/src/components/dev/DevConsole.css", "match": "max-width: 680px", "reason": "/dev is uncapped and high density (DESIGN_RULES.md §10); this is a text measure for the quality summary." },
+    { "rule": "page-width", "file": "client/src/components/dev/DevMerch.tsx", "match": "maxWidth: 960", "reason": "/dev is uncapped (DESIGN_RULES.md §10); this caps an admin table inside it." },
+    { "rule": "page-width", "file": "client/src/components/dev/DevSettings.tsx", "match": "maxWidth: 720", "reason": "/dev is uncapped (DESIGN_RULES.md §10); this caps an admin form inside it." },
+    { "rule": "page-width", "file": "client/src/components/dev/DevVouchers.tsx", "match": "maxWidth: 960", "reason": "/dev is uncapped (DESIGN_RULES.md §10); this caps an admin table inside it." },
+
+    { "rule": "button-height", "file": "client/src/styles/app-shell.css", "match": ".ss-footer-settings button", "reason": "The footer's appearance and sound toggles are compact utility controls with a 44px ::before hit area on a mouse and 44px on a coarse pointer (design-system.md, Control heights)." },
+
+    { "rule": "small-button", "file": "client/src/components/Leaderboard.tsx", "match": "t('quiz.retry')", "reason": "A Retry inside the stale-data banner: an in-row utility (design-system.md, Card actions)." },
+    { "rule": "small-button", "file": "client/src/components/Profile.tsx", "match": "t('quiz.retry')", "reason": "A Retry inside the stats warning banner: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/components/Profile.tsx", "match": "t('common.remove')", "reason": "A Remove on a saved-question list row: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/components/PlanLine.tsx", "match": "t('profile.plan.retry')", "reason": "A Retry inside the plan line's failure note: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/components/PremiumPage.tsx", "match": "t('profile.plan.retry')", "reason": "A Retry inside the 'billing unreachable' note: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/components/ReferralInvite.tsx", "match": "t('quiz.retry')", "reason": "A Retry inside the inline load error: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/components/Shop.tsx", "match": "t('quiz.retry')", "reason": "A Retry inside the wallet and catalogue inline load errors: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/components/Today.tsx", "match": "t('today.retry')", "reason": "A Retry inside the offline/error banner: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/components/coding/GithubGardenCard.tsx", "match": "t('quiz.retry')", "reason": "A Retry inside the GitHub load-failure banner: an in-row utility." },
+    { "rule": "small-button", "file": "client/src/coding/CodingWorkbench.tsx", "match": "t('coding.preview.reload')", "reason": "A Reload inside the preview's timeout note: an in-row utility, like a Retry in a banner." },
+    { "rule": "small-button", "file": "client/src/components/coding/CodingSection.tsx", "match": "size=\"sm\"", "reason": "The evolving task's stage stepper: a compact row of numbered stage links, like pagination; the 44px floor still holds every target." },
+
+    { "rule": "small-button", "file": "client/src/components/dev/DevConsole.tsx", "reason": "/dev is the high-density admin console (DESIGN_RULES.md §10, design skill: '/dev high density')." },
+    { "rule": "small-button", "file": "client/src/components/dev/DevLogs.tsx", "reason": "/dev is the high-density admin console." },
+    { "rule": "small-button", "file": "client/src/components/dev/DevMerch.tsx", "reason": "/dev is the high-density admin console." },
+    { "rule": "small-button", "file": "client/src/components/dev/DevQuality.tsx", "reason": "/dev is the high-density admin console." },
+    { "rule": "small-button", "file": "client/src/components/dev/DevQuestions.tsx", "reason": "/dev is the high-density admin console." },
+    { "rule": "small-button", "file": "client/src/components/dev/DevReports.tsx", "reason": "/dev is the high-density admin console." },
+    { "rule": "small-button", "file": "client/src/components/dev/DevTriage.tsx", "reason": "/dev is the high-density admin console." },
+    { "rule": "small-button", "file": "client/src/components/dev/DevVouchers.tsx", "reason": "/dev is the high-density admin console." },
+    { "rule": "small-button", "file": "client/src/components/dev/QuestionEditor.tsx", "reason": "/dev is the high-density admin console; the editor's toolbar buttons." }
+  ]
+}

@@ -41,7 +41,7 @@ import { LockedButton } from './ui/LockedButton';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
 import { Page } from './PublicInfoPages';
-import { SignedOutBlock } from './SignedOutBlock';
+import { StatePanel } from './ui/StatePanel';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
@@ -155,10 +155,10 @@ function Wallet({ signedIn, restoring = false }: { signedIn: boolean; restoring?
           {/* The h1 says Coins and the number says coins: the label names
               the section for a screen reader only (UX audit money-12). */}
           <h2 id="rw-wallet-title" className="ss-sr-only">{t('shop.balanceLabel')}</h2>
-          {/* Signed out, the money screens' one signed-out block stands where
-              the balance goes, so no '—' poses as a number (money-05). */}
+          {/* Signed out, the inline state stands where the balance goes, so
+              no '—' poses as a number (money-05). */}
           {!signedIn && !restoring ? (
-            <SignedOutBlock message={t('shop.signInForWallet')} />
+            <StatePanel inline body={t('shop.signInForWallet')} signIn />
           ) : (
             <p className="rw-wallet__amount">
               <strong>{signedIn && wallet.data ? wallet.data.balance.toLocaleString('en-GB') : '—'}</strong>

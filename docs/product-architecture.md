@@ -292,9 +292,10 @@ says when the XP opens again, on the learner's own clock (`XpToaster`).
 
 A learner's handle is their sharkname: the address friends add them by, 3 to
 32 characters (`shared/handles.ts`, the same rule as the
-`user_handles_handle_check` CHECK and `set_user_handle`). "Your sharkname" on
-the Profile's Overview (`SharknameCard`) shows it, rolls a new one with
-Generate (`shared/sharkname.ts`: a camelCase shark name such as
+`user_handles_handle_check` CHECK and `set_user_handle`). The 'Sharkname'
+field of the 'Your name' panel on the Profile's Overview (`SharknameCard`,
+beside its 'Friends see' and 'Leaderboards show' choices) shows it, rolls a
+new one with Generate (`shared/sharkname.ts`: a camelCase shark name such as
 `thirstySharkie`), lets the learner edit it, and saves through
 `op=friends-handle`; a taken name answers 409 `handle_taken` and the card
 offers another roll. A handle changes at most once every 30 days. Every

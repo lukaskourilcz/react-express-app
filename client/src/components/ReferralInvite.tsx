@@ -9,7 +9,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { Kicker } from './landing/LandingKit';
-import { SignedOutBlock } from './SignedOutBlock';
+import { StatePanel } from './ui/StatePanel';
 import { useT } from '../i18n/LanguageContext';
 import { useGameConfig } from '../lib/gameConfig';
 import { inviteLink, useReferral } from '../lib/referral';
@@ -86,10 +86,9 @@ export function ReferralInvite({ signedIn, restoring = false }: { signedIn: bool
         </div>
       )}
 
-      {/* The money screens' one signed-out block (UX audit money-05); the
-          wallet's Sign in above is the screen's primary, so this one is
-          secondary. */}
-      {!signedIn && !restoring && <SignedOutBlock message={t('rewards.invite.signedOut')} emphasis="secondary" />}
+      {/* The inline signed-out state (UX audit money-05); the wallet's Sign
+          in above is the screen's primary, so this one is secondary. */}
+      {!signedIn && !restoring && <StatePanel inline body={t('rewards.invite.signedOut')} signIn={{ emphasis: 'secondary' }} />}
       {loading && <p className="rw-muted" role="status">{t('common.loading')}</p>}
       {signedIn && referral.isError && !data && (
         <div className="rw-inline-error" role="alert">
@@ -113,7 +112,9 @@ export function ReferralInvite({ signedIn, restoring = false }: { signedIn: bool
                 aria-describedby={statusId}
                 onFocus={(event) => event.currentTarget.select()}
               />
-              <Button variant="primary" label={t('rewards.invite.copy')} onClick={() => void onCopy()} />
+              {/* A utility beside its field, not the page's task: secondary,
+                  so /shop keeps its filled buttons for buying. */}
+              <Button variant="secondary" label={t('rewards.invite.copy')} onClick={() => void onCopy()} />
             </div>
             <p id={statusId} className="rw-invite__status" role="status" aria-live="polite">
               {!spoken ? '' : copy === 'copied' ? t('rewards.invite.copied') : copy === 'failed' ? t('rewards.invite.copyFailed') : ''}

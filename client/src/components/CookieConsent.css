@@ -21,7 +21,7 @@
 }
 .ss-consent__inner {
   box-sizing: border-box;
-  max-width: 1000px;
+  max-width: var(--ss-width-standard);
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
