@@ -165,8 +165,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [code, setCode] = useState<string>(initialCode ?? task.starter);
   const shownCode = useRef(code);
   shownCode.current = code;
+  // The last code Format produced, or the starter as authored: Format has
+  // something to do once the code differs from it. Prettier (about 170 KB
+  // gzip) loads on the first press only, never to decide this (perf baseline
+  // #587 C02, C24).
   const [formattedCode, setFormattedCode] = useState<string>(task.starter);
-  const [formatSource, setFormatSource] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [runPhase, setRunPhase] = useState<RunPhase | null>(null);
   const [run, setRun] = useState<RunOutcome | null>(null);
@@ -240,25 +243,6 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const rungs = useMemo(() => ladderRungs(task), [task]);
   const taken = Math.min(hintsTaken, rungs.length);
-
-  // Format the code for display once the learner pauses, which tells the
-  // Format button whether it has anything to do. Not while a puzzle or the
-  // wait for a bigger screen stands in for the editor: there is no Format
-  // button then, and a phone downloaded Prettier for nothing.
-  const formatterNeeded = !puzzleMode && !pendingOnDesktop;
-  useEffect(() => {
-    if (!formatterNeeded) return;
-    let active = true;
-    const timer = window.setTimeout(() => {
-      if (!code.trim()) { setFormattedCode(code); setFormatSource(code); return; }
-      void formatCode(code, task.track).then(formatted => {
-        if (active) { setFormattedCode(formatted); setFormatSource(code); }
-      }).catch(() => {
-        if (active) { setFormattedCode(code); setFormatSource(code); }
-      });
-    }, 350);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [code, task.track, formatterNeeded]);
 
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
   // The runner, and TypeScript's compiler, load while the brief is read: the
@@ -472,6 +456,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setFormattedCode(formatted);
       setFormatError(null);
     } catch (error) {
+      // Code Prettier cannot read: the note says why, and Format waits for
+      // the next edit instead of saying the same again.
+      setFormattedCode(code);
       setFormatError(String((error as Error)?.message ?? error).split('\n')[0]);
     }
   }, [code, task.track, onEdit]);
@@ -648,7 +635,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       else void runLocal();
     }
   };
-  const formatDisabled = busy || !code.trim() || formatSource !== code || code === formattedCode;
+  const formatDisabled = busy || !code.trim() || code === formattedCode;
   const resetDisabled = busy || (code === task.starter && taken === 0);
   const tierLabel = t(`coding.tier.${CODING_TIERS[task.tier]}` as never);
   const trackLabel = t(`coding.track.${task.track}` as never);

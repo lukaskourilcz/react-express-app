@@ -652,6 +652,23 @@ Code typed a moment before and still waiting is written first
 (`beforeAccountChange`), and work begun for the account that left (a draft
 read, a brief refresh) checks `accountEpoch` and opens nothing.
 
+### What a task screen loads, and when
+
+The workbench's heavy parts load when the learner reaches for them, not when
+a page opens (perf audit #587). None of this changes what is graded, saved or
+shown once it has loaded.
+
+- **Prettier** (about 170 KB gzip) loads on the first Format press. Nothing
+  formats in the background: Format is on whenever the code differs from the
+  starter as authored or from what the last press produced, and a press that
+  changes nothing turns it off until the next edit. Code Prettier cannot read
+  says why under the editor and turns Format off until the next edit. Before,
+  the page formatted the whole program 350 ms after it opened and after every
+  typing pause to decide whether Format was on (C02, C24).
+- **A hidden track** (system design) is the not-found page before anything
+  loads: the track page and its task addresses read no plan, progress, stars
+  or run and warm no workbench (C26).
+
 ### Evolving projects and short paths
 
 `shared/evolving.ts` holds fourteen projects with 146 stages and fifteen

@@ -102,14 +102,45 @@ it('loads no runner while the screen waits for a bigger one, and loads it once t
 
 // The display formatter ran 350 ms after the task opened, so a phone waiting
 // for a bigger screen downloaded Prettier for a Format button it did not show.
-it('loads no formatter while the screen waits for a bigger one, and formats once the editor opens', async () => {
+// Since #587 C02 no screen formats in the background: Prettier loads on the
+// first Format press, here as on a wide screen.
+it('loads no formatter while the screen waits for a bigger one, and formats once the editor opens and Format is pressed', async () => {
   vi.mocked(formatCode).mockClear();
   mount();
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
   expect(formatCode).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
-  expect(formatCode).toHaveBeenCalled();
+  expect(formatCode).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one=()=>2' } });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Format' })); });
+  expect(formatCode).toHaveBeenCalledTimes(1);
+});
+
+// Perf baseline #587 C02 and C24: Prettier (about 170 KB gzip) loaded 350 ms
+// after every task opened and re-formatted the whole program after every
+// typing pause, only to set the Format button. It now runs on a press only.
+it('formats nothing on open or while the learner types on a wide screen, only when Format is pressed', async () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  vi.mocked(formatCode).mockClear();
+  mount();
+  const format = screen.getByRole('button', { name: 'Format' });
+  // The starter is shown as authored: nothing to format until the code changes.
+  expect(format).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one=()=>2' } });
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one=()=>3' } });
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+  expect(formatCode).not.toHaveBeenCalled();
+  expect(format).not.toHaveAttribute('aria-disabled');
+  await act(async () => { fireEvent.click(format); });
+  expect(formatCode).toHaveBeenCalledTimes(1);
+  expect(formatCode).toHaveBeenCalledWith('const one=()=>3', 'javascript');
+  // What Format produced has nothing more to format.
+  expect(format).toHaveAttribute('aria-disabled', 'true');
 });
 
 // CODE-5: a section task with a puzzle showed only the puzzle on a narrow
