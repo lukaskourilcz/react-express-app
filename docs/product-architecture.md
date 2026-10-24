@@ -1624,7 +1624,13 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   each completion. The browser pulls it at sign-in and when Today or a map
   asks (`GET /api/quiz/roadmap?resource=progress`, `syncProgressWithServer`,
   one request in flight per account) and sends nothing back; a PUT there
-  answers 405.
+  answers 405. A sync that answered in the last minute
+  (`PROGRESS_SYNC_FRESH_MS`) for the same account, with no level completed
+  since and the device copy as it left it, answers the next ask, so the
+  sign-in sync, Today and a Learn map share one read and a return to the map
+  reads nothing new (#587 C08, C22). Changes made in this tab come back in the
+  answer that made them; one made in another tab or on another device shows
+  within the minute.
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
   every answer before the handler runs, and the public reads set their own:
   the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,
