@@ -17,7 +17,6 @@ import type { CodingGardenStatus } from '../shared/coding-api';
 import { gardenPathFor, hasLearnLevel, type CodingTask } from '../shared/coding-catalog';
 import type { GardenPassInput } from './github-garden';
 import { UpstreamTimeoutError, withTimeout } from './http';
-import { afterResponse } from './coding/after-response';
 
 const API = 'https://api.github.com';
 const USER_AGENT = 'devShark-garden';
@@ -387,12 +386,15 @@ export async function commitPassedTask(supabase: SupabaseClient, input: GardenPa
   // after this one, an older copy would put the older code back.
   await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: new Date().toISOString() }).eq('user_id', input.userId).eq('path', path).eq('status', 'queued').neq('id', row.id));
   const status = await deliver(supabase, connection, row);
-  // Older queued rows go out after a commit proved the connection works.
-  // Nothing in the verdict reads how that went, so where the runtime keeps
-  // the function alive after the answer (after-response.ts) the Submit no
-  // longer waits for it (#587, server item 28); elsewhere it does, as before.
-  // The pass's own status is still the delivery's, decided above.
-  if (status.status === 'committed') await afterResponse(retryQueued(supabase, input.userId, 5));
+  // Older queued rows go out after a commit proved the connection works, and
+  // the Submit waits for them. Handing this retry to the runtime after the
+  // answer (#587, server item 28) was tried and undone: deliver() claims no
+  // row, so a Sync pressed on the verdict, or the next pass of one of those
+  // files, would then run beside a retry still writing. Two deliveries of
+  // one row race on its sha and can turn a committed row back to queued,
+  // and a retry that lands after a newer pass of the same file puts the
+  // older code back, which the skip above exists to prevent.
+  if (status.status === 'committed') await retryQueued(supabase, input.userId, 5).catch(() => undefined);
   return status;
 }
 

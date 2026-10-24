@@ -474,10 +474,11 @@ async function main() {
   assert.equal(retried.remaining, 0, 'the older copy is not left waiting');
 
   //     #587 server item 28: after a committed pass the older queued rows go
-  //     out too, and nothing in the verdict reads how. Where the runtime
-  //     keeps the function alive after the answer (the request context's
-  //     waitUntil) the pass answers without waiting for them; elsewhere it
-  //     waits, as before. The pass's own status is the same either way.
+  //     out too, and the pass answers only once they did, even where the
+  //     runtime would keep the function alive after the answer (the request
+  //     context's waitUntil). deliver() claims no row, so a retry still
+  //     writing after the answer would race a Sync pressed on the verdict or
+  //     the next pass of the same file, and could put older code back.
   {
     const contextKey = Symbol.for('@vercel/request-context');
     const holder = globalThis as unknown as Record<symbol, unknown>;
@@ -495,9 +496,8 @@ async function main() {
     try {
       const committed = await afterCodingPass(supabase, { userId: accountG, task, code: 'const answer = 5;', passedCount: 3, totalCount: 3, firstPass: false, codeChanged: true });
       assert.equal(committed?.status, 'committed', 'the pass reports its own commit');
-      assert.equal(handed.length, 1, 'the retry of older rows is handed to the runtime');
-      await handed[0];
-      assert.equal(commitRows.get(waitingG)?.status, 'committed', 'and the older row still goes out');
+      assert.equal(handed.length, 0, 'the retry of older rows is not left running after the answer');
+      assert.equal(commitRows.get(waitingG)?.status, 'committed', 'the older row went out before the pass answered');
     } finally {
       delete holder[contextKey];
     }
@@ -507,7 +507,7 @@ async function main() {
     const waitingH = queueOne(accountH, 'javascript/97-waiting.js');
     const awaited = await afterCodingPass(supabase, { userId: accountH, task, code: 'const answer = 6;', passedCount: 3, totalCount: 3, firstPass: false, codeChanged: true });
     assert.equal(awaited?.status, 'committed');
-    assert.equal(commitRows.get(waitingH)?.status, 'committed', 'without the hook the pass waits for the older rows, as before');
+    assert.equal(commitRows.get(waitingH)?.status, 'committed', 'without the hook the pass waits for the older rows too');
   }
 
   // 17. A connection the database could not read is a failed garden write,

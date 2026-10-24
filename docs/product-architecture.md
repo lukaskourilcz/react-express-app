@@ -1779,13 +1779,16 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   `lib/coding/after-response.ts` hands work whose result the answer does
   not use to the request context's `waitUntil`, the hook
   `@vercel/functions` wraps, read without that dependency: the React VM's
-  stop call, sent the moment the verdict is read, and the garden's retry of
-  older queued rows after a pass's own commit. The function stays alive for
-  them after it answers, within its `maxDuration`; where the runtime offers
-  no hook they are awaited as before. A garden pass still reports its own
-  delivery: answering `queued` before the commit would make "Commit queued;
-  it will be retried" say something else. The React grader bundle is read
-  from the deployment once per instance and uploaded unchanged on every run.
+  stop call, sent the moment the verdict is read. The function stays alive
+  for it after it answers, within its `maxDuration`; where the runtime
+  offers no hook it is awaited as before. The garden stays inside the
+  Submit: a pass reports its own delivery, since answering `queued` before
+  the commit would make "Commit queued; it will be retried" say something
+  else, and the retry of older queued rows after it is awaited too.
+  `deliver` claims no row, so a retry still writing after the answer would
+  race a Sync pressed on the verdict or the next pass of the same file and
+  could put older code back. The React grader bundle is read from the
+  deployment once per instance and uploaded unchanged on every run.
 - **Grader warm-up** (#587, server item 30). A page of a JavaScript,
   TypeScript or Algorithms task that can be submitted loads one QuickJS
   grader thread on an empty program when the instance has none loaded, none
