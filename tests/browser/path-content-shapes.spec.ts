@@ -114,9 +114,16 @@ for (const theme of ['light', 'dark'] as const) {
     // Reading text, not a stop: from the workspace's Close button, the last
     // control above the scenario, one Tab passes the case and lands on the
     // first radio.
-    await page.locator('.lp-workspace').getByRole('button', { name: 'Close' }).focus();
-    await page.keyboard.press('Tab');
-    await expect(firstRadio).toBeFocused();
+    // Retried as one step: on a loaded runner the activity's own focus move
+    // (its heading, on open) can land after our focus() and the Tab then
+    // starts elsewhere. The assertion is the same: one Tab from Close.
+    const close = page.locator('.lp-workspace').getByRole('button', { name: 'Close' });
+    await expect(async () => {
+      await close.focus();
+      await expect(close).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(firstRadio).toBeFocused({ timeout: 1000 });
+    }).toPass({ timeout: 10_000 });
     expect(await scenario.evaluate((el) => el.querySelector('a, button, input, select, textarea, [tabindex]'))).toBeNull();
 
     // The answer radios carry the brand accent at 20px on their own
