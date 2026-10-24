@@ -820,8 +820,9 @@ function App() {
           }}
         >
           {/* Route transition: the new view fades in over a stable backdrop —
-              no exit phase, so navigation never shows a blank beat. Reduced
-              motion still gets the (movement-free) fade.
+              no exit phase, so navigation never shows a blank beat. A page
+              that opens with reduced motion loads no motion features, so its
+              routes appear without the fade (lib/motion.tsx).
               The Suspense boundary sits OUTSIDE the keyed route box on
               purpose. Inside it, every pathname mounted a fresh boundary, and
               React shows a fresh boundary's fallback at once even in a

@@ -589,7 +589,6 @@ async function syncOnce(epoch: number): Promise<void> {
   // A completion that answered while this GET was out wrote a newer read of
   // the same record, which this one must not replace.
   if (completionWrites === writesBefore) writeProgress(serverProgress);
-  // Fresh from here on, unless a completion answered while the GET was out.
 
   // Unlocks are the server's too. A guest's skill-check unlocks, or ones this
   // device granted itself when applying a receipt failed, would draw a topic
