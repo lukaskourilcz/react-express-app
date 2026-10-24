@@ -7,6 +7,7 @@ import {
   loadSupabase,
   mayHaveSession,
   onSupabaseAuthStateChange,
+  openedOnAuthRedirect,
   storedSessionUserId,
   supabaseForSession,
   supabaseLoadFailed,
@@ -68,6 +69,21 @@ function reportSignIn(): void {
       settled(status >= 400 && status < 500 && status !== 429);
     },
   );
+}
+/** Which sign-in a session belongs to: the Auth session id in its access token
+ * (`session_id`, the same through every token refresh, new on every sign-in),
+ * or, for a token without one, the account and its last sign-in time. */
+export function signInIdOf(session: { access_token?: string; user?: { id?: string; last_sign_in_at?: string } | null } | null): string | null {
+  if (!session?.user?.id) return null;
+  try {
+    const payload = (session.access_token ?? '').split('.')[1] ?? '';
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '='));
+    const sid = (JSON.parse(json) as { session_id?: unknown }).session_id;
+    if (typeof sid === 'string' && sid) return `session:${sid}`;
+  } catch {
+    // Not a JWT this module can read: fall back to the account.
+  }
+  return `user:${session.user.id}:${session.user.last_sign_in_at ?? ''}`;
 }
 /** supabase-js's AuthRetryableFetchError (no answer, or a 502/503/504) or any
  * other 5xx: the server did not decide anything. Read by name and status, as
@@ -234,6 +250,15 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     // that before this effect ran; a client loaded on demand can attach this
     // listener first, and the order keeps the restore out of the log.
     let initialized = false;
+    // supabase-js also says SIGNED_IN for the stored session again each time
+    // the tab is shown (`_recoverAndRefresh` on visibilitychange). The
+    // per-tab mark below stopped the second of those, not the first, so every
+    // new tab of a signed-in learner reported a sign-in on its first return
+    // (perf baseline #587, item C30). The session INITIAL_SESSION restored
+    // from storage is remembered by its sign-in (signInIdOf), and a SIGNED_IN
+    // for that same sign-in is not reported. An OAuth return's INITIAL_SESSION
+    // is the new sign-in itself, so nothing is remembered for it.
+    let restored: string | null = null;
     // Whether supabase-js has said anything yet: after that its events, not
     // a session read that missed the boot deadline, say who is here.
     let heard = false;
@@ -242,10 +267,15 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
       if (session?.user) signedIn(session.user.id);
       setUser(session?.user ?? null);
       setIsLoading(false);
-      if (event === 'INITIAL_SESSION') initialized = true;
-      if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && initialized && session?.user) reportSignIn();
+      if (event === 'INITIAL_SESSION') {
+        initialized = true;
+        restored = openedOnAuthRedirect ? null : signInIdOf(session);
+      }
+      const restoredAgain = event === 'SIGNED_IN' && restored !== null && signInIdOf(session) === restored;
+      if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && initialized && session?.user && !restoredAgain) reportSignIn();
       if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
       if (event === 'SIGNED_OUT') {
+        restored = null;
         setPasswordRecovery(false);
         clearSignInReport();
         // The next person on this device starts from nothing, not from the

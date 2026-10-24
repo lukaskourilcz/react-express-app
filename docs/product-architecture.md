@@ -1574,6 +1574,14 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   sent: the caller gets a retryable `ApiError(0, 'auth_unavailable')`. Only a
   browser with no stored session sends a request without a token, so a
   signed-in learner is never graded or refused as a guest.
+- **The sign-in report** (`POST /api/user/authevent`, the `/dev` Logs tab)
+  goes once per sign-in. supabase-js also says `SIGNED_IN` for the stored
+  session each time a tab is shown again; `lib/auth.tsx` remembers the
+  sign-in its `INITIAL_SESSION` restored (the access token's `session_id`,
+  which survives refreshes) and reports no `SIGNED_IN` for that same sign-in,
+  so a new tab no longer sends a report on its first return (#587 C30). An
+  OAuth return, a sign-in in the tab, a reset link and a session that
+  replaces another are still reported.
 - **Log out** ends this browser's session (`signOut({ scope: 'local' })`).
   Offline or on a 5xx, supabase-js keeps the session, so `lib/auth.tsx` removes
   the stored session and its code verifier itself, forgets the account's data

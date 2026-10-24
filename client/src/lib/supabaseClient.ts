@@ -85,6 +85,12 @@ function hasAuthRedirect(key: string): boolean {
   return Boolean(params.code && readStorage(`${key}-code-verifier`));
 }
 
+/** Whether this page load opened on an OAuth return (read once, as the module
+ * evaluates, before supabase-js takes the parameters out of the address): the
+ * session supabase-js announces first is then a new sign-in, not one this
+ * browser had stored. */
+export const openedOnAuthRedirect = typeof window !== 'undefined' && sessionKey !== null && hasAuthRedirect(sessionKey);
+
 type AuthListener = (event: AuthChangeEvent, session: Session | null) => void;
 interface Waiting {
   listener: AuthListener;

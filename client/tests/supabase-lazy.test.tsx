@@ -525,6 +525,50 @@ describe('signing in', () => {
     expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
   });
 
+  // Perf baseline #587 C30: supabase-js says SIGNED_IN for the stored session
+  // each time the tab is shown again, and every new tab sent a sign-in report
+  // (an Auth call and a log row) on its first return.
+  it('reports no sign-in when supabase-js announces the restored session again as the tab is shown', async () => {
+    const jwt = (sessionId: string) => `e30.${btoa(JSON.stringify({ sub: 'user-stored', session_id: sessionId })).replace(/=+$/, '')}.sig`;
+    const restoredSession = { ...STORED, access_token: jwt('session-a') };
+    localStorage.setItem(KEY, JSON.stringify(restoredSession));
+    const reports = recordSignInReports();
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await settle();
+    // The tab is shown again: the same sign-in, its token refreshed meanwhile.
+    await act(async () => sb.clients[0].emit('SIGNED_IN', restoredSession));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', { ...restoredSession, access_token: jwt('session-a').replace('.sig', '.refreshed') }));
+    await settle();
+    expect(reports).toEqual([]);
+    // A sign-in in this tab is a new Auth session, and is reported once.
+    const signedInAgain = { ...restoredSession, access_token: jwt('session-b') };
+    localStorage.setItem(KEY, JSON.stringify(signedInAgain));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', signedInAgain));
+    await waitFor(() => expect(reports).toEqual([`Bearer ${jwt('session-b')}`]));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', signedInAgain));
+    await settle();
+    expect(reports).toHaveLength(1);
+  });
+
+  it('still reports a sign-in after a sign-out in a tab that restored a session', async () => {
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const reports = recordSignInReports();
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await settle();
+    await act(async () => sb.clients[0].emit('SIGNED_IN', STORED));
+    await settle();
+    expect(reports).toEqual([]);
+    localStorage.removeItem(KEY);
+    await act(async () => sb.clients[0].emit('SIGNED_OUT', null));
+    // The same account signs in again: a sign-in, though nothing in its
+    // non-JWT token tells the two sessions apart.
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', STORED));
+    await waitFor(() => expect(reports).toEqual(['Bearer stored-access-token']));
+  });
+
   it('in another tab loads supabase-js here and restores the user', async () => {
     const reports = recordSignInReports();
     const { renders } = await mountAuth();
