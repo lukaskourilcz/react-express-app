@@ -12,6 +12,8 @@
  *    reads, inserts nothing for a session the tier refuses, and then runs the
  *    reload (followed by the coin and referral credits together), the
  *    milestone settlement and the concept reviews at once (server item 5);
+ *  - a Premium level or part test reads the tier with the learner's record,
+ *    and a free one never reads it (server item 6);
  * Run as its own process by scripts/test-request-timing.ts, since the
  * modules read these settings when they load. Nothing leaves the machine. */
 
@@ -68,11 +70,12 @@ function completeAttempt(args: Row): Row {
   return { applied: true, passed: true, firstPass: true, repeatXp: null };
 }
 
-/** A progress record with these levels of a topic passed. */
+/** A progress record with these levels of a topic and its first part test
+ * passed. */
 function passedLevels(userId: string, topic: string, upTo: number) {
   const levels = Object.fromEntries(Array.from({ length: upTo }, (_, index) => [String(index + 1), { passed: true, bestPct: 100 }]));
   tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== userId);
-  tables.roadmap_progress.push({ user_id: userId, data: { [topic]: { levels, checkpoints: {} } }, extra: {} });
+  tables.roadmap_progress.push({ user_id: userId, data: { [topic]: { levels, checkpoints: { 1: { passed: true, bestPct: 100 } } } }, extra: {} });
 }
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
@@ -298,6 +301,27 @@ try {
     }
   }
   console.log('PASS round trips: a Premium completion checks its tier with its first reads, and a refused one writes nothing');
+
+  // ── server item 6: a Premium step reads its tier with the record ──────
+  {
+    passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
+    for (const query of [{ topic: 'nodejs', level: '10' }, { topic: 'nodejs', test: '1' }]) {
+      const { result, made } = await during(() => call('GET', query, PREMIUM_LEARNER.token));
+      const res = result as ReturnType<typeof mockResponse>;
+      assert.equal(res.statusCode, 200, `${JSON.stringify(query)}: ${JSON.stringify(res.body)}`);
+      assert.ok(together(one(made, 'rpc:is_premium'), one(made, 'GET roadmap_progress')), `${JSON.stringify(query)}: the tier is read with the record`);
+    }
+    const free = await during(() => call('GET', { topic: 'javascript', level: '3' }, LEARNER.token));
+    assert.equal((free.result as ReturnType<typeof mockResponse>).statusCode, 200);
+    assert.equal(free.made.filter((call) => call.name === 'rpc:is_premium').length, 0, 'a free level reads no tier');
+    // A Premium level the plan has not reached is still refused by the
+    // progression guard first, with 403.
+    tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
+    const early = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
+    assert.equal(early.statusCode, 403, JSON.stringify(early.body));
+    passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
+  }
+  console.log('PASS round trips: a Premium step reads its tier with the learner\'s record');
 } finally {
   server.close();
 }

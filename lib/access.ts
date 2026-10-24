@@ -80,6 +80,17 @@ export function resolveTier(userId: string): Promise<Tier> {
   });
 }
 
+/** Start the tier read for content Premium opens, without waiting for it.
+ * A handler that gates `content` once its other reads are back starts the
+ * read beside them, and `refuseLocked` then awaits the same answer, which is
+ * remembered for the request (#587, server item 6: the read was one more
+ * wave after the others). Free content and a guest cost nothing, as in
+ * `assertOpen`; a failure is answered where the gate awaits it. */
+export async function prefetchTier(userId: string | null, content: GatedContent): Promise<void> {
+  if (!userId || contentTier(content, serverContentIndex()) === 'free') return;
+  resolveTier(userId).catch(() => {});
+}
+
 export interface OpenOptions {
   /** Whether the learner already cleared this content. Called only when the
    * tier refuses it; true keeps it open for review. A rejection answers 503

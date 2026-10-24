@@ -111,6 +111,7 @@ const handleActivitySubmit = lazyExport(pathHandlers, 'handleActivitySubmit');
 const handleLearningPathCatalog = lazyExport(pathHandlers, 'handleLearningPathCatalog');
 // The tier check reads an index over the coding catalogue (lib/access.ts).
 const refuseLocked = lazyExport(() => import('../../lib/access'), 'refuseLocked');
+const prefetchTier = lazyExport(() => import('../../lib/access'), 'prefetchTier');
 /** What a code level seals: its coding tasks, their playable projection and
  * one coding session each. Loaded with the level map or the first code level. */
 const learnCoding = async () => {
@@ -615,6 +616,19 @@ async function learnerContext(
 }
 
 type StepRequest = ProgressStep;
+
+/** Start the tier read of the step a signed-in learner asked for, beside the
+ * reads that come before its gates. `part` is the part test's number, when
+ * the request is for one; `ref` is the number asked for. A request whose
+ * number is not a step's, or that carries no token, reads nothing; a token
+ * that fails is answered by `learnerContext`. */
+async function prefetchStepTier(req: VercelRequest, topic: RoadmapTopic, part: string | undefined, ref: string | undefined): Promise<void> {
+  const n = Number.parseInt(ref ?? '', 10);
+  if (!Number.isInteger(n) || n < 1 || (part !== undefined && !isValidPart(n))) return;
+  const auth = await tryAuthOnce(req).catch(() => null);
+  if (!auth) return;
+  await prefetchTier(auth.sub, part !== undefined ? { kind: 'learn-part-test', topic, part: n } : { kind: 'learn-level', topic, level: n });
+}
 
 /** Why the server will not serve this step, or null when it will. */
 function stepRefusal(
@@ -1736,7 +1750,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // step branches below. A guest has neither, and takes the preview path.
   // The served question set does not depend on who asks, so it loads at the
   // same time instead of waiting for the record.
-  const [learner, byId] = await Promise.all([learnerContext(req, res), getEffectiveQuestionsById(subject)]);
+  // The tier of a Premium step is read with them too (#587, server item 6),
+  // for the gate below, which still decides only after the progression one.
+  const [learner, byId] = await Promise.all([
+    learnerContext(req, res),
+    getEffectiveQuestionsById(subject),
+    prefetchStepTier(req, topic, testRaw ?? checkpointRaw, testRaw ?? checkpointRaw ?? levelRaw),
+  ]);
   if (learner === undefined) return;
   const exists = (id: string) => byId.has(id);
   const live = buildLiveTopic(topic, exists);
