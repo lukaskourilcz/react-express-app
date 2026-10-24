@@ -18,19 +18,21 @@ import { useAuth } from '../../lib/auth';
 import { enrollmentsQuery, pathCatalogQuery } from '../../lib/learningPaths';
 import { syncProgressWithServer } from '../../lib/roadmap';
 import { readString } from '../../lib/storage';
-import { primeRankMarker, syncXpWithServer } from '../../lib/xp';
+import { primeRankMarker, syncXpUnlessFresh } from '../../lib/xp';
 import { SECTION_KEY, resolveSection } from './sections';
 import { useFdeOpenInSettings } from './useFdePathSteps';
 
 /**
- * Pull the account's progress and XP and merge them with this device. The
+ * Pull the account's progress and XP and merge them with this device. Each
+ * read is skipped while one from the last minute is still current (#587 C08,
+ * C22: syncProgressWithServer and syncXpUnlessFresh). The
  * two reads leave together (#587 C08); XP used to wait for progress so the
  * rank marker counted the merged learning XP, and the marker is set again,
  * silently, once both are in, which leaves it where the chained reads left
  * it.
  */
 export function syncMapAccount(): Promise<void> {
-  return Promise.allSettled([syncProgressWithServer(), syncXpWithServer()]).then(() => primeRankMarker());
+  return Promise.allSettled([syncProgressWithServer(), syncXpUnlessFresh()]).then(() => primeRankMarker());
 }
 
 /** The sync a render before the map's first draw started, for the mount that

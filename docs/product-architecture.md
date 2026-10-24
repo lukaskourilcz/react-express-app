@@ -1780,7 +1780,16 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   within the minute. A signed-in Learn map asks for the account's XP beside
   the progress read rather than after it (#587 C08), and sets the rank marker
   again, without a toast, once both have answered, so it counts the merged
-  learning XP as the chained reads did.
+  learning XP as the chained reads did. The map's XP read has the same
+  one-minute window (`syncXpUnlessFresh`, `XP_SYNC_FRESH_MS` in
+  `client/src/lib/xp.ts`, #587 C22): a read that wrote in the last minute
+  answers the map's next ask, for the same account, while no other XP sync
+  has started since and the browser's copy is the one it wrote, so a return
+  to the map reads neither. Only the map uses it: every flow in this tab that
+  changes the account's XP on the server (a quiz result, a coding pass, a
+  Challenge, an FDE step, a repeated Learn step) syncs afterwards with
+  `syncXpWithServer`, which always reads. XP changed in another tab or on
+  another device shows on a map within the minute.
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
   every answer before the handler runs, and the public reads set their own:
   the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,

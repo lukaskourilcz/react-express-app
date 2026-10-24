@@ -10,6 +10,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Roadmap from '../src/components/Roadmap';
 import { getTotalXp } from '../src/lib/xp';
+import { clearAccountData } from '../src/lib/accountData';
 import { computeLearningXp, levelForXp } from '../src/lib/leveling';
 import { server } from './mocks/server';
 
@@ -80,4 +81,51 @@ it('asks for XP while the progress read is still out, and leaves the rank marker
   expect(expected).toBe(levelForXp(QUEST_XP + LEARNING_XP).level);
   expect(expected).toBeGreaterThan(levelForXp(QUEST_XP).level);
   await waitFor(() => expect(JSON.parse(localStorage.getItem('devquiz:xp:rank-seen:v2') ?? '{}').webdev).toBe(expected));
+});
+
+// A client-side return to a map within the minute reads neither again (perf
+// baseline #587 C22): the progress sync and the map's XP sync each let a read
+// from the last minute answer, while nothing has changed since.
+it('reads progress and XP once for a map and a return to it within the minute', async () => {
+  clearAccountData();
+  const reads = { progress: 0, xp: 0 };
+  server.use(
+    http.get('*/api/quiz/roadmap', ({ request }) => {
+      const resource = new URL(request.url).searchParams.get('resource');
+      if (resource === 'learning-path-catalog') return HttpResponse.json({ versions: {}, paths: [] });
+      if (resource === 'progress') {
+        reads.progress += 1;
+        return HttpResponse.json({ data: PROGRESS, extra: { unlocked: [] } });
+      }
+      return HttpResponse.json(STRUCTURE as never);
+    }),
+    http.get('*/api/user/*', ({ request }) => {
+      const url = new URL(request.url);
+      if (url.searchParams.get('op') === 'entitlement') return HttpResponse.json(FREE);
+      if (url.pathname.endsWith('/xp') || url.searchParams.get('op') === 'xp') {
+        reads.xp += 1;
+        return HttpResponse.json({ data: { quest_xp: QUEST_XP, by_subject: { webdev: QUEST_XP } } });
+      }
+      return HttpResponse.json({ enrollments: [] });
+    }),
+  );
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const map = () => render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/learn']}>
+        <LanguageProvider><Roadmap /></LanguageProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await act(async () => map());
+  await screen.findByRole('button', { name: /^Level 1: Level 1 title/ });
+  await waitFor(() => expect(reads).toEqual({ progress: 1, xp: 1 }));
+  // Let both answers be written before leaving.
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+  first.unmount();
+
+  await act(async () => map());
+  await screen.findByRole('button', { name: /^Level 1: Level 1 title/ });
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 100)); });
+  expect(reads).toEqual({ progress: 1, xp: 1 });
 });
