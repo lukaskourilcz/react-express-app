@@ -1706,6 +1706,19 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   concept reviews have already run, where they used to be skipped.
   `npm run test:performance` (`scripts/test-learn-round-trips.ts`) pins the
   waves against a timed stand-in.
+- **Learn tier reads** (#587, server item 6). A level or part test opened by
+  an account starts its `is_premium` read with the learner's record
+  (`prefetchTier` in `lib/access.ts`), for a Premium step only; the
+  progression guard still decides first. The eight answers of a Premium
+  level trust a Premium answer the same instance read within the last
+  minute instead of asking again (`recentPremium`, at most 5,000 accounts);
+  only a Premium answer is kept, and a free answer read anywhere on the
+  instance forgets it at once. Every other gate, the level open and the
+  completion included, asks the database each time. The trade-off, for the
+  owner to accept: an account whose Premium ended keeps answering the
+  questions of a Premium session it already holds for up to a minute, on an
+  instance that saw it Premium just before; completing that session asks
+  again and is refused, so no progress, XP or coin comes of it.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which

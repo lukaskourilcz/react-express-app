@@ -1049,9 +1049,13 @@ async function refuseLockedSession(
   res: VercelResponse,
   userId: string | null,
   session: NonNullable<ReturnType<typeof roadmapSession>>,
+  /** For an answer: a Premium tier this instance read in the last minute
+   * stands (lib/access.ts, #587 server item 6). A completion asks again. */
+  recentPremium = false,
 ): Promise<boolean> {
   const { content, step } = sessionContent(session);
   return refuseLocked(res, userId, content, {
+    recentPremium,
     cleared: async () => {
       if (!userId || !supabase) return false;
       const row = await withTimeout(supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle());
@@ -1098,7 +1102,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
   if (refuseForeignSession(res, session, userId)) return;
-  if (await refuseLockedSession(res, userId, session)) return;
+  if (await refuseLockedSession(res, userId, session, true)) return;
 
   const selectedIndex = Number(body.selectedIndex);
 

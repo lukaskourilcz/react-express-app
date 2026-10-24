@@ -14,6 +14,9 @@
  *    milestone settlement and the concept reviews at once (server item 5);
  *  - a Premium level or part test reads the tier with the learner's record,
  *    and a free one never reads it (server item 6);
+ *  - the answers of a Premium level trust a Premium tier the instance read
+ *    within the last minute, never longer, and never after a free answer
+ *    (server item 6);
  * Run as its own process by scripts/test-request-timing.ts, since the
  * modules read these settings when they load. Nothing leaves the machine. */
 
@@ -322,6 +325,73 @@ try {
     passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
   }
   console.log('PASS round trips: a Premium step reads its tier with the learner\'s record');
+
+  // ── server item 6: the answers of a Premium level ─────────────────────
+  {
+    const tierReads = (made: Call[]) => made.filter((call) => call.name === 'rpc:is_premium').length;
+    const answerOne = (sessionId: string, index: number) => {
+      const question = tokens.decodeSessionEnvelope(sessionId)!.questions[index];
+      return during(() => call('POST', { resource: 'answer' }, PREMIUM_LEARNER.token, { sessionId, questionId: question.questionId, selectedIndex: question.correctAnswer }));
+    };
+    const statusOf = (done: { result: unknown }) => (done.result as ReturnType<typeof mockResponse>).statusCode;
+    const realNow = Date.now;
+    let offset = 0;
+    Date.now = () => realNow() + offset;
+    try {
+      // The level open read the tier: its eight answers ask for none.
+      passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
+      const level = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
+      assert.equal(level.statusCode, 200);
+      const answered = await during(() => answerAll(level.body.sessionId, PREMIUM_LEARNER.token));
+      assert.equal(tierReads(answered.made), 0, 'the answers trust the tier the level open read');
+
+      // A minute later the tier is read again, once.
+      const later = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
+      offset += 61_000;
+      const first = await answerOne(later.body.sessionId, 0);
+      assert.deepEqual([statusOf(first), tierReads(first.made)], [200, 1], 'a tier read over a minute ago is read again');
+      const second = await answerOne(later.body.sessionId, 1);
+      assert.deepEqual([statusOf(second), tierReads(second.made)], [200, 0], 'and trusted for the next answer');
+
+      // Premium ends, and the learner never passed the level: within the
+      // minute the session's answers are trusted, after it they are refused.
+      const lapsing = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
+      PREMIUM.delete(PREMIUM_LEARNER.id);
+      tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
+      const within = await answerOne(lapsing.body.sessionId, 0);
+      assert.deepEqual([statusOf(within), tierReads(within.made)], [200, 0], 'within the minute the Premium answer stands');
+      offset += 61_000;
+      const after = await answerOne(lapsing.body.sessionId, 1);
+      assert.deepEqual([statusOf(after), tierReads(after.made)], [402, 1], 'after it the answer is refused');
+
+      // A free answer read anywhere on the instance ends the trust at once.
+      PREMIUM.add(PREMIUM_LEARNER.id);
+      passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
+      const again = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
+      assert.equal(again.statusCode, 200);
+      PREMIUM.delete(PREMIUM_LEARNER.id);
+      tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
+      const elsewhere = await call('GET', { topic: 'nodejs', level: '11' }, PREMIUM_LEARNER.token);
+      assert.notEqual(elsewhere.statusCode, 200, 'the free account is refused a new Premium level');
+      const forgotten = await answerOne(again.body.sessionId, 0);
+      assert.deepEqual([statusOf(forgotten), tierReads(forgotten.made)], [402, 1], 'and its Premium answer is no longer trusted');
+
+      // The completion never trusts it: a lapsed account is refused there
+      // within the minute too.
+      PREMIUM.add(PREMIUM_LEARNER.id);
+      passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
+      const last = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
+      await answerAll(last.body.sessionId, PREMIUM_LEARNER.token);
+      PREMIUM.delete(PREMIUM_LEARNER.id);
+      tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
+      const completed = await during(() => call('POST', { resource: 'complete' }, PREMIUM_LEARNER.token, { sessionId: last.body.sessionId }));
+      assert.deepEqual([statusOf(completed), tierReads(completed.made)], [402, 1], 'a completion asks for the tier every time');
+    } finally {
+      Date.now = realNow;
+      PREMIUM.add(PREMIUM_LEARNER.id);
+    }
+  }
+  console.log('PASS round trips: a Premium level\'s answers trust a tier read in the last minute, never longer');
 } finally {
   server.close();
 }

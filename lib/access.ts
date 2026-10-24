@@ -65,6 +65,36 @@ export function serverContentIndex(): ContentIndex {
   return index;
 }
 
+/* Premium answers this instance read lately (#587, server item 6). A Learn
+ * level is eight answers, and each one asked is_premium again for a session
+ * issued to a Premium account a minute before: one round trip of four on
+ * every answer of a Premium level. Only the Learn answer gate trusts this
+ * (`OpenOptions.recentPremium`); every other gate, the level open and the
+ * completion included, asks the database each time. Only a Premium answer
+ * is kept, for at most a minute, and a free answer read anywhere on the
+ * instance forgets it at once. The bounded trade-off, for the owner: an
+ * account whose Premium ended keeps answering the questions of a Premium
+ * session it already holds for up to a minute on an instance that saw it
+ * Premium just before. Completing that session asks again and is refused. */
+const RECENT_PREMIUM_MS = 60_000;
+const RECENT_PREMIUM_LIMIT = 5_000;
+const recentPremium = new Map<string, number>();
+
+function notePremium(userId: string, premium: boolean): void {
+  recentPremium.delete(userId);
+  if (!premium) return;
+  if (recentPremium.size >= RECENT_PREMIUM_LIMIT) recentPremium.delete(recentPremium.keys().next().value!);
+  recentPremium.set(userId, Date.now() + RECENT_PREMIUM_MS);
+}
+
+function heldPremium(userId: string): boolean {
+  const until = recentPremium.get(userId);
+  if (until === undefined) return false;
+  if (until > Date.now()) return true;
+  recentPremium.delete(userId);
+  return false;
+}
+
 /** The account's tier: one `is_premium` call, remembered for the rest of the
  * request. Before migration 039 is installed nobody can hold a grant, so a
  * missing routine reads as the free tier. */
@@ -76,6 +106,7 @@ export function resolveTier(userId: string): Promise<Tier> {
       if (isRpcMissing(error)) return 'free';
       throw new EntitlementUnavailableError();
     }
+    notePremium(userId, data === true);
     return data === true ? 'premium' : 'free';
   });
 }
@@ -96,6 +127,9 @@ export interface OpenOptions {
    * tier refuses it; true keeps it open for review. A rejection answers 503
    * `entitlement_unavailable`, never 402. */
   cleared?: () => Promise<boolean>;
+  /** Accept a Premium answer this instance read within the last minute
+   * instead of asking again. Only the Learn answer gate passes it. */
+  recentPremium?: boolean;
 }
 
 /** Throws `PremiumRequiredError` when a guest, or a signed-in free account,
@@ -103,6 +137,7 @@ export interface OpenOptions {
 export async function assertOpen(userId: string | null, content: GatedContent, options: OpenOptions = {}): Promise<void> {
   if (contentTier(content, serverContentIndex()) === 'free') return;
   if (!userId) throw new PremiumRequiredError(content);
+  if (options.recentPremium && heldPremium(userId)) return;
   if ((await resolveTier(userId)) === 'premium') return;
   // A "cleared" read that failed is not a "no": answering 402 would show a
   // lapsed learner the upgrade sheet for work they passed, so it is the same
