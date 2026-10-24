@@ -17,10 +17,14 @@ import { learnText } from '../../i18n/translations.learn';
 import { useAuth } from '../../lib/auth';
 import { isBarred, useContentLocks } from '../../lib/contentLocks';
 import { entryFor, isOpen, pathHref, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
+import { preloadPathPagesWithLinks } from '../../lib/learningPathWorkspace';
 import type { PathCatalogEntry, PathEnrollment } from '../../../../shared/learning-path-api';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import { Kicker } from '../landing/LandingKit';
 import './LearningPaths.css';
+
+// Its links to the path pages start those pages' first reads (#587 C27).
+preloadPathPagesWithLinks();
 
 /** One path: what it is, how much of it exists, and where the learner stands. */
 export function PathCard({ entry, enrollment, premium }: {

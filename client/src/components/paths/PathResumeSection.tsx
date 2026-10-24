@@ -19,8 +19,12 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { isBarred, useContentLocks } from '../../lib/contentLocks';
 import { activityHref, entryFor, isOpen, pathProgressQuery, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
+import { preloadPathPagesWithLinks } from '../../lib/learningPathWorkspace';
 import { isLearningPathId, type LearningPathId } from '../../../../shared/learning-paths';
 import type { PathEnrollment } from '../../../../shared/learning-path-api';
+
+// Its links to the path pages start those pages' first reads (#587 C27).
+preloadPathPagesWithLinks();
 
 const ArrowGlyph = ({ size = 16 }: { size?: number }) => (
   <svg

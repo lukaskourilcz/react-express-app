@@ -1022,7 +1022,13 @@ statement of what Premium opens.
 
 The FDE overview lives at `/learn/forward-deployed-engineer/path`, with module
 addresses under it. Old `/roadmap/specializations/fde` links redirect
-permanently and keep the module, query and fragment. The overview shows a
+permanently and keep the module, query and fragment. The pages' first reads,
+the catalogue and the stored session's enrollments, leave with the pages'
+code when a link to them is pointed at, focused or pressed, once the FDE
+section's path shelf or Today's path section has loaded
+(`preloadPathPagesWithLinks` in `client/src/lib/learningPathWorkspace.ts`,
+#587 C27); an enrollment's progress and an activity's start still wait for
+the enrollment id, which they need. The overview shows a
 competency board and the five delivery phases. Phase membership is manifest
 metadata (`deliveryPhase`) carried through the source, merge and public
 projection, and a validator rejects unknown phases and missing phases on
