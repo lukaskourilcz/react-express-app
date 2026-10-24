@@ -1739,6 +1739,19 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   questions of a Premium session it already holds for up to a minute, on an
   instance that saw it Premium just before; completing that session asks
   again and is refused, so no progress, XP or coin comes of it.
+- **Served question set** (#587, server item 19). `lib/questions-store.ts`
+  merges the admin console's `question_edits` rows onto the bank and keeps
+  the result for 15 seconds per instance. Up to a minute old, a good set is
+  served at once while one read of the rows runs, and the next request gets
+  the new set; only an older set, or none, waits for the read. A read that
+  fails within that minute keeps the good set, so a hidden question stays
+  hidden, and the next request reads again (one read in flight per
+  instance); past the minute a failure serves the bank alone, as before. The
+  read names the twelve columns the store uses instead of `*`, which also
+  sent the retired cs_* text. A read begun before an admin save never
+  becomes the cached set after it. Edits reach every instance within about
+  15 seconds plus one request. `npm run test:performance`
+  (`scripts/test-questions-cache.ts`) pins each bound.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which

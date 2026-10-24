@@ -29,3 +29,5 @@ await (await import('./cold-start-contracts')).coldStartContracts();
 await (await import('./cold-start-contracts')).runIsolated('scripts/test-prelude.ts');
 // The Learn branches' round trips (#587), in a process of their own.
 await (await import('./cold-start-contracts')).runIsolated('scripts/test-learn-round-trips.ts');
+// The served question set's refresh (#587), in a process of its own.
+await (await import('./cold-start-contracts')).runIsolated('scripts/test-questions-cache.ts');
