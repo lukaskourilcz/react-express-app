@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { localAuth, storeFakeSession } from './fake-session';
+import { fulfilTaskRead, isTaskRead } from './coding-task-read';
 
 // A page whose code does not load used to replace the whole app with the root
 // error screen: on devshark.app a dropped request for one chunk took the
@@ -105,10 +106,10 @@ test('the Coding workbench that fails to load comes back through the task screen
   const { documents } = await prepare(page);
   // The task itself answers; its editor, the workbench chunk, is dropped.
   const TASK = 'js-double-numbers';
-  await page.route((url) => url.pathname === '/api/quiz/roadmap' && url.searchParams.get('resource') === 'coding-task', (route) => {
+  await page.route((url) => url.pathname === '/api/quiz/roadmap' && isTaskRead(url.searchParams.get('resource')), (route) => {
     const task = CODING_TASKS.find((one) => one.id === TASK);
     if (!task) throw new Error(`no coding task ${TASK}`);
-    return route.fulfill({ json: { task: playable(task), session: task.id, locked: null, progress: null, draft: null, signedIn: false } });
+    return fulfilTaskRead(route, { task: playable(task), session: task.id, locked: null, progress: null, draft: null, signedIn: false });
   });
   const workbench = await dropChunk(page, /\/assets\/CodingWorkbench-[\w-]+\.js$/);
 
@@ -164,7 +165,7 @@ test('the upgrade sheet’s code fails to load: the sheet closes with a message,
   const { documents } = await prepare(page);
   // The server refuses the task with 402, which opens the upgrade sheet.
   const TASK = 'js-double-numbers';
-  await page.route((url) => url.pathname === '/api/quiz/roadmap' && url.searchParams.get('resource') === 'coding-task', (route) => route.fulfill({
+  await page.route((url) => url.pathname === '/api/quiz/roadmap' && isTaskRead(url.searchParams.get('resource')), (route) => route.fulfill({
     status: 402,
     json: { error: { code: 'premium_required', message: 'Premium opens this', kind: 'coding-task', ref: TASK } },
   }));
@@ -183,7 +184,7 @@ test('the upgrade sheet’s code fails to load: the sheet closes with a message,
 test('a second press for the upgrade sheet after its code failed asks the network again', async ({ page }) => {
   const { documents } = await prepare(page);
   const TASK = 'js-double-numbers';
-  await page.route((url) => url.pathname === '/api/quiz/roadmap' && url.searchParams.get('resource') === 'coding-task', (route) => route.fulfill({
+  await page.route((url) => url.pathname === '/api/quiz/roadmap' && isTaskRead(url.searchParams.get('resource')), (route) => route.fulfill({
     status: 402,
     json: { error: { code: 'premium_required', message: 'Premium opens this', kind: 'coding-task', ref: TASK } },
   }));

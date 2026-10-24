@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { solutionFor } from '../../lib/coding/solutions';
+import { fulfilTaskRead, isTaskRead } from './coding-task-read';
 
 // Real built editor/iframe/navigation with deterministic API fixtures. Actual
 // server grading is independently covered by test:coding and test:react-isolation.
@@ -17,9 +18,9 @@ for (const theme of ['light', 'dark']) {
     },{theme});
     await page.route('**/api/**',async route=>{
       const url=new URL(route.request().url());
-      if(url.searchParams.get('resource')==='coding-task') {
+      if(isTaskRead(url.searchParams.get('resource'))) {
         const task=CODING_TASKS.find(task=>task.id===url.searchParams.get('id'))!;
-        return route.fulfill({json:{task:playable(task),session:task.id,locked:null,progress:null,draft:null,signedIn:true}});
+        return fulfilTaskRead(route,{task:playable(task),session:task.id,locked:null,progress:null,draft:null,signedIn:true});
       }
       if(url.searchParams.get('resource')==='coding-submit') return route.fulfill({json:{verdict:'passed',results:[{pass:true,actual:null,error:null}],hidden:null,check:null,logs:[],codeError:null,design:null,designReference:null,failureHint:null,puzzle:null,progress:null,firstPass:false,xpAwarded:0,applied:false,github:null}});
       if(url.searchParams.get('resource')==='coding-approaches') return route.fulfill({json:{taskId:url.searchParams.get('id'),approaches:[]}});

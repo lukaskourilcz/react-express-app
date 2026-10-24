@@ -2,6 +2,7 @@ import { test, expect, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { localAuth, storeFakeSession } from './fake-session';
+import { fulfilTaskRead, isTaskRead } from './coding-task-read';
 
 // The Coding pages against the built app, with the API answered here in its
 // real shapes: a missing track or task (C3-17, V3-2), a track whose progress
@@ -30,7 +31,7 @@ async function answer(page: Page, api: Api = {}) {
     const url = new URL(route.request().url());
     const op = url.searchParams.get('op');
     if (url.pathname === '/api/quiz/roadmap') {
-      if (url.searchParams.get('resource') === 'coding-task') return api.task ? api.task(route) : notFound(route);
+      if (isTaskRead(url.searchParams.get('resource'))) return api.task ? api.task(route) : notFound(route);
       if (!url.search) return route.fulfill({ json: { topics: [], structure: {} } });
       return notFound(route);
     }
@@ -119,7 +120,7 @@ test.describe('signed in', () => {
       localStorage.setItem(time, JSON.stringify({ base: null }));
     }, { copy: COPY, time: TIME });
     await answer(page, {
-      task: (route) => route.fulfill({ json: { task: playable(task), session: 'session-1', locked: null, progress: null, draft: '// the account draft\n', draftUpdatedAt: saved, signedIn: true } }),
+      task: (route) => fulfilTaskRead(route, { task: playable(task), session: 'session-1', locked: null, progress: null, draft: '// the account draft\n', draftUpdatedAt: saved, signedIn: true }),
     });
     await page.goto(`/coding/javascript/${TASK}`);
     await expect(page.locator('.cm-content')).toContainText('// the account draft');

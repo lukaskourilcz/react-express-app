@@ -34,3 +34,18 @@ export function codingTask(id: string) {
   if (!task) return null;
   return { task: playable(task), session: task.id, locked: null, progress: null, draft: null, signedIn: false };
 }
+
+/** A task page's read by its resource: the combined `coding-task`, or the
+ * brief (`coding-brief`) and the visitor's part (`coding-state`) a free task
+ * reads apart (#587 C23); null for an id the catalog does not hold. */
+export function codingTaskRead(resource: string, id: string) {
+  const whole = codingTask(id);
+  if (!whole) return null;
+  const { puzzle, design, drill, ...task } = whole.task;
+  if (resource === 'coding-brief') return { task, version: 'responsive-sweep' };
+  if (resource === 'coding-state') {
+    const { session, locked, progress, draft, signedIn } = whole;
+    return { session, locked, progress, draft, draftUpdatedAt: null, signedIn, dealt: { ...(puzzle ? { puzzle } : {}), ...(design ? { design } : {}), ...(drill ? { drill } : {}) }, briefVersion: 'responsive-sweep' };
+  }
+  return resource === 'coding-task' ? whole : null;
+}

@@ -64,12 +64,6 @@ export interface CodingTaskStateResponse extends Omit<CodingTaskResponse, 'task'
   briefVersion: string;
 }
 
-/** The `coding-task` answer a brief and a state read make together. */
-export function joinCodingTaskRead(brief: CodingBriefResponse, state: CodingTaskStateResponse): CodingTaskResponse {
-  const { dealt, session, locked, progress, draft, draftUpdatedAt, signedIn } = state;
-  return { task: { ...brief.task, ...dealt }, session, locked, progress, draft, draftUpdatedAt, signedIn };
-}
-
 export interface CodingGardenStatus {
   status: 'committed' | 'queued' | 'skipped' | 'failed' | 'not_connected';
   url?: string;

@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { fakeUser, sessionKey } from './fake-session';
+import { fulfilTaskRead, isTaskRead } from './coding-task-read';
 
 // A learner's code in the built app, through the real editor and the real
 // supabase-js (owner decisions 4, 5 and 10, 9 Oct 2026; C5-1, C5-3, C5-4).
@@ -68,10 +69,10 @@ async function standIn(page: Page): Promise<Stand> {
     const resource = url.searchParams.get('resource');
     const method = route.request().method();
     const account = accountOf(route);
-    if (resource === 'coding-task') {
+    if (isTaskRead(resource)) {
       const task = CODING_TASKS.find((one) => one.id === url.searchParams.get('id'))!;
       const row = account ? stand.drafts.get(`${account}:${task.id}`) : undefined;
-      return route.fulfill({ json: { task: playable(task), session: `${task.id}-${account ?? 'guest'}`, locked: null, progress: null, draft: row?.code ?? null, draftUpdatedAt: row?.updatedAt ?? null, signedIn: Boolean(account) } });
+      return fulfilTaskRead(route, { task: playable(task), session: `${task.id}-${account ?? 'guest'}`, locked: null, progress: null, draft: row?.code ?? null, draftUpdatedAt: row?.updatedAt ?? null, signedIn: Boolean(account) });
     }
     if (resource === 'progress') return route.fulfill({ json: { data: {}, extra: { unlocked: [] } } });
     if (op === 'coding-draft' && !account) return route.fulfill({ status: 401, json: { error: { code: 'missing_token', message: 'Sign in' } } });

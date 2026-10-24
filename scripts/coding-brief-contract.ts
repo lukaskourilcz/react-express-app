@@ -20,7 +20,8 @@ import { solutionFor } from '../lib/coding/solutions';
 import { CODING_INDEX } from '../shared/coding-index';
 import { EVOLVING_CHALLENGES } from '../shared/evolving';
 import { codingContent, isFreeCodingTask, PREMIUM_REQUIRED } from '../shared/tiers';
-import { joinCodingTaskRead, type CodingBriefResponse, type CodingTaskResponse, type CodingTaskStateResponse } from '../shared/coding-api';
+import type { CodingBriefResponse, CodingTaskResponse, CodingTaskStateResponse } from '../shared/coding-api';
+import { joinCodingTaskRead } from '../shared/coding-task-read';
 
 function mockResponse() {
   const headers = new Map<string, string>();
@@ -95,6 +96,9 @@ export async function codingBriefContracts() {
   assert.match(CODING_BRIEF_CACHE, /^public, max-age=\d+, s-maxage=\d+, stale-while-revalidate=\d+$/, 'the brief is cached publicly, by browsers and the CDN');
 
   // ── every free task: the brief, its headers, and nothing of an answer ──
+  // The browser reads a brief for exactly the tasks the index marks free
+  // (client/src/coding/taskRead.ts); the flag is the tier rule's projection.
+  for (const task of CODING_INDEX) assert.equal(task.free === true, isFreeCodingTask(task.id), `${task.id}: the index's free flag is the tier rule's`);
   const freeTasks = CODING_INDEX.filter((task) => task.free && codingTaskById(task.id));
   assert.ok(freeTasks.length > 100, `the free tier opens the starter set (${freeTasks.length})`);
   for (const summary of freeTasks) {

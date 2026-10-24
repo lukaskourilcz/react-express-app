@@ -180,8 +180,9 @@ API_FIXTURES.push(
   { method: 'GET', match: (url) => url.pathname === ROADMAP && url.searchParams.get('resource') === 'learning-path-catalog', body: () => SERVER.pathCatalog() },
   {
     method: 'GET',
-    match: (url) => url.pathname === ROADMAP && url.searchParams.get('resource') === 'coding-task' && SERVER.codingTask(url.searchParams.get('id') ?? '') !== null,
-    body: (url) => SERVER.codingTask(url.searchParams.get('id') ?? ''),
+    // A task page's read: combined, or a free task's brief and visitor's part.
+    match: (url) => url.pathname === ROADMAP && SERVER.codingTaskRead(url.searchParams.get('resource') ?? '', url.searchParams.get('id') ?? '') !== null,
+    body: (url) => SERVER.codingTaskRead(url.searchParams.get('resource') ?? '', url.searchParams.get('id') ?? ''),
   },
   { method: 'GET', match: (url) => url.pathname === '/api/quiz/challenge' && url.searchParams.get('resource') === 'leaderboard', body: () => CHALLENGE_BOARD },
   { method: 'GET', match: (url) => url.pathname === '/api/leaderboard' && url.searchParams.get('period') === '30d', body: (url) => ({ ...WINDOW_BOARD, category: url.searchParams.get('category') }) },
