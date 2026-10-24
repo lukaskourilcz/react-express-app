@@ -662,7 +662,8 @@ shown once it has loaded.
   formats in the background: Format is on whenever the code differs from the
   starter as authored or from what the last press produced, and a press that
   changes nothing turns it off until the next edit. Code Prettier cannot read
-  says why under the editor and turns Format off until the next edit. Before,
+  says why in the notes beside the editor and turns Format off until the next
+  edit. Before,
   the page formatted the whole program 350 ms after it opened and after every
   typing pause to decide whether Format was on (C02, C24).
 - **The editor** (CodeMirror, about 170 KB gzip of the workbench's 190) is
