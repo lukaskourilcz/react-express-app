@@ -20,8 +20,7 @@ import { codingPassXp, complexityGuidance, type ComplexityReport } from '../../s
 import { codingAwardId, creditVerifiedXp, settleMilestonesAfterPass } from '../rewards/coins';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
-import { refuseLocked, resolveTier, serverContentIndex } from '../access';
-import { contentTier, type GatedContent } from '../../shared/tiers';
+import { prefetchTier, refuseLocked, resolveTier } from '../access';
 import { enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
@@ -310,16 +309,6 @@ function recommendedBridges(path: MergedPath, competencies: CompetencyResult[], 
     return { id: bridge.id, weight: gapHits * 4 + unknownHits + trackHit };
   });
   return scored.filter((one) => one.weight > 0).sort((a, b) => b.weight - a.weight).map((one) => one.id);
-}
-
-/** Ask for the caller's tier ahead of the plan check when `content` is
- * Premium, so the check does not wait for it after the enrollment read
- * (#587, server items 20 and 21). `resolveTier` remembers the answer for the
- * request and `refuseLocked` reads that same answer; free content still
- * costs no query. A failure is left for the plan check to ask again and
- * answer (resolveTier forgets a failed read). */
-function prefetchTier(userId: string, content: GatedContent): void {
-  if (contentTier(content, serverContentIndex()) === 'premium') resolveTier(userId).catch(() => {});
 }
 
 /* ── preference ───────────────────────────────────────────────────────── */
@@ -615,7 +604,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   // nothing ahead.
   const requested = body.activityId;
   const named = LEARNING_PATHS.find((one) => activityIn(one, requested));
-  if (named) prefetchTier(userId, { kind: 'learning-path-activity', pathId: named.id, activityId: requested });
+  if (named) void prefetchTier(userId, { kind: 'learning-path-activity', pathId: named.id, activityId: requested });
   let row: EnrollmentRow | null;
   try {
     row = await loadEnrollment(supabase, userId, body.enrollmentId);
@@ -972,7 +961,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // (#587, server item 20) and remembered for the request, so refuseLocked
   // below reads the same answer. It is the caller's own plan, and it is used
   // only once the enrollment is proven to be theirs.
-  prefetchTier(userId, { kind: 'learning-path-activity', pathId: path.id, activityId: session.activityId });
+  void prefetchTier(userId, { kind: 'learning-path-activity', pathId: path.id, activityId: session.activityId });
   let enrollmentRow: EnrollmentRow | null;
   try {
     enrollmentRow = await loadEnrollment(supabase, userId, session.enrollmentId);
