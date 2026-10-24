@@ -94,7 +94,7 @@ import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
 import { readJSON, readString, writeJSON, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
-import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
+import { DelayedQuoteLoader, revealWhenReady } from './learn/LevelLoader';
 import { IconTile, BoltIcon, TrophyIcon } from './ui/icons';
 import { SwimCta } from './landing/LandingKit';
 import { lazyShellPart } from '../lib/routeRecovery';
@@ -120,9 +120,21 @@ const PathShelf = lazyShellPart(() => import('./paths/PathShelf'));
 // shows, was about two thirds of the Learn chunk, and the map needs none of
 // it. It loads when a level opens: open() starts the load beside the level's
 // own request, and LessonStage holds the loader meanwhile.
-const loadLessonRunner = () => import('./learn/LessonRunner');
+type RunnerModule = typeof import('./learn/LessonRunner');
+let runnerModule: RunnerModule | null = null;
+const loadLessonRunner = () => import('./learn/LessonRunner').then((m) => (runnerModule = m));
 const preloadLessonRunner = () => { loadLessonRunner().catch(() => {}); };
-const LessonRunner = lazyShellPart(() => loadLessonRunner().then((m) => ({ default: m.LessonRunner })));
+const LazyLessonRunner = lazyShellPart(() => loadLessonRunner().then((m) => ({ default: m.LessonRunner })));
+type RunnerProps = Parameters<RunnerModule['LessonRunner']>[0];
+/** The runner, drawn at once when its code is already here (perf baseline
+ * #587 C05, C28). A lazy component suspends on its first render even then,
+ * and React holds a boundary that showed its fallback for 300 ms before it
+ * draws what arrived, so a level opened that much later than its answer.
+ * Decided once per mount, so a runner never swaps one tree for the other. */
+function LessonRunner(props: RunnerProps) {
+  const [Loaded] = useState(() => runnerModule?.LessonRunner ?? null);
+  return Loaded ? <Loaded {...props} /> : <LazyLessonRunner {...props} />;
+}
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
@@ -414,6 +426,9 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const [loadingLesson, setLoadingLesson] = useState(false);
   const [readingLessonId, setReadingLessonId] = useState<string | null>(null);
   const [lessonError, setLessonError] = useState<string | null>(null);
+  // When the level's wait began: its loader and the runner's code loader
+  // after it are one wait (learn/LevelLoader.tsx).
+  const [waitSince, setWaitSince] = useState(0);
   const lessonAbortRef = useRef<AbortController | null>(null);
   // Leaving Learn while a level loads drops its request too.
   useEffect(() => () => lessonAbortRef.current?.abort(), []);
@@ -628,13 +643,20 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     setLoadingLesson(true);
     setLessonError(null);
     const startedAt = Date.now();
+    setWaitSince(startedAt);
+    // The screen opens once the runner's code is in too, so a level answered
+    // first does not swap its loader for the runner's own.
+    const runner = loadLessonRunner().then(() => undefined, () => undefined);
     const req =
       a.kind === 'level'
         ? fetchRoadmapLevel(topic, a.ref, controller.signal)
         : fetchRoadmapPartTest(topic, a.ref, controller.signal);
     req
       .then(async (data) => {
-        await holdLoadingScreen(startedAt);
+        // A fast answer opens at once; a slow one keeps its loader up long
+        // enough to read as a beat (learn/LevelLoader.tsx, #587 C05).
+        await runner;
+        await revealWhenReady(startedAt);
         if (controller.signal.aborted) return;
         // A part test comes back as a generic exam; give it a localized title.
         setPlayable(a.kind === 'test' ? { ...data, title: t('roadmap.partLabel', { n: a.ref }) } : data);
@@ -839,7 +861,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   if (active !== null) {
     if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} backLabel={t(categoryLabelKey(topic))} onStart={() => open(active, true)} onBack={exitLesson} />;
     if (loadingLesson) {
-      return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
+      return <DelayedQuoteLoader since={waitSince} quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     }
     if (lessonError || !playable) {
       return <LessonError message={lessonError ?? t('roadmap.error')} onRetry={() => open(active)} onExit={exitLesson} t={t} />;
@@ -859,7 +881,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           ? t('roadmap.nextPart')
           : t('roadmap.nextLevel');
     return (
-      <LessonStage onExit={exitLesson} t={t}>
+      <LessonStage since={waitSince} onExit={exitLesson} t={t}>
       <LessonRunner
         key={`${topic}-${active.kind}-${active.ref}`}
         playable={playable}
@@ -1477,9 +1499,9 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
 /** The lazily loaded runner in a boundary of its own: code that did not load
  * leaves the learner a Try again and the way back to the map, not the page's
  * error screen. */
-function LessonStage({ onExit, t, children }: { onExit: () => void; t: TFn; children: ReactNode }) {
+function LessonStage({ since, onExit, t, children }: { since?: number; onExit: () => void; t: TFn; children: ReactNode }) {
   return (
-    <Suspense fallback={<QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />}>
+    <Suspense fallback={<DelayedQuoteLoader since={since} quote={t('quiz.loadingQuote')} label={t('common.loading')} />}>
       <ShellPartBoundary fallback={(retry) => <LessonError message={t('roadmap.error')} onRetry={retry} onExit={onExit} t={t} />}>
         {children}
       </ShellPartBoundary>
@@ -1643,7 +1665,7 @@ function SkillCheckRunner({
     try {
       const params = new URLSearchParams({ resource: 'placement', subject });
       const res = await apiFetch<PlacementResponse>(`/api/quiz/roadmap?${params}`);
-      await holdLoadingScreen(startedAt);
+      await revealWhenReady(startedAt);
       if (res.done) await finishFrom(res);
       else applyRound(res, null);
     } catch (err) {
@@ -1717,7 +1739,7 @@ function SkillCheckRunner({
   }
 
   if (phase === 'loading' || phase === 'submitting') {
-    return <QuoteLoader quote={t('quiz.loadingQuote')} label={learnText('placement.loading')} />;
+    return <DelayedQuoteLoader quote={t('quiz.loadingQuote')} label={learnText('placement.loading')} />;
   }
 
   if (phase === 'error') {
@@ -1872,6 +1894,13 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
   const [level, setLevel] = useState<1 | 2 | null>(() => (asked === '1' ? 1 : asked === '2' ? 2 : null));
   const [generation, setGeneration] = useState(0);
   const [reading, setReading] = useState(true);
+  // When the questions were asked for: the level's loader and the runner's
+  // code loader after it are one wait (learn/LevelLoader.tsx).
+  const [since, setSince] = useState(0);
+  const startQuestions = () => {
+    setSince(Date.now());
+    setReading(false);
+  };
   const before = useRef(0);
   useEffect(() => {
     if (asked === null) return;
@@ -1897,10 +1926,10 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
     setLevel(next);
   };
   if (level !== null) {
-    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
-    if (lesson.isPending) return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
+    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={startQuestions} onBack={() => setLevel(null)} />;
+    if (lesson.isPending) return <DelayedQuoteLoader since={since} quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
-    return <LessonStage onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
+    return <LessonStage since={since} onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
       topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
       onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} onActiveChange={onActiveChange} t={t}
       onFinished={(pct, repeatXp) => {

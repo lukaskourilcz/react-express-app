@@ -736,6 +736,16 @@ slips through as its words instead of failing the lesson. The level runner
 (`components/learn/LessonRunner.tsx`) is a chunk of its own: Learn fetches it
 when a level opens, not with the map.
 
+Opening a level, a part test or the skill check draws nothing for the first
+200 ms and then the quote loader, which stays at least 400 ms once shown
+(`components/learn/LevelLoader.tsx`); a level answered inside 200 ms opens
+at once and never shows it. It used to hold the loader at least 1.2 s
+(`MIN_LOADING_MS`, which Quiz and Challenge still use), so a level the server
+answered in 120 ms opened after about 1.8 s (#587 C05). The screen waits for
+the runner's code as well as the level, and a runner whose code is already
+here draws without suspending, so React's 300 ms reveal hold on a boundary
+that showed its fallback does not apply.
+
 ## Learn sections
 
 `shared/learn-sections.ts` groups the Learn topics and the FDE path into three
