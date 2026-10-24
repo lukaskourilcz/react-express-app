@@ -52,7 +52,7 @@ The owner asked for every finding to be applied. Where two area reviews proposed
 | Question | Decision |
 |---|---|
 | Desktop button height | 44px default and 36px compact, changed once in the Astryx size token and the shared button rules, not page by page. Toolbar buttons may be 36px, with a 44px hit area. |
-| Billing, checkout and auth card width | One 640px task card (`--ss-task-width`), the same width as the question shell. |
+| Billing, checkout and auth card width | One 640px task card (`--ss-width-task`), the same width as the question shell. |
 | The primary action on question screens | SwimCta md (44px) as the one primary in the shared QuestionActions row; secondaries are Astryx at 44px. |
 
 ### Target system
