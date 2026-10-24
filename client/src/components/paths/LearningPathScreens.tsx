@@ -59,6 +59,7 @@ import {
 } from '../../lib/learningPaths';
 import { forgetLocalDraft, keepDraftLocally, localDraftOver, withChangedEnrollments } from '../../lib/learningPathWorkspace';
 import { accountEpoch } from '../../lib/accountData';
+import { loadEditor } from '../../coding/loadEditor';
 import type {
   EnrollmentListResponse,
   PathCatalogEntry,
@@ -709,6 +710,11 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
 
   const module = entry?.manifest.modules.find((one) => one.id === moduleId);
   const activity = module?.activities.find((one) => one.id === activityId);
+  // A code exercise's editor loads beside its start, as soon as the catalogue
+  // says what the activity is, rather than after the start answered (#587
+  // paths walk): the start then no longer leads a second wait for CodeMirror.
+  const opensCode = activity?.kind === 'code';
+  useEffect(() => { if (opensCode) void loadEditor().catch(() => undefined); }, [opensCode]);
 
   useEffect(() => {
     let cancelled = false;
