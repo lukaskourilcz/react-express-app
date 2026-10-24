@@ -24,7 +24,6 @@ import {
   applySkillCheckReceipt,
   recordLevelResult,
   recordPartTestResult,
-  syncProgressWithServer,
   useRoadmapProgress,
   isLevelPassed,
   isPartLevelUnlocked,
@@ -57,7 +56,7 @@ import {
 import type { PlacementReview } from '../../../shared/assessment';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
-import { announceLearnRepeat, awardLearningOutcome, primeRankMarker, syncXpWithServer } from '../lib/xp';
+import { announceLearnRepeat, awardLearningOutcome } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
 import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
@@ -88,6 +87,7 @@ import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionS
 import { CheckIcon, LockIcon, LockedNote, SectionEmpty, SectionRail } from './learn/SectionRail';
 import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
 import { useFdePathSteps } from './learn/useFdePathSteps';
+import { useMapReadsBesideHold } from './learn/mapReads';
 import { useOnline } from './learn/useOnline';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
@@ -335,6 +335,9 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
  * its header and footer as it does for a Quiz or a Challenge run (UX audit
  * questions-07). */
 function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
+  // The account's progress and XP, and the path reads where they count,
+  // start beside the hold rather than after the first draw (#587 C07, C08).
+  useMapReadsBesideHold();
   useRoadmapStructureFirst({ plan: true });
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
@@ -498,16 +501,6 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
       setPart(currentPart(progress, topic, ranges, extraUnlocksSet, availability));
     }
   }, [topic, ranges, progress, extraUnlocksSet, part, availability]);
-
-  // Pull account progress + XP on sign-in and merge with this device. The two
-  // reads leave together (perf baseline #587 C08): XP waited for progress,
-  // one round trip after it, so that the rank marker counted the merged
-  // learning XP. The marker is set again, silently, once both are in, which
-  // leaves it where the chained reads left it.
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    void Promise.allSettled([syncProgressWithServer(), syncXpWithServer()]).then(() => primeRankMarker());
-  }, [isAuthenticated]);
 
   // Show `next`, on the first unlocked, incomplete part of it.
   const landOn = (next: RoadmapTopic, remember: LearnSectionId | null) => {

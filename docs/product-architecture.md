@@ -832,6 +832,15 @@ remembers its last topic (`devquiz:roadmap:section-topic`). The sections
 share one route box (`routeBoxKey`), so a switch keeps the page mounted, and
 a level or the skill check stays open while the address changes.
 
+The map holds its first draw for the structure and, signed in, the plan.
+Its other reads start in the render that hold suspends, without being
+waited for (`components/learn/mapReads.ts`, #587 C07): the account's
+progress and XP sync, and, on the FDE section or while the settings may
+have the path open, the path catalogue and the account's enrollments. They
+used to leave one round trip after the map had drawn. The map syncs once per
+mount and again on a sign-in or sign-out while it is mounted; a section
+switch syncs nothing new.
+
 In a section the learner has not joined, the topics the plan lacks show
 dimmed beside one action. Software Engineer saves the union of the saved
 `sections` and its own id. Forward Deployed Engineer enrols in the FDE path
