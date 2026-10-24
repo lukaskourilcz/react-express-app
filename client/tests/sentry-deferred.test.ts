@@ -83,6 +83,17 @@ describe('the error monitor', () => {
     expect(sentry.init).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps at most EARLY_ERROR_LIMIT errors from before the SDK, the first ones', async () => {
+    Object.defineProperty(document, 'readyState', { value: 'loading', configurable: true });
+    const { initSentry, reportError, EARLY_ERROR_LIMIT } = await freshMonitor();
+    initSentry();
+    const errors = Array.from({ length: EARLY_ERROR_LIMIT + 5 }, (_, index) => new Error(`loop ${index}`));
+    for (const error of errors) reportError(error);
+    await vi.waitFor(() => expect(sentry.init).toHaveBeenCalledTimes(1));
+    expect(EARLY_ERROR_LIMIT).toBe(20);
+    expect(sentry.captureException.mock.calls.map(([error]) => error)).toEqual(errors.slice(0, EARLY_ERROR_LIMIT));
+  });
+
   it('does nothing, and keeps nothing, without a DSN', async () => {
     vi.stubEnv('VITE_SENTRY_DSN', '');
     const { initSentry, reportError } = await freshMonitor();
