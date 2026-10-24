@@ -10,6 +10,7 @@ import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDB
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
 import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { requestMemo, withRequestContext } from '../lib/http';
 import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { type CodingDesignKey } from '../lib/quiz-tokens';
 import { gradeDesign, prepareDesign } from '../lib/coding/grade';
@@ -539,6 +540,61 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   assert.deepEqual(timeline.slice(0, 2).sort(), ['start:credit_verified_xp_tokens', 'start:settle_coin_milestones'], `both routines start before either ends (${timeline.join(', ')})`);
   assert.equal(timeline.length, 4, 'and the answer waits for both');
   console.log('PASS integrity: a pass credits its coins and settles milestones together, and answers after both');
+}
+
+// ── a Submit reads what waits only on the caller while other work runs ───
+// Server item 10: a Learn-linked Submit of Premium content asked the plan,
+// then read the level attempt, after both per-task buckets had answered; a
+// signed-in stage Submit read its passed stages after the code was graded.
+// The attempt is now read as soon as the token check answers, while the
+// plan is still being asked, and the stages while the code is graded. The
+// gates still decide in their order on what was read.
+{
+  const db = codingDatabase();
+  const learner = 'user-prefetch-0010';
+  const levelAttempt = 'prefetchattempt0123456789';
+  db.levels.set(levelAttempt, { user_id: learner, coding_task_ids: ['alg-dsa-stack'], completed_at: null, expires_at: new Date(Date.now() + 60 * 60_000).toISOString() });
+  const session = encodeCodingSession({ taskId: 'alg-dsa-stack', track: 'algorithms', userId: learner, roadmapAttemptId: levelAttempt });
+  const req = { method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.92' }, query: {}, body: { session, code: solutionFor('alg-dsa-stack')!.solution, user_id: learner } };
+  const out = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await withRequestContext(req as never, out as never, async () => {
+    // A Premium account whose plan takes a moment to answer.
+    void requestMemo(`tier:${learner}`, () => new Promise((resolve) => setTimeout(() => { db.events.push('tier:answered'); resolve('premium'); }, 30)));
+    await handleCodingSubmit(req as never, out as never, db.client as never);
+  });
+  assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  assert.equal(out.body?.verdict, 'passed');
+  assert.equal(out.body?.applied, true, 'the linked pass is recorded');
+  const attemptRead = db.events.indexOf('read:roadmap_attempts');
+  assert.ok(attemptRead >= 0 && attemptRead < db.events.indexOf('tier:answered'), `the level attempt is read while the plan is asked (${db.events.join(', ')})`);
+  assert.equal(db.events.filter((event) => event === 'read:roadmap_attempts').length, 1, 'and read once');
+
+  // The stage gate's read starts while the code holds its grading slot: a
+  // probe of the same in-flight count, one per task, finds it taken.
+  const stageId = 'js-evolving-calculator-1-start';
+  const stageLearner = 'user-prefetch-0011';
+  const probes: boolean[] = [];
+  const stageDb = codingDatabase();
+  const list = stageDb.client.from;
+  stageDb.client.from = (table: string) => {
+    const chain = list(table) as { then: (resolve: (value: unknown) => unknown) => unknown };
+    const then = chain.then;
+    if (table === 'coding_progress') chain.then = (resolve) => {
+      const slot = enterInFlight(stageReq as never, 'grading', { item: gradingItem.task(stageId), perItem: 1, perCaller: 99 }, `user:${stageLearner}`);
+      probes.push(slot === null);
+      slot?.();
+      return then(resolve);
+    };
+    return chain as never;
+  };
+  const stageReq = { method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.93' }, query: {}, body: { session: encodeCodingSession({ taskId: stageId, track: 'javascript', userId: stageLearner }), code: solutionFor(stageId)!.solution, user_id: stageLearner } };
+  const stageOut = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit(stageReq as never, stageOut as never, stageDb.client as never);
+  assert.equal(stageOut.statusCode, 200, JSON.stringify(stageOut.body));
+  assert.equal(stageOut.body?.verdict, 'passed');
+  assert.equal(stageOut.body?.applied, true, 'the open stage is recorded');
+  assert.deepEqual(probes, [true], 'the stage gate reads the passed stages once, while the code is graded');
+  console.log('PASS integrity: a Submit reads the Learn attempt while the plan is asked and a stage\'s passed stages while it is graded');
 }
 
 // ── a task's XP again, after a reset and an hour (migration 058) ─────────

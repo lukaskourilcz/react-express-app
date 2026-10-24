@@ -9,7 +9,7 @@ import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
-import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
+import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, verifiedCallerId, withTimeout } from '../http';
 import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
@@ -169,11 +169,17 @@ const learnAttemptEnded = (res: VercelResponse) =>
 const raisedEndedLearnAttempt = (error: { message?: string } | null | undefined): boolean =>
   /\binvalid_roadmap_attempt\b/.test(error?.message ?? '');
 
-async function refuseInvalidLearnLink(supabase: SupabaseClient | null, res: VercelResponse, session: CodingSession, userId: string | null): Promise<boolean> {
+type LearnAttemptRead = Awaited<ReturnType<typeof readLearnAttempt>>;
+const readLearnAttempt = (supabase: SupabaseClient, attemptId: string) =>
+  withTimeout(supabase.from('roadmap_attempts').select('user_id,completed_at,expires_at,coding_task_ids').eq('attempt_id', attemptId).maybeSingle());
+
+/** `prefetched`: the attempt row, read already for this session's own
+ * account (`prefetchSubmitReads`). Every check below still decides. */
+async function refuseInvalidLearnLink(supabase: SupabaseClient | null, res: VercelResponse, session: CodingSession, userId: string | null, prefetched?: Promise<LearnAttemptRead> | null): Promise<boolean> {
   if (!session.roadmapAttemptId) return false;
   if (session.userId !== userId) { jsonError(res, 409, 'session_owner_mismatch', 'This lesson was opened under a different sign-in. Start it again.'); return true; }
   if (!supabase) { jsonError(res, 503, 'not_configured', 'Learning progress is not configured'); return true; }
-  const row = await withTimeout(supabase.from('roadmap_attempts').select('user_id,completed_at,expires_at,coding_task_ids').eq('attempt_id', session.roadmapAttemptId).maybeSingle());
+  const row = await (prefetched ?? readLearnAttempt(supabase, session.roadmapAttemptId));
   if (row.error) { jsonError(res, 503, 'progress_unavailable', 'Could not load the learning attempt. Try again.'); return true; }
   const attempt = row.data;
   if (!attempt || (attempt.user_id ?? null) !== userId || attempt.completed_at || Date.parse(attempt.expires_at) <= Date.now()
@@ -733,6 +739,34 @@ function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyErr
 
 /* ── POST ?resource=coding-submit ────────────────────────────────────── */
 
+/**
+ * A Submit's reads that wait only on who the caller is (#587, server item
+ * 10). The per-task and ceiling buckets need the verified account, and the
+ * plan (Premium content) and the Learn level attempt (a linked session) were
+ * then read one after the other once both buckets had answered. They start as
+ * soon as the token check answers, beside the two buckets; the gates below
+ * still decide, in their order, on what was read.
+ *
+ * Only a session issued to the verified caller, or to no one, is read for:
+ * one bound to another account is refused before anything is read, as it
+ * was. The trade-off: a Submit one of the two buckets then refuses has spent
+ * these reads (an `is_premium` call, a roadmap_attempts row) for nothing.
+ * Such a caller is signed in and still inside its address bucket
+ * (`codingSubmitAddress`), which bounds them.
+ */
+function prefetchSubmitReads(req: VercelRequest, supabase: SupabaseClient | null, task: CodingTask, session: CodingSession): Promise<{ learnAttempt: Promise<LearnAttemptRead> | null }> {
+  return verifiedCallerId(req).then((callerId) => {
+    if (!callerId || !supabase || (session.userId && session.userId !== callerId)) return { learnAttempt: null };
+    // Remembered for the request; a failure is asked again by the gate.
+    if (contentTier(codingSessionContent(task, session), serverContentIndex()) === 'premium') void resolveTier(callerId).catch(() => undefined);
+    if (!session.roadmapAttemptId || session.userId !== callerId) return { learnAttempt: null };
+    const learnAttempt = readLearnAttempt(supabase, session.roadmapAttemptId);
+    // Awaited by the link check; a request answered before it ends quietly.
+    learnAttempt.catch(() => undefined);
+    return { learnAttempt };
+  });
+}
+
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingSubmitAddress))) return;
@@ -741,20 +775,24 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
   const task = codingTaskById(session.taskId);
   if (!task || task.track !== session.track) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
+  // The plan and the Learn attempt are read while the per-task buckets answer.
+  const prefetched = prefetchSubmitReads(req, supabase, task, session);
   // Per task, beneath a ceiling per caller (owner decision, 9 October 2026):
   // a learner who spent one task's budget still submits on the next one.
   if (!(await enforcePerItemRateLimit(req, res, RATE_LIMITS.codingSubmit, RATE_LIMITS.codingSubmitCeiling, gradingItem.task(task.id)))) return;
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
+  const { learnAttempt } = await prefetched;
   if (await refuseLocked(res, userId, codingSessionContent(task, session), { cleared: () => taskCleared(supabase, userId!, task.id) })) return;
-  if (await refuseInvalidLearnLink(supabase, res, session, userId)) return;
+  if (await refuseInvalidLearnLink(supabase, res, session, userId, learnAttempt)) return;
   if (session.version !== codingAttemptVersion(task)) {
     return jsonError(res, 409, 'task_changed', 'This task changed while you were working. Reload its latest brief before submitting. Your code has been kept.');
   }
 
   let graded: Graded;
   let code: string | null = null;
+  let stagePassed: Promise<Set<string>> | null = null;
   // A code-ordering submission. The server neither reads nor believes a
   // viewport: it accepts an order from any device and grades it the same way,
   // and what it produces is ordering evidence, never a code pass.
@@ -821,6 +859,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     code = body.code;
     const done = enterInFlight(req, 'grading', { item: gradingItem.task(task.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, userId ? `user:${userId}` : undefined);
     if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
+    // A signed-in stage Submit's gate reads the passed stages while the code
+    // is graded rather than after (#587, server item 10); it still decides
+    // before anything is written.
+    if (userId && supabase && evolvingStage(task.id)) {
+      stagePassed = loadPassedTaskIds(supabase, userId);
+      stagePassed.catch(() => undefined);
+    }
     try {
       graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
     } catch (error) {
@@ -845,7 +890,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (userId) {
     if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
     if (evolvingStage(task.id)) {
-      const passed = await loadPassedTaskIds(supabase, userId);
+      const passed = await (stagePassed ?? loadPassedTaskIds(supabase, userId));
       if (!evolvingUnlocked(task.id, passed)) return jsonError(res, 403, 'stage_locked', 'Complete earlier stages first');
       // Persist the exact submitted code before publishing completion. A next
       // stage can then resume from this draft even on another device. It is
