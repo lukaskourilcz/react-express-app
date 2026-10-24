@@ -370,6 +370,34 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   console.log('PASS integrity: a slow React VM is a runner outage, not the learner\'s timeout');
 }
 
+// ── the React grader bundle is read once per instance (#587 item 14) ────
+// Every Submit read the 2 MB bundle from disk again. It is read once and the
+// same bytes are uploaded on every run, exactly the deployed file.
+{
+  const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))('./lib/coding/generated/vercel-sandbox.cjs') as { Sandbox: { create: (...args: unknown[]) => Promise<unknown> } };
+  const { runIsolatedReactSuite } = await import('../lib/coding/react-isolated');
+  const realCreate = Sandbox.create;
+  const uploaded: Buffer[] = [];
+  Sandbox.create = async () => ({
+    writeFiles: async (files: { path: string; content: Buffer }[]) => { uploaded.push(files.find((file) => file.path.endsWith('/runner.cjs'))!.content); },
+    runCommand: async () => ({ exitCode: 124, stdout: async () => '' }),
+    stop: async () => undefined,
+  });
+  process.env.REACT_RUNNER_SNAPSHOT_ID = 'snapshot-test';
+  try {
+    const input = { suite: "test('renders', () => {});", appSource: 'export default function App() { return null; }' };
+    await runIsolatedReactSuite(input);
+    await runIsolatedReactSuite(input);
+    assert.equal(uploaded.length, 2, 'every run uploads the bundle');
+    assert.equal(uploaded[0], uploaded[1], 'the bytes read once are reused');
+    assert.ok(uploaded[0].equals(readFileSync(join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'))), 'and they are the deployed bundle, byte for byte');
+  } finally {
+    Sandbox.create = realCreate;
+    delete process.env.REACT_RUNNER_SNAPSHOT_ID;
+  }
+  console.log('PASS integrity: the React grader bundle is read once per instance and uploaded unchanged on every run');
+}
+
 // ── a checkpoint hands over nothing that passes its milestone ───────────
 // A pass of a checkpoint (`…-start`) and a reveal there serve that
 // checkpoint's own reference and no boards; that reference fails the

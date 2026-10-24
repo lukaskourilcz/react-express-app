@@ -51,6 +51,18 @@ const fixtures = () => compiledFixtureModules ??= {
   './localFetch': compileReactLearner(LOCAL_FETCH_SOURCE, false),
 };
 
+/** The grader bundle the VM runs, 2 MB, read from the deployment once per
+ * instance and reused (#587, server item 14): it is built with the
+ * deployment and cannot change under a running instance, and every Submit
+ * read it from disk again. Every run still uploads it, byte for byte. A
+ * failed read is not kept, so the next run reads again. */
+let runnerBytes: Promise<Buffer> | null = null;
+const runnerArtifact = (): Promise<Buffer> =>
+  runnerBytes ??= readFile(join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs')).catch((error) => {
+    runnerBytes = null;
+    throw runnerFailure('Artifact', error);
+  });
+
 /** No code, environment secrets, or writable state are shared between runs.
  * Authentication stays in this API process; only source + fixtures enter the
  * VM. No in-process fallback is allowed when infrastructure is unavailable.
@@ -73,9 +85,7 @@ export async function runIsolatedReactSuite(input: {
   }
   const snapshotId = process.env.REACT_RUNNER_SNAPSHOT_ID;
   if (!snapshotId) throw runnerFailure('Configuration');
-  const runner = await readFile(
-    join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'),
-  ).catch((error) => { throw runnerFailure('Artifact', error); });
+  const runner = await runnerArtifact();
   const signal = AbortSignal.timeout(22_000);
   const nonce = randomBytes(24).toString('hex');
   const compiledFixtures = fixtures();
