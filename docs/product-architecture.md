@@ -858,7 +858,10 @@ shelf.
 Today keeps unfinished → review → new priority, orders within those buckets by
 `planTopics(profile)`, and exposes one `startHereId`; joining a section adds
 work after the track and does not replace the next action. Career groups its
-topics under the three section headings and links into Learn. The Skill Check
+topics under the three section headings and links into Learn; it draws once
+the structure is in, and the FDE group's figure reads "Loading…" in its own
+line until the path catalogue and the enrollments land, which start beside
+the structure while the path may be open (#587 C25). The Skill Check
 (placement) returns its review after the server accepts each round, in the
 shuffled order the learner saw.
 
