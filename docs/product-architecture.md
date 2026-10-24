@@ -1797,6 +1797,22 @@ seeds a row in every such table.
   pg_cron, and `consentContracts()` in `scripts/test-launch-contracts.ts`
   ties the sentence to the SQL.
 
+## Client start-up
+
+What every page pays before its own content, and the rules that keep it
+small (perf audit #587). The sign-in, token and plan rules are under
+"Sign-in, caching and limits"; error monitoring under "Cookie consent,
+analytics and the privacy policy".
+
+- **Motion.** `MotionProvider` (`client/src/lib/motion.tsx`) loads Motion's
+  feature chunk (14 KB) in the background. A page that opens with
+  `prefers-reduced-motion: reduce` loads none (`motionFeaturesFor`) and marks
+  `<html data-motion="off">`, the mark a failed load sets, so app-shell.css
+  shows each `m` element at its final opacity without a transform and an
+  exiting one leaves at once: such a reader sees things appear instead of a
+  120 ms fade. A preference changed while the page is open applies from the
+  next load.
+
 ## Deployment
 
 One Vercel project, `react-express-app`, builds this repository for
