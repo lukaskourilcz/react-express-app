@@ -12,6 +12,8 @@ const state = vi.hoisted(() => ({
   /** The outcome of each load of the workbench's code; the last one repeats. */
   outcomes: ['load'] as ('fail' | 'load')[],
   loads: 0,
+  /** Loads of the editor's code. */
+  editorImports: 0,
   reloadOnPress: vi.fn(async () => true),
 }));
 
@@ -49,12 +51,18 @@ vi.mock('../src/coding/api', () => ({
   }),
 }));
 vi.mock('../src/coding/CodingWorkbench', () => ({ CodingWorkbench: () => <p>the workbench</p> }));
+vi.mock('../src/coding/Editor', () => ({ Editor: () => null }));
+vi.mock('../src/coding/loadEditor', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/coding/loadEditor')>();
+  return { ...real, loadEditor: () => { state.editorImports += 1; return real.loadEditor(); } };
+});
 
 beforeEach(() => {
   // CodingSection keeps a loaded workbench for the page's lifetime: each test
   // is a fresh page.
   vi.resetModules();
   state.loads = 0;
+  state.editorImports = 0;
   state.reloadOnPress.mockReset();
   state.reloadOnPress.mockResolvedValue(true);
 });
@@ -131,5 +139,34 @@ it('warms the workbench from a list only when the browser is not saving data', a
     expect(state.loads).toBe(1);
   } finally {
     vi.unstubAllGlobals();
+  }
+});
+
+// C12: a task opened on a wide screen fetches the editor beside the
+// workbench and draws once both are in; on a phone that shows the puzzle or
+// the "bigger screen" note it does not fetch the editor at all.
+it('loads the editor beside the workbench on a wide screen only', async () => {
+  state.outcomes = ['load'];
+  await mount();
+  expect(await screen.findByText('the workbench')).toBeInTheDocument();
+  expect(state.editorImports).toBe(1);
+});
+
+it('opens a task on a phone without fetching the editor', async () => {
+  state.outcomes = ['load'];
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query === '(max-width: 1023.95px)', media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  try {
+    await mount();
+    expect(await screen.findByText('the workbench')).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(state.editorImports).toBe(0);
+  } finally {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: false, media: query, onchange: null,
+      addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+    }) as MediaQueryList);
   }
 });

@@ -665,6 +665,17 @@ shown once it has loaded.
   says why under the editor and turns Format off until the next edit. Before,
   the page formatted the whole program 350 ms after it opened and after every
   typing pause to decide whether Format was on (C02, C24).
+- **The editor** (CodeMirror, about 170 KB gzip of the workbench's 190) is
+  its own chunk (`client/src/coding/loadEditor.ts`). A task screen fetches it
+  beside the workbench and draws once both are in; a pointer, focus or touch
+  on a task link starts both. A narrow screen that shows the puzzle or the
+  "bigger screen" note fetches no editor until the learner chooses it there;
+  from then on it stays mounted, hidden after a resize, as before. Where the
+  editor is not in yet (a Learn level's coding step, the choice on a phone)
+  its box holds the place and the brief and controls are already drawn; an
+  editor that fails to load offers Try again in that box alone. The editor's
+  code is evaluated in a task of its own, apart from the workbench's (C12,
+  C21).
 - **TypeScript's compiler** (about 1 MB gzip, 4 MB of JavaScript) loads
   once the learner reaches for the code: a pointer or the focus in the editor
   or on the Run and Submit row, an edit, the first Run or Submit, or the

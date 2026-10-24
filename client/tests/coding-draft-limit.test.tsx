@@ -12,6 +12,7 @@ import { preloadPath } from '../src/lib/routePreload';
 import { CodingTaskScreen } from '../src/components/coding/CodingSection';
 import { saveCodingDraft, submitCoding } from '../src/coding/api';
 import type { CodingTaskResponse } from '../../shared/coding-api';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: true }) }));
 vi.mock('../src/coding/Editor', () => ({
@@ -48,6 +49,10 @@ vi.mock('../src/coding/api', () => ({
 }));
 
 beforeAll(() => preloadPath('/coding/javascript/js-test-limit'));
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 it('keeps code over 20 kB on this device only, on Submit or Run, says so, and saves code that fits to the account', async () => {
   render(

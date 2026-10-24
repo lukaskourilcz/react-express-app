@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -10,6 +10,7 @@ import { EVOLVING_CHALLENGES, evolvingTaskTrack } from '../../shared/evolving';
 import { formatCode } from '../src/coding/runner/format';
 import { FinButton } from '../src/components/landing/LandingKit';
 import { generateFinHover } from '../src/lib/finHover';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -31,6 +32,10 @@ const task: PlayableCodingTask = {
 function mount(onDraft = vi.fn()) {
   return { onDraft, ...render(<MemoryRouter><LanguageProvider><CodingWorkbench initialCode={null} task={task} session={null} locked={null} signedIn={false} mode="section" onDraft={onDraft} /></LanguageProvider></MemoryRouter>) };
 }
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 it('disables idle/empty formatting and enables it only for a real formatting change', async () => {
   mount();

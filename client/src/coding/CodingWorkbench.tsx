@@ -2,7 +2,7 @@
 // ladder. Used by the Coding section (`mode="section"`) and inside a Learn
 // level (`mode="lesson"`). It never fetches on its own: the parent hands it a
 // playable task, its sealed session and the saved draft.
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
 import { DropdownMenu, DropdownMenuItem } from '@astryxdesign/core/DropdownMenu';
@@ -13,7 +13,11 @@ import { workbenchCopy } from '../i18n/translations.workbench';
 import { openSignIn } from '../lib/signInDialog';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
-import { Editor } from './Editor';
+import type { EditorProps } from './Editor';
+import { loadEditor, loadedEditor, NARROW_EDITOR_KEY, readNarrowEditor } from './loadEditor';
+import { lazyShellPart } from '../lib/routeRecovery';
+import { ShellPartBoundary } from '../components/ShellPartBoundary';
+import ErrorRetry from '../components/ErrorRetry';
 import { CodingCompletion, ComplexityInfo } from './CodingCompletion';
 import { formatCode } from './runner/format';
 import { compilerStarted, holdCompiler, runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
@@ -117,11 +121,33 @@ const readLayout = (): WorkbenchLayout => {
 // A narrow screen waits for a bigger one by default, but the learner may take
 // the editor here instead (docs/interactive-content-manifest.md). The choice is
 // theirs for the rest of the browser session, on every task, and nothing else
-// reads it: the server grades the same code from any screen.
-const NARROW_EDITOR_KEY = 'devshark:coding:narrow-editor:v1';
-const readNarrowEditor = (): boolean => {
-  try { return sessionStorage.getItem(NARROW_EDITOR_KEY) === '1'; } catch { return false; }
-};
+// reads it: the server grades the same code from any screen. The key and its
+// reader live in loadEditor.ts, which also decides whether to fetch the editor.
+
+/** CodeMirror loads as its own chunk (loadEditor.ts). The task screen and an
+ * intent preload fetch it beside the workbench, so it is usually in before
+ * the first render and draws at once; otherwise its box holds the editor's
+ * place, and a load that failed offers Try again in that box alone. */
+const LazyEditor = lazyShellPart(() => loadEditor().then((Editor) => ({ default: Editor })));
+const EDITOR_MIN = 'var(--cd-editor-min, 280px)';
+function EditorPart(props: EditorProps & { loadingLabel: string; failedLabel: string }) {
+  const { loadingLabel, failedLabel, ...editor } = props;
+  // Decided once per mount, so the editor never swaps one tree for the other.
+  const [Loaded] = useState(loadedEditor);
+  if (Loaded) return <Loaded {...editor} />;
+  const box = (
+    <div className={editor.fill ? 'cd-editor cd-editor--fill' : 'cd-editor'} style={{ minHeight: editor.minHeight ?? EDITOR_MIN, maxHeight: editor.maxHeight }}>
+      <span className="cd-visually-hidden" role="status">{loadingLabel}</span>
+    </div>
+  );
+  return (
+    <Suspense fallback={box}>
+      <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={failedLabel} onRetry={retry} busy={busy} />}>
+        <LazyEditor {...editor} />
+      </ShellPartBoundary>
+    </Suspense>
+  );
+}
 
 /** The names a React suite gives its cases, in order, so Results can list them
  * before the first run. The suite is read, never executed, here. */
@@ -267,6 +293,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // bigger screen stands in for the editor: a phone would download and start
   // a runner it has no Run for. Choosing the editor starts them.
   const editorShown = !puzzleMode && !pendingOnDesktop;
+  // The editor mounts the first time it shows and then stays, hidden while a
+  // puzzle or the pending note stands in for it after a resize, so its undo
+  // history and selection survive (the code itself lives here). A phone that
+  // never shows it never downloads it (perf baseline #587 C12).
+  const [editorMounted, setEditorMounted] = useState(editorShown);
+  if (editorShown && !editorMounted) setEditorMounted(true);
   useEffect(() => (isReact || !editorShown ? undefined : warmRunner(codeTrack)), [isReact, editorShown, codeTrack]);
   // A compiler another TypeScript task loaded is held at once: it costs no
   // download, and the next Run finds it ready.
@@ -1302,7 +1334,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           )}
 
           {/* Stays mounted while a puzzle or the pending note stands in for it,
-              so the code survives a resize. The brief and the actions go with
+              so the code survives a resize; the editor inside it mounts once
+              it has shown (editorMounted). The brief and the actions go with
               whichever pane is showing. */}
           <section className="cd-pane cd-pane--editor" ref={editorPaneRef} tabIndex={-1} hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
             {!puzzleMode && !pendingOnDesktop && brief}
@@ -1311,7 +1344,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {/* In the frame (1024px and up) the editor takes what the brief
                   and the action bar leave and scrolls inside; stacked, it
                   starts at --cd-editor-min and grows with the code. */}
-              <Editor fill={mode !== 'landing'} minHeight={mode === 'landing' ? 160 : undefined} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              {editorMounted && <EditorPart loadingLabel={t('common.loading')} failedLabel={t('coding.loadError')} fill={mode !== 'landing'} minHeight={mode === 'landing' ? 160 : undefined} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />}
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
               <span id={`${baseId}-keys`} className="cd-visually-hidden">{t(mode === 'landing' ? 'coding.shortcuts.preview' : 'coding.shortcuts')}</span>

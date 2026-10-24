@@ -1,7 +1,7 @@
 // What the workbench says after Run and Submit, checked against the coding
 // audit of 8 October 2026 (C3, C4, C5). Each case names its finding.
 import { readFileSync } from 'node:fs';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -15,6 +15,7 @@ import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-e
 import type { CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 import { declared } from './css';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -63,6 +64,10 @@ function mount(props: { signedIn?: boolean; subject?: PlayableCodingTask; mode?:
     </MemoryRouter>,
   );
 }
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 beforeEach(() => {
   vi.mocked(submitCoding).mockReset();

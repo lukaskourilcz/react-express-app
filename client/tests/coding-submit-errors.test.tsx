@@ -3,7 +3,7 @@
 // over the size limit, a rate limit, a locked stage and a plan check that
 // could not run all sent the learner to look at their network. A React
 // grader outage read as a build error in their code.
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -12,6 +12,7 @@ import { submitCoding } from '../src/coding/api';
 import { ApiError } from '../src/lib/api';
 import type { CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -72,6 +73,10 @@ for (const [status, code, message, reads] of [
     expect(await screen.findByRole('alert')).toHaveTextContent(reads);
   });
 }
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 it('refuses code over 20 kB before sending it', async () => {
   vi.mocked(submitCoding).mockReset();

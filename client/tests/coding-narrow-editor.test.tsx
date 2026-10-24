@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -9,6 +9,7 @@ import { formatCode } from '../src/coding/runner/format';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 import { readFileSync } from 'node:fs';
 import { declared } from './css';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -47,6 +48,10 @@ const mount = (id = task.id) => render(
   </LanguageProvider></MemoryRouter>,
 );
 
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
+
 beforeEach(() => { sessionStorage.clear(); narrowScreen(); });
 afterEach(() => { sessionStorage.clear(); });
 
@@ -61,7 +66,9 @@ it('waits for a bigger screen by default in one note with its one button, and ke
   // The decision sits inside the note; nothing promises an autosave.
   expect(within(note as HTMLElement).getByRole('button', { name: 'Use the editor here' })).toBeVisible();
   expect(screen.queryByText(/anything you have written is saved/)).toBeNull();
-  expect(screen.getByLabelText('Test editor')).not.toBeVisible();
+  // Not merely hidden: a phone that has not chosen the editor does not mount
+  // or download it (perf baseline #587 C12).
+  expect(screen.queryByLabelText('Test editor')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
   // Hint, Solution and Report wait for the editor.
   expect(screen.queryByRole('button', { name: /Hint|Solution|More actions|Report/ })).toBeNull();
@@ -211,7 +218,9 @@ const mountPuzzle = () => render(
 it('offers the editor beside a puzzle, and an earlier choice of the editor opens it straight away', () => {
   mountPuzzle();
   expect(screen.getByRole('button', { name: /Check the order/ })).toBeVisible();
-  expect(screen.getByLabelText('Test editor')).not.toBeVisible();
+  // Not merely hidden: a phone that has not chosen the editor does not mount
+  // or download it (perf baseline #587 C12).
+  expect(screen.queryByLabelText('Test editor')).toBeNull();
   // The puzzle needs no runner (V3-4).
   expect(warmRunner).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));

@@ -1,7 +1,7 @@
 // The results pane's tabs (UX audit coding-04): one order on every track, so
 // the shared tabs keep their place, and React opens on Results like the rest,
 // with an empty preview that takes no room until a run draws into it.
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -10,6 +10,7 @@ import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import type { HarnessRun } from '../src/coding/useReactHarness';
 import { runCodeTests } from '../src/coding/runner/run-tests';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({ Editor: () => <textarea aria-label="Test editor" /> }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({ data: undefined }), submitCoding: vi.fn(), revealCoding: vi.fn(), resetCoding: vi.fn() }));
@@ -38,6 +39,10 @@ const mount = (track: keyof typeof tasks) => render(
   </LanguageProvider></MemoryRouter>,
 );
 const tabNames = () => screen.getAllByRole('tab').map((tab) => tab.textContent?.replace(/\d+(\/\d+)?$/, '').trim());
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 beforeEach(() => { harness.run = null; });
 

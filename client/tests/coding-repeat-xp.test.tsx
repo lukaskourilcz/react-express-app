@@ -2,7 +2,7 @@
 // (migration 058, owner decision of 9 Oct 2026). Signed in, Reset tells the
 // server; the verdict card says when the XP opens again, or why a pass paid
 // nothing. Signed out, Reset stays in the browser and nothing is said.
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -10,6 +10,7 @@ import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { resetCoding, submitCoding } from '../src/coding/api';
 import type { CodingRepeatXp, CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -55,6 +56,10 @@ async function submitWith(body: CodingVerdictResponse) {
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
   return screen.findByRole('heading', { level: 1, name: /^Passed/ });
 }
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 beforeEach(() => {
   vi.mocked(submitCoding).mockReset();

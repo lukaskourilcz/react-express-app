@@ -2,19 +2,36 @@ import { useEffect, useState } from 'react';
 import type { CodingWorkbench as CodingWorkbenchView } from './CodingWorkbench';
 import { routeChunk } from '../lib/routePreload';
 import { RELOAD_GRACE_MS, isChunkLoadError, reloadOnPress } from '../lib/routeRecovery';
+import { editorWantedHere, loadEditor } from './loadEditor';
 
 // The editor, the test runner and the hint ladder serve a task and nothing
 // else, and with CodeMirror they are most of the section's code. The lists no
 // longer wait for them: a task screen loads them beside its task, a pointer on
 // a task link starts them, and a list on screen warms them once it is idle.
 let workbenchView: typeof CodingWorkbenchView | null = null;
+let workbenchPending: Promise<typeof import('./CodingWorkbench')> | null = null;
+const importWorkbench = () => {
+  if (!workbenchPending) {
+    workbenchPending = import('./CodingWorkbench').then((module) => {
+      // Loaded once, drawn at once by every task screen after it.
+      workbenchView = module.CodingWorkbench;
+      return module;
+    });
+    // A failed fetch is forgotten, so the next attempt asks the network again.
+    workbenchPending.catch(() => { workbenchPending = null; });
+  }
+  return workbenchPending;
+};
+/** The editor as well, where the task will show one: a phone that shows the
+ * puzzle or the "bigger screen" note does not fetch CodeMirror (C12). Settles
+ * with the workbench once the editor has settled too, so the task draws whole;
+ * an editor that failed fails alone, in its own box, when it is drawn. */
 const loadWorkbench = routeChunk(
   (pathname) => /^\/coding\/(?!system-design\/)[^/]+\/[^/]+$/.test(pathname),
-  () => import('./CodingWorkbench').then((module) => {
-    // Loaded once, drawn at once by every task screen after it.
-    workbenchView = module.CodingWorkbench;
-    return module;
-  }),
+  () => {
+    const editor = editorWantedHere() ? loadEditor().catch(() => undefined) : undefined;
+    return importWorkbench().then(async (module) => { await editor; return module; });
+  },
 );
 
 /** The workbench once its code is in (null while it loads), whether the load

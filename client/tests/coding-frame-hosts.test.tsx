@@ -2,10 +2,11 @@
 // coding phase and a path's code activity widen the route box while their
 // editor is mounted, and the code activity sits in the workbench's frame with
 // the shared editor floor.
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ ariaLabel, fill, minHeight, value, onChange }: { ariaLabel: string; fill?: boolean; minHeight?: number; value?: string; onChange?: (next: string) => void }) =>
@@ -13,6 +14,10 @@ vi.mock('../src/coding/Editor', () => ({
 }));
 
 const source = (path: string) => readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8');
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 it('puts a path code activity in the workbench frame, on the wide page, with the shared editor floor', async () => {
   const { CodeActivity } = await import('../src/components/paths/ActivityViews');
