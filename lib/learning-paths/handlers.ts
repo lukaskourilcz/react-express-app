@@ -236,10 +236,14 @@ interface ProgressRow {
   completed_at: string | null;
 }
 
-async function loadProgressRows(supabase: SupabaseClient, enrollmentId: string): Promise<ProgressRow[]> {
-  const { data, error } = await withTimeout(
-    supabase.from('learning_path_progress').select('module_id,activity_states,completed_at').eq('enrollment_id', enrollmentId),
-  );
+/** The enrollment's progress rows. With `userId`, only rows that account
+ * owns: every row carries the user_id of its enrollment's owner (the accept
+ * routines write it from the owner they checked), so for the caller's own
+ * enrollment this is the same set, and it can be read before the enrollment
+ * is proven theirs without reading anyone else's rows. */
+async function loadProgressRows(supabase: SupabaseClient, enrollmentId: string, userId?: string): Promise<ProgressRow[]> {
+  const query = supabase.from('learning_path_progress').select('module_id,activity_states,completed_at').eq('enrollment_id', enrollmentId);
+  const { data, error } = await withTimeout(userId ? query.eq('user_id', userId) : query);
   if (error) throw Object.assign(new Error('db_error'), { supabase: error });
   markStorageInstalled();
   return (data ?? []) as ProgressRow[];
@@ -964,6 +968,17 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // below reads the same answer. It is the caller's own plan, and it is used
   // only once the enrollment is proven to be theirs.
   void prefetchTier(userId, { kind: 'learning-path-activity', pathId: path.id, activityId: session.activityId });
+  // One read of the progress rows serves the plan check's "already passed"
+  // exception and the completion projection below. Outside a code activity
+  // (whose rows are read while the grader runs) it is issued beside the
+  // enrollment read, scoped to the caller's own rows, instead of after it
+  // (#587, server item 20): a lesson, check or artifact submit then goes from
+  // the enrollment straight to its accept call. The rows are used only once
+  // the enrollment is proven the caller's; a submit refused before that has
+  // spent the read. A failure is answered where the rows are awaited.
+  let progress: Promise<ProgressRow[]> | null = null;
+  const progressRows = () => (progress ??= loadProgressRows(supabase, session.enrollmentId, userId));
+  if (session.activityKind !== 'code') progressRows().catch(() => {});
   let enrollmentRow: EnrollmentRow | null;
   try {
     enrollmentRow = await loadEnrollment(supabase, userId, session.enrollmentId);
@@ -975,11 +990,6 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (enrollmentRow.status === 'paused') {
     return jsonError(res, 409, 'enrollment_paused', 'Resume this path before submitting work');
   }
-  const ownEnrollmentId = enrollmentRow.enrollment_id;
-  // One read of the progress rows serves the plan check's "already passed"
-  // exception and the completion projection below.
-  let progress: Promise<ProgressRow[]> | null = null;
-  const progressRows = () => (progress ??= loadProgressRows(supabase, ownEnrollmentId));
   if (session.curriculumVersion !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'The curriculum changed while this attempt was open. Start it again.');
   }

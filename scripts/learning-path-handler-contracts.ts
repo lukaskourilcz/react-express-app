@@ -87,7 +87,7 @@ function fakeSupabase(options: {
       eq: (...args: unknown[]) => { options.onQuery?.(table, 'eq', args); return chain; },
       order: (...args: unknown[]) => { options.onQuery?.(table, 'order', args); return chain; },
       limit: (...args: unknown[]) => { options.onQuery?.(table, 'limit', args); return chain; },
-      maybeSingle: async () => ({ data: options.rows?.[table] ?? null, error: options.rowErrors?.[table] ?? null }),
+      maybeSingle: async () => { options.onQuery?.(table, 'maybeSingle', []); return { data: options.rows?.[table] ?? null, error: options.rowErrors?.[table] ?? null }; },
       then: <A>(resolve: (value: { data: unknown[]; error: null }) => A) => resolve({ data: options.lists?.[table] ?? [], error: null }),
     };
     return chain;
@@ -738,6 +738,67 @@ export async function handlerContracts(fail: Fail): Promise<void> {
         await settleMilestonesAfterPass(fakeSupabase({ rpc: (name) => { unread.push(name); return { data: {} }; } }), passer, 'webdev',
           async () => { throw new Error('entitlement_unavailable'); });
         if (!unread.includes('settle_coin_milestones')) fail('an unreadable plan skipped settle_coin_milestones instead of letting it decide');
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
+    /* ── a lesson, check or write-up submit reads its rows beside the enrollment ── */
+    // #587, server item 20: outside a code activity the progress rows are
+    // read beside the enrollment read, not after it, scoped to the caller's
+    // own rows; a paused enrollment still answers 409 and writes nothing.
+    {
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const reader = `user-paths-rows-${stamp}`;
+        const lesson = path.modules.filter((module) => !isOffLoopModule(module)).flatMap((module) => module.activities).find((activity) => activity.kind === 'lesson')!;
+        for (const status of ['active', 'paused'] as const) {
+          const events: string[] = [];
+          const progressScope: unknown[][] = [];
+          const written: string[] = [];
+          const req = request('POST', `rows-${status}-${stamp}`, {
+            user_id: reader,
+            session: encodeLearningPathSession({
+              attemptId: `ROWS${status}${stamp}`.slice(0, 20).padEnd(20, 'a'), enrollmentId, userId: reader, pathId: 'fde',
+              activityId: lesson.id, activityKind: lesson.kind, purpose: lesson.purpose,
+              curriculumVersion: path.version, rubricVersion: path.rubric.version,
+            }).token,
+            idempotencyKey: `KEYrows${status}${stamp}`.slice(0, 24).padEnd(24, 'a'),
+            acknowledged: true,
+          });
+          const res = response();
+          await withRequestContext(req, res as never, async () => {
+            await requestMemo(`tier:${reader}`, async () => 'premium');
+            await handleActivitySubmit(req, res as never, fakeSupabase({
+              rows: { learning_path_enrollments: { ...enrollmentRow(status), user_id: reader } },
+              lists: { learning_path_progress: [] },
+              onQuery: (table, op, args) => {
+                if (op === 'select') events.push(`select ${table}`);
+                if (op === 'maybeSingle') events.push(`answered ${table}`);
+                if (table === 'learning_path_progress' && op === 'eq') progressScope.push(args);
+              },
+              rpc: (name) => { written.push(name); return name.startsWith('accept_learning_path') ? { data: { ok: true, replayed: false } } : {}; },
+            }));
+          });
+          const reads = events.filter((one) => one === 'select learning_path_progress').length;
+          // A paused enrollment may have spent the early read; it uses nothing of it.
+          if (status === 'active' ? reads !== 1 : reads > 1) fail(`a ${status} lesson submit read its progress rows ${reads} times`);
+          if (events.indexOf('select learning_path_progress') > events.indexOf('answered learning_path_enrollments')) {
+            fail(`a lesson submit read its progress rows after the enrollment answered: ${events.join(' > ')}`);
+          }
+          if (!progressScope.some((args) => args[0] === 'user_id' && args[1] === reader)
+              || !progressScope.some((args) => args[0] === 'enrollment_id' && args[1] === enrollmentId)) {
+            fail(`the early progress read was not scoped to the caller's own enrollment rows: ${JSON.stringify(progressScope)}`);
+          }
+          if (status === 'active') {
+            if (res.statusCode !== 200 || (res.body as SubmitActivityResponse).state !== 'self_reviewed') fail(`a lesson submit answered ${res.statusCode} ${JSON.stringify(res.body).slice(0, 200)}`);
+          } else {
+            if (res.statusCode !== 409 || code(res) !== 'enrollment_paused') fail(`a lesson submit to a paused enrollment answered ${res.statusCode} ${code(res)}`);
+            if (written.length > 0) fail(`a lesson submit to a paused enrollment wrote ${written.join(', ')}`);
+          }
+        }
       } finally {
         if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
         else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;

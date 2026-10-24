@@ -1692,8 +1692,13 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   for the request, used only once the enrollment is proven the caller's).
   One progress read serves the plan check's "already passed" exception and
   the completion projection, and for a code activity it runs while the
-  grader does; it is still read before the accept call, which decides
-  completion again under its lock. After a verified code pass the XP coin
+  grader does; for a lesson, check or write-up it is issued beside the
+  enrollment read, scoped to the caller's own rows by `user_id` as well as
+  the enrollment (every row carries its enrollment owner's id), so those
+  submits go from the enrollment straight to the accept call. It is used
+  only once the enrollment is proven the caller's; a submit refused before
+  that (a paused or unknown enrollment) has spent the read. It is still read
+  before the accept call, which decides completion again under its lock. After a verified code pass the XP coin
   credit and the milestone settlement (Premium only, see "Where credits
   happen") run together, both awaited before the answer.
 - **Learning-path activity start** (#587, server item 21). Every published
