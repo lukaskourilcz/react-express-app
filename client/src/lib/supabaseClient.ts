@@ -109,6 +109,35 @@ export function hasStoredSession(): boolean {
   return Boolean(sessionKey && readStorage(sessionKey));
 }
 
+/** How close to its expiry supabase-js still hands out a stored access token
+ * unchanged: auth-js 2.110's EXPIRY_MARGIN_MS (three 30-second refresh ticks),
+ * which `getSession()` and the refresh at start-up both use. */
+export const TOKEN_EXPIRY_MARGIN_MS = 90_000;
+
+/**
+ * The stored session's access token, read straight from storage, when
+ * supabase-js would hand out that same token: a well-formed session (its
+ * `_isValidSession` test) that expires more than TOKEN_EXPIRY_MARGIN_MS from
+ * now, on a page that did not open on an OAuth return (whose new session is
+ * not stored yet). `getSession()` reads the same key and returns that token
+ * without a request, so a request can carry it without waiting for the
+ * supabase-js download (perf baseline #587 C10). Null in every other case;
+ * the caller then asks supabase-js, which refreshes or removes the session.
+ * The server verifies the token on every request either way.
+ */
+export function freshStoredAccessToken(now: number = Date.now()): string | null {
+  if (!sessionKey || openedOnAuthRedirect) return null;
+  try {
+    const stored = JSON.parse(readStorage(sessionKey) || 'null') as { access_token?: unknown; refresh_token?: unknown; expires_at?: unknown } | null;
+    if (!stored || typeof stored !== 'object') return null;
+    const { access_token: token, refresh_token: refresh, expires_at: expiresAt } = stored;
+    if (typeof token !== 'string' || !token || typeof refresh !== 'string' || typeof expiresAt !== 'number') return null;
+    return expiresAt * 1000 - now > TOKEN_EXPIRY_MARGIN_MS ? token : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The account of the session stored in this browser, current or expired,
  * read before supabase-js removes one it can no longer refresh. */
 export function storedSessionUserId(): string | null {

@@ -1578,7 +1578,16 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   Learn map, the path catalog and a lesson): their handlers never read the
   caller and the CDN shares their answers, so they leave at once without a
   token instead of waiting for supabase-js and the session (#587 C10). A
-  handler that starts reading the caller must leave that list.
+  handler that starts reading the caller must leave that list. Every other
+  request of a returning learner carries the stored access token straight from
+  localStorage while it is more than 90 seconds from its expiry
+  (`freshStoredAccessToken`): supabase-js's `getSession()` hands out that same
+  token unchanged inside that window (auth-js `EXPIRY_MARGIN_MS`), so the
+  request no longer waits for the 54 KB supabase-js download. A token closer
+  to its expiry, a malformed session, blocked storage or a page that opened on
+  an OAuth return asks supabase-js as before, which refreshes or removes the
+  session. The trade-off is bounded by the token's own expiry: the server
+  verifies it on every request exactly as before.
 - **The sign-in report** (`POST /api/user/authevent`, the `/dev` Logs tab)
   goes once per sign-in. supabase-js also says `SIGNED_IN` for the stored
   session each time a tab is shown again; `lib/auth.tsx` remembers the

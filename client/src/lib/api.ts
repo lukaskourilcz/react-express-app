@@ -1,4 +1,4 @@
-import { getSupabaseSession, hasStoredSession, mayHaveSession } from './supabaseClient';
+import { freshStoredAccessToken, getSupabaseSession, hasStoredSession, mayHaveSession } from './supabaseClient';
 import { translateStatic } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { openUpgradeSheet } from './upgradeSheet';
@@ -39,6 +39,10 @@ const TOKEN_READ_LIMIT_MS = 4_000;
 
 async function getAccessToken(): Promise<string | null> {
   if (!mayHaveSession()) return null;
+  // A stored token supabase-js would hand out unchanged goes at once, without
+  // the download (lib/supabaseClient.ts, freshStoredAccessToken).
+  const stored = freshStoredAccessToken();
+  if (stored) return stored;
   let timer: number | undefined;
   let session: Awaited<ReturnType<typeof getSupabaseSession>> = null;
   try {

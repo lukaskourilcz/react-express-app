@@ -100,6 +100,10 @@ const sb = vi.hoisted(() => {
 
 const KEY = sb.KEY;
 const STORED = sb.sessionFor('stored-access-token', 'user-stored');
+// The same session within supabase-js's refresh margin (90 s): its token
+// comes from supabase-js, which refreshes it first, so a request waits for
+// the download. A token further from its expiry goes at once (C10).
+const EXPIRING = { ...STORED, expires_at: Math.floor(Date.now() / 1000) + 60 };
 
 /** The page load: fresh modules, and a supabase-js whose imports are counted.
  * `held` keeps the download pending until releaseDownload(), as a slow network
@@ -307,7 +311,7 @@ describe('a returning visitor with a stored session', () => {
 
   it('waits for a download still in flight, within the four-second limit, and sends the token', async () => {
     freshPageLoad('held');
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch } = await import('../src/lib/api');
     const request = apiFetch('/api/test');
@@ -318,12 +322,57 @@ describe('a returning visitor with a stored session', () => {
     expect(authorization).toEqual(['Bearer stored-access-token']);
   });
 
+  // Perf baseline #587 C10: supabase-js's getSession() hands out a stored token
+  // unchanged until 90 s before it expires, so a request can carry that token
+  // without waiting for the 54 KB download.
+  it('sends a stored token far from its expiry at once, without waiting for the download', async () => {
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const authorization = recordAuthorization();
+    const { apiFetch } = await import('../src/lib/api');
+    await expect(apiFetch('/api/test')).resolves.toEqual({ ok: true });
+    expect(authorization).toEqual(['Bearer stored-access-token']);
+    expect(sb.createClient).not.toHaveBeenCalled();
+  });
+
+  it('reads the stored token only while supabase-js would hand it out unchanged', async () => {
+    const { freshStoredAccessToken, TOKEN_EXPIRY_MARGIN_MS } = await import('../src/lib/supabaseClient');
+    const now = Date.now();
+    const store = (session: unknown) => localStorage.setItem(KEY, JSON.stringify(session));
+    store({ ...STORED, expires_at: Math.floor((now + TOKEN_EXPIRY_MARGIN_MS) / 1000) + 5 });
+    expect(freshStoredAccessToken(now)).toBe('stored-access-token');
+    store({ ...STORED, expires_at: Math.floor((now + TOKEN_EXPIRY_MARGIN_MS) / 1000) - 1 });
+    expect(freshStoredAccessToken(now)).toBeNull();
+    store({ ...STORED, refresh_token: undefined });
+    expect(freshStoredAccessToken(now)).toBeNull();
+    store({ ...STORED, expires_at: undefined });
+    expect(freshStoredAccessToken(now)).toBeNull();
+    localStorage.setItem(KEY, '{not json');
+    expect(freshStoredAccessToken(now)).toBeNull();
+    localStorage.removeItem(KEY);
+    expect(freshStoredAccessToken(now)).toBeNull();
+  });
+
+  it('waits for supabase-js on an OAuth return, though another account’s fresh session is stored', async () => {
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    window.history.replaceState(null, '', '/#access_token=oauth-access-token&refresh_token=r&expires_in=3600&token_type=bearer');
+    const authorization = recordAuthorization();
+    const { apiFetch } = await import('../src/lib/api');
+    const request = apiFetch('/api/test');
+    await settle();
+    expect(authorization).toEqual([]);
+    await releaseDownload();
+    await expect(request).resolves.toEqual({ ok: true });
+    expect(authorization).toEqual(['Bearer oauth-access-token']);
+  });
+
   // Perf baseline #587 C10: the settings, the Learn map, the path catalog and
   // a lesson are the same for every caller, so they do not wait for the
   // supabase-js download or the session read, and carry no token.
   it('sends the public reads at once and without a token, while an account read still waits for it', async () => {
     freshPageLoad('held');
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const seen: { path: string; authorization: string | null }[] = [];
     const record = ({ request }: { request: Request }) => {
       const url = new URL(request.url);
@@ -376,7 +425,7 @@ describe('a returning visitor with a stored session', () => {
     // A signed-in learner whose token refresh is slow: sent without the token,
     // a quiz submit would be graded as a guest's and its one-time claim spent.
     freshPageLoad('held');
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch, friendlyError } = await import('../src/lib/api');
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
@@ -396,7 +445,7 @@ describe('a returning visitor with a stored session', () => {
   it('sends nothing while supabase-js keeps a session it could not refresh', async () => {
     // An expired token whose refresh met a network error: supabase-js answers
     // no session and keeps the stored one for the next try.
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch } = await import('../src/lib/api');
     await waitFor(() => expect(sb.createClient).toHaveBeenCalledTimes(1));
@@ -410,7 +459,7 @@ describe('a returning visitor with a stored session', () => {
   it('sends a request without a token once supabase-js has removed a session it cannot refresh', async () => {
     // A revoked refresh token: supabase-js removes the session and signs out,
     // so this browser is a guest's again.
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch } = await import('../src/lib/api');
     await waitFor(() => expect(sb.createClient).toHaveBeenCalledTimes(1));
