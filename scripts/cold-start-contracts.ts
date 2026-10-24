@@ -13,7 +13,10 @@
  *    hashes as before;
  *  - neither the complexity estimator nor the type-check pool loads the
  *    TypeScript compiler at import (server item 16); the first assessment
- *    and the in-thread fallback load it and still work. */
+ *    and the in-thread fallback load it and still work;
+ *  - api/settings.ts, read on every page load, loads neither the learning-
+ *    path handlers nor a grader (server item 17), and publishes the same
+ *    capability the handlers compute. */
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -101,4 +104,28 @@ export async function coldStartContracts(): Promise<void> {
     console.log('PASS cold start: the complexity estimator and the type-check pool load TypeScript on first use');
   }
 
+  // ── server item 17: /api/settings without the learning-path handlers ─────
+  {
+    const fresh = await loadFresh('api/settings.ts');
+    for (const heavy of ['typescript', 'quickjs-emscripten', 'stripe']) {
+      assert.ok(!fresh.packages.includes(heavy), `api/settings.ts does not load ${heavy} (${fresh.packages.join(', ')})`);
+    }
+    const [{ learningPathCapability: published }, { learningPathCapability: handlers }] = await Promise.all([
+      import('../lib/learning-paths/capability'),
+      import('../lib/learning-paths/handlers'),
+    ]);
+    const before = process.env.LEARNING_PATH_FDE_ENABLED;
+    try {
+      for (const value of [undefined, 'false', 'true']) {
+        if (value === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = value;
+        assert.deepEqual(published(), handlers(), `the settings capability matches the handlers' with the switch ${value ?? 'unset'}`);
+      }
+      assert.ok(Object.keys(published().paths).length > 0, 'and it names the paths');
+    } finally {
+      if (before === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+      else process.env.LEARNING_PATH_FDE_ENABLED = before;
+    }
+    console.log('PASS cold start: /api/settings publishes the learning-path capability without the handlers or a grader');
+  }
 }
