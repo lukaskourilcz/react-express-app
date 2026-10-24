@@ -17,8 +17,8 @@ import { announceLearnRepeat, awardLearningOutcome } from '../../lib/xp';
 import { computeLearningXp } from '../../lib/leveling';
 import { getCategoryHexColor } from '../../lib/categories';
 import { BigOLessons } from './BigOLessons';
-import { DelayedQuoteLoader } from './LevelLoader';
-import { LessonError, LessonReader, LessonRunner, LessonStage, preloadLessonReader, preloadLessonRunner } from './lessonParts';
+import { DelayedQuoteLoader, revealWhenReady } from './LevelLoader';
+import { LessonError, LessonReader, LessonRunner, LessonStage, loadLessonRunner, preloadLessonReader, preloadLessonRunner } from './lessonParts';
 
 const savesData = (): boolean => (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
 /** A lesson's reading and its runner start loading when the learner reaches
@@ -66,7 +66,16 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
   const lesson = useQuery({
     queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
     enabled: level !== null && !reading,
-    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, signal),
+    // As on the map (Roadmap.tsx open()): the questions open once the
+    // runner's code is in too, and an answer that came after the loader
+    // showed keeps it up LOADER_MIN_SHOWN_MS, so it never flickers (#587 C05).
+    queryFn: async ({ signal }) => {
+      const runner = loadLessonRunner().then(() => undefined, () => undefined);
+      const data = await fetchRoadmapLevel('dsa', level!, signal);
+      await runner;
+      await revealWhenReady(since);
+      return data;
+    },
     staleTime: 0,
     gcTime: 0,
     retry: false,
