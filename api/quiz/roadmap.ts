@@ -20,6 +20,7 @@ import {
   withRequestContext,
   tryAuthOnce,
   ServiceUnavailableError,
+  lazyExport,
 } from '../../lib/http';
 import { AuthError, confirmedEmail, tryAuth } from '../../lib/auth';
 import {
@@ -50,17 +51,8 @@ import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { claimOnce, enforceClassRateLimit, enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
-import { playable as playableCodingTask } from '../../lib/coding/catalog';
-import { levelCodingTasks } from '../../lib/coding/active';
-import { isLearnCodingTopic } from '../../shared/coding-catalog';
+import { isLearnCodingTopic, type CodingTask } from '../../shared/coding-catalog';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
-import { handleCodingApproaches, handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
-import {
-  handleActivityStart,
-  handleActivitySubmit,
-  handleLearningPathCatalog,
-} from '../../lib/learning-paths/handlers';
-import { createCodingSession } from '../../lib/coding/session';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
 import {
@@ -95,12 +87,40 @@ import { itemReview, contentVersion } from '../../lib/curation';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 import { conceptOf } from '../../shared/concepts';
-import { refuseLocked } from '../../lib/access';
 import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
 import { isBigOIntroduction, type GatedContent } from '../../shared/tiers';
 import { learnRepeatXpOf, type LearnRepeatXp } from '../../shared/repeat-xp';
 import { handleLessonRead } from '../../lib/learn-lessons/serve';
+
+// Modules only some resources need load on their first use, not with this
+// function (#587, server item 4). Statically imported, every new instance
+// evaluated the coding catalogue with its reference solutions, QuickJS and the
+// learning-path handlers (with TypeScript) before it answered a progress read
+// or a Learn answer: about 350 ms of import. The names and the dispatch lines
+// are the same as with static imports.
+const codingHandlers = () => import('../../lib/coding/handlers');
+const handleCodingApproaches = lazyExport(codingHandlers, 'handleCodingApproaches');
+const handleCodingReset = lazyExport(codingHandlers, 'handleCodingReset');
+const handleCodingReveal = lazyExport(codingHandlers, 'handleCodingReveal');
+const handleCodingSubmit = lazyExport(codingHandlers, 'handleCodingSubmit');
+const handleCodingTask = lazyExport(codingHandlers, 'handleCodingTask');
+const pathHandlers = () => import('../../lib/learning-paths/handlers');
+const handleActivityStart = lazyExport(pathHandlers, 'handleActivityStart');
+const handleActivitySubmit = lazyExport(pathHandlers, 'handleActivitySubmit');
+const handleLearningPathCatalog = lazyExport(pathHandlers, 'handleLearningPathCatalog');
+// The tier check reads an index over the coding catalogue (lib/access.ts).
+const refuseLocked = lazyExport(() => import('../../lib/access'), 'refuseLocked');
+/** What a code level seals: its coding tasks, their playable projection and
+ * one coding session each. Loaded with the level map or the first code level. */
+const learnCoding = async () => {
+  const [{ levelCodingTasks }, { playable }, { createCodingSession }] = await Promise.all([
+    import('../../lib/coding/active'),
+    import('../../lib/coding/catalog'),
+    import('../../lib/coding/session'),
+  ]);
+  return { levelCodingTasks, playableCodingTask: playable, createCodingSession };
+};
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -119,7 +139,11 @@ const logEvent = createLogger('quiz/roadmap');
 /** The level map marks devShark code levels that end with coding tasks, so the
  * learner sees the extra work before opening the level. Counts only; the task
  * ids stay sealed in the level session. */
-function withCodingCounts(topic: string, live: RoadmapTopicStructure): RoadmapTopicStructure {
+function withCodingCounts(
+  topic: string,
+  live: RoadmapTopicStructure,
+  levelCodingTasks: (topic: CodingTask['topic'], level: number) => CodingTask[],
+): RoadmapTopicStructure {
   if (!isLearnCodingTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
   return {
     ...live,
@@ -178,9 +202,10 @@ async function playableResponse(input: {
   // devShark Learn levels of the code topics carry coding tasks. Their ids are
   // sealed into the session so completion can insist on every one passing;
   // each task gets its own coding session bound to this level attempt.
-  const codingTasks = input.kind === 'level' && subject === 'webdev' && isLearnCodingTopic(input.topic)
-    ? levelCodingTasks(input.topic, input.ref)
-    : [];
+  const coding = input.kind === 'level' && subject === 'webdev' && isLearnCodingTopic(input.topic)
+    ? await learnCoding()
+    : null;
+  const codingTasks = coding && isLearnCodingTopic(input.topic) ? coding.levelCodingTasks(input.topic, input.ref) : [];
   const sessionId = encodeSession(built.answerKey, {
     scope: 'roadmap',
     subject,
@@ -215,8 +240,8 @@ async function playableResponse(input: {
     ...(codingTasks.length > 0
       ? {
           coding: codingTasks.map((task) => ({
-            task: playableCodingTask(task),
-            session: createCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
+            task: coding!.playableCodingTask(task),
+            session: coding!.createCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
           })),
         }
       : {}),
@@ -1568,7 +1593,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // The same for everyone, so only the address tier: verifying a token
     // here would cost a round trip the map never needed.
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
-    const byId = await getEffectiveQuestionsById();
+    const [byId, { levelCodingTasks }] = await Promise.all([getEffectiveQuestionsById(), learnCoding()]);
     const exists = (id: string) => byId.has(id);
     const topics = deploymentSubjectIds().flatMap((subject) => [...SUBJECT_SCOPE_CATALOG[subject].topics]);
     const topicSet = new Set<string>(topics);
@@ -1576,7 +1601,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       Object.entries(liveRoadmapStructure(exists))
         .filter(([topic]) => topicSet.has(topic))
         .map(([topic, live]) => {
-          const withCounts = withCodingCounts(topic, live);
+          const withCounts = withCodingCounts(topic, live, levelCodingTasks);
           const unavailableParts = unavailablePartsOf(withCounts.levels);
           return [topic, unavailableParts.length > 0 ? { ...withCounts, unavailableParts } : withCounts];
         }),

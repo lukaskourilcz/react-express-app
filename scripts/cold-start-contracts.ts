@@ -20,7 +20,9 @@
  *  - api/user/[op].ts loads its op families on first call (server item 3):
  *    a fresh instance evaluates no grader, no TypeScript, no Stripe and no
  *    coding catalogue before it answers, and an op that needs them loads them
- *    and answers. */
+ *    and answers;
+ *  - api/quiz/roadmap.ts does the same for its coding and learning-path
+ *    resources, the tier check and a code level's tasks (server item 4). */
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -154,5 +156,26 @@ export async function coldStartContracts(): Promise<void> {
     })()`, { SUPABASE_URL: 'http://127.0.0.1:9', SUPABASE_ANON_KEY: 'cold-start-anon', SUPABASE_SERVICE_ROLE_KEY: 'cold-start-service' });
     assert.deepEqual(called.probe, { before: false, after: true, status: 401, code: 'missing_token' }, 'a coding op loads its handlers on first call and answers');
     console.log('PASS cold start: api/user/[op].ts loads no grader, TypeScript, Stripe or coding catalogue before its first answer');
+  }
+
+  // ── server item 4: api/quiz/roadmap.ts loads coding and paths on use ─────
+  {
+    const fresh = await loadFresh('api/quiz/roadmap.ts');
+    for (const heavy of ['typescript', 'quickjs-emscripten', '@jitl/quickjs-singlefile-cjs-release-sync']) {
+      assert.ok(!fresh.packages.includes(heavy), `api/quiz/roadmap.ts does not load ${heavy} at import (${fresh.packages.join(', ')})`);
+    }
+    // The public path catalogue is served by the lazily loaded path handlers,
+    // which bring the graders with them, and answers as before.
+    const called = await loadFresh('api/quiz/roadmap.ts', `(async () => {
+      const res = { statusCode: 200, headers: {}, body: undefined, headersSent: false,
+        setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; }, getHeader(k) { return this.headers[k.toLowerCase()]; },
+        status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; this.headersSent = true; return this; }, end() { this.headersSent = true; return this; } };
+      const loaded = () => Object.keys(require.cache).some((path) => path.includes('/node_modules/quickjs-emscripten/'));
+      const before = loaded();
+      await mod.default({ method: 'GET', headers: { 'x-forwarded-for': '198.51.100.8' }, query: { resource: 'learning-path-catalog' }, url: '/api/quiz/roadmap', socket: {} }, res);
+      return { before, after: loaded(), status: res.statusCode, paths: Array.isArray(res.body && res.body.paths) };
+    })()`);
+    assert.deepEqual(called.probe, { before: false, after: true, status: 200, paths: true }, 'the path catalogue loads its handlers on first call and answers');
+    console.log('PASS cold start: api/quiz/roadmap.ts loads no grader or TypeScript before its first answer');
   }
 }
