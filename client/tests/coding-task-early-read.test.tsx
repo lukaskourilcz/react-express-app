@@ -2,6 +2,8 @@
 // screen rendered. On the first page of a visit the section's chunk now asks
 // for the task, and fetches the workbench, as it evaluates; the screen takes
 // that answer instead of asking again. A hidden track asks for nothing.
+// A free task asks for its brief and the caller's part apart (#587 C23),
+// both as the chunk evaluates; a Premium task asks for the combined answer.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -32,11 +34,14 @@ beforeEach(() => {
   asked.length = 0;
   server.use(http.get('*/api/quiz/roadmap', ({ request }) => {
     const url = new URL(request.url);
-    asked.push(`${url.searchParams.get('resource')} ${url.searchParams.get('id')}`);
-    return HttpResponse.json({
-      task: { id: 'js-double-numbers', track: 'javascript', level: 1, tier: 1, difficulty: 'easy', focus: [], title: 'Double numbers', prompt: 'p', starter: '', hints: [], verify: 'tests', estimatedMinutes: 5, tests: [] },
-      session: 'sealed', locked: null, signedIn: false, draft: null, draftUpdatedAt: null, progress: null,
-    });
+    const resource = url.searchParams.get('resource');
+    const id = url.searchParams.get('id');
+    asked.push(`${resource} ${id}`);
+    const task = { id, track: 'javascript', level: 1, tier: 1, difficulty: 'easy', focus: [], title: 'Double numbers', prompt: 'p', starter: '', hints: [], verify: 'tests', estimatedMinutes: 5, tests: [] };
+    const state = { session: 'sealed', locked: null, signedIn: false, draft: null, draftUpdatedAt: null, progress: null };
+    if (resource === 'coding-brief') return HttpResponse.json({ task, version: 'v1' });
+    if (resource === 'coding-state') return HttpResponse.json({ ...state, dealt: {}, briefVersion: 'v1' });
+    return HttpResponse.json({ task, ...state });
   }));
 });
 afterEach(() => { window.history.replaceState(null, '', '/'); });
@@ -49,26 +54,31 @@ async function firstPage(path: string) {
   return { section, queryClient, LanguageProvider };
 }
 
-it('asks for the task as the section loads, before the screen renders, and asks once', async () => {
-  const { section, queryClient, LanguageProvider } = await firstPage('/coding/javascript/js-double-numbers');
-  // Nothing has rendered yet, and the request is already out.
-  await vi.waitFor(() => expect(asked).toEqual(['coding-task js-double-numbers']));
-  await act(async () => {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/coding/javascript/js-double-numbers']}>
-          <LanguageProvider>
-            <Routes><Route path="/coding/:track/:taskId" element={<section.CodingTaskScreen />} /></Routes>
-          </LanguageProvider>
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
+for (const [id, reads] of [
+  ['js-double-numbers', ['coding-brief js-double-numbers', 'coding-state js-double-numbers']],
+  ['js-palindrome', ['coding-task js-palindrome']],
+] as const) {
+  it(`asks for ${id} as the section loads, before the screen renders, and asks once`, async () => {
+    const { section, queryClient, LanguageProvider } = await firstPage(`/coding/javascript/${id}`);
+    // Nothing has rendered yet, and the requests are already out.
+    await vi.waitFor(() => expect([...asked].sort()).toEqual(reads));
+    await act(async () => {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={[`/coding/javascript/${id}`]}>
+            <LanguageProvider>
+              <Routes><Route path="/coding/:track/:taskId" element={<section.CodingTaskScreen />} /></Routes>
+            </LanguageProvider>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    });
+    expect(await screen.findByText('workbench for Double numbers')).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect([...asked].sort()).toEqual(reads);
+    queryClient.clear();
   });
-  expect(await screen.findByText('workbench for Double numbers')).toBeInTheDocument();
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
-  expect(asked).toEqual(['coding-task js-double-numbers']);
-  queryClient.clear();
-});
+}
 
 it('asks for nothing on a hidden track or a list', async () => {
   await firstPage('/coding/system-design/sd-url-shortener');

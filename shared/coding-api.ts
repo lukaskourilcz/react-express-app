@@ -39,6 +39,31 @@ export interface CodingTaskResponse {
   signedIn: boolean;
 }
 
+/** The parts of a playable task dealt per request: the puzzle's shuffled
+ * lines and a design's shuffled options. The sealed session holds the key to
+ * them, so they travel with it and never with the shared brief. */
+export type CodingDealtParts = Pick<PlayableCodingTask, 'puzzle' | 'design' | 'drill'>;
+
+/** GET ?resource=coding-brief&id=… (#587 C23): the task's brief, the same for
+ * every caller, without a token, and cached publicly. It carries what the
+ * task page always showed a guest (no solution, no hidden test, no key) and
+ * none of the dealt parts. Premium content is refused with the guest's 402. */
+export interface CodingBriefResponse {
+  task: PlayableCodingTask;
+  /** The brief's public content version, `task.review.version`. */
+  version: string;
+}
+
+/** GET ?resource=coding-state&id=… (#587 C23): the caller's part of a task
+ * page, with the gates, limits and reads of `coding-task`: the sealed
+ * session, the lock, the progress, the draft and the dealt parts. */
+export interface CodingTaskStateResponse extends Omit<CodingTaskResponse, 'task'> {
+  dealt: CodingDealtParts;
+  /** The version of the brief this session was sealed against. A cached
+   * brief of another version is read again before the page shows it. */
+  briefVersion: string;
+}
+
 export interface CodingGardenStatus {
   status: 'committed' | 'queued' | 'skipped' | 'failed' | 'not_connected';
   url?: string;

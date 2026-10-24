@@ -448,6 +448,22 @@ async function main() {
     assert.ok(progressReads.length > 0 && progressReads.every((one) => one.filters.user_id === A.id), `coding progress is read for the token's account (${JSON.stringify(progressReads.map((one) => one.filters))})`);
     console.log('PASS verified caller: a coding op reads and writes the token\'s account');
 
+    // The caller's part of a task page (#587 C23) is read for the token's
+    // account, as the combined task read is; the brief reads no row at all.
+    seen.length = 0;
+    const taskState = await call(roadmap as Handler, { account: A, query: { resource: 'coding-state', id: codingTask.id, user_id: B.id } });
+    assert.equal(taskState.statusCode, 200, JSON.stringify(taskState.body));
+    const stateReads = seen.filter((one) => one.method === 'GET' && 'user_id' in one.filters);
+    assert.ok(stateReads.some((one) => one.path === '/rest/v1/coding_drafts'), 'the state read reads the draft');
+    assert.ok(stateReads.length > 0 && stateReads.every((one) => one.filters.user_id === A.id), `the task state is read for the token's account (${JSON.stringify(stateReads.map((one) => [one.path, one.filters]))})`);
+    seen.length = 0;
+    const authBefore = authChecks;
+    const brief = await call(roadmap as Handler, { account: A, query: { resource: 'coding-brief', id: codingTask.id, user_id: B.id } });
+    assert.equal(brief.statusCode, 200, JSON.stringify(brief.body));
+    assert.deepEqual(seen.map((one) => one.path), [], 'the brief reads no row');
+    assert.equal(authChecks, authBefore, 'and asks Supabase Auth nothing, whatever token it carries');
+    console.log('PASS verified caller: a task page\'s state is the token\'s account\'s, and its brief reads nobody');
+
     const connect = await user('github-connect-start', { method: 'POST', account: A, query: { user_id: B.id }, body: { user_id: B.id } });
     assert.equal(connect.statusCode, 200, JSON.stringify(connect.body));
     const state = new URL((connect.body as { url: string }).url).searchParams.get('state')!;

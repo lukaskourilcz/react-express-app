@@ -14,9 +14,10 @@ import { openUpgradeSheet } from '../../lib/upgradeSheet';
 // different rewards.
 
 import { Link } from 'react-router-dom';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
+import { anyLearningPathOpen, GAME_CONFIG_KEY, type GameConfig } from '../../lib/gameConfig';
 import { isBarred, useContentLocks } from '../../lib/contentLocks';
 import { activityHref, entryFor, isOpen, pathProgressQuery, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
 import { preloadPathPagesWithLinks } from '../../lib/learningPathWorkspace';
@@ -82,8 +83,14 @@ function PathRow({ row }: { row: ResumeRow }) {
 export function PathResumeSection() {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
-  const userId = isAuthenticated ? user?.id : undefined;
-  const catalog = usePathCatalog();
+  // While the settings the app read as it started say no path is open, no row
+  // can show (a closed path offers none), so neither the 30 KB catalogue nor
+  // the account's enrollments are asked for (#587 paths walk; as the Learn
+  // map and Career, C06 and C20). Settings not yet in, or failed: as before.
+  const settings = useQuery<GameConfig>({ queryKey: GAME_CONFIG_KEY, enabled: false });
+  const closed = settings.data?.learningPaths ? !anyLearningPathOpen(settings.data) : false;
+  const userId = isAuthenticated && !closed ? user?.id : undefined;
+  const catalog = usePathCatalog(!closed);
   const manifests = useMemo(() => catalog.data?.paths.map(entry => entry.manifest) ?? [], [catalog.data]);
   const { lockOf } = useContentLocks(undefined, { paths: manifests });
   const enrollments = useEnrollments(userId);

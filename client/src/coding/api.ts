@@ -1,12 +1,15 @@
 // Typed wrappers over the coding API resources plus the TanStack Query hooks
 // the section screens use. Query keys live under ['coding', …] so a submit
 // can invalidate exactly the progress it changed.
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { queryOptions, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { staleProfileStats } from '../lib/queryClient';
 import { announceVerifiedQuestXp, announceXpHeld, syncXpWithServer } from '../lib/xp';
+import { joinCodingTaskRead } from '../../../shared/coding-task-read';
 import type {
   CodingApproachesResponse,
+  CodingBriefResponse,
   CodingDraftSaveRequest,
   CodingDraftSaveResponse,
   CodingProgressResponse,
@@ -16,6 +19,7 @@ import type {
   CodingRevealResponse,
   CodingSubmitRequest,
   CodingTaskResponse,
+  CodingTaskStateResponse,
   CodingVerdictResponse,
   GithubConnectStartResponse,
   GithubConnectionResponse,
@@ -28,6 +32,7 @@ const USER = '/api/user/[op]';
 export const codingKeys = {
   approaches: (id: string) => ['coding', 'approaches', id] as const,
   task: (id: string) => ['coding', 'task', id] as const,
+  brief: (id: string) => ['coding', 'brief', id] as const,
   progress: () => ['coding', 'progress'] as const,
   github: () => ['coding', 'github'] as const,
 };
@@ -36,6 +41,18 @@ export function fetchCodingTask(id: string, signal?: AbortSignal, learnSession?:
   return apiFetch<CodingTaskResponse>(`${ROADMAP}?resource=coding-task&id=${encodeURIComponent(id)}`, { signal,
     ...(learnSession ? { method: 'POST', body: JSON.stringify({ session: learnSession }) } : {}),
   });
+}
+
+/** The task's brief, the same for every caller and sent without a token
+ * (lib/api.ts PUBLIC_READ). `fresh` reads past the browser's cache, for a
+ * brief of another version than the session's. */
+export function fetchCodingBrief(id: string, signal?: AbortSignal, fresh = false): Promise<CodingBriefResponse> {
+  return apiFetch<CodingBriefResponse>(`${ROADMAP}?resource=coding-brief&id=${encodeURIComponent(id)}`, { signal, ...(fresh ? { cache: 'no-cache' as const } : {}) });
+}
+
+/** The caller's part of a task page: the sealed session, lock, progress and draft. */
+export function fetchCodingTaskState(id: string, signal?: AbortSignal): Promise<CodingTaskStateResponse> {
+  return apiFetch<CodingTaskStateResponse>(`${ROADMAP}?resource=coding-state&id=${encodeURIComponent(id)}`, { signal });
 }
 
 export async function submitCoding(input: CodingSubmitRequest): Promise<CodingVerdictResponse> {
@@ -136,15 +153,20 @@ export function useCodingApproaches(id: string | undefined, passed: boolean) {
  * still asks afresh, since nothing outlives the screen (gcTime 0). */
 export const TASK_HANDOFF_MS = 5_000;
 
-/** The task, its sealed session and the account's draft, as one set of
- * options the task screen and the first page's early read share. */
+// Premium (402), an unknown task (404) and a retired one (410) are answers,
+// not failures to retry, and so is a request the server refused as
+// malformed (400): sent again, it is refused again.
+const retryTaskRead = (failures: number, error: unknown) =>
+  ![400, 402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1;
+
+/** The task, its sealed session and the account's draft in one answer, as
+ * one set of options the task screen and the first page's early read share.
+ * The Learn link and Premium tasks read it this way; a free task reads its
+ * brief and the caller's part apart (coding/taskRead.ts). */
 export const codingTaskQuery = (id: string, learnSession?: string) => queryOptions({
   queryKey: [...codingKeys.task(id), learnSession ?? null] as const,
   queryFn: ({ signal }) => fetchCodingTask(id, signal, learnSession),
-  // Premium (402), an unknown task (404) and a retired one (410) are
-  // answers, not failures to retry, and so is a request the server refused
-  // as malformed (400): sent again, it is refused again.
-  retry: (failures, error) => ![400, 402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1,
+  retry: retryTaskRead,
   staleTime: TASK_HANDOFF_MS,
   // A read that failed in the early read is the screen's error: its Try
   // again asks again, as after a failure of its own.
@@ -154,8 +176,107 @@ export const codingTaskQuery = (id: string, learnSession?: string) => queryOptio
   gcTime: 0,
 });
 
-export function useCodingTask(id: string | undefined, learnSession?: string) {
-  return useQuery({ ...codingTaskQuery(id ?? '', learnSession), enabled: Boolean(id) });
+/** How long a brief read in this tab answers a task page (#587 C23). The
+ * brief changes only with a deploy, and a page whose session names another
+ * version reads it again (`useCodingTask`), so it may be kept long. */
+export const BRIEF_STALE_MS = 30 * 60_000;
+
+/** A task's brief, kept per task like any other read (gcTime by default):
+ * a return to the task, or the next stage's page, takes it from here. */
+export const codingBriefQuery = (id: string) => queryOptions({
+  queryKey: codingKeys.brief(id),
+  queryFn: ({ signal }) => fetchCodingBrief(id, signal),
+  retry: retryTaskRead,
+  staleTime: BRIEF_STALE_MS,
+  retryOnMount: false,
+});
+
+/** The caller's part of a task page, read afresh on every visit, as the
+ * combined answer was: it carries the sealed session and the account draft,
+ * which must be current. Nothing of it outlives the screen (gcTime 0), and a
+ * sign-out empties the cache, so no account's part answers another. */
+export const codingTaskStateQuery = (id: string) => queryOptions({
+  queryKey: [...codingKeys.task(id), 'state'] as const,
+  queryFn: ({ signal }) => fetchCodingTaskState(id, signal),
+  retry: retryTaskRead,
+  staleTime: TASK_HANDOFF_MS,
+  retryOnMount: false,
+  gcTime: 0,
+});
+
+/** Read the brief again past the browser's cache, into the query cache. */
+const readFreshBrief = (client: QueryClient, id: string) =>
+  client.fetchQuery({ ...codingBriefQuery(id), queryFn: ({ signal }) => fetchCodingBrief(id, signal, true), staleTime: 0 });
+
+export interface CodingTaskRead {
+  data: CodingTaskResponse | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => Promise<{ error: unknown }>;
+}
+
+/** A task page's read: the combined answer, or, with `splitRead` (a free
+ * task outside a Learn link, coding/taskRead.ts), the brief and the caller's
+ * part together, which make the same answer (`joinCodingTaskRead`). The page
+ * sees one read either way. The brief comes from this tab's cache when it
+ * holds one; when the session was sealed against another version of it (a
+ * deploy since), the brief is read again past the browser's cache before
+ * the page draws, and the page keeps what it showed until then. */
+export function useCodingTask(id: string | undefined, learnSession?: string, splitRead = false): CodingTaskRead {
+  const client = useQueryClient();
+  const split = Boolean(id) && splitRead && !learnSession;
+  const whole = useQuery({ ...codingTaskQuery(id ?? '', learnSession), enabled: Boolean(id) && !split });
+  const brief = useQuery({ ...codingBriefQuery(id ?? ''), enabled: split });
+  const state = useQuery({ ...codingTaskStateQuery(id ?? ''), enabled: split });
+
+  const wanted = state.data?.briefVersion;
+  const behind = split && brief.data !== undefined && wanted !== undefined && brief.data.version !== wanted;
+  // The version the brief was last read again for, past the browser's cache.
+  const [freshFor, setFreshFor] = useState<string | null>(null);
+  const freshKey = `${id}:${wanted}`;
+  useEffect(() => {
+    if (!behind || !id || freshFor === freshKey) return;
+    setFreshFor(freshKey);
+    void readFreshBrief(client, id).catch(() => undefined);
+  }, [behind, client, freshFor, freshKey, id]);
+  // Held while a brief of the session's version is on its way; one read
+  // again that still answers another version is shown as it is.
+  const holding = behind && (freshFor !== freshKey || brief.isFetching);
+
+  const joined = useMemo(() => (brief.data && state.data ? joinCodingTaskRead(brief.data, state.data) : undefined), [brief.data, state.data]);
+  const shown = useRef<CodingTaskResponse | undefined>(undefined);
+  if (split && joined && !holding) shown.current = joined;
+  const data = !split ? whole.data : holding ? (shown.current?.task.id === id ? shown.current : undefined) : joined;
+
+  const latest = useRef({ split, id, brief, state, whole });
+  latest.current = { split, id, brief, state, whole };
+  const refetch = useCallback(async (): Promise<{ error: unknown }> => {
+    const now = latest.current;
+    if (!now.split || !now.id) return now.whole.refetch();
+    const taskId = now.id;
+    const [read] = await Promise.all([now.state.refetch(), now.brief.isError ? now.brief.refetch() : null]);
+    if (read.error) return { error: read.error };
+    const version = read.data?.briefVersion;
+    if (version !== undefined && client.getQueryData(codingBriefQuery(taskId).queryKey)?.version !== version) {
+      setFreshFor(`${taskId}:${version}`);
+      try {
+        await readFreshBrief(client, taskId);
+      } catch (error) {
+        return { error };
+      }
+    }
+    return { error: client.getQueryState(codingBriefQuery(taskId).queryKey)?.error ?? null };
+  }, [client]);
+
+  if (!split) return { data, isLoading: whole.isLoading, isError: whole.isError, error: whole.error, refetch };
+  return {
+    data,
+    isLoading: data === undefined && (brief.isLoading || state.isLoading || holding),
+    isError: brief.isError || state.isError,
+    error: state.error ?? brief.error,
+    refetch,
+  };
 }
 
 export function useGithubConnection(enabled: boolean) {

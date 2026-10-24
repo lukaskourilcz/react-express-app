@@ -46,6 +46,8 @@ import {
 } from '../../shared/coding-catalog';
 import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
+  CodingBriefResponse,
+  CodingDealtParts,
   CodingDraftResponse,
   CodingDraftSaveRequest,
   CodingDraftSaveResponse,
@@ -60,6 +62,7 @@ import type {
   CodingSubmitRequest,
   CodingTaskProgress,
   CodingTaskResponse,
+  CodingTaskStateResponse,
   CodingApproachesResponse,
   CodingSolutionPair,
   CodingVerdictResponse,
@@ -246,17 +249,16 @@ function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, cod
   return `${session.attemptId}:${graded}`;
 }
 
-/* ── GET ?resource=coding-task&id=… ──────────────────────────────────── */
+/* ── the task a read names ───────────────────────────────────────────── */
 
-export async function handleCodingTask(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
-  if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
+/** The task a request names, or null once it answered 400, 404 or 410. */
+function requestedTask(req: VercelRequest, res: VercelResponse): CodingTask | null {
   const id = req.query.id;
-  if (typeof id !== 'string' || !id) return jsonError(res, 400, 'bad_request', 'A task id is required');
+  if (typeof id !== 'string' || !id) { jsonError(res, 400, 'bad_request', 'A task id is required'); return null; }
   // An id no task could have (`/coding/javascript/no-such-task`) is as
   // unknown as one that fits the pattern, and gets the same answer: the
   // browser shows its not-found page for a 404 and does not ask again.
-  if (!isCodingTaskId(id)) return jsonError(res, 404, 'not_found', 'Unknown task');
+  if (!isCodingTaskId(id)) { jsonError(res, 404, 'not_found', 'Unknown task'); return null; }
   const task = codingTaskById(id);
   if (!task) {
     // A task that exists but is withheld by the content gate is told apart
@@ -264,17 +266,75 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
     // than a "not found" it will keep retrying. A task on a hidden track
     // (system design) is answered as unknown: nothing of it is reachable.
     const authored = codingTaskForHistory(id);
-    if (authored && !isHiddenCodingTask(authored)) return jsonError(res, 410, 'task_retired', 'This challenge was retired from the active catalogue');
-    return jsonError(res, 404, 'not_found', 'Unknown task');
+    if (authored && !isHiddenCodingTask(authored)) jsonError(res, 410, 'task_retired', 'This challenge was retired from the active catalogue');
+    else jsonError(res, 404, 'not_found', 'Unknown task');
+    return null;
   }
+  return task;
+}
+
+/** The version of a task's brief: what is known about it, the version and the
+ * execution evidence that a reference solution passes its own grader. Not a
+ * review — nobody has read it for clarity or judged whether it is worth doing. */
+const briefReview = (task: CodingTask) => codingTaskReview(task, solutionFor(task.id));
+
+/** A task's brief: everything of the playable task that is the same for every
+ * caller and every request. A design's options, in their authored order, are
+ * left out with the other dealt parts (`openCodingTask`). */
+export function codingBrief(task: CodingTask): CodingBriefResponse {
+  const brief = playable(task);
+  delete brief.design;
+  delete brief.drill;
+  brief.review = briefReview(task);
+  return { task: brief, version: brief.review.version };
+}
+
+/** What `coding-brief` answers with (#587 C23). The brief changes only with a
+ * deploy, and every deploy starts the CDN cache afresh; a browser keeps it
+ * five minutes. A page holding a brief of another version than the state
+ * read's `briefVersion` reads it again past the browser cache. */
+export const CODING_BRIEF_CACHE = 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400';
+
+/* ── GET ?resource=coding-brief&id=… ─────────────────────────────────── */
+
+/** The brief alone, for every caller alike (#587 C23). It reads no token and
+ * no row, so the CDN can share it, and it is exactly as public as the task
+ * page is to a guest: Premium content is refused with the guest's 402. */
+export async function handleCodingBrief(req: VercelRequest, res: VercelResponse) {
+  if (!codingAvailable()) return notAvailable(res);
+  // The same for everyone, so only the address tier, as the Learn map.
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
+  const task = requestedTask(req, res);
+  if (!task) return;
+  if (await refuseLocked(res, null, codingContent(task.id))) return;
+  res.setHeader('Cache-Control', CODING_BRIEF_CACHE);
+  return res.json(codingBrief(task));
+}
+
+/* ── GET ?resource=coding-task&id=… and ?resource=coding-state&id=… ──── */
+
+interface OpenedTask {
+  task: CodingTask;
+  dealt: CodingDealtParts;
+  state: Omit<CodingTaskResponse, 'task'>;
+}
+
+/** Everything a task page needs from the caller: the limits, the token, the
+ * Learn link, the progress and draft reads, the tier ladder, the Premium gate,
+ * the dealt parts and the sealed session. Null once it answered. */
+async function openCodingTask(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null): Promise<OpenedTask | null> {
+  if (!codingAvailable()) { notAvailable(res); return null; }
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return null;
+  const task = requestedTask(req, res);
+  if (!task) return null;
 
   const userId = await optionalUser(req, res);
-  if (userId === undefined) return;
+  if (userId === undefined) return null;
 
   const linkedRaw = req.method === 'POST' ? (req.body as { session?: unknown } | undefined)?.session : undefined;
   const linkedSession = linkedRaw === undefined ? null : sessionFrom(linkedRaw);
-  if (req.method === 'POST' && (!linkedSession?.roadmapAttemptId || linkedSession.taskId !== task.id)) return jsonError(res, 400, 'invalid_session', 'A valid Learn task link is required');
-  if (linkedSession && await refuseInvalidLearnLink(supabase, res, linkedSession, userId)) return;
+  if (req.method === 'POST' && (!linkedSession?.roadmapAttemptId || linkedSession.taskId !== task.id)) { jsonError(res, 400, 'invalid_session', 'A valid Learn task link is required'); return null; }
+  if (linkedSession && await refuseInvalidLearnLink(supabase, res, linkedSession, userId)) return null;
 
   let progress: CodingTaskProgress | null = null;
   let draft: string | null = null;
@@ -316,7 +376,8 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       }
     } catch (error) {
       logEvent({ status: 500, kind: 'task_progress_unavailable', reason: error instanceof Error ? error.message : 'unknown' });
-      return jsonError(res, 500, 'db_error', 'Could not load coding progress');
+      jsonError(res, 500, 'db_error', 'Could not load coding progress');
+      return null;
     }
   } else {
     // Anonymous visitors may open and run any free task without recording
@@ -329,14 +390,13 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   // Premium opens the rest of the catalogue; a guest and a free account are
   // refused it with 402. A task already passed stays open for review whatever
   // the tier.
-  if (await refuseLocked(res, userId, gated, { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
+  if (await refuseLocked(res, userId, gated, { cleared: async () => evolvingPassed(task.id, passedIds) })) return null;
   if (linkedSession) locked = null;
 
-  const play = playable(task);
-  // What is known about this brief: the version of it, and the execution
-  // evidence that a reference solution passes its own grader. Not a review —
-  // nobody has read it for clarity or judged whether it is worth doing.
-  play.review = codingTaskReview(task, solutionFor(task.id));
+  // A design's options in their authored order, replaced below by the
+  // shuffled deal when the task has one.
+  const { design, drill } = playable(task);
+  const dealt: CodingDealtParts = { ...(design ? { design } : {}), ...(drill ? { drill } : {}) };
   // The puzzle's lines go out shuffled under presentation ids, and both the
   // accepted orders and the id translation stay here — the translation in the
   // sealed session. The shuffle is per request, so reloading does not hand
@@ -345,7 +405,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   const authoredPuzzle = puzzleFor(task.id);
   if (authoredPuzzle) {
     const presented = presentPuzzle(authoredPuzzle, secureShuffle);
-    play.puzzle = {
+    dealt.puzzle = {
       taskId: task.id,
       variantId: 'v1',
       lines: presented.lines,
@@ -358,7 +418,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
     const prepared = prepareDesign(task, secureShuffle);
     key = { ...(key ?? {}), ...prepared.key };
     if (prepared.design) {
-      play.design = {
+      dealt.design = {
         scenario: prepared.design.scenario,
         brief: prepared.design.brief,
         passMark: prepared.design.passMark,
@@ -367,7 +427,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
     }
     if (prepared.drill) {
       const { format, scenario, prompt, unit, options, steps } = prepared.drill;
-      play.drill = { format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) };
+      dealt.drill = { format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) };
     }
   }
   // Reading the current brief renews a stale Learn link under the same parent
@@ -378,12 +438,32 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       ...(key ? { key } : {}),
     });
 
-  res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, draftUpdatedAt, signedIn: Boolean(userId) };
   // A task this page can submit, graded in QuickJS (TypeScript after its
   // type check): load a grader thread now if the instance has none, so the
   // first Submit does not wait for it (#587, server item 30).
   if (session && QUICKJS_GRADED.has(task.track)) warmSandbox();
+  return { task, dealt, state: { session, locked, progress, draft, draftUpdatedAt, signedIn: Boolean(userId) } };
+}
+
+/** A playable task with its sealed session, the account's lock, progress and
+ * draft: the brief and the caller's part in one answer. The Learn link (POST
+ * with its session) and Premium tasks are read this way. */
+export async function handleCodingTask(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  const opened = await openCodingTask(req, res, supabase);
+  if (!opened) return;
+  res.setHeader('Cache-Control', 'private, no-store');
+  const body: CodingTaskResponse = { task: { ...codingBrief(opened.task).task, ...opened.dealt }, ...opened.state };
+  return res.json(body);
+}
+
+/** The caller's part of a task page alone (#587 C23): what `coding-task`
+ * answers but the brief, which `coding-brief` serves to everyone alike. The
+ * same limits, token check, reads and gates, so a 402 stays a 402. */
+export async function handleCodingState(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  const opened = await openCodingTask(req, res, supabase);
+  if (!opened) return;
+  res.setHeader('Cache-Control', 'private, no-store');
+  const body: CodingTaskStateResponse = { ...opened.state, dealt: opened.dealt, briefVersion: briefReview(opened.task).version };
   return res.json(body);
 }
 

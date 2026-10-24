@@ -80,10 +80,14 @@ async function getAccessToken(): Promise<string | null> {
  *   /api/quiz/roadmap                           the Learn map (no topic, level, test or resource)
  *   /api/quiz/roadmap?resource=learning-path-catalog   the published path manifests
  *   /api/quiz/roadmap?resource=lesson&id=…      a Learn level's lesson
+ *   /api/quiz/roadmap?resource=coding-brief&id=…  a coding task's brief (#587 C23)
  */
-const PUBLIC_READ = /^\/api\/(?:settings|quiz\/roadmap(?:\?resource=(?:learning-path-catalog|lesson&id=[a-z0-9-]+))?)$/;
+// Written short (plain groups, `\d`, the method matched without case): it
+// ships in the first download, and the brief's address was added to it
+// without making that download larger (check:bundle).
+const PUBLIC_READ = /^\/api\/(settings|quiz\/roadmap(\?resource=(learning-path-catalog|(lesson|coding-brief)&id=[a-z\d-]+))?)$/;
 export const isPublicRead = (url: string, method?: string): boolean =>
-  (!method || method.toUpperCase() === 'GET') && PUBLIC_READ.test(url);
+  (!method || /^get$/i.test(method)) && PUBLIC_READ.test(url);
 
 /** The server refused locked content; the upgrade sheet is already open. */
 export const isPremiumRequired = (err: unknown): boolean =>

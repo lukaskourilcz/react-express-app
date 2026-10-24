@@ -439,6 +439,35 @@ it('shows the minimal completion for an accepted order without granting XP or re
   expect(vi.mocked(useCodingApproaches).mock.calls.every(([, enabled]) => enabled === false)).toBe(true);
 });
 
+// The paths walk (#587): a pass made on the screen shows the completion,
+// which never returns to the tabs, so the approach comparisons it would open
+// are not read; a task passed before still opens them.
+it('reads no approach comparisons for the completion a pass shows, and reads them for a task passed before', async () => {
+  // A wide screen: the editor shows (the case above left a narrow one).
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  vi.mocked(useCodingApproaches).mockClear();
+  vi.mocked(runCodeTests).mockResolvedValue(outcome({ results: [{ pass: true, actual: '[2]', error: null }, { pass: true, actual: '[]', error: null }] }));
+  vi.mocked(submitCoding).mockResolvedValueOnce(verdict({}));
+  const { unmount } = mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+  expect(await screen.findByRole('heading', { level: 1, name: 'Passed +25 XP' })).toBeVisible();
+  expect(vi.mocked(useCodingApproaches).mock.calls.every(([, enabled]) => enabled === false)).toBe(true);
+  unmount();
+
+  vi.mocked(useCodingApproaches).mockClear();
+  render(
+    <MemoryRouter>
+      <LanguageProvider>
+        <CodingWorkbench task={task} session="test-session" locked={null} initialCode={null} signedIn progress={progress('passed')} mode="section" />
+      </LanguageProvider>
+    </MemoryRouter>,
+  );
+  expect(vi.mocked(useCodingApproaches).mock.calls.some(([, enabled]) => enabled === true)).toBe(true);
+});
+
 it('shows three landing examples while Run still checks every test', async () => {
   const subject = { ...task, tests: [1, 2, 3, 4, 5].map(n => ({ call: `double([${n}])`, expected: [n * 2] })) };
   vi.mocked(runCodeTests).mockResolvedValue(outcome({ results: subject.tests.map(test => ({ pass: true, actual: JSON.stringify(test.expected), error: null })) }));

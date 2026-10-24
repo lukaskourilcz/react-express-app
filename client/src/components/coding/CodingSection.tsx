@@ -14,6 +14,7 @@ import LoadingScreen from '../LoadingScreen';
 import { preloadTaskWorkbench, useWorkbench, useWarmWorkbench } from '../../coding/loadWorkbench';
 import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
 import { releaseCodingTaskRead, startCodingTaskRead } from '../../coding/earlyTaskRead';
+import { splitsTaskRead } from '../../coding/taskRead';
 import { queryClient as appQueryClient } from '../../lib/queryClient';
 import { freshStoredAccessToken, storedSessionUserId } from '../../lib/supabaseClient';
 import { autosaveDraft, deviceDraft, draftStoredBySubmit, flushAutosave, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
@@ -816,7 +817,7 @@ function CodingTaskView({ track, taskId }: { track: CodingTrack; taskId: string 
     try { sessionStorage.setItem(`devshark:learn-coding:${taskId}`, learnSession); } catch { /* memory copy still works */ }
     if (new URLSearchParams(window.location.hash.slice(1)).has('learn')) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
   }, [learnSession, taskId]);
-  const task = useCodingTask(taskId, learnSession);
+  const task = useCodingTask(taskId, learnSession, splitsTaskRead(taskId, learnSession));
   // This screen's read is on: an early read of the first page lets go.
   useEffect(() => { releaseCodingTaskRead(); }, []);
   useEffect(() => {

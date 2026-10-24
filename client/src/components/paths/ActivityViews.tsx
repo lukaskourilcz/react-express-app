@@ -12,6 +12,7 @@ import { workbenchCopy } from '../../i18n/translations.workbench';
 import { useT } from '../../i18n/LanguageContext';
 import { beforeAccountChange } from '../../lib/accountData';
 import { lazyShellPart } from '../../lib/routeRecovery';
+import { loadEditor, loadedEditor } from '../../coding/loadEditor';
 import ErrorRetry from '../ErrorRetry';
 import { ShellPartBoundary } from '../ShellPartBoundary';
 import { pathsEn as pathCopy } from '../../i18n/translations.paths';
@@ -282,8 +283,12 @@ export function CheckActivity({
 
 // The editor (CodeMirror) loads when a code exercise opens, not with the
 // path overview and module pages, which never show it. Its own boundary keeps
-// the activity standing when its code does not load.
-const Editor = lazyShellPart(() => import('../../coding/Editor').then((m) => ({ default: m.Editor })));
+// the activity standing when its code does not load. The workspace starts the
+// load as soon as the catalogue says the open activity is code, beside the
+// activity's start (#587 paths walk), and an editor already in is drawn at
+// once rather than through Suspense, whose reveal React holds back for up to
+// 300 ms after the brief (as the workbench's EditorPart does).
+const LazyEditor = lazyShellPart(() => loadEditor().then((Editor) => ({ default: Editor })));
 
 const DRAFT_DEBOUNCE_MS = 900;
 const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
@@ -348,6 +353,8 @@ export function CodeActivity({
   submitBlocked?: boolean;
 }) {
   const t = useT();
+  // Decided once per mount, so the editor never swaps one tree for the other.
+  const [Editor] = useState(() => loadedEditor() ?? LazyEditor);
   const [source, setSource] = useState<string>(() => (typeof draft?.content.code === 'string' ? draft.content.code : code.starter));
   const [hintsShown, setHintsShown] = useState(0);
   const queueDraft = useDraftQueue(onDraft);

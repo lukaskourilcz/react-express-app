@@ -735,7 +735,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Giving up and reading the reference solution is a different thing: it does
   // not open this, which is why the flag below is the verdict and not `solution`.
   const passedNow = verdict?.verdict === 'passed' && !verdict.puzzle;
-  const approaches = useCodingApproaches(task.id, signedIn && (passedNow || recordedPass || progress?.status === 'passed'));
+  // A pass made here shows the completion instead of the tabs (below), and
+  // nothing on it returns to them, so the comparisons are read only where
+  // their tab can show: a task passed before, or a pass gone stale. Read on
+  // every pass, they were never seen (#587 paths walk).
+  const completionShown = verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable;
+  const approaches = useCodingApproaches(task.id, signedIn && !completionShown && (passedNow || recordedPass || progress?.status === 'passed'));
   const approachList = approaches.data?.approaches ?? [];
   // The junior and senior solutions arrive with a verified pass — this one, or
   // a recorded earlier one — and from nowhere else.
@@ -1283,7 +1288,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const refreshAction = taskChanged && onRefreshTask && <Button className="cd-brief-refresh" variant="secondary" isDisabled={busy || !online} onClick={() => void refreshTask()} label={t('coding.verdict.reloadBrief')} />;
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
 
-  if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {
+  if (completionShown && verdict) {
     return <div className={`cd-workbench cd-workbench--${mode}`}><CodingCompletion
       xp={verdict.xpAwarded} complexity={verdict.complexity} sectionRef={verdictRef}
       signInToRecord={!signedIn && !verdict.progress}

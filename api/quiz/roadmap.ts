@@ -105,6 +105,8 @@ const handleCodingReset = lazyExport(codingHandlers, 'handleCodingReset');
 const handleCodingReveal = lazyExport(codingHandlers, 'handleCodingReveal');
 const handleCodingSubmit = lazyExport(codingHandlers, 'handleCodingSubmit');
 const handleCodingTask = lazyExport(codingHandlers, 'handleCodingTask');
+const handleCodingBrief = lazyExport(codingHandlers, 'handleCodingBrief');
+const handleCodingState = lazyExport(codingHandlers, 'handleCodingState');
 const pathHandlers = () => import('../../lib/learning-paths/handlers');
 const handleActivityStart = lazyExport(pathHandlers, 'handleActivityStart');
 const handleActivitySubmit = lazyExport(pathHandlers, 'handleActivitySubmit');
@@ -1581,6 +1583,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   // Coding challenges share this function (twelve-function budget):
   //   GET  ?resource=coding-task&id=     → a playable task with its sealed session
+  //   GET  ?resource=coding-brief&id=    → the task's brief alone, public and cached (#587 C23)
+  //   GET  ?resource=coding-state&id=    → the caller's part alone: session, lock, progress, draft
   //   POST ?resource=coding-submit       → server grading (every track)
   //   POST ?resource=coding-reveal       → the reference solution after a pass or give-up
   //   POST ?resource=coding-reset        → Reset, signed in: opens the task's repeat XP
@@ -1588,11 +1592,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (resource.startsWith('coding-')) {
     try {
       if (resource === 'coding-task' && (req.method === 'GET' || req.method === 'POST')) return await handleCodingTask(req, res, supabase);
+      if (resource === 'coding-brief' && req.method === 'GET') return await handleCodingBrief(req, res);
+      if (resource === 'coding-state' && req.method === 'GET') return await handleCodingState(req, res, supabase);
       if (resource === 'coding-submit' && req.method === 'POST') return await handleCodingSubmit(req, res, supabase);
       if (resource === 'coding-reveal' && req.method === 'POST') return await handleCodingReveal(req, res, supabase);
       if (resource === 'coding-reset' && req.method === 'POST') return await handleCodingReset(req, res, supabase);
       if (resource === 'coding-approaches' && req.method === 'GET') return await handleCodingApproaches(req, res, supabase);
-      res.setHeader('Allow', resource === 'coding-task' ? 'GET, POST' : resource === 'coding-approaches' ? 'GET' : 'POST');
+      res.setHeader('Allow', resource === 'coding-task' ? 'GET, POST' : ['coding-approaches', 'coding-brief', 'coding-state'].includes(resource) ? 'GET' : 'POST');
       return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
     } catch (error) {
       if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);

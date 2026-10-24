@@ -6,6 +6,7 @@ import { hiddenGlobalMessage, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/co
 import { runInQuickJS } from '../../lib/coding/sandbox';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from '../../scripts/fixtures/utc-react';
 import { localAuth, storeFakeSession } from './fake-session';
+import { fulfilTaskRead, isTaskRead } from './coding-task-read';
 
 // The coding workbench in the built app with a real editor, a real runner
 // worker and the real React sandbox frame. The API is answered here, so
@@ -38,9 +39,9 @@ async function prepare(page: Page, { signedIn = false, verdict = {} as Record<st
     const resource = url.searchParams.get('resource');
     const op = url.searchParams.get('op');
     const method = route.request().method();
-    if (resource === 'coding-task') {
+    if (isTaskRead(resource)) {
       const task = CODING_TASKS.find((one) => one.id === url.searchParams.get('id'))!;
-      return route.fulfill({ json: { task: playable(task), session: task.id, locked: null, progress: null, draft: null, signedIn } });
+      return fulfilTaskRead(route, { task: playable(task), session: task.id, locked: null, progress: null, draft: null, signedIn });
     }
     if (resource === 'coding-submit') {
       seen.submits.push(Date.now());
@@ -422,11 +423,11 @@ for (const width of [360, 1440]) {
         submits++;
         return route.fulfill({ status: 409, json: { error: { code: 'task_changed', message: 'This task changed while you were working. Load its latest brief before submitting. Your code has been kept.' } } });
       });
-      await page.route(/resource=coding-task(?:&|$)/, route => {
+      await page.route(/resource=coding-(?:task|brief|state)(?:&|$)/, route => {
         const authored = CODING_TASKS.find(one => one.id === 'js-double-numbers')!;
         const task = playable(authored);
         if (refreshed) task.title = 'Updated double task';
-        return route.fulfill({ json: { task, session: refreshed ? 'fresh-session' : 'old-session', locked: null, progress: null, draft: null, signedIn: false } });
+        return fulfilTaskRead(route, { task, session: refreshed ? 'fresh-session' : 'old-session', locked: null, progress: null, draft: null, signedIn: false });
       });
       await openTask(page, '/coding/javascript/js-double-numbers');
       await page.evaluate(value => localStorage.setItem('devquiz:color-mode', value), theme);

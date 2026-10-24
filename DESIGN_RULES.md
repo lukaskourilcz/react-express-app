@@ -124,6 +124,11 @@ existing convention in `app-shell.css` / `astryx-theme.css`: guard every
 `@keyframes`-driven class with a `@media (prefers-reduced-motion: reduce)` block
 that sets `animation: none` (and neutralises any hover `transform`).
 
+Motion's `m` elements (`client/src/lib/motion.tsx`) go one step further: a
+page that opens under reduced motion loads no Motion features and marks
+`<html data-motion="off">`, so they appear at their final opacity at once,
+without the fade (perf audit #587, an owner trade-off in `NEEDED.md`).
+
 ## 6. Cards don't lift on the fin-school hover
 
 On the topic cards (the "fin schools" hero effect), the card itself does **not**

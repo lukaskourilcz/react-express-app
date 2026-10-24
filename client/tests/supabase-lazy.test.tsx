@@ -404,6 +404,8 @@ describe('a returning visitor with a stored session', () => {
     expect(isPublicRead('/api/quiz/roadmap', 'GET')).toBe(true);
     expect(isPublicRead('/api/quiz/roadmap?resource=learning-path-catalog', 'get')).toBe(true);
     expect(isPublicRead('/api/quiz/roadmap?resource=lesson&id=html-1', undefined)).toBe(true);
+    // A coding task's brief reads nobody (#587 C23); the caller's part does.
+    expect(isPublicRead('/api/quiz/roadmap?resource=coding-brief&id=js-double-numbers', 'GET')).toBe(true);
     for (const url of [
       '/api/quiz/roadmap?id=x&resource=lesson',
       '/api/quiz/roadmap?resource=lesson&id=',
@@ -415,6 +417,9 @@ describe('a returning visitor with a stored session', () => {
       '/api/quiz/roadmap?resource=lesson&resource=lesson&id=x',
       '/api/quiz/roadmap?resource=learning-path-start',
       '/api/quiz/roadmap?resource=coding-task&id=x',
+      '/api/quiz/roadmap?resource=coding-state&id=x',
+      '/api/quiz/roadmap?resource=coding-brief&id=',
+      '/api/quiz/roadmap?resource=coding-brief&id=x&user_id=y',
       '/api/settings?admin=1',
       '/api/leaderboard',
       '/api/user/[op]?op=entitlement',

@@ -13,6 +13,9 @@ The API converts learner TypeScript/JSX to ES2015 CommonJS without evaluating it
 API instance and reused by every Submit. Downlevelled async functions use the private learner
 Promise kernel. The API uploads the guest bundle and an input containing compiled
 learner/fixture modules, trusted visible/hidden suite and random run nonce.
+It reads the guest bundle from the deployment once per instance and uploads
+it unchanged on every run. The VM's stop call is sent the moment the verdict
+is read and runs after the answer (`waitUntil`, `lib/coding/after-response.ts`).
 
 1. The guest reads and deletes its input before learner execution. It prepares
    jsdom, development React and Testing Library, freezes host intrinsics and

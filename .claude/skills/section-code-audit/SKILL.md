@@ -1,6 +1,6 @@
 ---
 name: section-code-audit
-description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564), Software Engineer (#565), Quiz/Play/Profile/Leaderboard (#566), sign-in and sandboxes (#570), rewards and billing (#568) and site and plumbing (#569) audits of 22–23 October 2026.
+description: Audit and fix the code behind one product area (a Learn section such as Web Developer, Software Engineer or Forward Deployed Engineer, or Quiz, Play, Profile, Leaderboard) before users arrive. Covers how to split the area, what to look for, how to fix and commit, and the checks to run without browser tests. Learned from the FDE (#563), Web Developer (#564), Software Engineer (#565), Quiz/Play/Profile/Leaderboard (#566), sign-in and sandboxes (#570), rewards and billing (#568) and site and plumbing (#569) audits of 22–23 October 2026, and from the performance and cost audit of the three Learn paths (#587: #590, #591 and the final walk) of 24 October 2026.
 ---
 
 # Section code audit
@@ -114,7 +114,7 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Long code tokens wrap at 200 % text and 360 px. End a drag on `pointercancel`.
 
 **Client: loading and bundle**
-- Load heavy parts with `lazyShellPart` + `Suspense` + `ShellPartBoundary`, the boundary inside `Suspense` as its doc comment says. A static import of the editor pulled CodeMirror (about 173 kB gzip) into a screen that rarely needs it; the Learn level runner, a path's code editor and Prettier now load only when shown.
+- Load heavy parts with `lazyShellPart` + `Suspense` + `ShellPartBoundary`, the boundary inside `Suspense` as its doc comment says, and mind React's 300 ms reveal hold (section 3). A static import of the editor pulled CodeMirror (about 173 kB gzip) into a screen that rarely needs it; the Learn level runner, a path's code editor and Prettier now load only when shown.
 - Helpers only lazy screens use must not live in a module the main chunk imports, and strings or defaults nothing reads still ship. Measure with `check:bundle`: the waiting-result sender loads only when a result waits.
 - Route preload matchers (`routes(...)` in `App.tsx`) match only the paths their routes serve. Skip intent preloads and idle warm-ups when `navigator.connection.saveData` is set, except a left mouse press.
 - Stop a browser run or worker when the learner leaves. Memoise heavy, pure children (`LessonView`, rich-text parsing) only where they re-render per keystroke, with stable inputs.
@@ -123,7 +123,21 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 
 - Shell growth: fixes in modules every page loads (`store.ts`, `queryClient.ts`, `auth.tsx`, `consent.ts`) add bytes. Win them back by moving code only one screen uses into its own module (`rewardsShop.ts`, the lazily loaded `RegisterPromptCard.tsx`, Sentry's init options in `sentry-sdk.ts`), and measure each move: some "trims" grow the gzip size.
 
-## 3. How to work
+## 3. Performance and cost
+
+What the paths audit (#587) measured and fixed. Use it when the owner asks for an area to be faster or cheaper, and keep the rules at the top of this skill: no behaviour, grading, tier, XP or price changes, and every bound written down for the owner.
+
+- **Measure before and after with the same tools.** The baseline harness lives outside the repository in `devshark-perf/`: `server/tools/measure-roundtrips.ts` runs the real handlers in-process against Auth, PostgREST and Upstash stand-ins that answer after 25 ms and counts waves (calls one after another), `measure-coldstart.mjs` and `measure-firstcall.mjs` time each handler's import and first request as CommonJS (what `@vercel/node` ships; an ESM bundle hoists lazy imports and hides the gain), `baseline/client-tools/measure-client.mjs` and `final/tools/walk.mjs` load every page with 120 ms API fixtures at 1280 and 390 px. Run main and the branch in the same session, take the median of three passes, and call anything under about 80 ms noise. In the repository, every answer's `Server-Timing` carries `db_http` and `auth_http` call counts, and `npm run test:performance` pins the cold-start, prelude, round-trip and cache contracts.
+- **The token check is the most expensive line.** Every signed-in request used to ask Supabase Auth (`getUser`, one round trip). Reads now trust an acceptance on the same instance for 60 s (`VERIFIED_TOKEN_TTL_MS`); writes, the wallet, admin, billing and deletion still ask (`requireFreshAuth`). Never extend the trust to a write, and write the bound into `docs/product-architecture.md` and `NEEDED.md`.
+- **Prelude order.** Check the token while the address bucket answers, then take the caller's bucket: two waves where there were three. The address bucket still decides first, and an address it refused is checked only after its bucket for a minute. `scripts/test-prelude.ts` pins the order.
+- **Lazy heavy imports.** A router serves every op from one function, so one static import of the coding catalogue, a grader, TypeScript or Stripe made every op's cold start pay for it (`api/quiz/roadmap.ts` imported in 325 ms; 100 ms once they were lazy). Import op families through `lazyExport` (`lib/http.ts`), load TypeScript on first use, and keep `/api/settings` free of handler modules. `scripts/cold-start-contracts.ts` fails when a handler loads one at import.
+- **CDN `s-maxage` only for caller-independent answers.** The Learn map, the path catalogue (`s-maxage=300`), a lesson and a free task's brief are the same for every caller and the CDN shares them. Split an answer when only part of it is per caller (`coding-brief` apart from `coding-state`). Anything that reads the caller stays `private, no-store`.
+- **Public reads without the session.** The browser sends the public reads (`isPublicRead` in `client/src/lib/api.ts`) at once, with no token, instead of waiting for supabase-js. A handler that starts reading the caller must leave that list.
+- **React's 300 ms reveal throttle.** React commits a Suspense boundary that leaves its fallback no sooner than 300 ms after the last fallback any boundary showed or hid. So a screen drawn through `lazy` + `Suspense` can wait up to 300 ms with its code and data in hand. Start the first page in a transition (`useFirstPageTransition`), and draw parts whose code may already be in from state (`useWorkbench`, the lesson reader) rather than by suspending.
+- **Load heavy client tools on intent.** The TypeScript compiler, Prettier, CodeMirror and the React sandbox now load when the learner points at, focuses or presses what needs them, not when the page opens; Sentry loads after the load event and Motion's features never under reduced motion. Start them on the earliest real signal (the last question of a level, the catalogue saying an activity is code) so the wait is gone by the time it matters, and skip idle warm-ups under `saveData`.
+- **Reads that wait for nothing.** Start a screen's reads before it renders, beside the hold that waits for the first of them, and skip reads whose answer nothing on the screen shows (the path catalogue while the path is off, approach comparisons after a fresh pass). A short freshness window (progress and the map's XP, one minute; the plan on tab return, five minutes) saves a read per return; each one is an owner trade-off.
+
+## 4. How to work
 
 - Run it as a workflow: four reviewers in parallel on the disjoint groups, each followed by a skeptic that tries to refute every commit and repairs or reverts with *new* commits, then one checks agent. Then a second, smaller round for the issues the first round listed as "not fixed" but that are real. Check the scariest-sounding "not fixed" items yourself first: in the FDE audit, a reported token/attempt TTL mismatch turned out to be 3 h on both sides.
 - One fix per commit, right after its cheapest relevant check passes. Message: `fix|perf|refactor|test(<area>): <what and why>`. Agents share the worktree, so commit with `git commit -m … -- <paths>` and never `git add -A`, stash, reset, rebase or push. The owner wants many real commits; never pad.
@@ -133,7 +147,7 @@ Read `CLAUDE.md`, the area's tests (`client/tests/*`, `scripts/*contracts*.ts`, 
 - Do not edit SQL migrations, reviewed content (`lib/learning-paths/content`, `solutions`, `lib/roadmap-questions-*`, `lib/coding/tasks`, `lib/coding/solutions`), tier gating, XP or copy meaning. Report DB issues that need a migration.
 - Comments count: `scripts/test-learning-paths.ts` and `test-launch-contracts.ts` fail if any file under `client/src` *mentions* `lib/learning-paths`, even in a comment.
 
-## 4. Checks (no browser or e2e)
+## 5. Checks (no browser or e2e)
 
 ```bash
 export PATH=/private/tmp/devshark-codex-node24/node_modules/.bin:$PATH   # Node 24
@@ -143,6 +157,6 @@ git diff --check origin/main...HEAD
 
 Add the area's own suites (`test:coding`, `test:coding-auth`, `test:grading-integrity`, `test:billing` and so on) when the area touches them. Compare `check:bundle` with main's number: the initial load must not grow. On this 8-CPU machine a load average around 15 makes vitest time out; rerun a failing file alone before believing it. Then push, open one PR, wait for `verify` and `sql`, merge with a merge commit and record the result in `docs/release-acceptance.md`.
 
-## 5. Finish
+## 6. Finish
 
 List what was fixed, what was left and why, and add the real open items to `NEEDED.md` (`[owner:ai]` for agent work, `[owner:me]` for decisions).
