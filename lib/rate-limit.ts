@@ -473,8 +473,8 @@ export async function enforceRateLimit(
  * refusal: an address its bucket refused on this instance has its token
  * checked only after the bucket admits it, for a minute
  * (REFUSED_ADDRESS_HOLD_MS). Until that first refusal every request was
- * admitted, and was checked under the old order too. A token Auth accepted
- * is not asked again for a minute either (lib/auth.ts). */
+ * admitted, and was checked under the old order too. A read whose token
+ * Auth accepted is not asked again for a minute either (lib/auth.ts). */
 const REFUSED_ADDRESS_HOLD_MS = 60_000;
 const REFUSED_ADDRESS_LIMIT = 10_000;
 const refusedAddresses = new Map<string, number>();

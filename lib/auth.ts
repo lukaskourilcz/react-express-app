@@ -94,10 +94,20 @@ const tokenChecks = new WeakMap<VercelRequest, Map<string, Promise<AuthResult>>>
  *    up. Auth itself accepts a stolen access token until its `exp` (one
  *    hour), so this widens nothing beyond that, only past Auth's own session
  *    check. The account's data reads the same as in the request that asked.
- *  - Exceptions: a request marked with `requireFreshAuth` (the admin API,
- *    account deletion, billing, vouchers and the fulfilment desk) always asks
- *    Auth, and a deleted account's token is forgotten at once on the
- *    instance that deleted it (`forgetVerifiedToken`).
+ *  - Reads only. Only a GET or HEAD request trusts an earlier acceptance;
+ *    every other method (an answer, a completion, a claim, a purchase, a
+ *    draft, any write) asks Auth itself, so XP, coins and one-time claims
+ *    are never earned on a session Auth has ended, and no write lands for an
+ *    account deleted on another instance (its rows would not be erased
+ *    again: nothing ties them to auth.users). A write's own acceptance still
+ *    renews the one reads use.
+ *  - Exceptions among reads: a request marked with `requireFreshAuth` (the
+ *    admin API, the fulfilment desk, and the wallet read, which settles coin
+ *    grants) always asks Auth, and a deleted account's token is forgotten at
+ *    once on the instance that deleted it (`forgetVerifiedToken`). A few
+ *    other reads write a row of their own (a Learn level open records its
+ *    attempt); for an account deleted on another instance less than a minute
+ *    before, such a row can still be written, and is listed for the owner.
  *  - Only a JWT whose `exp` and `sub` can be read is kept, keyed by the
  *    SHA-256 of the token, so the token itself is never held as a key; at
  *    most VERIFIED_TOKEN_LIMIT entries, the oldest dropped first.
@@ -108,10 +118,12 @@ const VERIFIED_TOKEN_LIMIT = 2_000;
 const acceptedTokens = new Map<string, { result: AuthResult; until: number }>();
 const sharedChecks = new Map<string, Promise<AuthResult>>();
 const freshRequests = new WeakSet<VercelRequest>();
+/** The methods whose requests may trust an earlier acceptance: reads. */
+const TRUSTING_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD']);
 
 /** This request asks Supabase Auth itself, whatever this instance accepted
- * before: for the admin API and for writes that move money or end an account.
- * Call it before anything verifies the request. */
+ * before: for the admin API and for reads that grant something (every write
+ * asks anyway, see above). Call it before anything verifies the request. */
 export function requireFreshAuth(req: VercelRequest): void {
   freshRequests.add(req);
 }
@@ -168,7 +180,7 @@ async function askAuth(client: SupabaseClient, token: string): Promise<AuthResul
  * check already under way for the same token, or a new Auth call. */
 async function decideToken(client: SupabaseClient, req: VercelRequest, token: string): Promise<AuthResult> {
   const key = tokenKey(token);
-  const fresh = freshRequests.has(req);
+  const fresh = freshRequests.has(req) || !TRUSTING_METHODS.has(String(req.method ?? '').toUpperCase());
   if (!fresh) {
     const accepted = acceptedTokens.get(key);
     if (accepted && accepted.until > Date.now()) return copyOf(accepted.result);

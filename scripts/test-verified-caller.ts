@@ -87,7 +87,8 @@ const JWT_SHORT = jwtAccount(3, 30);
 const JWT_ADMIN = jwtAccount(4, 3600, { appMetadata: { role: 'admin' } });
 const JWT_DELETED = jwtAccount(5);
 const JWT_OUTAGE = jwtAccount(6);
-const JWT_ACCOUNTS = [JWT_LEARNER, JWT_TOGETHER, JWT_SHORT, JWT_ADMIN, JWT_DELETED, JWT_OUTAGE];
+const JWT_WRITER = jwtAccount(7);
+const JWT_ACCOUNTS = [JWT_LEARNER, JWT_TOGETHER, JWT_SHORT, JWT_ADMIN, JWT_DELETED, JWT_OUTAGE, JWT_WRITER];
 const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE, ...JWT_ACCOUNTS];
 /** Tokens the stand-in now refuses (a session ended elsewhere), and tokens
  * for which it answers 500, as Supabase Auth does when it is down. */
@@ -1023,6 +1024,25 @@ async function main() {
         assert.equal((await identity(JWT_LEARNER)).statusCode, 401, 'and refused once the minute is up');
         assert.equal((await identity(JWT_LEARNER)).statusCode, 401, 'and stays refused');
         assert.equal(authChecks, 2, 'the two reads inside the minute were not asked; both after it were');
+        // Only reads trust an acceptance: every write, and the wallet read
+        // that settles coin grants, asks Auth, so a session ended elsewhere
+        // earns and writes nothing more.
+        authChecks = 0;
+        assert.equal((await identity(JWT_WRITER)).statusCode, 200);
+        assert.equal((await identity(JWT_WRITER)).statusCode, 200);
+        assert.equal(authChecks, 1, 'a read trusts the acceptance');
+        await user('identity', { method: 'PUT', account: JWT_WRITER, body: {} });
+        await user('identity', { method: 'PUT', account: JWT_WRITER, body: {} });
+        assert.equal(authChecks, 3, 'every write asks Auth, even for a token accepted a moment ago');
+        await user('wallet', { account: JWT_WRITER });
+        await user('wallet', { account: JWT_WRITER });
+        assert.equal(authChecks, 5, 'the wallet read settles grants, so it asks Auth every time');
+        revokedTokens.add(JWT_WRITER.token);
+        assert.equal((await identity(JWT_WRITER)).statusCode, 200, 'an ended session may still read for the rest of its minute');
+        const endedWrite = await user('identity', { method: 'PUT', account: JWT_WRITER, body: {} });
+        assert.equal(endedWrite.statusCode, 401, `but a write on it is refused at once (${JSON.stringify(endedWrite.body)})`);
+        const endedWallet = await user('wallet', { account: JWT_WRITER });
+        assert.equal(endedWallet.statusCode, 401, `and so is the wallet (${JSON.stringify(endedWallet.body)})`);
         // The admin desk asks Auth on every request, accepted or not.
         authChecks = 0;
         assert.equal((await identity(JWT_ADMIN)).statusCode, 200);
@@ -1045,7 +1065,7 @@ async function main() {
         revokedTokens.clear();
         failingTokens.clear();
       }
-      console.log('PASS verified caller: a token Auth accepted is trusted for at most a minute and never past its expiry, refusals and outages are asked again, the admin desk and deletion always ask');
+      console.log('PASS verified caller: a token Auth accepted is trusted by reads for at most a minute and never past its expiry, refusals and outages are asked again, writes, the wallet, the admin desk and deletion always ask');
     }
 
     console.log('Verified-caller contracts passed: a token acts for its own account whatever user_id says, admin by confirmed address or role, private caching by default, read limits, and one-time claims that fail closed.');

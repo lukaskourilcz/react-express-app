@@ -1638,21 +1638,29 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
 - **Token checks across requests** (#587). An access token Supabase Auth
   accepted is trusted again on the same function instance, without another
   Auth round trip, for at most 60 seconds (`VERIFIED_TOKEN_TTL_MS` in
-  `lib/auth.ts`) and never past the token's own `exp`. Only acceptances are
-  kept: a refusal, an outage or a timeout is asked again on the next request.
+  `lib/auth.ts`) and never past the token's own `exp`, and only by reads:
+  a GET or HEAD request. Every other method (answers, completions, claims,
+  purchases, drafts, deletions) asks Auth on every request, so no XP, coin or
+  one-time claim is earned on a session Auth has ended, and no write lands
+  for an account deleted on another instance. Only acceptances are kept: a
+  refusal, an outage or a timeout is asked again on the next request.
   Requests on one instance that present the same new token at once share one
   Auth call. Only a JWT whose `exp` and `sub` can be read is kept, keyed by
-  the SHA-256 of the token, at most 2,000 per instance. The trade-off the
-  owner accepted with it: a session ended elsewhere (sign out everywhere, a
-  password change, a ban, an admin role removed) keeps working for up to a
-  minute on an instance that accepted its token just before. Auth itself
+  the SHA-256 of the token, at most 2,000 per instance. The trade-off, for
+  the owner to accept: a session ended elsewhere (sign out everywhere, a
+  password change, a ban, an admin role removed) can keep reading for up to
+  a minute on an instance that accepted its token just before. Auth itself
   accepts a stolen access token until it expires (one hour); the minute only
-  postpones Auth's own session lookup. The admin API, the fulfilment desk,
+  postpones Auth's own session lookup. A few reads write a row of their own
+  (a Learn level open records its attempt), and for an account deleted on
+  another instance in that minute such a row can still be written; nothing
+  erases it again, since the tables do not reference `auth.users`. Among
+  reads, the admin API, the fulfilment desk and the wallet (its GET settles
+  coin grants) call `requireFreshAuth` and ask Auth on every request, as do
   account deletion, billing checkout, portal and cancellation, and voucher
-  redemption call `requireFreshAuth` and ask Auth on every request, and a
-  deleted account's token is forgotten at once on the instance that deleted
-  it (`forgetVerifiedToken`). `npm run test:launch` (verified-caller suite)
-  pins each bound.
+  redemption, and a deleted account's token is forgotten at once on the
+  instance that deleted it (`forgetVerifiedToken`). `npm run test:launch`
+  (verified-caller suite) pins each bound.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which
