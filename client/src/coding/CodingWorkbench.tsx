@@ -215,6 +215,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // which the server's answer replaces.
   const localRun = useRef<AbortController | null>(null);
   const harness = useReactHarness();
+  // The sandbox frame (about 216 KB gzip, and a long task as it boots) loads
+  // on the first Run or Submit, when the Preview tab opens, or when a pointer
+  // or the focus reaches the Run and Submit row: not while the brief is read
+  // (perf baseline #587 C13). Once loaded it stays for the visit.
+  const [frameWanted, setFrameWanted] = useState(false);
+  const wantFrame = useCallback(() => { if (isReact) setFrameWanted(true); }, [isReact]);
   // What a narrow screen gets instead of an editor: the task's puzzle when it
   // has one, and an honest pending state when it does not. Neither is a pass.
   // Both offer the editor anyway, so neither is a dead end: a puzzle never
@@ -313,6 +319,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     setFormatError(null);
     try {
       if (isReact) {
+        setFrameWanted(true);
         const restoreFocus = keepFocus();
         const outcome = await harness.start(files(), { tests: Boolean(task.suite), preview: true });
         restoreFocus();
@@ -381,6 +388,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           // The frame runs the suite so the learner sees named cases and a
           // fresh preview straight away; the verdict itself comes from the
           // server, which runs the same suite where it cannot be edited.
+          setFrameWanted(true);
           const restoreFocus = keepFocus();
           const outcome = await harness.start(files(), { tests: true, preview: true });
           restoreFocus();
@@ -997,8 +1005,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const renderConsole = (): ReactNode => (logs.length === 0 ? <p className="cd-console__empty">{t('coding.console.empty')}</p> : <pre className="cd-console">{logs.join('\n')}</pre>);
 
   // Before the first run there is nothing to show, so the preview says so in
-  // one line and its frame takes no room (coding-04). The frame stays mounted
-  // all the same: the sandbox loads while the learner reads, and a run needs it.
+  // one line and its frame takes no room (coding-04). The frame mounts once it
+  // is wanted (frameWanted above) or the Preview tab opens, and stays.
+  useEffect(() => { if (isReact && tab === 'preview') setFrameWanted(true); }, [isReact, tab]);
+  const frameOn = isReact && (frameWanted || tab === 'preview');
   const previewIdle = !reactRun && !busy;
   const renderPreview = (): ReactNode => (
     <>
@@ -1006,7 +1016,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <Button variant="ghost" size="sm" onClick={harness.reload} label={t('coding.preview.reload')} /></p>}
       {previewIdle ? <p className="cd-console__empty">{workbenchCopy('coding.preview.idle')}</p>
         : !harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
-      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className={previewIdle ? 'cd-frame cd-frame--idle' : 'cd-frame'} aria-hidden={previewIdle || undefined} tabIndex={tab === 'preview' && !previewIdle ? undefined : -1} />
+      {frameOn && <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className={previewIdle ? 'cd-frame cd-frame--idle' : 'cd-frame'} aria-hidden={previewIdle || undefined} tabIndex={tab === 'preview' && !previewIdle ? undefined : -1} />}
     </>
   );
 
@@ -1164,7 +1174,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const showReveal = mode !== 'landing' && Boolean(session) && !solution && !solutions;
   const showSkip = signedIn && mode === 'section' && !skipResult;
   const actionBar = (
-    <div className="cd-editor-actions">
+    <div className="cd-editor-actions" onPointerEnter={wantFrame} onFocus={wantFrame}>
       <div className="cd-actions cd-actions--commands">
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus

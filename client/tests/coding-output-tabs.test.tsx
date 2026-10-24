@@ -73,6 +73,35 @@ it('opens React on Results, keeps the empty preview to one line, and shows the p
   expect(screen.getByRole('tab', { name: /Results/ })).toHaveAttribute('aria-selected', 'true');
 });
 
+// Perf baseline #587 C13: a React task booted the sandbox frame (216 KB gzip
+// and a 280 ms long task at 4x CPU) as it opened, before any Run or Preview.
+it('loads the sandbox frame on the first Run, not while the brief is read', async () => {
+  const { container } = mount('react');
+  expect(container.querySelector('iframe')).toBeNull();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Run' })); });
+  const frame = container.querySelector('iframe');
+  expect(frame).toHaveAttribute('src', '/sandbox/index.html');
+  // It stays for the visit: Results again does not unload it.
+  fireEvent.click(screen.getByRole('tab', { name: /Results/ }));
+  expect(container.querySelector('iframe')).toBe(frame);
+});
+
+it('starts the sandbox frame when a pointer or the focus reaches Run and Submit', () => {
+  const pointer = mount('react');
+  expect(pointer.container.querySelector('iframe')).toBeNull();
+  fireEvent.pointerEnter(pointer.container.querySelector('.cd-editor-actions')!);
+  expect(pointer.container.querySelector('iframe')).not.toBeNull();
+  pointer.unmount();
+  const keyboard = mount('react');
+  act(() => { screen.getByRole('button', { name: 'Run' }).focus(); });
+  expect(keyboard.container.querySelector('iframe')).not.toBeNull();
+  keyboard.unmount();
+  // No other track has a frame to load.
+  const javascript = mount('javascript');
+  fireEvent.pointerEnter(javascript.container.querySelector('.cd-editor-actions')!);
+  expect(javascript.container.querySelector('iframe')).toBeNull();
+});
+
 it('scrolls the tab strip instead of squeezing its tabs, and drops the Resources count on a phone (coding-12)', () => {
   mount('javascript');
   expect(screen.getByRole('tab', { name: /Resources/ })).toHaveAttribute('data-tab', 'resources');
