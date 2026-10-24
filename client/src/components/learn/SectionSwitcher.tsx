@@ -13,7 +13,7 @@
 // drawn as two parts so the list can set them apart. Up and Down move along
 // the list as Left and Right do.
 
-import { useEffect, useRef, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Button } from '@astryxdesign/core/Button';
@@ -182,19 +182,28 @@ export function SectionHeader({
   const joinable = section !== 'web-developer' && !authLoading && signedIn && hasPlan && !isMember;
 
   // A join removes the button that started it: the saved line or the error's
-  // Try again takes its place. Focus goes there, unless the learner moved it
-  // elsewhere during the save.
+  // Try again takes its place, and a retry's Try again gives way to the
+  // saving join button. Focus goes there, unless the learner moved it
+  // elsewhere during the save. It moves in the commit that removed the
+  // focused control (a layout effect), so focus never rests on <body> between
+  // the two: the app's first-page route focus (App.tsx) reads a focus on
+  // <body> as nobody's and would take it to the page, and the saved line
+  // would then leave it there as the learner's move.
   const headerRef = useRef<HTMLDivElement>(null);
   const retryRef = useRef<HTMLButtonElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const status = join?.status ?? null;
   const shownStatus = useRef(status);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (shownStatus.current === status) return;
     shownStatus.current = status;
     const held = document.activeElement;
     if (held && held !== document.body && !headerRef.current?.contains(held)) return;
-    (status === 'saved' ? statusRef.current : status === 'error' ? retryRef.current : null)?.focus();
+    const target = status === 'saved' ? statusRef.current
+      : status === 'error' ? retryRef.current
+        : status === 'saving' ? headerRef.current?.querySelector<HTMLElement>('.rm-section-action button')
+          : null;
+    target?.focus();
   }, [status]);
 
   let action: ReactNode = null;
