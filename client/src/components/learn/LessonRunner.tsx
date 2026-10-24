@@ -3,7 +3,7 @@
 // loads it when a level opens, with the level intros and worked-example
 // figures it shows, so the Learn map paints without them.
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button as AxButton } from '@astryxdesign/core/Button';
 import { Text } from '@astryxdesign/core/Text';
@@ -47,7 +47,7 @@ import { figuresFor } from '../../../../shared/lesson-figures';
 import { glossaryDomainFor } from '../../lib/glossaryDomain';
 import { RedFlagDialog } from '../RedFlagDialog';
 import { IconTile, CloseIcon, TrophyIcon } from '../ui/icons';
-import { lazyShellPart } from '../../lib/routeRecovery';
+import { preloadTaskWorkbench, useWorkbench } from '../../coding/loadWorkbench';
 import { ShellPartBoundary } from '../ShellPartBoundary';
 import ErrorRetry from '../ErrorRetry';
 import './LessonRunner.css';
@@ -55,11 +55,13 @@ import { SaveSharkCard } from '../SaveSharkCard';
 import { CheckIcon } from './SectionRail';
 
 // The coding workbench pulls the editor and the runner in; keep it out of the
-// Learn chunk until a devShark level actually reaches its coding phase. A
-// `lazyShellPart` inside its own boundary: when its code does not load, the
-// level stays on screen with "Could not load this task." and a Try again that
-// asks again, or reloads when the same failure comes straight back.
-const CodingWorkbench = lazyShellPart(() => import('../../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
+// Learn chunk until a devShark level reaches its last question before a
+// coding step (preloadTaskWorkbench below), as a task link's intent does on
+// /coding. It is drawn from state, not through Suspense, as the task screen
+// draws it (useWorkbench): React held a suspended step's reveal back for up
+// to 300 ms after its code was in (#587 paths walk). When its code does not
+// load, the level stays on screen with "Could not load this task." and a Try
+// again that asks again, or reloads when the same failure comes straight back.
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -161,13 +163,16 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
   const { base, epoch } = choice;
   // Leaving the step writes what is still waiting.
   useEffect(() => () => flushAutosave(task.id), [task.id]);
+  const [attempt, setAttempt] = useState(0);
+  const workbench = useWorkbench(true, attempt);
+  const CodingWorkbench = workbench.View;
   const loading = <div className="cd-note" role="status">{t('common.loading')}</div>;
-  if (!opening) return loading;
+  if (workbench.failed && !CodingWorkbench) return <ErrorRetry message={t('coding.loadError')} onRetry={() => setAttempt((n) => n + 1)} busy={workbench.reloading} />;
+  if (!opening || !CodingWorkbench) return loading;
   return (
     <>
       <DraftNote choice={choice} />
-      <Suspense fallback={loading}>
-        <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
+      <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
           <CodingWorkbench
             key={choice.version}
             task={currentTask.task}
@@ -193,8 +198,7 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
             onRevealed={onRevealed}
             onContinue={onContinue}
           />
-        </ShellPartBoundary>
-      </Suspense>
+      </ShellPartBoundary>
     </>
   );
 }
@@ -252,6 +256,10 @@ export function LessonRunner({
   // server has a passed verdict for every one of them (the ids are sealed in
   // the level session), so the finish screen reads the server's answer.
   const codingTasks = useMemo(() => (playable.kind === 'level' ? playable.coding ?? [] : []), [playable]);
+  // One answer before a coding step, its workbench (and, where it will show,
+  // the editor) starts loading, so the step opens at once (#587 paths walk).
+  const nearCoding = codingTasks.length > 0 && qIndex >= total - 1;
+  useEffect(() => { if (nearCoding) void preloadTaskWorkbench().catch(() => undefined); }, [nearCoding]);
   const [codingPhase, setCodingPhase] = useState(false);
   const [codingIndex, setCodingIndex] = useState(0);
   const [codingPassed, setCodingPassed] = useState<string[]>([]);
