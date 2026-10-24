@@ -9,7 +9,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingHome, CodingTaskScreen, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import { CODING_INDEX } from '../../shared/coding-index';
 
-const asked = vi.hoisted(() => ({ ids: [] as (string | undefined)[] }));
+const asked = vi.hoisted(() => ({ ids: [] as (string | undefined)[], reads: [] as string[] }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: false, isLoading: false }) }));
 vi.mock('../src/lib/entitlement', () => ({
   useEntitlement: () => ({ tier: 'free', signedIn: false, loading: false, failed: false, data: null, refetch: () => {} }),
@@ -17,17 +17,22 @@ vi.mock('../src/lib/entitlement', () => ({
 vi.mock('../src/coding/api', () => ({
   codingKeys: { task: (id: string) => ['task', id], progress: () => ['progress'] },
   saveCodingDraft: vi.fn(),
-  useCodingProgress: () => ({ data: undefined, isLoading: false, isError: false, refetch: () => {} }),
+  useCodingProgress: () => { asked.reads.push('progress'); return { data: undefined, isLoading: false, isError: false, refetch: () => {} }; },
   useCodingTask: (id: string | undefined) => { asked.ids.push(id); return { data: undefined, isLoading: false, isError: false }; },
 }));
 vi.mock('../src/coding/practice', () => ({
-  useBookmarks: () => ({ data: { saved: [] }, isPending: false, isError: false }),
+  useBookmarks: () => { asked.reads.push('bookmarks'); return { data: { saved: [] }, isPending: false, isError: false }; },
   useSaveChallenge: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
-  usePracticeSession: () => ({ data: { session: null } }),
+  usePracticeSession: () => { asked.reads.push('session'); return { data: { session: null } }; },
   useAdvanceSession: () => ({ mutate: vi.fn() }),
 }));
 vi.mock('../src/components/coding/ChallengeRunPlanner', () => ({ ChallengeRunPlanner: () => null, taskHref: (id: string) => `/coding/javascript/${id}` }));
 vi.mock('../src/coding/CodingWorkbench', () => ({ CodingWorkbench: () => null }));
+vi.mock('../src/coding/loadWorkbench', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../src/coding/loadWorkbench')>(),
+  useWarmWorkbench: () => { asked.reads.push('warm'); },
+  useWorkbench: () => { asked.reads.push('workbench'); return { View: null, failed: false, reloading: false }; },
+}));
 
 function mount(path: string) {
   render(
@@ -48,6 +53,7 @@ function mount(path: string) {
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   asked.ids = [];
+  asked.reads = [];
   document.head.innerHTML = '';
 });
 
@@ -58,6 +64,14 @@ it.each(['/coding/system-design', '/coding/system-design/sd-url-shortener', '/co
   expect(screen.getByRole('link', { name: 'Back to Coding' })).toHaveAttribute('href', '/coding');
   expect(screen.queryByText(/system design/i)).toBeNull();
   expect(asked.ids.every((id) => id === undefined), 'the task is never asked for').toBe(true);
+  // Perf baseline #587 C26: the page reads no progress, stars or run for a
+  // track that does not exist, and warms no workbench or editor.
+  expect(asked.reads).toEqual([]);
+});
+
+it('still reads progress and stars and warms the workbench on a real track', () => {
+  mount('/coding/javascript');
+  expect(asked.reads).toEqual(expect.arrayContaining(['progress', 'bookmarks', 'warm']));
 });
 
 it('lists no system design on the Coding home, and ships none in the index', () => {
