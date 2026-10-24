@@ -8,6 +8,8 @@ import { useCallback } from 'react';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { useAuth } from './auth';
+import { queryClient } from './queryClient';
+import { freshStoredAccessToken, storedSessionUserId } from './supabaseClient';
 import type { EntitlementResponse, Tier } from '../../../shared/tiers';
 import { ENTITLEMENT_QUERY_ROOT } from './upgradeSheet';
 
@@ -39,6 +41,23 @@ export const entitlementQuery = (userId: string) => queryOptions({
   queryFn: ({ signal }) => fetchEntitlement(signal),
   staleTime: 60_000,
 });
+
+/**
+ * Start the plan read of the account whose session is stored, as the app
+ * starts (perf baseline #587 C14). The header and every Learn map read the
+ * plan anyway, and a map holds its first draw for it; asked only once auth
+ * had restored the user, it left after the supabase-js download and the
+ * session read. With a stored token supabase-js would hand out unchanged
+ * (`freshStoredAccessToken`) the read leaves at once, under the key the
+ * account's own query uses, so the hold finds it answered or in flight. One
+ * attempt, as the hold's own read (lib/routeData.ts readOnce). A session that
+ * turns out to have ended signs out, and the sign-out empties the cache.
+ */
+export function prefetchStoredAccountPlan(): void {
+  const userId = storedSessionUserId();
+  if (!userId || !freshStoredAccessToken()) return;
+  void queryClient.prefetchQuery({ ...entitlementQuery(userId), retry: false });
+}
 
 /** `held`: the page's first-data hold read the plan (lib/routeData.ts
  * HELD_READ), so a failure it met shows as failed instead of loading again. */

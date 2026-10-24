@@ -14,6 +14,7 @@ import { ColorModeProvider } from './theme/ColorModeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LanguageProvider } from './i18n/LanguageContext';
 import { AuthProvider } from './lib/auth';
+import { prefetchStoredAccountPlan } from './lib/entitlement';
 import { queryClient } from './lib/queryClient';
 import { initSentry } from './lib/sentry';
 import { initAnalytics } from './lib/analytics';
@@ -75,6 +76,9 @@ const ReactQueryDevtools = import.meta.env.DEV
   : null;
 
 capturePublicGuide();
+// A returning learner's plan, asked now rather than once the header and the
+// page have rendered and auth has restored the user (lib/entitlement.ts).
+prefetchStoredAccountPlan();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>

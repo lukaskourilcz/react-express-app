@@ -1588,6 +1588,12 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   an OAuth return asks supabase-js as before, which refreshes or removes the
   session. The trade-off is bounded by the token's own expiry: the server
   verifies it on every request exactly as before.
+- **The plan read** (`useEntitlement`, `lib/entitlement.ts`). A returning
+  learner's plan is asked as the app starts (`prefetchStoredAccountPlan` in
+  `main.tsx`), for the stored session's account and only with a token
+  supabase-js would hand out unchanged, so a Learn map's first-data hold finds
+  it answered instead of starting it after auth has restored the user (#587
+  C14). It is the same request the header made anyway.
 - **The sign-in report** (`POST /api/user/authevent`, the `/dev` Logs tab)
   goes once per sign-in. supabase-js also says `SIGNED_IN` for the stored
   session each time a tab is shown again; `lib/auth.tsx` remembers the
