@@ -5,13 +5,15 @@
 // The scrubber below travels in this lazy chunk with the SDK, so the shell
 // carries none of it.
 import type { Breadcrumb, Event } from '@sentry/react';
-import { init, browserTracingIntegration } from '@sentry/react';
+import { init, browserTracingIntegration, captureException } from '@sentry/react';
+import type { EarlyError } from './sentry';
 
 export { captureException } from '@sentry/react';
 
-/** Start monitoring. The options live here, in the lazy chunk, so the shell
- * carries only the DSN check and the import (lib/sentry.ts). */
-export function start(dsn: string, environment: string): void {
+/** Start monitoring, then send the errors lib/sentry.ts kept while this
+ * chunk loaded. The options live here, in the lazy chunk, so the shell
+ * carries only the DSN check, the queue and the import (lib/sentry.ts). */
+export function start(dsn: string, environment: string, early: EarlyError[] = []): void {
   init({
     dsn,
     environment,
@@ -34,6 +36,10 @@ export function start(dsn: string, environment: string): void {
     beforeSendTransaction: (event) => scrubEvent(event),
     beforeBreadcrumb: (crumb) => scrubBreadcrumb(crumb),
   });
+  // Through the same scrubbing as every other event (beforeSend above).
+  for (const [error, context, uncaughtBy] of early) {
+    captureException(error, uncaughtBy ? { mechanism: { type: uncaughtBy, handled: false } } : context ? { extra: context } : undefined);
+  }
 }
 
 /* ── what an event may carry ─────────────────────────────────────────────

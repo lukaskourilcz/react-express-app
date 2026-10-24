@@ -11,8 +11,11 @@ import { accountEpoch } from '../../lib/accountData';
 import { FadeFinCta, Kicker, SwimCta } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
-import { useWorkbench, useWarmWorkbench } from '../../coding/loadWorkbench';
+import { preloadTaskWorkbench, useWorkbench, useWarmWorkbench } from '../../coding/loadWorkbench';
 import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
+import { releaseCodingTaskRead, startCodingTaskRead } from '../../coding/earlyTaskRead';
+import { queryClient as appQueryClient } from '../../lib/queryClient';
+import { freshStoredAccessToken, storedSessionUserId } from '../../lib/supabaseClient';
 import { autosaveDraft, deviceDraft, draftStoredBySubmit, flushAutosave, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
 import { DraftNote, useDraftChoice } from '../../coding/DraftNote';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
@@ -78,6 +81,43 @@ function difficultyParam(params: URLSearchParams): Difficulty | 'all' {
   if (isDifficulty(value)) return value;
   const tier = Number(params.get('tier'));
   return isCodingTier(tier) ? TIER_DIFFICULTY[tier] : 'all';
+}
+
+/** The sealed Learn session a task tab was opened with: in the address's
+ * fragment when the Build-it link opened it, then in this tab's storage. */
+function learnSessionAt(taskId: string | undefined): string | undefined {
+  const sealed = new URLSearchParams(window.location.hash.slice(1)).get('learn');
+  try { return sealed ?? sessionStorage.getItem(`devshark:learn-coding:${taskId}`) ?? undefined; } catch { return sealed ?? undefined; }
+}
+
+// The first page of a visit (perf baseline #587 C16): a task address asks for
+// its task, and fetches its workbench and editor, as this chunk evaluates,
+// before the screen renders. The screen's own read then takes the answer
+// (coding/earlyTaskRead.ts); a hidden track asks for nothing.
+{
+  const first = /^\/coding\/([^/]+)\/([^/]+)\/?$/.exec(window.location.pathname);
+  let taskId: string | null = null;
+  try { taskId = first ? decodeURIComponent(first[2]) : null; } catch { taskId = null; }
+  if (first && taskId && isCodingSectionTrack(first[1])) {
+    startCodingTaskRead(appQueryClient, taskId, learnSessionAt(taskId));
+    void preloadTaskWorkbench().catch(() => undefined);
+  }
+  // A list address (perf baseline #587 C15): a signed-in list holds its first
+  // draw on the plan, the coding progress and the open run (home) or the
+  // saved stars (a track), which left only once the screen rendered. The
+  // plan already leaves as the app starts (lib/entitlement.ts
+  // prefetchStoredAccountPlan); the others leave now, for the stored
+  // session's account and only with a token supabase-js would hand out
+  // unchanged, under the keys the hold and the screen read, one attempt each
+  // as the hold's own reads (lib/routeData.ts readOnce). A session that turns
+  // out to have ended signs out, and the sign-out empties the cache.
+  const list = /^\/coding(?:\/([^/]+))?\/?$/.exec(window.location.pathname);
+  const screen = !list ? null : list[1] === undefined ? 'home' : list[1] === 'fullstack' ? 'fullstack' : isCodingSectionTrack(list[1]) ? 'track' : null;
+  if (screen && storedSessionUserId() && freshStoredAccessToken()) {
+    void appQueryClient.prefetchQuery({ ...codingProgressQuery, retry: false });
+    if (screen === 'home') void appQueryClient.prefetchQuery({ ...practiceSessionQuery, retry: false });
+    if (screen === 'track') void appQueryClient.prefetchQuery({ ...bookmarksQuery, retry: false });
+  }
 }
 
 /** A track, or a challenge, that does not exist (or no longer does): a
@@ -474,16 +514,22 @@ export function FullStackScreen() {
 }
 
 /* ── /coding/:track ──────────────────────────────────────────────────── */
+/** A track the section does not offer (system design is hidden) is the
+ * not-found page, decided before anything loads: it reads no plan, progress
+ * or stars and warms no workbench (perf baseline #587 C26). */
 export function CodingTrackScreen() {
+  const { track } = useParams();
+  return isCodingSectionTrack(track) ? <CodingTrackList track={track} /> : <CodingNotFound what="track" track={null} />;
+}
+
+function CodingTrackList({ track }: { track: CodingTrack }) {
   useCodingFirstData('bookmarks');
   useWarmWorkbench();
   const { t } = useLanguage();
-  const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { passed, statusOf, lockReason, premiumOf, planLoading, planFailed, retryPlan } = useStatuses(progress.data);
-  const track = isCodingSectionTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
   // An old ?status=due link (the retired review queue) lists everything.
   const statusParam = params.get('status');
@@ -543,7 +589,6 @@ export function CodingTrackScreen() {
   const filtersOn = Boolean(group) || needle !== '' || difficulty !== 'all' || duration !== 'all'
     || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
-  if (!track) return <CodingNotFound what="track" track={null} />;
   // The plan decides which rows carry the Premium mark, so the list waits for
   // it, as the Coding home does; a plan that cannot load says so.
   if (planLoading) return <LoadingScreen label={t('coding.loading')} />;
@@ -749,28 +794,31 @@ function StageNav({ stages, short, currentId, passed, premiumOf }: { stages: rea
   );
 }
 
+/** A track the section does not offer (system design is hidden) is not
+ * found. Its task is never fetched, so no session is issued, and the screen
+ * reads no plan, progress, stars or run for it (perf baseline #587 C26). */
 export function CodingTaskScreen() {
+  const { track, taskId } = useParams();
+  return isCodingSectionTrack(track) && taskId ? <CodingTaskView track={track} taskId={taskId} /> : <CodingNotFound what="track" track={null} />;
+}
+
+function CodingTaskView({ track, taskId }: { track: CodingTrack; taskId: string }) {
   const { t } = useLanguage();
-  const { track: trackParam, taskId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf, premiumOf, passed: passedIds } = useStatuses(progress.data);
-  // A track the section does not offer (system design is hidden) is not
-  // found. Its task is never fetched, so no session is issued.
-  const track = isCodingSectionTrack(trackParam) ? trackParam : null;
-  const [learnLink, setLearnLink] = useState(() => {
-    const sealed = new URLSearchParams(window.location.hash.slice(1)).get('learn');
-    try { return { taskId, session: sealed ?? sessionStorage.getItem(`devshark:learn-coding:${taskId}`) ?? undefined }; } catch { return { taskId, session: sealed ?? undefined }; }
-  });
+  const [learnLink, setLearnLink] = useState(() => ({ taskId, session: learnSessionAt(taskId) }));
   const learnSession = learnLink.taskId === taskId ? learnLink.session : undefined;
   useEffect(() => {
     if (!learnSession || !taskId) return;
     try { sessionStorage.setItem(`devshark:learn-coding:${taskId}`, learnSession); } catch { /* memory copy still works */ }
     if (new URLSearchParams(window.location.hash.slice(1)).has('learn')) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
   }, [learnSession, taskId]);
-  const task = useCodingTask(track ? taskId : undefined, learnSession);
+  const task = useCodingTask(taskId, learnSession);
+  // This screen's read is on: an early read of the first page lets go.
+  useEffect(() => { releaseCodingTaskRead(); }, []);
   useEffect(() => {
     if (learnSession && task.data?.session && task.data.session !== learnSession && task.data.task.id === taskId) {
       setLearnLink({ taskId, session: task.data.session });
@@ -781,7 +829,7 @@ export function CodingTaskScreen() {
   // was typed under: after a sign-out the editor does not reopen on it.
   const [refreshDraft, setRefreshDraft] = useState<{ taskId: string; code: string; epoch: number } | null>(null);
   const [completedTask, setCompletedTask] = useState<string | null>(null);
-  const workbench = useWorkbench(track !== null, attempt);
+  const workbench = useWorkbench(true, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
   const save = useSaveChallenge();
   // An active challenge run carries the learner from one queued task to the
@@ -792,7 +840,7 @@ export function CodingTaskScreen() {
   const runIndex = activeRun && taskId ? activeRun.queue.indexOf(taskId) : -1;
 
   useEffect(() => {
-    if (task.data && track && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
+    if (task.data && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
   }, [task.data, track, navigate]);
 
   // The code the editor opens with, decided once per load of the task: this
@@ -857,7 +905,6 @@ export function CodingTaskScreen() {
     setAttempt((n) => n + 1);
   }, [task, workbench.reloading]);
 
-  if (!track || !taskId) return <CodingNotFound what="track" track={null} />;
   // One loading state until the task and its editor are both in.
   if (task.isLoading || (!task.isError && !workbench.View && !workbench.failed)) {
     return <LoadingScreen label={t('coding.loading')} />;

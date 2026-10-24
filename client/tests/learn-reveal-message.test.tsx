@@ -2,7 +2,7 @@
 // asked for is: "open under the hints" (coding.lesson.solutionShown). This
 // holds the workbench to that: after a reveal in a level, the reference
 // solution is in the hints group, and there is no Solution tab (C3-14).
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -10,6 +10,7 @@ import { en } from '../src/i18n/translations';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { revealCoding } from '../src/coding/api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -24,6 +25,10 @@ const task: PlayableCodingTask = {
   starter: 'const one = () => 0;\n', hints: ['Use a function.'],
   verify: 'tests', estimatedMinutes: 5, tests: [{ call: 'one()', expected: 1 }],
 };
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 it('shows a revealed solution under the hints in a level, where the Learn message says it is', async () => {
   vi.mocked(revealCoding).mockResolvedValue({ solution: 'const one = () => 1;', reference: null, progress: null });

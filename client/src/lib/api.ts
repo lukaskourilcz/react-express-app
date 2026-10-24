@@ -1,4 +1,4 @@
-import { getSupabaseSession, hasStoredSession, mayHaveSession } from './supabaseClient';
+import { freshStoredAccessToken, getSupabaseSession, hasStoredSession, mayHaveSession } from './supabaseClient';
 import { translateStatic } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { openUpgradeSheet } from './upgradeSheet';
@@ -39,6 +39,10 @@ const TOKEN_READ_LIMIT_MS = 4_000;
 
 async function getAccessToken(): Promise<string | null> {
   if (!mayHaveSession()) return null;
+  // A stored token supabase-js would hand out unchanged goes at once, without
+  // the download (lib/supabaseClient.ts, freshStoredAccessToken).
+  const stored = freshStoredAccessToken();
+  if (stored) return stored;
   let timer: number | undefined;
   let session: Awaited<ReturnType<typeof getSupabaseSession>> = null;
   try {
@@ -62,6 +66,25 @@ async function getAccessToken(): Promise<string | null> {
   return null;
 }
 
+/**
+ * Reads whose handler never looks at the caller: the same answer for a guest
+ * and for every account, verified by no token, and cached publicly by the CDN
+ * (docs/product-architecture.md, "Caching"). They go out at once, without the
+ * token, so a signed-in visit no longer holds them behind the supabase-js
+ * download and the session read (perf baseline #587 C10), and the CDN sees the
+ * same request a guest's is. Only GETs of exactly these addresses, as the
+ * client writes them, qualify; a handler that starts reading the caller must
+ * leave this list.
+ *
+ *   /api/settings                               game settings (api/settings.ts)
+ *   /api/quiz/roadmap                           the Learn map (no topic, level, test or resource)
+ *   /api/quiz/roadmap?resource=learning-path-catalog   the published path manifests
+ *   /api/quiz/roadmap?resource=lesson&id=…      a Learn level's lesson
+ */
+const PUBLIC_READ = /^\/api\/(?:settings|quiz\/roadmap(?:\?resource=(?:learning-path-catalog|lesson&id=[a-z0-9-]+))?)$/;
+export const isPublicRead = (url: string, method?: string): boolean =>
+  (!method || method.toUpperCase() === 'GET') && PUBLIC_READ.test(url);
+
 /** The server refused locked content; the upgrade sheet is already open. */
 export const isPremiumRequired = (err: unknown): boolean =>
   err instanceof ApiError && err.status === 402 && err.code === PREMIUM_REQUIRED;
@@ -80,7 +103,7 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   try {
     // Inside the try, so a token that cannot be read settles like any other
     // failure: the timer and the abort listener are released below.
-    const token = await getAccessToken();
+    const token = isPublicRead(url, rest.method) ? null : await getAccessToken();
     const res = await fetch(url, {
       ...rest,
       signal: controller.signal,

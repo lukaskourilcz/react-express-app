@@ -1,7 +1,7 @@
 // The results pane's tabs (UX audit coding-04): one order on every track, so
 // the shared tabs keep their place, and React opens on Results like the rest,
 // with an empty preview that takes no room until a run draws into it.
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -10,10 +10,11 @@ import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import type { HarnessRun } from '../src/coding/useReactHarness';
 import { runCodeTests } from '../src/coding/runner/run-tests';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({ Editor: () => <textarea aria-label="Test editor" /> }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({ data: undefined }), submitCoding: vi.fn(), revealCoding: vi.fn(), resetCoding: vi.fn() }));
-vi.mock('../src/coding/runner/run-tests', () => ({ warmRunner: () => undefined, runCodeTests: vi.fn(), runPassed: () => false }));
+vi.mock('../src/coding/runner/run-tests', () => ({ warmRunner: () => undefined, holdCompiler: () => () => {}, compilerStarted: () => false, runCodeTests: vi.fn(), runPassed: () => false }));
 const harness = vi.hoisted(() => {
   const handle: { ready: boolean; run: HarnessRun | null; start: () => Promise<HarnessRun>; reload: () => void; iframeRef: () => void; frameKey: number } = {
     ready: true, run: null, reload: () => {}, iframeRef: () => {}, frameKey: 0,
@@ -38,6 +39,10 @@ const mount = (track: keyof typeof tasks) => render(
   </LanguageProvider></MemoryRouter>,
 );
 const tabNames = () => screen.getAllByRole('tab').map((tab) => tab.textContent?.replace(/\d+(\/\d+)?$/, '').trim());
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 beforeEach(() => { harness.run = null; });
 
@@ -71,6 +76,35 @@ it('opens React on Results, keeps the empty preview to one line, and shows the p
   // Later runs go back to the checks the learner has to pass.
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Run' })); });
   expect(screen.getByRole('tab', { name: /Results/ })).toHaveAttribute('aria-selected', 'true');
+});
+
+// Perf baseline #587 C13: a React task booted the sandbox frame (216 KB gzip
+// and a 280 ms long task at 4x CPU) as it opened, before any Run or Preview.
+it('loads the sandbox frame on the first Run, not while the brief is read', async () => {
+  const { container } = mount('react');
+  expect(container.querySelector('iframe')).toBeNull();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Run' })); });
+  const frame = container.querySelector('iframe');
+  expect(frame).toHaveAttribute('src', '/sandbox/index.html');
+  // It stays for the visit: Results again does not unload it.
+  fireEvent.click(screen.getByRole('tab', { name: /Results/ }));
+  expect(container.querySelector('iframe')).toBe(frame);
+});
+
+it('starts the sandbox frame when a pointer or the focus reaches Run and Submit', () => {
+  const pointer = mount('react');
+  expect(pointer.container.querySelector('iframe')).toBeNull();
+  fireEvent.pointerEnter(pointer.container.querySelector('.cd-editor-actions')!);
+  expect(pointer.container.querySelector('iframe')).not.toBeNull();
+  pointer.unmount();
+  const keyboard = mount('react');
+  act(() => { screen.getByRole('button', { name: 'Run' }).focus(); });
+  expect(keyboard.container.querySelector('iframe')).not.toBeNull();
+  keyboard.unmount();
+  // No other track has a frame to load.
+  const javascript = mount('javascript');
+  fireEvent.pointerEnter(javascript.container.querySelector('.cd-editor-actions')!);
+  expect(javascript.container.querySelector('iframe')).toBeNull();
 });
 
 it('scrolls the tab strip instead of squeezing its tabs, and drops the Resources count on a phone (coding-12)', () => {

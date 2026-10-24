@@ -37,10 +37,10 @@ import { readOnce, settled, useFirstData } from '../lib/routeData';
 import { useTrack, trackTopics, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { preferredLearningOf, saveLearningPreference } from '../lib/trackPref';
 import { eligibilityKeys, useInPlan, useLearnerSections } from '../lib/eligibility';
-import { useLocks } from '../lib/locks';
+import { useContentLocks } from '../lib/contentLocks';
 import { LEARN_SECTIONS } from '../../../shared/learn-sections';
 import { railEntries, sectionProgress } from './learn/sections';
-import { useFdePathSteps } from './learn/useFdePathSteps';
+import { useFdeOpenInSettings, useFdePathSteps } from './learn/useFdePathSteps';
 import { learnText } from '../i18n/translations.learn';
 import { categoryLabelKey, getCategoryHexColor } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
@@ -56,15 +56,23 @@ import './CareerRoadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-/** Cache the structure and FDE evidence reads before the Career groups draw. */
+/** Hold the page's first draw for the structure only (perf baseline #587
+ * C25). It also waited for the 30 KB path catalogue and the account's
+ * enrollments, which only the FDE group's figure reads; that figure says
+ * "Loading…" in its own line until they land (useFdePathSteps). They start
+ * beside the structure while the path may be open, and not at all while the
+ * settings say it is closed (C06, C20). */
 function useRoadmapFirstData() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  useFirstData(`roadmap ${user?.id ?? ''}`, () => settled([
-    readOnce(queryClient, roadmapStructureQuery),
-    readOnce(queryClient, pathCatalogQuery),
-    user ? readOnce(queryClient, enrollmentsQuery(user.id)) : null,
-  ]));
+  const path = useFdeOpenInSettings();
+  useFirstData(`roadmap ${user?.id ?? ''}`, () => {
+    if (path === 'open' || path === 'unknown') {
+      void queryClient.prefetchQuery({ ...pathCatalogQuery, retry: false });
+      if (user) void queryClient.prefetchQuery({ ...enrollmentsQuery(user.id), retry: false });
+    }
+    return settled([readOnce(queryClient, roadmapStructureQuery)]);
+  });
 }
 
 // Tinted Card variants cycle across the pillars so each knowledge area reads as
@@ -193,14 +201,14 @@ export default function CareerRoadmap() {
   const inPlan = useInPlan();
   const { hasPlan, members } = useLearnerSections();
   const extraUnlocks = useExtraUnlocks();
-  // Kept per structure, as on /learn: useLocks memoises its content index on
+  // Kept per structure, as on /learn: useContentLocks memoises its content index on
   // this object, and a fresh one each render rebuilt the index and lockOf.
   const levelCounts = useMemo(
     () => Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([topic, data]) => [topic, data.levels.length])),
     [structure],
   );
   const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
-  const { lockOf } = useLocks(levelCounts);
+  const { lockOf } = useContentLocks(levelCounts);
   const fde = useFdePathSteps();
   const sectionGroups = LEARN_SECTIONS.map((section) => {
     const entries = railEntries(section.id, {

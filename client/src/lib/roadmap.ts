@@ -6,7 +6,7 @@ import { ApiError, apiFetch } from './api';
 import type { LearnLessonResponse } from '../../../shared/learning-path-api';
 import { accountEpoch } from './accountData';
 import { staleProfileStats } from './queryClient';
-import { readJSON, writeJSON } from './storage';
+import { readJSON, readString, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { getSubject } from './subjects';
 import { assessmentUnlocks, ASSESSMENT_QUESTION_COUNT } from '../../../shared/assessment';
@@ -525,10 +525,32 @@ export function registerAccountExtras(onReceive: (extras: AccountExtras) => void
 // that ask while it is in flight, for the same account. A sync still in flight
 // when the account signs out answers for nobody: it writes nothing (see
 // accountEpoch), and the next account's first ask starts its own.
+//
+// A sync that answered less than PROGRESS_SYNC_FRESH_MS ago, for the same
+// account and with no level completed since, answers the next ask too (perf
+// baseline #587 C08 and C22). The sign-in sync in App, Today's and the map's
+// all asked within a second of each other on a first Learn visit, and every
+// client-side return to a map asked again; each read costs an Auth getUser,
+// two Upstash calls and a roadmap_progress read. Within this tab every change
+// the server makes to the record comes back in the answer that made it (a
+// completion writes its record, completionWrites below), so only a change
+// made in another tab or device can wait, for at most the window. A device
+// copy that is no longer the one the sync left (another tab wrote it, or it
+// was cleared) is read again at once.
+export const PROGRESS_SYNC_FRESH_MS = 60_000;
 let syncInFlight: { epoch: number; done: Promise<void> } | null = null;
+let lastSynced: { epoch: number; writes: number; at: number; copy: string } | null = null;
+const deviceCopy = (): string => `${readString(PROGRESS_KEY)}\n${readString(UNLOCKS_KEY)}`;
+const syncedRecently = (epoch: number): boolean =>
+  lastSynced !== null
+  && lastSynced.epoch === epoch
+  && lastSynced.writes === completionWrites
+  && Date.now() - lastSynced.at < PROGRESS_SYNC_FRESH_MS
+  && lastSynced.copy === deviceCopy();
 export function syncProgressWithServer(): Promise<void> {
   const epoch = accountEpoch();
   if (syncInFlight?.epoch !== epoch) {
+    if (syncedRecently(epoch)) return Promise.resolve();
     const entry = { epoch, done: syncOnce(epoch).finally(() => { if (syncInFlight === entry) syncInFlight = null; }) };
     syncInFlight = entry;
   }
@@ -604,5 +626,7 @@ async function syncOnce(epoch: number): Promise<void> {
 
     onAccountExtrasReceived({ wallets, inventories });
   }
+  // Fresh from here on, unless a completion answered while the GET was out.
+  lastSynced = { epoch, writes: writesBefore, at: Date.now(), copy: deviceCopy() };
   // No write follows: the server keeps progress, unlocks and extras itself.
 }

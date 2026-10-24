@@ -9,7 +9,27 @@
 // the route will run. The browser fetches and evaluates a module once, so a
 // preload never downloads anything twice.
 
+import { startTransition, useEffect, useState } from 'react';
+
 type Loader = () => Promise<unknown>;
+
+/**
+ * False for the app's first commit, then true, set in a transition (perf
+ * baseline #587 C04). The route box (App.tsx) draws its loader as content
+ * while this is false, so its Suspense boundary is revealed from the first
+ * frame, and renders the first page once it is true: in a transition, which
+ * keeps the loader up until the page can draw whole and commits it the moment
+ * it can. Shown through the fallback instead, the page waited for React's
+ * reveal throttle: a boundary leaving its fallback on a retry commits no
+ * sooner than 300 ms after the last fallback any boundary showed or hid.
+ */
+export function useFirstPageTransition(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    startTransition(() => setReady(true));
+  }, []);
+  return ready;
+}
 
 const loaders: { matches: (pathname: string) => boolean; load: Loader }[] = [];
 

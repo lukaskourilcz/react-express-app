@@ -652,6 +652,93 @@ Code typed a moment before and still waiting is written first
 (`beforeAccountChange`), and work begun for the account that left (a draft
 read, a brief refresh) checks `accountEpoch` and opens nothing.
 
+### What a task screen loads, and when
+
+The workbench's heavy parts load when the learner reaches for them, not when
+a page opens (perf audit #587). None of this changes what is graded, saved or
+shown once it has loaded.
+
+- **Prettier** (about 170 KB gzip) loads on the first Format press. Nothing
+  formats in the background: Format is on whenever the code differs from the
+  starter as authored or from what the last press produced, and a press that
+  changes nothing turns it off until the next edit. Code Prettier cannot read
+  says why in the notes beside the editor and turns Format off until the next
+  edit. Before, the page formatted the whole program 350 ms after it opened and after every
+  typing pause to decide whether Format was on (C02, C24).
+- **The editor** (CodeMirror, about 170 KB gzip of the workbench's 190) is
+  its own chunk (`client/src/coding/loadEditor.ts`). A task screen fetches it
+  beside the workbench and draws once both are in; a pointer, focus or touch
+  on a task link starts both. A narrow screen that shows the puzzle or the
+  "bigger screen" note fetches no editor until the learner chooses it there;
+  from then on it stays mounted, hidden after a resize, as before. Where the
+  editor is not in yet (a Learn level's coding step, the choice on a phone)
+  its box holds the place and the brief and controls are already drawn; an
+  editor that fails to load offers Try again in that box alone. The editor's
+  code is evaluated in a task of its own, apart from the workbench's (C12,
+  C21).
+- **The first page of a visit** to a task address asks for the task, and
+  fetches the workbench and editor, as the section's chunk evaluates, before
+  the screen renders (`client/src/coding/earlyTaskRead.ts`); the screen's
+  own read takes that answer instead of asking again. A task's answer counts
+  as this visit's for 5 s (`TASK_HANDOFF_MS`) so the screen does not ask a
+  second time; nothing outlives the screen (`gcTime: 0`), so every visit
+  still asks afresh and a stage never opens from an older draft. An answer
+  the screen never takes is let go after 15 s. Before, the request left only
+  once the screen had rendered (C16).
+- **The first page of a visit** to a coding list asks, as the section's
+  chunk evaluates, for what a signed-in list holds its first draw on: the
+  coding progress, and the open run on `/coding` or the saved stars on a
+  track (`/coding/fullstack` reads progress only). They go only for the
+  stored session's account and only with a token supabase-js would hand out
+  unchanged, under the keys the list's first-data hold reads, one attempt
+  each; the plan already leaves as the app starts. A hidden track, the
+  retired review address and a signed-out visit ask for nothing. Before,
+  the three reads left only once the screen rendered (C15).
+- **The coding lists** (`/coding`, a track, `/coding/fullstack`) warm the
+  workbench (about 21 KB gzip) when the browser is idle, and no longer the
+  editor with it: a list visit that opens no task, or opens one on a phone,
+  costs no CodeMirror, and a pointer, focus or touch on a task link starts
+  the editor beside the workbench (`useWarmWorkbench`,
+  `client/src/coding/loadWorkbench.ts`). Before, every list visit downloaded
+  both, 190 KB gzip (C03).
+- **TypeScript's compiler** (about 1 MB gzip, 4 MB of JavaScript) loads
+  once the learner reaches for the code: a pointer or the focus in the editor
+  or on the Run and Submit row, an edit, the first Run or Submit, or the
+  choice of the editor on a narrow screen. It loads into one compiler worker
+  (`holdCompiler`, `client/src/coding/runner/run-tests.ts`) that stays while
+  the task is open and 30 s after (`COMPILER_KEEP_MS`), so the next
+  TypeScript task finds it. That worker only type-checks and transpiles and
+  never runs the learner's code; each Run's JavaScript still runs in a fresh
+  worker with the grader's realm, so no Run sees another's. A check that ran
+  past its 8 s, out of stack, or a compiler that did not load drops the
+  worker, as the server's type-check pool drops its thread. A Run that finds
+  the worker still checking code an earlier Run left behind (a Submit's
+  preview cancelled by the server's answer) waits at most 1 s
+  (`ABANDONED_CHECK_GRACE_MS`) and then drops it, so a runaway type holds no
+  later Run for its whole 8 s; a compiler still downloading is waited for.
+  A check whose Run was cancelled or whose task was left gets the same 1 s
+  and is then dropped even when no Run waits, so a runaway type does not
+  keep a core busy in the background (a Run's own worker used to be stopped
+  at once). Before, the compiler downloaded as the task opened and every Run evaluated it again in
+  a new worker (C01). Trade-off: a reader who goes offline before touching
+  the code or Run has no compiler for that Run (the runner says it could not
+  load, never a failed attempt); the runner's own script still loads while
+  the brief is read.
+- **The runner's script** is fetched by a short-lived worker once per page
+  (`warmRunner`); a later task or a return to one starts no worker for it
+  again. The task request itself is still made on every visit: it carries
+  the sealed session and the account draft, which must be current (C23,
+  part).
+- **The React sandbox frame** (`client/sandbox/`, about 216 KB gzip and a
+  long task as it boots) mounts on the first Run or Submit, when the Preview
+  tab opens, or when a pointer or the focus reaches the Run and Submit row,
+  and stays for the visit. Before, it booted as a React task opened (C13). A
+  Run that arrives first waits for the frame within the run's own 20 s
+  ready budget, as a Run during the old boot did.
+- **A hidden track** (system design) is the not-found page before anything
+  loads: the track page and its task addresses read no plan, progress, stars
+  or run and warm no workbench (C26).
+
 ### Evolving projects and short paths
 
 `shared/evolving.ts` holds fourteen projects with 146 stages and fifteen
@@ -734,7 +821,37 @@ rewards. A failed lesson read still permits the questions. The content
 contracts refuse a trace with no frames, and `LessonBody` shows one that
 slips through as its words instead of failing the lesson. The level runner
 (`components/learn/LessonRunner.tsx`) is a chunk of its own: Learn fetches it
-when a level opens, not with the map.
+when a level opens, not with the map. So is the reader (`LearnLesson.tsx`,
+with `LessonBody`, its code runner, the terms bar and `LearningPaths.css`,
+about 11 KB gzip), which only levels with a reading open: it loads when such
+a level opens or the learner reaches for one (`components/learn/lessonParts.tsx`,
+#587 C19). A reader whose code does not load says the lesson could not load
+and offers Try again and the questions, as a failed lesson read does. The
+press that opens a reading also asks for the lesson
+(`components/learn/lessonQuery.ts`), so the read does not wait for the
+reader's code, and the reader draws from state once its code is in rather
+than by suspending, so React's 300 ms hold on a revealed boundary does not
+apply. The reader takes that read's answer: one lesson request per opening,
+none again within five minutes. A read that fails before the reader has
+drawn is asked once more when it draws (TanStack's retry on mount, as on any
+reopening after a failure), and the reader then shows the error. With the
+reader lazy and neither change, a reading opened about 0.4 s after the press
+(the 1.7 s level wait before #587 C05 had hidden it).
+
+Opening a level, a part test or the skill check draws nothing for the first
+200 ms and then the quote loader, which stays at least 400 ms once shown
+(`components/learn/LevelLoader.tsx`); a level answered inside 200 ms opens
+at once and never shows it. It used to hold the loader at least 1.2 s
+(`MIN_LOADING_MS`, which Quiz and Challenge still use), so a level the server
+answered in 120 ms opened after about 1.8 s (#587 C05). The screen waits for
+the runner's code as well as the level, and a runner whose code is already
+here draws without suspending, so React's 300 ms reveal hold on a boundary
+that showed its fallback does not apply. The runner's code starts loading
+when a mouse rests on an open step of the map or the next-step card, when one
+takes keyboard focus, or on a press (#587 C28); a visitor who asked the
+browser to save data loads it on the press only. Prism, which the first code
+question loads, is not warmed yet: `CodeBlock.tsx` would have to export its
+loader.
 
 ## Learn sections
 
@@ -778,6 +895,28 @@ remembers its last topic (`devquiz:roadmap:section-topic`). The sections
 share one route box (`routeBoxKey`), so a switch keeps the page mounted, and
 a level or the skill check stays open while the address changes.
 
+The map holds its first draw for the structure and, signed in, the plan
+and the account's progress sync (`useRoadmapStructureFirst`,
+`client/src/lib/queries.ts`; capped at 1.2 s like every first-data hold).
+Its other reads start in the render that hold suspends, without being
+waited for (`components/learn/mapReads.ts`, #587 C07): the XP sync, and,
+on the FDE section or while the settings may have the path open, the path
+catalogue and the account's enrollments. They used to leave one round trip
+after the map had drawn. The progress sync is the same request the map
+starts beside the hold; the hold waits for it because the map picks its
+topic on its first draw from the progress the device holds, so a signed-in
+deep link to a topic that progress opens (`?topic=dsa-advanced`) lands
+there. The hold can only wait for an account auth has restored, and the
+map's public reads no longer wait for supabase-js (#587 C10), so the map can
+still draw before the account's plan or progress is in. A `?topic` the first
+draw could not open then opens as soon as they open it, together with its
+`?level`, unless the learner has picked a topic, switched section, opened a
+step or joined first (`lateDeepLink` in `Roadmap.tsx`). Before #587 the
+account's data was in by the first draw, and the map landed on the link at
+once. The map syncs once per
+mount and again on a sign-in or sign-out while it is mounted; a section
+switch syncs nothing new.
+
 In a section the learner has not joined, the topics the plan lacks show
 dimmed beside one action. Software Engineer saves the union of the saved
 `sections` and its own id. Forward Deployed Engineer enrols in the FDE path
@@ -788,12 +927,26 @@ to sign in, and an account with no saved plan gets a link to the plan card at
 counts levels passed over levels available across the topics the learner can
 work toward, plus the path's steps when the path is open; any passed level
 shows as at least 1%. Joining a section can lower the figure, since the
-joined topics and their prerequisites join the total.
+joined topics and their prerequisites join the total. Whether the path is
+open comes first from the public settings the app reads as it starts
+(`learningPaths` in `/api/settings`, the verdict the catalogue carries per
+entry; `useFdeOpenInSettings` in `components/learn/useFdePathSteps.ts`).
+While they say it is closed, the figure is the topics' alone and no section
+other than FDE, and not Career, reads the 30 KB catalogue, the account's
+enrollments or its path progress (#587 C06, C20); while their first read is
+out the figure waits for it, and when they failed the catalogue decides, as
+before. The settings are cached by the CDN for 15 s and kept for the tab's
+life, so a path switched on shows in a tab opened before the switch only
+after a reload. The FDE section still reads the catalogue for its path
+shelf.
 
 Today keeps unfinished → review → new priority, orders within those buckets by
 `planTopics(profile)`, and exposes one `startHereId`; joining a section adds
 work after the track and does not replace the next action. Career groups its
-topics under the three section headings and links into Learn. The Skill Check
+topics under the three section headings and links into Learn; it draws once
+the structure is in, and the FDE group's figure reads "Loading…" in its own
+line until the path catalogue and the enrollments land, which start beside
+the structure while the path may be open (#587 C25). The Skill Check
 (placement) returns its review after the server accepts each round, in the
 shuffled order the learner saw.
 
@@ -817,7 +970,14 @@ same way). Migration 026's path tables and their old rows stay.
   size and common growth rates and links to `/learn/big-o`, which opens DSA
   levels 1 and 2 without placement or a track prerequisite
   (`isBigOIntroduction` in `shared/tiers.ts`) through the same lesson read.
-  Level 3 onward follows ordinary progression.
+  Level 3 onward follows ordinary progression. The `/learn/big-o` page is
+  its own module (`components/learn/BigOIntroduction.tsx`), which imports
+  nothing of the Learn map (#587 C17), and its route loads that module
+  alone (App.tsx `loadBigOIntroduction`; the Learn sections' loader leaves
+  `/learn/big-o` out), about 43 KB gzip of JavaScript less than with the
+  map's chunk it came with before (309 against 266 KB, signed out). The module imports the map's `Roadmap.css` and
+  `DeepEndScreens.css` itself, ahead of its own styles, because the reader
+  and the runner draw with them. `Roadmap.tsx` still re-exports it.
 - **DSA Advanced** (`dsa-advanced`, opt-in through Software Engineer) has
   fifteen levels of eight reviewed questions and needs the first five
   Foundations levels. Its levels and part tests are Premium. Eight lessons in
@@ -904,7 +1064,13 @@ statement of what Premium opens.
 
 The FDE overview lives at `/learn/forward-deployed-engineer/path`, with module
 addresses under it. Old `/roadmap/specializations/fde` links redirect
-permanently and keep the module, query and fragment. The overview shows a
+permanently and keep the module, query and fragment. The pages' first reads,
+the catalogue and the stored session's enrollments, leave with the pages'
+code when a link to them is pointed at, focused or pressed, once the FDE
+section's path shelf or Today's path section has loaded
+(`preloadPathPagesWithLinks` in `client/src/lib/learningPathWorkspace.ts`,
+#587 C27); an enrollment's progress and an activity's start still wait for
+the enrollment id, which they need. The overview shows a
 competency board and the five delivery phases. Phase membership is manifest
 metadata (`deliveryPhase`) carried through the source, merge and public
 projection, and a validator rejects unknown phases and missing phases on
@@ -1175,7 +1341,13 @@ Premium opens through a manual grant or a voucher.
   text and opens the one `UpgradeSheet`, which leads a guest to sign-in and
   checkout. An unknown row carries no Premium mark, and the coding track page
   waits for the plan and says when it could not load. Today leaves barred
-  levels out, and the Profile shows the plan line.
+  levels out, and the Profile shows the plan line. Screens that lock no
+  coding task (the Learn map, Career, the FDE screens and cards) use
+  `useContentLocks()` (`client/src/lib/contentLocks.ts`), the same states
+  and rules over a content index without the generated coding index, whose
+  free list only a coding lock reads; its type refuses a coding task, so the
+  Learn map, Career and the FDE screens no longer download the 17 KB index
+  (#587 C11). `useLocks()` adds the coding tasks on top of it.
 
 ### Grants and vouchers
 
@@ -1583,7 +1755,44 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   while keeping the stored one (a refresh that failed offline), nothing is
   sent: the caller gets a retryable `ApiError(0, 'auth_unavailable')`. Only a
   browser with no stored session sends a request without a token, so a
-  signed-in learner is never graded or refused as a guest.
+  signed-in learner is never graded or refused as a guest. The one exception
+  is the short list of public reads in `isPublicRead` (`/api/settings`, the
+  Learn map, the path catalog and a lesson): their handlers never read the
+  caller and the CDN shares their answers, so they leave at once without a
+  token instead of waiting for supabase-js and the session (#587 C10). A
+  handler that starts reading the caller must leave that list. Every other
+  request of a returning learner carries the stored access token straight from
+  localStorage while it is more than 90 seconds from its expiry
+  (`freshStoredAccessToken`): supabase-js's `getSession()` hands out that same
+  token unchanged inside that window (auth-js `EXPIRY_MARGIN_MS`), so the
+  request no longer waits for the 54 KB supabase-js download. A token closer
+  to its expiry, a malformed session, blocked storage or a page that opened on
+  an OAuth return asks supabase-js as before, which refreshes or removes the
+  session. The trade-off is bounded by the token's own expiry: the server
+  verifies it on every request exactly as before.
+- **The plan read** (`useEntitlement`, `lib/entitlement.ts`). A returning
+  learner's plan is asked as the app starts (`prefetchStoredAccountPlan` in
+  `main.tsx`), for the stored session's account and only with a token
+  supabase-js would hand out unchanged, so a Learn map's first-data hold finds
+  it answered instead of starting it after auth has restored the user (#587
+  C14). It is the same request the header made anyway. A tab shown again
+  re-reads the plan only once it is five minutes old (`PLAN_FOCUS_REFRESH_MS`;
+  it was every return past the 60-second staleTime, an Auth `getUser` and an
+  `entitlement_summary` read each, #587 C29). The plan still changes at once
+  where it matters: the billing pages and the voucher write or invalidate it,
+  every refused lock and upgrade sheet re-reads it, and a tab that reads a
+  plan different from the last one this browser saw writes
+  `devshark:plan-seen` (`<user id>:<tier>`, cleared with the account's data),
+  which makes the other tabs re-read theirs. A change made on another device
+  shows within five minutes or at the next lock pressed.
+- **The sign-in report** (`POST /api/user/authevent`, the `/dev` Logs tab)
+  goes once per sign-in. supabase-js also says `SIGNED_IN` for the stored
+  session each time a tab is shown again; `lib/auth.tsx` remembers the
+  sign-in its `INITIAL_SESSION` restored (the access token's `session_id`,
+  which survives refreshes) and reports no `SIGNED_IN` for that same sign-in,
+  so a new tab no longer sends a report on its first return (#587 C30). An
+  OAuth return, a sign-in in the tab, a reset link and a session that
+  replaces another are still reported.
 - **Log out** ends this browser's session (`signOut({ scope: 'local' })`).
   Offline or on a 5xx, supabase-js keeps the session, so `lib/auth.tsx` removes
   the stored session and its code verifier itself, forgets the account's data
@@ -1597,7 +1806,25 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   each completion. The browser pulls it at sign-in and when Today or a map
   asks (`GET /api/quiz/roadmap?resource=progress`, `syncProgressWithServer`,
   one request in flight per account) and sends nothing back; a PUT there
-  answers 405.
+  answers 405. A sync that answered in the last minute
+  (`PROGRESS_SYNC_FRESH_MS`) for the same account, with no level completed
+  since and the device copy as it left it, answers the next ask, so the
+  sign-in sync, Today and a Learn map share one read and a return to the map
+  reads nothing new (#587 C08, C22). Changes made in this tab come back in the
+  answer that made them; one made in another tab or on another device shows
+  within the minute. A signed-in Learn map asks for the account's XP beside
+  the progress read rather than after it (#587 C08), and sets the rank marker
+  again, without a toast, once both have answered, so it counts the merged
+  learning XP as the chained reads did. The map's XP read has the same
+  one-minute window (`syncXpUnlessFresh`, `XP_SYNC_FRESH_MS` in
+  `client/src/lib/xp.ts`, #587 C22): a read that wrote in the last minute
+  answers the map's next ask, for the same account, while no other XP sync
+  has started since and the browser's copy is the one it wrote, so a return
+  to the map reads neither. Only the map uses it: every flow in this tab that
+  changes the account's XP on the server (a quiz result, a coding pass, a
+  Challenge, an FDE step, a repeated Learn step) syncs afterwards with
+  `syncXpWithServer`, which always reads. XP changed in another tab or on
+  another device shows on a map within the minute.
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
   every answer before the handler runs, and the public reads set their own:
   the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,
@@ -1927,7 +2154,12 @@ seeds a row in every such table.
   `setUser`. Its scrub hooks (in the lazy `client/src/lib/sentry-sdk.ts`)
   remove query strings, fragments, e-mail addresses, tokens, request data and
   the user from every error, breadcrumb and trace. Adding any of those moves
-  it under analytics consent. PostHog sends each event as it is captured, so
+  it under analytics consent. The SDK chunk loads after the page's load event,
+  at the browser's next idle moment, or at once on the first error (#587 C09);
+  an error reported or thrown before that waits in memory (at most 20) and is
+  sent through the same scrub hooks when the SDK starts. The pageload trace
+  still reads its timings from the browser's buffered performance entries.
+  PostHog sends each event as it is captured, so
   nothing batched before a withdrawal leaves after it.
 - **The privacy policy** (`PRIVACY` in `client/src/components/LegalPages.tsx`,
   keys `legal.privacy.*` in `client/src/i18n/translations.privacy.ts`, which
@@ -1944,6 +2176,45 @@ seeds a row in every such table.
   `purge_expired_learning_data`, which production runs daily through
   pg_cron, and `consentContracts()` in `scripts/test-launch-contracts.ts`
   ties the sentence to the SQL.
+
+## Client start-up
+
+What every page pays before its own content, and the rules that keep it
+small (perf audit #587). The sign-in, token and plan rules are under
+"Sign-in, caching and limits"; error monitoring under "Cookie consent,
+analytics and the privacy policy".
+
+- **The first page.** The route box's Suspense boundary (`App.tsx`) draws
+  the loader as its content on the first commit, and the first page follows
+  in a transition (`useFirstPageTransition`, `client/src/lib/routePreload.ts`),
+  as every later navigation already did. React commits a boundary that leaves
+  its fallback on a retry no sooner than 300 ms after the last fallback any
+  boundary showed or hid (the header's account widget among them), so the
+  first page of a visit used to wait up to 300 ms with its code and data in
+  hand (#587 C04). What shows is unchanged: nothing for 200 ms, then the
+  loader, then the page. `main.tsx` starts the first page's chunk
+  (`preloadPath`) before anything renders, so the transition finds the import
+  already running. The shell's route focus moves to `<main>` 230 ms after
+  the route box changes; on the visit's first location it now leaves a
+  control the learner or the page focused by then where it is, because a
+  page that draws sooner can be in use inside that delay. When nothing holds
+  the focus, the first page still moves it to `<main>`.
+- **The document head.** `lib/routeHead.ts` (titles, descriptions,
+  canonical links, structured data), with the public pages' metadata and the
+  topic catalogue it reads, is its own chunk: `App.tsx` starts it as it
+  evaluates and writes each route's head when it has arrived, the latest
+  route only. It was about 3 KB gzip of the first download. The share head a
+  coding task or a dated question of the day arrived with is read as the
+  chunk arrives, before any route writes; a failed load is asked again on the
+  next navigation.
+- **Motion.** `MotionProvider` (`client/src/lib/motion.tsx`) loads Motion's
+  feature chunk (14 KB) in the background. A page that opens with
+  `prefers-reduced-motion: reduce` loads none (`motionFeaturesFor`) and marks
+  `<html data-motion="off">`, the mark a failed load sets, so app-shell.css
+  shows each `m` element at its final opacity without a transform and an
+  exiting one leaves at once: such a reader sees things appear instead of a
+  120 ms fade. A preference changed while the page is open applies from the
+  next load.
 
 ## Deployment
 

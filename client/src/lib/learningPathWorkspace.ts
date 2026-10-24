@@ -5,7 +5,49 @@
 // load before a learner opens a path.
 
 import { readJSON, removeStored, writeJSON } from './storage';
+import { queryClient } from './queryClient';
+import { routeChunk } from './routePreload';
+import { freshStoredAccessToken, storedSessionUserId } from './supabaseClient';
+import { enrollmentsQuery, pathCatalogQuery } from './learningPaths';
 import type { EnrollmentListResponse, PathDraft } from '../../../shared/learning-path-api';
+
+/* ── the path pages' first reads ───────────────────────────────────────── */
+
+/** The FDE overview and its module pages (App.tsx serves the same two). */
+export const isPathPage = (pathname: string): boolean =>
+  /^\/learn\/forward-deployed-engineer\/path(?:\/[^/]+)?\/?$/.test(pathname);
+
+/**
+ * The catalogue and, for the stored session's account, its enrollments: what
+ * the path pages read first, before an enrollment's progress or an activity's
+ * start can leave (perf baseline #587 C27). They left only once the page had
+ * drawn; now they leave with the pages' code when a link to one is pointed
+ * at, focused or pressed (the route preload, lib/routePreload.ts). The
+ * enrollments go only with a token supabase-js would hand out unchanged,
+ * under the key the page's own query uses; one attempt each, as a page hold's
+ * reads.
+ */
+export function prefetchPathPages(): Promise<void> {
+  void queryClient.prefetchQuery({ ...pathCatalogQuery, retry: false });
+  const userId = storedSessionUserId();
+  if (userId && freshStoredAccessToken()) void queryClient.prefetchQuery({ ...enrollmentsQuery(userId), retry: false });
+  return Promise.resolve();
+}
+
+let registered = false;
+/**
+ * Add the path pages' first reads to their route preload. The screens that
+ * link to the path pages call it as they load (the FDE section's path shelf,
+ * Today's path section), so it costs the app's first download nothing; a
+ * route preload runs once per page load, so a later visit reads as its page
+ * mounts, as before. A first visit that opens on a path page reads as the
+ * page mounts too.
+ */
+export function preloadPathPagesWithLinks(): void {
+  if (registered) return;
+  registered = true;
+  routeChunk(isPathPage, prefetchPathPages);
+}
 
 /** The cached enrollment list with the rows a change returned put in place,
  * so a screen shows the new status at once instead of after a refetch. With

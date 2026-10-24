@@ -2,7 +2,7 @@
 // ladder. Used by the Coding section (`mode="section"`) and inside a Learn
 // level (`mode="lesson"`). It never fetches on its own: the parent hands it a
 // playable task, its sealed session and the saved draft.
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
 import { DropdownMenu, DropdownMenuItem } from '@astryxdesign/core/DropdownMenu';
@@ -13,10 +13,14 @@ import { workbenchCopy } from '../i18n/translations.workbench';
 import { openSignIn } from '../lib/signInDialog';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
-import { Editor } from './Editor';
+import type { EditorProps } from './Editor';
+import { loadEditor, loadedEditor, NARROW_EDITOR_KEY, readNarrowEditor } from './loadEditor';
+import { lazyShellPart } from '../lib/routeRecovery';
+import { ShellPartBoundary } from '../components/ShellPartBoundary';
+import ErrorRetry from '../components/ErrorRetry';
 import { CodingCompletion, ComplexityInfo } from './CodingCompletion';
 import { formatCode } from './runner/format';
-import { runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
+import { compilerStarted, holdCompiler, runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { runtimePolicyForTask } from '../../../shared/coding-task-runtime';
 import { TYPE_CHECK_STOPPED_MESSAGE } from '../../../shared/coding-evaluate';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
@@ -117,11 +121,33 @@ const readLayout = (): WorkbenchLayout => {
 // A narrow screen waits for a bigger one by default, but the learner may take
 // the editor here instead (docs/interactive-content-manifest.md). The choice is
 // theirs for the rest of the browser session, on every task, and nothing else
-// reads it: the server grades the same code from any screen.
-const NARROW_EDITOR_KEY = 'devshark:coding:narrow-editor:v1';
-const readNarrowEditor = (): boolean => {
-  try { return sessionStorage.getItem(NARROW_EDITOR_KEY) === '1'; } catch { return false; }
-};
+// reads it: the server grades the same code from any screen. The key and its
+// reader live in loadEditor.ts, which also decides whether to fetch the editor.
+
+/** CodeMirror loads as its own chunk (loadEditor.ts). The task screen and an
+ * intent preload fetch it beside the workbench, so it is usually in before
+ * the first render and draws at once; otherwise its box holds the editor's
+ * place, and a load that failed offers Try again in that box alone. */
+const LazyEditor = lazyShellPart(() => loadEditor().then((Editor) => ({ default: Editor })));
+const EDITOR_MIN = 'var(--cd-editor-min, 280px)';
+function EditorPart(props: EditorProps & { loadingLabel: string; failedLabel: string }) {
+  const { loadingLabel, failedLabel, ...editor } = props;
+  // Decided once per mount, so the editor never swaps one tree for the other.
+  const [Loaded] = useState(loadedEditor);
+  if (Loaded) return <Loaded {...editor} />;
+  const box = (
+    <div className={editor.fill ? 'cd-editor cd-editor--fill' : 'cd-editor'} style={{ minHeight: editor.minHeight ?? EDITOR_MIN, maxHeight: editor.maxHeight }}>
+      <span className="cd-visually-hidden" role="status">{loadingLabel}</span>
+    </div>
+  );
+  return (
+    <Suspense fallback={box}>
+      <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={failedLabel} onRetry={retry} busy={busy} />}>
+        <LazyEditor {...editor} />
+      </ShellPartBoundary>
+    </Suspense>
+  );
+}
 
 /** The names a React suite gives its cases, in order, so Results can list them
  * before the first run. The suite is read, never executed, here. */
@@ -165,8 +191,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [code, setCode] = useState<string>(initialCode ?? task.starter);
   const shownCode = useRef(code);
   shownCode.current = code;
+  // The last code Format produced, or the starter as authored: Format has
+  // something to do once the code differs from it. Prettier (about 170 KB
+  // gzip) loads on the first press only, never to decide this (perf baseline
+  // #587 C02, C24).
   const [formattedCode, setFormattedCode] = useState<string>(task.starter);
-  const [formatSource, setFormatSource] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [runPhase, setRunPhase] = useState<RunPhase | null>(null);
   const [run, setRun] = useState<RunOutcome | null>(null);
@@ -212,6 +241,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // which the server's answer replaces.
   const localRun = useRef<AbortController | null>(null);
   const harness = useReactHarness();
+  // The sandbox frame (about 216 KB gzip, and a long task as it boots) loads
+  // on the first Run or Submit, when the Preview tab opens, or when a pointer
+  // or the focus reaches the Run and Submit row: not while the brief is read
+  // (perf baseline #587 C13). Once loaded it stays for the visit.
+  const [frameWanted, setFrameWanted] = useState(false);
+  const wantFrame = useCallback(() => { if (isReact) setFrameWanted(true); }, [isReact]);
+  // TypeScript's compiler (about 1 MB gzip) loads once the learner reaches
+  // for the code: a pointer or the focus in the editor or on the Run and
+  // Submit row, an edit, the first Run or Submit, or the choice of the editor
+  // on a narrow screen. It stays loaded in its own worker while the task is
+  // open (holdCompiler in runner/run-tests.ts, perf baseline #587 C01).
+  const [compilerWanted, setCompilerWanted] = useState(false);
+  const wantCompiler = useCallback(() => { if (isTypeScript) setCompilerWanted(true); }, [isTypeScript]);
+  const reachForRun = useCallback(() => { wantFrame(); wantCompiler(); }, [wantFrame, wantCompiler]);
   // What a narrow screen gets instead of an editor: the task's puzzle when it
   // has one, and an honest pending state when it does not. Neither is a pass.
   // Both offer the editor anyway, so neither is a dead end: a puzzle never
@@ -229,7 +272,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     try { sessionStorage.setItem(NARROW_EDITOR_KEY, '1'); } catch { /* the choice then lasts for this page only */ }
     focusEditorPane.current = true;
     setEditorHere(true);
-  }, []);
+    wantCompiler();
+  }, [wantCompiler]);
   // The button that made the choice is gone, so focus goes to the pane that
   // replaced it rather than back to the top of the page.
   useEffect(() => {
@@ -241,33 +285,24 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const rungs = useMemo(() => ladderRungs(task), [task]);
   const taken = Math.min(hintsTaken, rungs.length);
 
-  // Format the code for display once the learner pauses, which tells the
-  // Format button whether it has anything to do. Not while a puzzle or the
-  // wait for a bigger screen stands in for the editor: there is no Format
-  // button then, and a phone downloaded Prettier for nothing.
-  const formatterNeeded = !puzzleMode && !pendingOnDesktop;
-  useEffect(() => {
-    if (!formatterNeeded) return;
-    let active = true;
-    const timer = window.setTimeout(() => {
-      if (!code.trim()) { setFormattedCode(code); setFormatSource(code); return; }
-      void formatCode(code, task.track).then(formatted => {
-        if (active) { setFormattedCode(formatted); setFormatSource(code); }
-      }).catch(() => {
-        if (active) { setFormattedCode(code); setFormatSource(code); }
-      });
-    }, 350);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [code, task.track, formatterNeeded]);
-
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
-  // The runner, and TypeScript's compiler, load while the brief is read: the
-  // first Run does not wait for them, and Run still works if the connection
-  // drops afterwards. Not while a puzzle or the wait for a bigger screen
-  // stands in for the editor: a phone would download and start a compiler it
-  // has no Run for. Choosing the editor starts it.
+  // The runner's script loads while the brief is read: the first Run does not
+  // wait for it, and Run still works if the connection drops afterwards.
+  // TypeScript's compiler waits for the learner to reach for the code
+  // (compilerWanted above). Neither loads while a puzzle or the wait for a
+  // bigger screen stands in for the editor: a phone would download and start
+  // a runner it has no Run for. Choosing the editor starts them.
   const editorShown = !puzzleMode && !pendingOnDesktop;
+  // The editor mounts the first time it shows and then stays, hidden while a
+  // puzzle or the pending note stands in for it after a resize, so its undo
+  // history and selection survive (the code itself lives here). A phone that
+  // never shows it never downloads it (perf baseline #587 C12).
+  const [editorMounted, setEditorMounted] = useState(editorShown);
+  if (editorShown && !editorMounted) setEditorMounted(true);
   useEffect(() => (isReact || !editorShown ? undefined : warmRunner(codeTrack)), [isReact, editorShown, codeTrack]);
+  // A compiler another TypeScript task loaded is held at once: it costs no
+  // download, and the next Run finds it ready.
+  useEffect(() => (isTypeScript && editorShown && (compilerWanted || compilerStarted()) ? holdCompiler() : undefined), [isTypeScript, editorShown, compilerWanted]);
   // A Run, or a Submit's browser preview, has nowhere to report once the task
   // is left.
   useEffect(() => () => localRun.current?.abort(), []);
@@ -311,12 +346,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   }, [setSplit]);
 
   const onCodeChange = useCallback((next: string) => {
+    wantCompiler();
     setCode(next);
     onEdit?.(next);
     if (run || harness.run) setStale(true);
     if (verdict) setVerdictStale(true);
     setServerChecked(false);
-  }, [run, harness.run, verdict, onEdit]);
+  }, [run, harness.run, verdict, onEdit, wantCompiler]);
 
   const files = useCallback(() => ({ '/App.js': code, '/App.test.js': task.suite ?? '' }), [code, task.suite]);
 
@@ -325,10 +361,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     setDraftTooLarge(onDraft?.(code) === 'tooLarge');
     localRun.current?.abort();
     setPhase('running');
+    wantCompiler();
     setServerChecked(false);
     setFormatError(null);
     try {
       if (isReact) {
+        setFrameWanted(true);
         const restoreFocus = keepFocus();
         const outcome = await harness.start(files(), { tests: Boolean(task.suite), preview: true });
         restoreFocus();
@@ -377,6 +415,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       return;
     }
     setPhase('submitting');
+    wantCompiler();
     setSubmitError(null);
     setFormatError(null);
     // A new Submit replaces the last verdict. Left standing, the old one sat
@@ -397,6 +436,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           // The frame runs the suite so the learner sees named cases and a
           // fresh preview straight away; the verdict itself comes from the
           // server, which runs the same suite where it cannot be edited.
+          setFrameWanted(true);
           const restoreFocus = keepFocus();
           const outcome = await harness.start(files(), { tests: true, preview: true });
           restoreFocus();
@@ -472,6 +512,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setFormattedCode(formatted);
       setFormatError(null);
     } catch (error) {
+      // Code Prettier cannot read: the note says why, and Format waits for
+      // the next edit instead of saying the same again.
+      setFormattedCode(code);
       setFormatError(String((error as Error)?.message ?? error).split('\n')[0]);
     }
   }, [code, task.track, onEdit]);
@@ -648,7 +691,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       else void runLocal();
     }
   };
-  const formatDisabled = busy || !code.trim() || formatSource !== code || code === formattedCode;
+  const formatDisabled = busy || !code.trim() || code === formattedCode;
   const resetDisabled = busy || (code === task.starter && taken === 0);
   const tierLabel = t(`coding.tier.${CODING_TIERS[task.tier]}` as never);
   const trackLabel = t(`coding.track.${task.track}` as never);
@@ -1010,8 +1053,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const renderConsole = (): ReactNode => (logs.length === 0 ? <p className="cd-console__empty">{t('coding.console.empty')}</p> : <pre className="cd-console">{logs.join('\n')}</pre>);
 
   // Before the first run there is nothing to show, so the preview says so in
-  // one line and its frame takes no room (coding-04). The frame stays mounted
-  // all the same: the sandbox loads while the learner reads, and a run needs it.
+  // one line and its frame takes no room (coding-04). The frame mounts once it
+  // is wanted (frameWanted above) or the Preview tab opens, and stays.
+  useEffect(() => { if (isReact && tab === 'preview') setFrameWanted(true); }, [isReact, tab]);
+  const frameOn = isReact && (frameWanted || tab === 'preview');
   const previewIdle = !reactRun && !busy;
   const renderPreview = (): ReactNode => (
     <>
@@ -1019,7 +1064,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <Button variant="ghost" size="sm" onClick={harness.reload} label={t('coding.preview.reload')} /></p>}
       {previewIdle ? <p className="cd-console__empty">{workbenchCopy('coding.preview.idle')}</p>
         : !harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
-      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className={previewIdle ? 'cd-frame cd-frame--idle' : 'cd-frame'} aria-hidden={previewIdle || undefined} tabIndex={tab === 'preview' && !previewIdle ? undefined : -1} />
+      {frameOn && <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className={previewIdle ? 'cd-frame cd-frame--idle' : 'cd-frame'} aria-hidden={previewIdle || undefined} tabIndex={tab === 'preview' && !previewIdle ? undefined : -1} />}
     </>
   );
 
@@ -1177,7 +1222,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const showReveal = mode !== 'landing' && Boolean(session) && !solution && !solutions;
   const showSkip = signedIn && mode === 'section' && !skipResult;
   const actionBar = (
-    <div className="cd-editor-actions">
+    <div className="cd-editor-actions" onPointerEnter={reachForRun} onFocus={reachForRun}>
       <div className="cd-actions cd-actions--commands">
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus
@@ -1289,16 +1334,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           )}
 
           {/* Stays mounted while a puzzle or the pending note stands in for it,
-              so the code survives a resize. The brief and the actions go with
+              so the code survives a resize; the editor inside it mounts once
+              it has shown (editorMounted). The brief and the actions go with
               whichever pane is showing. */}
           <section className="cd-pane cd-pane--editor" ref={editorPaneRef} tabIndex={-1} hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
             {!puzzleMode && !pendingOnDesktop && brief}
-            <div className="cd-editor-slot">
+            <div className="cd-editor-slot" onPointerEnter={wantCompiler} onFocus={wantCompiler}>
               {!puzzleMode && !pendingOnDesktop && editorBar}
               {/* In the frame (1024px and up) the editor takes what the brief
                   and the action bar leave and scrolls inside; stacked, it
                   starts at --cd-editor-min and grows with the code. */}
-              <Editor fill={mode !== 'landing'} minHeight={mode === 'landing' ? 160 : undefined} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              {editorMounted && <EditorPart loadingLabel={t('common.loading')} failedLabel={t('coding.loadError')} fill={mode !== 'landing'} minHeight={mode === 'landing' ? 160 : undefined} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />}
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
               <span id={`${baseId}-keys`} className="cd-visually-hidden">{t(mode === 'landing' ? 'coding.shortcuts.preview' : 'coding.shortcuts')}</span>

@@ -1,14 +1,15 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { submitCoding } from '../src/coding/api';
-import { runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
+import { holdCompiler, runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
 import { formatCode } from '../src/coding/runner/format';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 import { readFileSync } from 'node:fs';
 import { declared } from './css';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -19,6 +20,8 @@ vi.mock('../src/coding/runner/format', () => ({ formatCode: vi.fn(async (code: s
 vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/coding/runner/run-tests')>(),
   warmRunner: vi.fn(() => () => {}),
+  holdCompiler: vi.fn(() => () => {}),
+  compilerStarted: () => false,
   runCodeTests: vi.fn(() => new Promise(() => {})),
 }));
 
@@ -45,6 +48,10 @@ const mount = (id = task.id) => render(
   </LanguageProvider></MemoryRouter>,
 );
 
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
+
 beforeEach(() => { sessionStorage.clear(); narrowScreen(); });
 afterEach(() => { sessionStorage.clear(); });
 
@@ -59,7 +66,9 @@ it('waits for a bigger screen by default in one note with its one button, and ke
   // The decision sits inside the note; nothing promises an autosave.
   expect(within(note as HTMLElement).getByRole('button', { name: 'Use the editor here' })).toBeVisible();
   expect(screen.queryByText(/anything you have written is saved/)).toBeNull();
-  expect(screen.getByLabelText('Test editor')).not.toBeVisible();
+  // Not merely hidden: a phone that has not chosen the editor does not mount
+  // or download it (perf baseline #587 C12).
+  expect(screen.queryByLabelText('Test editor')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
   // Hint, Solution and Report wait for the editor.
   expect(screen.queryByRole('button', { name: /Hint|Solution|More actions|Report/ })).toBeNull();
@@ -96,20 +105,100 @@ it('loads no runner while the screen waits for a bigger one, and loads it once t
   );
   expect(screen.getByText('This task works best on a bigger screen. Your code is kept.')).toBeVisible();
   expect(warmRunner).not.toHaveBeenCalled();
+  expect(holdCompiler).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   expect(warmRunner).toHaveBeenCalledWith('typescript');
+  // Choosing the editor is reaching for the code: the compiler loads too.
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+});
+
+// Perf baseline #587 C01: a TypeScript task downloaded the 1 MB compiler as
+// it opened, also for a learner who only read the brief. It loads once the
+// learner reaches for the code.
+it('loads the TypeScript compiler when the learner reaches for the code, not on open', () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  const typed = { ...task, track: 'typescript' as const };
+  const view = (id: string) => render(
+    <MemoryRouter><LanguageProvider>
+      <CodingWorkbench initialCode={null} task={{ ...typed, id }} session="test-session" locked={null} signedIn mode="section" />
+    </LanguageProvider></MemoryRouter>,
+  );
+  vi.mocked(holdCompiler).mockClear();
+  const pointer = view('ts-reach-pointer');
+  expect(warmRunner).toHaveBeenCalledWith('typescript');
+  expect(holdCompiler).not.toHaveBeenCalled();
+  fireEvent.pointerEnter(pointer.container.querySelector('.cd-editor-slot')!);
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+  pointer.unmount();
+
+  vi.mocked(holdCompiler).mockClear();
+  const typing = view('ts-reach-typing');
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = (): number => 2;' } });
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+  typing.unmount();
+
+  vi.mocked(holdCompiler).mockClear();
+  const keyboard = view('ts-reach-run');
+  act(() => { screen.getByRole('button', { name: 'Run' }).focus(); });
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+  keyboard.unmount();
+
+  // A JavaScript task has no compiler to load.
+  vi.mocked(holdCompiler).mockClear();
+  const plain = render(
+    <MemoryRouter><LanguageProvider>
+      <CodingWorkbench initialCode={null} task={task} session="test-session" locked={null} signedIn mode="section" />
+    </LanguageProvider></MemoryRouter>,
+  );
+  fireEvent.pointerEnter(plain.container.querySelector('.cd-editor-slot')!);
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = () => 2;' } });
+  expect(holdCompiler).not.toHaveBeenCalled();
 });
 
 // The display formatter ran 350 ms after the task opened, so a phone waiting
 // for a bigger screen downloaded Prettier for a Format button it did not show.
-it('loads no formatter while the screen waits for a bigger one, and formats once the editor opens', async () => {
+// Since #587 C02 no screen formats in the background: Prettier loads on the
+// first Format press, here as on a wide screen.
+it('loads no formatter while the screen waits for a bigger one, and formats once the editor opens and Format is pressed', async () => {
   vi.mocked(formatCode).mockClear();
   mount();
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
   expect(formatCode).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
-  expect(formatCode).toHaveBeenCalled();
+  expect(formatCode).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one=()=>2' } });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Format' })); });
+  expect(formatCode).toHaveBeenCalledTimes(1);
+});
+
+// Perf baseline #587 C02 and C24: Prettier (about 170 KB gzip) loaded 350 ms
+// after every task opened and re-formatted the whole program after every
+// typing pause, only to set the Format button. It now runs on a press only.
+it('formats nothing on open or while the learner types on a wide screen, only when Format is pressed', async () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  vi.mocked(formatCode).mockClear();
+  mount();
+  const format = screen.getByRole('button', { name: 'Format' });
+  // The starter is shown as authored: nothing to format until the code changes.
+  expect(format).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one=()=>2' } });
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one=()=>3' } });
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+  expect(formatCode).not.toHaveBeenCalled();
+  expect(format).not.toHaveAttribute('aria-disabled');
+  await act(async () => { fireEvent.click(format); });
+  expect(formatCode).toHaveBeenCalledTimes(1);
+  expect(formatCode).toHaveBeenCalledWith('const one=()=>3', 'javascript');
+  // What Format produced has nothing more to format.
+  expect(format).toHaveAttribute('aria-disabled', 'true');
 });
 
 // CODE-5: a section task with a puzzle showed only the puzzle on a narrow
@@ -129,7 +218,9 @@ const mountPuzzle = () => render(
 it('offers the editor beside a puzzle, and an earlier choice of the editor opens it straight away', () => {
   mountPuzzle();
   expect(screen.getByRole('button', { name: /Check the order/ })).toBeVisible();
-  expect(screen.getByLabelText('Test editor')).not.toBeVisible();
+  // Not merely hidden: a phone that has not chosen the editor does not mount
+  // or download it (perf baseline #587 C12).
+  expect(screen.queryByLabelText('Test editor')).toBeNull();
   // The puzzle needs no runner (V3-4).
   expect(warmRunner).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));

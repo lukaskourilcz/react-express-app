@@ -1,8 +1,7 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
-import { BigOLessons } from './learn/BigOLessons';
 import { retirementOf } from '../../../shared/retired-content';
 import { Text } from '@astryxdesign/core/Text';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -24,7 +23,6 @@ import {
   applySkillCheckReceipt,
   recordLevelResult,
   recordPartTestResult,
-  syncProgressWithServer,
   useRoadmapProgress,
   isLevelPassed,
   isPartLevelUnlocked,
@@ -57,14 +55,15 @@ import {
 import type { PlacementReview } from '../../../shared/assessment';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
-import { announceLearnRepeat, awardLearningOutcome, syncXpWithServer } from '../lib/xp';
+import { announceLearnRepeat, awardLearningOutcome } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
 import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { learnText } from '../i18n/translations.learn';
-import { LearnLesson } from './learn/LearnLesson';
+import { LessonError, LessonReader, LessonRunner, LessonStage, loadLessonRunner, preloadLessonReader, preloadLessonRunner } from './learn/lessonParts';
+import { prefetchLearnLesson } from './learn/lessonQuery';
 import { useAuth } from '../lib/auth';
 import { accountEpoch } from '../lib/accountData';
 import { friendlyError, isPremiumRequired } from '../lib/api';
@@ -88,13 +87,14 @@ import { SectionHeader, SectionSwitcher, type JoinState } from './learn/SectionS
 import { CheckIcon, LockIcon, LockedNote, SectionEmpty, SectionRail } from './learn/SectionRail';
 import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
 import { useFdePathSteps } from './learn/useFdePathSteps';
+import { useMapReadsBesideHold } from './learn/mapReads';
 import { useOnline } from './learn/useOnline';
-import { isBarred, useLocks } from '../lib/locks';
+import { isBarred, useContentLocks, type NonCodingContent } from '../lib/contentLocks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
-import { gatedRef, type GatedContent } from '../../../shared/tiers';
+import { gatedRef } from '../../../shared/tiers';
 import { readJSON, readString, writeJSON, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
-import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
+import { DelayedQuoteLoader, revealWhenReady } from './learn/LevelLoader';
 import { IconTile, BoltIcon, TrophyIcon } from './ui/icons';
 import { SwimCta } from './landing/LandingKit';
 import { lazyShellPart } from '../lib/routeRecovery';
@@ -116,13 +116,36 @@ import './DeepEndScreens.css';
 // Keep path screens and their styles outside the normal topic chunk.
 const PathShelf = lazyShellPart(() => import('./paths/PathShelf'));
 
-// An open level's runner, with the level intros and worked-example figures it
-// shows, was about two thirds of the Learn chunk, and the map needs none of
-// it. It loads when a level opens: open() starts the load beside the level's
-// own request, and LessonStage holds the loader meanwhile.
-const loadLessonRunner = () => import('./learn/LessonRunner');
-const preloadLessonRunner = () => { loadLessonRunner().catch(() => {}); };
-const LessonRunner = lazyShellPart(() => loadLessonRunner().then((m) => ({ default: m.LessonRunner })));
+// An open level's runner and a DSA level's reading load only when a level
+// opens or the learner reaches for one (learn/lessonParts.tsx).
+/** A step a press opens: an enabled level or part test on the map, or the
+ * next-step card's action. A Premium node opens the upgrade sheet instead. */
+const STEP_CONTROL = '.rm-path-canvas button:not([disabled]):not([aria-disabled="true"]), .rm-overview-card button';
+/** A step whose level opens with a reading (`data-lesson`). */
+const READING_STEP = '[data-lesson]';
+const savesData = (): boolean => (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+/**
+ * The runner's code starts loading when the learner shows they are about to
+ * open a step (perf baseline #587 C28): a mouse resting on it, keyboard focus,
+ * or a press. It used to start on the click, beside the level's own request.
+ * A visitor who asked the browser to save data loads it on the press only, as
+ * the route preloads do (lib/routePreload.ts).
+ */
+function warmRunnerOnIntent(event: { type: string; target: EventTarget | null; nativeEvent: Event }): void {
+  if (!(event.target instanceof Element) || !event.target.closest(STEP_CONTROL)) return;
+  const press = event.type === 'pointerdown' || event.type === 'touchstart';
+  if (event.type === 'pointerover' && (event.nativeEvent as PointerEvent).pointerType !== 'mouse') return;
+  if (!press && savesData()) return;
+  preloadLessonRunner();
+  // Only DSA levels open with a reading (#587 C19).
+  if (event.target.closest(READING_STEP)) preloadLessonReader();
+}
+const RUNNER_INTENT = {
+  onPointerOver: warmRunnerOnIntent,
+  onFocus: warmRunnerOnIntent,
+  onPointerDown: warmRunnerOnIntent,
+  onTouchStart: warmRunnerOnIntent,
+} as const;
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
@@ -298,7 +321,10 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
  * its header and footer as it does for a Quiz or a Challenge run (UX audit
  * questions-07). */
 function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
-  useRoadmapStructureFirst({ plan: true });
+  // The account's progress and XP, and the path reads where they count,
+  // start beside the hold rather than after the first draw (#587 C07, C08).
+  useMapReadsBesideHold();
+  useRoadmapStructureFirst({ plan: true, progress: true });
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const progress = useRoadmapProgress();
@@ -319,7 +345,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     () => Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([id, one]) => [id, one.levels.length])),
     [structure],
   );
-  const { lockOf, loading: planLoading } = useLocks(levelCounts);
+  const { lockOf, loading: planLoading } = useContentLocks(levelCounts);
   const loadingStructure = structureQuery.isPending || planLoading;
   const structureError = structureQuery.error ? friendlyError(structureQuery.error) : null;
   // Topics for the active subject, in path order. The first is the default/
@@ -392,6 +418,19 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     const chosen = firstSelectable(initial, [fromUrl, readSectionTopic(resolved.section), readString(TOPIC_KEY), TOPICS[0]]);
     return (chosen ?? initial[0]?.topic ?? TOPICS[0]) as RoadmapTopic;
   });
+  // A deep link's ?topic the first draw could not open: signed in, the
+  // account's plan and progress can still be on their way when the map
+  // draws, now that its public reads no longer wait for supabase-js and the
+  // session (perf baseline #587 C10) and it draws without React's reveal
+  // throttle (C04). It opens once they open it (the effect after landOn),
+  // unless the learner has moved on first: picked a topic, switched section,
+  // opened a step or joined. Before #587 the account's data was in by the
+  // first draw, and the map landed on it at once.
+  const lateDeepLink = useRef<string | null | undefined>(undefined);
+  if (lateDeepLink.current === undefined) {
+    const asked = new URLSearchParams(window.location.search).get('topic');
+    lateDeepLink.current = asked && asked !== topic ? asked : null;
+  }
   // Which of the topic's PARTS_PER_TOPIC parts is open in the path view.
   const [part, setPart] = useState<number>(() => {
     const fromUrl = parseInt(new URLSearchParams(window.location.search).get('part') ?? '', 10);
@@ -414,6 +453,9 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const [loadingLesson, setLoadingLesson] = useState(false);
   const [readingLessonId, setReadingLessonId] = useState<string | null>(null);
   const [lessonError, setLessonError] = useState<string | null>(null);
+  // When the level's wait began: its loader and the runner's code loader
+  // after it are one wait (learn/LevelLoader.tsx).
+  const [waitSince, setWaitSince] = useState(0);
   const lessonAbortRef = useRef<AbortController | null>(null);
   // Leaving Learn while a level loads drops its request too.
   useEffect(() => () => lessonAbortRef.current?.abort(), []);
@@ -459,13 +501,6 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     }
   }, [topic, ranges, progress, extraUnlocksSet, part, availability]);
 
-  // Pull account progress + XP on sign-in and merge with this device (progress
-  // first, so the merged learning XP is reflected before the XP reconcile).
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    syncProgressWithServer().then(() => syncXpWithServer()).catch(() => {});
-  }, [isAuthenticated]);
-
   // Show `next`, on the first unlocked, incomplete part of it.
   const landOn = (next: RoadmapTopic, remember: LearnSectionId | null) => {
     setTopic(next);
@@ -482,6 +517,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const selectTopic = (next: RoadmapTopic) => {
     // Locked and dimmed topics aren't tabbable; ignore if somehow invoked.
     if (!entries.some((entry) => entry.topic === next && entry.state === 'open')) return;
+    lateDeepLink.current = null;
     landOn(next, section);
   };
 
@@ -496,10 +532,29 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     if (next) landOn(next as RoadmapTopic, null);
   }, [section, entries]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The deep link's topic, once the account's plan and progress open it
+  // (lateDeepLink above). It lands as the first draw would have: the part
+  // the address or this device named is kept where it opens, and nothing is
+  // remembered, as for any ?topic on arrival. A switch to another section
+  // drops it.
+  const arrivalSection = useRef(section);
+  useEffect(() => {
+    const asked = lateDeepLink.current;
+    if (!asked) return;
+    if (section !== arrivalSection.current) {
+      lateDeepLink.current = null;
+      return;
+    }
+    if (active || !entries.some((entry) => entry.topic === asked && entry.state === 'open')) return;
+    lateDeepLink.current = null;
+    setTopic(asked as RoadmapTopic);
+  }, [section, entries, active]);
+
   /** Open another section, optionally on one of its topics. The old query is
    * dropped, so a ?topic of the section left behind cannot send the learner
    * back. */
   const switchSection = (id: LearnSectionId, nextTopic?: RoadmapTopic) => {
+    lateDeepLink.current = null;
     if (nextTopic) landOn(nextTopic, id);
     navigate({ pathname: `/learn/${id}`, search: nextTopic ? `?topic=${nextTopic}` : '' });
   };
@@ -546,6 +601,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const runJoin = async (id: LearnSectionId) => {
     if (!user || !profile || join?.status === 'saving' || joiningRef.current) return;
     joiningRef.current = true;
+    lateDeepLink.current = null;
     const retryAfterSave = join?.section === id && join.status === 'error' && join.step === 'save';
     const started = { section: id, status: 'saving' as const };
     const epoch = accountEpoch();
@@ -608,10 +664,14 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   );
 
   const open = (a: Active, questions = false) => {
+    lateDeepLink.current = null;
     preloadLessonRunner();
     const lessonId = a.kind === 'level' && !questions ? levels.find((level) => level.level === a.ref)?.lessonId : undefined;
     setReadingLessonId(lessonId ?? null);
     if (lessonId) {
+      preloadLessonReader();
+      // The lesson is asked for with the press, beside the reader's code.
+      prefetchLearnLesson(queryClient, lessonId);
       lessonAbortRef.current?.abort();
       setActive(a);
       setPlayable(null);
@@ -628,13 +688,20 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     setLoadingLesson(true);
     setLessonError(null);
     const startedAt = Date.now();
+    setWaitSince(startedAt);
+    // The screen opens once the runner's code is in too, so a level answered
+    // first does not swap its loader for the runner's own.
+    const runner = loadLessonRunner().then(() => undefined, () => undefined);
     const req =
       a.kind === 'level'
         ? fetchRoadmapLevel(topic, a.ref, controller.signal)
         : fetchRoadmapPartTest(topic, a.ref, controller.signal);
     req
       .then(async (data) => {
-        await holdLoadingScreen(startedAt);
+        // A fast answer opens at once; a slow one keeps its loader up long
+        // enough to read as a beat (learn/LevelLoader.tsx, #587 C05).
+        await runner;
+        await revealWhenReady(startedAt);
         if (controller.signal.aborted) return;
         // A part test comes back as a generic exam; give it a localized title.
         setPlayable(a.kind === 'test' ? { ...data, title: t('roadmap.partLabel', { n: a.ref }) } : data);
@@ -655,7 +722,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   };
 
   // A Premium step opens the upgrade sheet instead of a lesson.
-  const stepContent = (a: Active): GatedContent =>
+  const stepContent = (a: Active): NonCodingContent =>
     a.kind === 'level' ? { kind: 'learn-level', topic, level: a.ref } : { kind: 'learn-part-test', topic, part: a.ref };
   const openOrUpgrade = (a: Active) => {
     const content = stepContent(a);
@@ -677,12 +744,15 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     const params = new URLSearchParams(window.location.search);
     const levelRaw = params.get('level');
     if (!levelRaw) return;
-    autoOpenedRef.current = true;
     // Never open a level of a topic other than the one on screen, nor of one
     // the rail does not show as open: with nothing open in the section (a
     // fresh device on /learn?topic=dsa&level=1), `topic` is the section's
-    // first, locked entry and the map says what opens it.
+    // first, locked entry and the map says what opens it. A topic the
+    // account's data may still open (lateDeepLink) keeps the level for its
+    // landing.
     const urlTopic = params.get('topic');
+    if (urlTopic && urlTopic !== topic && lateDeepLink.current === urlTopic) return;
+    autoOpenedRef.current = true;
     if (urlTopic && urlTopic !== topic) return;
     if (!entries.some((entry) => entry.topic === topic && entry.state === 'open')) return;
     const lvl = parseInt(levelRaw, 10);
@@ -837,9 +907,9 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   // the moment the invite link is offered (#239).
   const noLevelPassedYet = (TOPICS as RoadmapTopic[]).every((one) => passedLevelCount(progress, one) === 0);
   if (active !== null) {
-    if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} backLabel={t(categoryLabelKey(topic))} onStart={() => open(active, true)} onBack={exitLesson} />;
+    if (readingLessonId) return <LessonReader key={readingLessonId} lessonId={readingLessonId} backLabel={t(categoryLabelKey(topic))} onStart={() => open(active, true)} onBack={exitLesson} />;
     if (loadingLesson) {
-      return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
+      return <DelayedQuoteLoader since={waitSince} quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     }
     if (lessonError || !playable) {
       return <LessonError message={lessonError ?? t('roadmap.error')} onRetry={() => open(active)} onExit={exitLesson} t={t} />;
@@ -859,7 +929,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           ? t('roadmap.nextPart')
           : t('roadmap.nextLevel');
     return (
-      <LessonStage onExit={exitLesson} t={t}>
+      <LessonStage since={waitSince} onExit={exitLesson} t={t}>
       <LessonRunner
         key={`${topic}-${active.kind}-${active.ref}`}
         playable={playable}
@@ -945,7 +1015,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
 
       {/* Keyed by section: a switch fades the section in (rmTrackIn, none
           under reduced motion) and re-measures the map. */}
-      <div key={section} ref={sectionBodyRef} className="rm-track-in rm-section-body">
+      <div key={section} ref={sectionBodyRef} className="rm-track-in rm-section-body" {...RUNNER_INTENT}>
         <SectionHeader
           section={section}
           name={sectionName}
@@ -1064,7 +1134,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           {/* A next level Premium opens says so once, here, and its button
               says what it does (UX audit learn-22): it opens the upgrade
               sheet, not a level. */}
-          <div className="rm-overview-card">
+          <div className="rm-overview-card" data-lesson={continueLevel && continueLevel.lessonId ? '' : undefined}>
             <span className="rm-overview-fin" aria-hidden="true" />
             <div className="rm-overview-copy">
               <p id="rm-overview-step" className="rm-overview-step">
@@ -1140,6 +1210,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
                   <div
                     key={n.key}
                     data-step={n.key}
+                    data-lesson={n.level?.lessonId ? '' : undefined}
                     style={{ position: 'absolute', transform: 'translateX(-50%)', left: n.cx, top: n.cy - n.half }}
                   >
                     <div className="rm-node" style={{ animationDelay: `${n.i * 0.025}s` }}>
@@ -1474,31 +1545,6 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
   );
 }
 
-/** The lazily loaded runner in a boundary of its own: code that did not load
- * leaves the learner a Try again and the way back to the map, not the page's
- * error screen. */
-function LessonStage({ onExit, t, children }: { onExit: () => void; t: TFn; children: ReactNode }) {
-  return (
-    <Suspense fallback={<QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />}>
-      <ShellPartBoundary fallback={(retry) => <LessonError message={t('roadmap.error')} onRetry={retry} onExit={onExit} t={t} />}>
-        {children}
-      </ShellPartBoundary>
-    </Suspense>
-  );
-}
-
-function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry: () => void; onExit: () => void; t: TFn }) {
-  return (
-    <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', textAlign: 'center', marginTop: 32 }}>
-      <div style={{ color: 'var(--ss-error)', marginBottom: 16 }} role="alert">{message}</div>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-        <AxButton variant="primary" label={t('roadmap.retry')} onClick={onRetry} />
-        <AxButton variant="secondary" label={t('roadmap.backToPath')} onClick={onExit} />
-      </div>
-    </div>
-  );
-}
-
 /* ──── adaptive placement runner ────────────────────────────────────────── */
 
 // The skill-check is an adaptive placement: the server serves short rounds and
@@ -1643,7 +1689,7 @@ function SkillCheckRunner({
     try {
       const params = new URLSearchParams({ resource: 'placement', subject });
       const res = await apiFetch<PlacementResponse>(`/api/quiz/roadmap?${params}`);
-      await holdLoadingScreen(startedAt);
+      await revealWhenReady(startedAt);
       if (res.done) await finishFrom(res);
       else applyRound(res, null);
     } catch (err) {
@@ -1717,7 +1763,7 @@ function SkillCheckRunner({
   }
 
   if (phase === 'loading' || phase === 'submitting') {
-    return <QuoteLoader quote={t('quiz.loadingQuote')} label={learnText('placement.loading')} />;
+    return <DelayedQuoteLoader quote={t('quiz.loadingQuote')} label={learnText('placement.loading')} />;
   }
 
   if (phase === 'error') {
@@ -1859,59 +1905,8 @@ function SkillCheckRunner({
   );
 }
 
-/** The same reviewed DSA lessons, with an entry point open before placement. */
-export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
-  const { t } = useLanguage();
-  const { isAuthenticated, user } = useAuth();
-  // /big-o's "Start lesson 1" opens a lesson directly (?lesson=1, UX audit
-  // learn-19): the lesson's reading is the first screen, and the parameter is
-  // dropped so Back and a reload land on the introduction.
-  const location = useLocation();
-  const navigate = useNavigate();
-  const asked = new URLSearchParams(location.search).get('lesson');
-  const [level, setLevel] = useState<1 | 2 | null>(() => (asked === '1' ? 1 : asked === '2' ? 2 : null));
-  const [generation, setGeneration] = useState(0);
-  const [reading, setReading] = useState(true);
-  const before = useRef(0);
-  useEffect(() => {
-    if (asked === null) return;
-    if (level !== null) {
-      preloadLessonRunner();
-      before.current = computeLearningXp(getRoadmapProgress());
-    }
-    navigate({ pathname: location.pathname, hash: location.hash }, { replace: true });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival
-  const lesson = useQuery({
-    queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
-    enabled: level !== null && !reading,
-    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, signal),
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-  });
-  const open = (next: 1 | 2) => {
-    preloadLessonRunner();
-    before.current = computeLearningXp(getRoadmapProgress());
-    setGeneration((value) => value + 1);
-    setReading(true);
-    setLevel(next);
-  };
-  if (level !== null) {
-    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={() => setReading(false)} onBack={() => setLevel(null)} />;
-    if (lesson.isPending) return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
-    if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
-    return <LessonStage onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
-      topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
-      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} onActiveChange={onActiveChange} t={t}
-      onFinished={(pct, repeatXp) => {
-        recordLevelResult('dsa', level, pct, lesson.data!.passPct);
-        awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before.current, isAuthenticated);
-        if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
-      }} /></LessonStage>;
-  }
-  // The route shell sets the width. The Learn header, then lesson 1 as the one
-  // SwimCta md and lesson 2 a secondary, both 44px (UX audit learn-04, -15, -19).
-  return <BigOLessons onOpen={open} />;
-}
+// /learn/big-o's page lives in its own module, so that route can load it
+// without the map (#587 C17); App.tsx still reads it from here.
+export { BigOIntroduction } from './learn/BigOIntroduction';
 
 export default Roadmap;

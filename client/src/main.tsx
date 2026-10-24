@@ -10,10 +10,12 @@ document.documentElement.dataset.design = 'apple';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
+import { preloadPath } from './lib/routePreload';
 import { ColorModeProvider } from './theme/ColorModeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LanguageProvider } from './i18n/LanguageContext';
 import { AuthProvider } from './lib/auth';
+import { prefetchStoredAccountPlan } from './lib/entitlement';
 import { queryClient } from './lib/queryClient';
 import { initSentry } from './lib/sentry';
 import { initAnalytics } from './lib/analytics';
@@ -31,7 +33,9 @@ if (import.meta.hot) import.meta.hot.dispose(() => { void scrollbarReady.then(di
 const disposeChunkErrorTracking = installChunkErrorTracking();
 if (import.meta.hot) import.meta.hot.dispose(disposeChunkErrorTracking);
 
-// Start error/performance reporting before anything renders (no-op without a DSN).
+// Error/performance reporting (no-op without a DSN). Errors are caught from
+// here on; the SDK itself loads once the page is idle, or on the first error
+// (lib/sentry.ts).
 initSentry();
 // PostHog product analytics, only after the visitor's yes to analytics in the
 // cookie banner (lib/consent.ts). Before it the SDK is not downloaded and
@@ -75,6 +79,13 @@ const ReactQueryDevtools = import.meta.env.DEV
   : null;
 
 capturePublicGuide();
+// A returning learner's plan, asked now rather than once the header and the
+// page have rendered and auth has restored the user (lib/entitlement.ts).
+prefetchStoredAccountPlan();
+// The first page's code, asked now: App renders it in a transition after its
+// first commit (lib/routePreload.ts useFirstPageTransition), and the import
+// it then runs is this one.
+void preloadPath(window.location.pathname);
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>

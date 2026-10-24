@@ -23,8 +23,7 @@ import {
   passedLevelCount,
   type VerifiedProgress,
 } from '../../../../shared/progression';
-import { isBarred, type LockState } from '../../lib/locks';
-import type { GatedContent } from '../../../../shared/tiers';
+import { isBarred, type LockState, type NonCodingContent } from '../../lib/contentLocks';
 import type { PathProgressResponse } from '../../../../shared/learning-path-api';
 import type { ModuleSummary } from '../../../../shared/learning-paths';
 
@@ -92,7 +91,7 @@ export interface RailContext {
   isMember: boolean;
   progress: VerifiedProgress;
   extraUnlocks: ReadonlySet<string>;
-  lockOf: (content: GatedContent) => LockState;
+  lockOf: (content: NonCodingContent) => LockState;
 }
 
 /** The rail of one section. A member sees the section's topics that are in

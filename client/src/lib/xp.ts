@@ -13,7 +13,7 @@
 
 import { apiFetch } from './api';
 import { accountEpoch } from './accountData';
-import { readJSON, writeJSON } from './storage';
+import { readJSON, readString, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { useRoadmapProgress, getRoadmapProgress } from './roadmap';
 import {
@@ -297,9 +297,35 @@ export async function syncXpWithServer({ announceRankUp = false }: { announceRan
   if (epoch !== accountEpoch() || turn < newestWritten) return;
   newestWritten = turn;
   writeQuestMap(serverMap);
+  lastXpWrite = { epoch, turn, at: Date.now(), copy: readString(QUEST_KEY) };
   const announce = announceOwed !== null && announceOwed.epoch === epoch && turn >= announceOwed.turn;
   if (announce || announceOwed?.epoch !== epoch) announceOwed = null;
   reconcileRank(announce);
+}
+
+// The Learn map reads the account's XP on every mount (perf baseline #587
+// C22): a client-side return to a map seconds after the last read asked
+// again, each read an Auth getUser and an XP query. A read that wrote less
+// than XP_SYNC_FRESH_MS ago answers the map's next ask, for the same account,
+// while no other sync has started since and the browser's copy is the one it
+// wrote. Every flow in this tab that changes the account's XP on the server
+// (a quiz result, a coding pass, a Challenge, an FDE step, a repeated Learn
+// step) syncs itself afterwards with syncXpWithServer, which always reads, and
+// a local award changes the copy, so only a change made in another tab or on
+// another device can wait, for at most the window. Only the map uses this.
+export const XP_SYNC_FRESH_MS = 60_000;
+let lastXpWrite: { epoch: number; turn: number; at: number; copy: string | null } | null = null;
+
+/** The Learn map's XP sync: syncXpWithServer, unless a read wrote within
+ * XP_SYNC_FRESH_MS and nothing has changed since (see above). */
+export function syncXpUnlessFresh(): Promise<void> {
+  const epoch = accountEpoch();
+  const fresh = lastXpWrite !== null
+    && lastXpWrite.epoch === epoch
+    && lastXpWrite.turn === syncsStarted
+    && Date.now() - lastXpWrite.at < XP_SYNC_FRESH_MS
+    && lastXpWrite.copy === readString(QUEST_KEY);
+  return fresh ? Promise.resolve() : syncXpWithServer();
 }
 
 /**

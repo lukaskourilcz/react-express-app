@@ -12,6 +12,8 @@ const state = vi.hoisted(() => ({
   /** The outcome of each load of the workbench's code; the last one repeats. */
   outcomes: ['load'] as ('fail' | 'load')[],
   loads: 0,
+  /** Loads of the editor's code. */
+  editorImports: 0,
   reloadOnPress: vi.fn(async () => true),
 }));
 
@@ -49,12 +51,18 @@ vi.mock('../src/coding/api', () => ({
   }),
 }));
 vi.mock('../src/coding/CodingWorkbench', () => ({ CodingWorkbench: () => <p>the workbench</p> }));
+vi.mock('../src/coding/Editor', () => ({ Editor: () => null }));
+vi.mock('../src/coding/loadEditor', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/coding/loadEditor')>();
+  return { ...real, loadEditor: () => { state.editorImports += 1; return real.loadEditor(); } };
+});
 
 beforeEach(() => {
   // CodingSection keeps a loaded workbench for the page's lifetime: each test
   // is a fresh page.
   vi.resetModules();
   state.loads = 0;
+  state.editorImports = 0;
   state.reloadOnPress.mockReset();
   state.reloadOnPress.mockResolvedValue(true);
 });
@@ -115,10 +123,11 @@ it('gives the button back when no reload starts, offline or with the server unre
   expect(screen.getByRole('alert')).toHaveTextContent('Could not load this task.');
 });
 
-// The lists warm the workbench (CodeMirror, about 190 kB gzipped) once the
-// browser is idle, even for a visitor who asked it to save data; the runner
-// already waits for their first Run instead.
-it('warms the workbench from a list only when the browser is not saving data', async () => {
+// The lists warmed the workbench (with CodeMirror, about 190 kB gzipped)
+// once the browser was idle, even for a visitor who asked it to save data; the
+// runner already waits for their first Run instead. Since perf baseline #587
+// C03 the warm-up leaves CodeMirror (about 170 kB of it) to the task.
+it('warms the workbench from a list only when the browser is not saving data, and never the editor', async () => {
   vi.stubGlobal('requestIdleCallback', (run: () => void) => { run(); return 1; });
   vi.stubGlobal('cancelIdleCallback', () => {});
   vi.stubGlobal('navigator', { ...navigator, connection: { saveData: true } });
@@ -129,7 +138,37 @@ it('warms the workbench from a list only when the browser is not saving data', a
     vi.stubGlobal('navigator', { ...navigator, connection: { saveData: false } });
     renderHook(() => useWarmWorkbench()).unmount();
     expect(state.loads).toBe(1);
+    expect(state.editorImports).toBe(0);
   } finally {
     vi.unstubAllGlobals();
+  }
+});
+
+// C12: a task opened on a wide screen fetches the editor beside the
+// workbench and draws once both are in; on a phone that shows the puzzle or
+// the "bigger screen" note it does not fetch the editor at all.
+it('loads the editor beside the workbench on a wide screen only', async () => {
+  state.outcomes = ['load'];
+  await mount();
+  expect(await screen.findByText('the workbench')).toBeInTheDocument();
+  expect(state.editorImports).toBe(1);
+});
+
+it('opens a task on a phone without fetching the editor', async () => {
+  state.outcomes = ['load'];
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query === '(max-width: 1023.95px)', media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  try {
+    await mount();
+    expect(await screen.findByText('the workbench')).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(state.editorImports).toBe(0);
+  } finally {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: false, media: query, onchange: null,
+      addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+    }) as MediaQueryList);
   }
 });

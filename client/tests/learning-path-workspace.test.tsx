@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
+import { loadEditor } from '../src/coding/loadEditor';
 
 const A = 'fde-v1-m01-linear-accumulator';
 const B = 'fde-v1-m01-halving-counter';
@@ -132,6 +133,10 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
 // The screen's code, compiled once up front rather than inside the first
 // test's time budget. Imported here, after the fixtures the mocks read.
 beforeAll(() => import('../src/components/paths/LearningPathScreens'), 60_000);
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 beforeEach(() => {
   calls.codePassed = false;

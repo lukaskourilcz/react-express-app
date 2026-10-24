@@ -248,7 +248,10 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) test(`Motionâ€
   const routeBox = page.locator('.ss-route');
   const opacity = () => routeBox.evaluate((node) => getComputedStyle(node).opacity);
 
-  expect(motion.dropped).toBeGreaterThan(0);
+  // With reduced motion the page never asks for the chunk (perf baseline #587
+  // C18, lib/motion.tsx motionFeaturesFor) and draws as a failed load does.
+  if (reducedMotion === 'reduce') expect(motion.dropped).toBe(0);
+  else expect(motion.dropped).toBeGreaterThan(0);
   await expect.poll(opacity).toBe('1');
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
   await expectShell(page);
@@ -262,6 +265,8 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) test(`Motionâ€
   await expect.poll(() => routeBox.evaluate((node) => getComputedStyle(node).transform)).toBe('none');
   // Nothing reloads for it.
   expect(documents).toHaveLength(1);
+  // Nor does a navigation ask for it with reduced motion.
+  if (reducedMotion === 'reduce') expect(motion.dropped + motion.served).toBe(0);
 });
 
 test('a preload that fails on hover neither reloads nor shows an error', async ({ page }) => {

@@ -1,4 +1,3 @@
-import { applyRouteHead, readShareHead } from './lib/routeHead';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
@@ -34,7 +33,7 @@ import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import SignInDialogHost from './components/auth/SignInDialogHost';
 import { useAuthLanding } from './lib/authLanding';
-import { installIntentPreloading, routeBoxKey, routeChunk } from './lib/routePreload';
+import { installIntentPreloading, routeBoxKey, routeChunk, useFirstPageTransition } from './lib/routePreload';
 import { lazyPage, lazyShellPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { pageMaxWidth } from './components/ui/pageWidth';
@@ -74,8 +73,12 @@ const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
 // The FDE path's pages sit inside its Learn section (#489) but load the path
 // screens, not the Learn page. lib/learningPaths.ts names the same address.
 const FDE_PATH = '/learn/forward-deployed-engineer/path';
-// /learn/big-o is one of them: BigOIntroduction lives in the Learn chunk.
-const loadRoadmap = routeChunk(routes('/learn/:section?'), () => import('./components/Roadmap'));
+// /learn/big-o is not a section: its page is a module of its own
+// (learn/BigOIntroduction.tsx) that loads without the map's chunk (#587 C17).
+const BIG_O_INTRODUCTION = /^\/learn\/big-o\/?$/;
+const learnSection = routes('/learn/:section?');
+const loadRoadmap = routeChunk((pathname) => learnSection(pathname) && !BIG_O_INTRODUCTION.test(pathname), () => import('./components/Roadmap'));
+const loadBigOIntroduction = routeChunk((pathname) => BIG_O_INTRODUCTION.test(pathname), () => import('./components/learn/BigOIntroduction'));
 const loadBigO = routeChunk(exact('/big-o'), () => import('./components/BigOPage'));
 const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
 const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
@@ -104,7 +107,7 @@ const Home = lazyPage(loadHome);
 const Quiz = lazyPage(loadQuiz);
 const Roadmap = lazyPage(loadRoadmap);
 const BigOPage = lazyPage(loadBigO);
-const BigOIntroduction = lazyPage(() => loadRoadmap().then((m) => ({ default: m.BigOIntroduction })));
+const BigOIntroduction = lazyPage(() => loadBigOIntroduction().then((m) => ({ default: m.BigOIntroduction })));
 const CareerRoadmap = lazyPage(loadCareerRoadmap);
 const Profile = lazyPage(loadProfile);
 const Leaderboard = lazyPage(loadLeaderboard);
@@ -168,9 +171,23 @@ const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 // The route box's width is the route's page width (.ss-route in app-shell.css).
 const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, display: 'flex', flexDirection: 'column' } as const;
 
-// The head a coding task or a dated question of the day arrived with
-// (vite.config.ts), read before any route writes its own (lib/routeHead.ts).
-const SHARE_HEAD = readShareHead();
+// The document head of each route (lib/routeHead.ts, with the public pages'
+// metadata and the topic catalogue it needs, ~3 KB gzip) loads as its own
+// chunk, started as this module evaluates, instead of inside the shell's
+// first download (perf audit #587). The head a coding task or a dated question
+// of the day arrived with (vite.config.ts) is read as the chunk arrives, before
+// any route writes its own; a load that fails is asked again on the next
+// navigation.
+type RouteHead = { apply: typeof import('./lib/routeHead').applyRouteHead; share: ReturnType<typeof import('./lib/routeHead').readShareHead> };
+let routeHead: Promise<RouteHead> | null = null;
+const loadRouteHead = (): Promise<RouteHead> => (routeHead ??= import('./lib/routeHead').then(
+  (head) => ({ apply: head.applyRouteHead, share: head.readShareHead() }),
+  (error: unknown) => {
+    routeHead = null;
+    throw error;
+  },
+));
+void loadRouteHead().catch(() => undefined);
 
 const MenuIcon = () => (
   <svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -443,7 +460,14 @@ function App() {
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
-    applyRouteHead(location.pathname, t, SHARE_HEAD);
+    // Only the latest route writes, however the loads finish.
+    let current = true;
+    loadRouteHead().then(({ apply, share }) => {
+      if (current) apply(location.pathname, t, share);
+    }, () => undefined);
+    return () => {
+      current = false;
+    };
   }, [location.pathname, t]);
 
   // Route focus follows the route box (lib/routePreload.ts), not the
@@ -457,10 +481,17 @@ function App() {
     // the head does not pull focus away from the current control.
     if (startupGuidePath.current !== location.pathname) startupGuidePath.current = null;
     const preserveStartupFocus = startupGuidePath.current !== null;
+    // The visit's first location (React Router keys it 'default').
+    const firstPage = location.key === 'default';
     const timer = window.setTimeout(() => {
       // The public guide's native interaction owns focus during cold startup.
       // Once navigation leaves it, ordinary route focus resumes.
       if (preserveStartupFocus) return;
+      // The first page of a visit can draw inside this delay now that it
+      // renders in a transition and a level opens without a minimum loader
+      // (perf baseline #587 C04, C05): a control the learner or the page has
+      // focused by then keeps the focus, as it did when the page drew later.
+      if (firstPage && document.activeElement && document.activeElement !== document.body) return;
       // A page that focused the target its hash names keeps that focus.
       if (location.hash && document.activeElement?.id === location.hash.slice(1)) return;
       const main = document.getElementById('main-content');
@@ -529,6 +560,12 @@ function App() {
     return out;
   }, []);
   const showChrome = !isDev && !(quizActive && (isQuiz || isChallenge || isLearn));
+
+  // The first page of a visit renders in a transition, so it draws as soon as
+  // its code and data are in, without React's 300 ms reveal throttle
+  // (lib/routePreload.ts). What shows is the same: nothing for 200 ms, then
+  // the loader, then the page.
+  const booted = useFirstPageTransition();
 
   return (
     // One-screen shell: the app is exactly one viewport tall. Pages scroll
@@ -794,8 +831,9 @@ function App() {
           }}
         >
           {/* Route transition: the new view fades in over a stable backdrop —
-              no exit phase, so navigation never shows a blank beat. Reduced
-              motion still gets the (movement-free) fade.
+              no exit phase, so navigation never shows a blank beat. A page
+              that opens with reduced motion loads no motion features, so its
+              routes appear without the fade (lib/motion.tsx).
               The Suspense boundary sits OUTSIDE the keyed route box on
               purpose. Inside it, every pathname mounted a fresh boundary, and
               React shows a fresh boundary's fallback at once even in a
@@ -804,7 +842,10 @@ function App() {
               300ms reveal throttle and only then drew the page. Outside it, the
               boundary has already revealed content, so the router's transition
               keeps the current page until the next one can render whole. The
-              fallback remains for the first page of a visit.
+              first page of a visit gets the same: the box first draws the
+              loader as content (`booted` false), and the page follows in a
+              transition (useFirstPageTransition). The fallback is left for
+              an update outside a transition that suspends.
               RouteErrorBoundary catches a page that fails, whether its code
               did not load or it threw. It sits inside this Suspense so that
               catching never unmounts the Suspense: a remounted one shows its
@@ -825,6 +866,7 @@ function App() {
               a desktop and 0.15 on a phone, and 0.98 when the header settled in
               the same frame. */}
           <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
+            {!booted ? <div style={ROUTE_BOX_STYLE}><RouteLoader /></div> : <>
             <m.div
               key={boxKey}
               className="ss-route"
@@ -889,6 +931,7 @@ function App() {
               </RouteErrorBoundary>
             </m.div>
             {showChrome && <BrandFooter />}
+            </>}
           </Suspense>
         </div>
       </main>

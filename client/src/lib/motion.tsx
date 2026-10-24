@@ -9,7 +9,8 @@
 //
 // Accessibility: every helper honours `prefers-reduced-motion` - transforms are
 // dropped and only a short opacity fade remains (or nothing), so vestibular
-// users don't get movement they didn't ask for.
+// users don't get movement they didn't ask for. A page that opens with reduced
+// motion loads no animation features at all, and its elements simply appear.
 
 import { LazyMotion, m as motionM, AnimatePresence, useReducedMotion } from 'motion/react';
 import { createElement, type ComponentType, type CSSProperties, type ReactNode } from 'react';
@@ -27,8 +28,8 @@ import { reportError } from './sentry';
 // (`<html data-motion="off">`), and app-shell.css shows each `m` element as
 // its animation ends, without the animation. Every `m` element in the app
 // enters to full opacity and no transform, and this module gives each a
-// `data-m` attribute for that rule. Reduced motion is untouched: it only
-// changes what a working animation does.
+// `data-m` attribute for that rule. Reduced motion at page load takes the
+// same path without loading the chunk (motionFeaturesFor below).
 type Features = typeof import('./motion-features').default;
 
 /** Load the features, or mark the document when their chunk does not load.
@@ -44,7 +45,24 @@ export function loadMotionFeatures(
   });
 }
 
-const loadFeatures = () => loadMotionFeatures();
+/**
+ * The features for this page load. A reader who asked for reduced motion
+ * when the page opened gets none (perf baseline #587 C18): the 14 KB chunk
+ * stayed in every page's boot window only to run 120 ms fades. The document
+ * is marked as when the chunk fails, so app-shell.css shows every `m` element
+ * at once, at its final opacity and without a transform, and an exiting one
+ * leaves at once. A preference changed later takes effect on the next load.
+ */
+export function motionFeaturesFor(
+  reduced: boolean,
+  load?: () => Promise<Features>,
+): Promise<Features> {
+  if (!reduced) return loadMotionFeatures(load);
+  document.documentElement.dataset.motion = 'off';
+  return new Promise<Features>(() => undefined);
+}
+
+const loadFeatures = () => motionFeaturesFor(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /** Wrap the app once so every `m.*` element below has its features. */
 export function MotionProvider({ children }: { children: ReactNode }) {

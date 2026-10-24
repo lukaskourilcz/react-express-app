@@ -130,20 +130,32 @@ export function useCodingApproaches(id: string | undefined, passed: boolean) {
   });
 }
 
+/** How long a task's answer counts as the one this visit asked for. The
+ * first page's early read (startCodingTaskRead) hands its answer to the
+ * screen within that time, so the screen does not ask again; every visit
+ * still asks afresh, since nothing outlives the screen (gcTime 0). */
+export const TASK_HANDOFF_MS = 5_000;
+
+/** The task, its sealed session and the account's draft, as one set of
+ * options the task screen and the first page's early read share. */
+export const codingTaskQuery = (id: string, learnSession?: string) => queryOptions({
+  queryKey: [...codingKeys.task(id), learnSession ?? null] as const,
+  queryFn: ({ signal }) => fetchCodingTask(id, signal, learnSession),
+  // Premium (402), an unknown task (404) and a retired one (410) are
+  // answers, not failures to retry, and so is a request the server refused
+  // as malformed (400): sent again, it is refused again.
+  retry: (failures, error) => ![400, 402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1,
+  staleTime: TASK_HANDOFF_MS,
+  // A read that failed in the early read is the screen's error: its Try
+  // again asks again, as after a failure of its own.
+  retryOnMount: false,
+  // Task responses contain an editable starting draft. Do not mount a new
+  // stage from an old response while its current draft is being fetched.
+  gcTime: 0,
+});
+
 export function useCodingTask(id: string | undefined, learnSession?: string) {
-  return useQuery({
-    queryKey: [...codingKeys.task(id ?? ''), learnSession ?? null],
-    enabled: Boolean(id),
-    queryFn: ({ signal }) => fetchCodingTask(id!, signal, learnSession),
-    // Premium (402), an unknown task (404) and a retired one (410) are
-    // answers, not failures to retry, and so is a request the server refused
-    // as malformed (400): sent again, it is refused again.
-    retry: (failures, error) => ![400, 402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1,
-    staleTime: 0,
-    // Task responses contain an editable starting draft. Do not mount a new
-    // stage from an old response while its current draft is being fetched.
-    gcTime: 0,
-  });
+  return useQuery({ ...codingTaskQuery(id ?? '', learnSession), enabled: Boolean(id) });
 }
 
 export function useGithubConnection(enabled: boolean) {

@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -6,6 +6,7 @@ import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { submitCoding } from '../src/coding/api';
 import type { CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({ Editor: () => <textarea aria-label="Test editor" /> }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({data:undefined}), submitCoding: vi.fn(), revealCoding: vi.fn() }));
@@ -27,6 +28,10 @@ const result = (extra: Partial<CodingVerdictResponse>): CodingVerdictResponse =>
   verdict:'passed',results:[{pass:true,actual:null,error:null}],hidden:null,check:null,logs:[],codeError:null,
   design:null,designReference:null,failureHint:null,puzzle:null,progress:null,firstPass:false,xpAwarded:0,xpForfeited:false,applied:false,github:null,solutions:null,...extra,
 });
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
+
 it('replaces the workbench with the passed award and two completion actions', async () => {
   vi.mocked(submitCoding).mockResolvedValue(result({xpAwarded:25}));
   mount();

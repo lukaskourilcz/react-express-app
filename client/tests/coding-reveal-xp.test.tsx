@@ -1,7 +1,7 @@
 // Revealing a solution before passing costs that task its XP and coins. The
 // learner is told before (the confirmation) and after (the verdict card), and
 // not told once the task is passed, where a reveal costs nothing.
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -9,6 +9,7 @@ import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { revealCoding, submitCoding } from '../src/coding/api';
 import type { CodingRevealResponse, CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
+import { loadEditor } from '../src/coding/loadEditor';
 
 vi.mock('../src/coding/Editor', () => ({
   Editor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>
@@ -66,6 +67,10 @@ async function submitAndWait() {
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
   return screen.findByRole('heading', { level: 1, name: /^Passed/ });
 }
+
+// CodeMirror is its own chunk (perf baseline #587 C12): load it before the
+// first render, as the task screen and an intent preload do.
+beforeAll(async () => { await loadEditor(); });
 
 it('warns a signed-in learner before a pass that revealing costs the XP and coins', async () => {
   vi.mocked(revealCoding).mockResolvedValue(revealed);

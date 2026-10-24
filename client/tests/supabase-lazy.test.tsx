@@ -100,6 +100,10 @@ const sb = vi.hoisted(() => {
 
 const KEY = sb.KEY;
 const STORED = sb.sessionFor('stored-access-token', 'user-stored');
+// The same session within supabase-js's refresh margin (90 s): its token
+// comes from supabase-js, which refreshes it first, so a request waits for
+// the download. A token further from its expiry goes at once (C10).
+const EXPIRING = { ...STORED, expires_at: Math.floor(Date.now() / 1000) + 60 };
 
 /** The page load: fresh modules, and a supabase-js whose imports are counted.
  * `held` keeps the download pending until releaseDownload(), as a slow network
@@ -307,7 +311,7 @@ describe('a returning visitor with a stored session', () => {
 
   it('waits for a download still in flight, within the four-second limit, and sends the token', async () => {
     freshPageLoad('held');
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch } = await import('../src/lib/api');
     const request = apiFetch('/api/test');
@@ -318,11 +322,113 @@ describe('a returning visitor with a stored session', () => {
     expect(authorization).toEqual(['Bearer stored-access-token']);
   });
 
+  // Perf baseline #587 C10: supabase-js's getSession() hands out a stored token
+  // unchanged until 90 s before it expires, so a request can carry that token
+  // without waiting for the 54 KB download.
+  it('sends a stored token far from its expiry at once, without waiting for the download', async () => {
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const authorization = recordAuthorization();
+    const { apiFetch } = await import('../src/lib/api');
+    await expect(apiFetch('/api/test')).resolves.toEqual({ ok: true });
+    expect(authorization).toEqual(['Bearer stored-access-token']);
+    expect(sb.createClient).not.toHaveBeenCalled();
+  });
+
+  it('reads the stored token only while supabase-js would hand it out unchanged', async () => {
+    const { freshStoredAccessToken, TOKEN_EXPIRY_MARGIN_MS } = await import('../src/lib/supabaseClient');
+    const now = Date.now();
+    const store = (session: unknown) => localStorage.setItem(KEY, JSON.stringify(session));
+    store({ ...STORED, expires_at: Math.floor((now + TOKEN_EXPIRY_MARGIN_MS) / 1000) + 5 });
+    expect(freshStoredAccessToken(now)).toBe('stored-access-token');
+    store({ ...STORED, expires_at: Math.floor((now + TOKEN_EXPIRY_MARGIN_MS) / 1000) - 1 });
+    expect(freshStoredAccessToken(now)).toBeNull();
+    store({ ...STORED, refresh_token: undefined });
+    expect(freshStoredAccessToken(now)).toBeNull();
+    store({ ...STORED, expires_at: undefined });
+    expect(freshStoredAccessToken(now)).toBeNull();
+    localStorage.setItem(KEY, '{not json');
+    expect(freshStoredAccessToken(now)).toBeNull();
+    localStorage.removeItem(KEY);
+    expect(freshStoredAccessToken(now)).toBeNull();
+  });
+
+  it('waits for supabase-js on an OAuth return, though another account’s fresh session is stored', async () => {
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    window.history.replaceState(null, '', '/#access_token=oauth-access-token&refresh_token=r&expires_in=3600&token_type=bearer');
+    const authorization = recordAuthorization();
+    const { apiFetch } = await import('../src/lib/api');
+    const request = apiFetch('/api/test');
+    await settle();
+    expect(authorization).toEqual([]);
+    await releaseDownload();
+    await expect(request).resolves.toEqual({ ok: true });
+    expect(authorization).toEqual(['Bearer oauth-access-token']);
+  });
+
+  // Perf baseline #587 C10: the settings, the Learn map, the path catalog and
+  // a lesson are the same for every caller, so they do not wait for the
+  // supabase-js download or the session read, and carry no token.
+  it('sends the public reads at once and without a token, while an account read still waits for it', async () => {
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
+    const seen: { path: string; authorization: string | null }[] = [];
+    const record = ({ request }: { request: Request }) => {
+      const url = new URL(request.url);
+      seen.push({ path: `${url.pathname}${url.search}`, authorization: request.headers.get('authorization') });
+      return HttpResponse.json({ ok: true });
+    };
+    server.use(http.get('*/api/settings', record), http.get('*/api/quiz/roadmap', record), http.get('*/api/test', record));
+    const { apiFetch } = await import('../src/lib/api');
+    const publicReads = [
+      '/api/settings',
+      '/api/quiz/roadmap',
+      '/api/quiz/roadmap?resource=learning-path-catalog',
+      '/api/quiz/roadmap?resource=lesson&id=html-1',
+    ];
+    const account = apiFetch('/api/test');
+    const progress = apiFetch('/api/quiz/roadmap?resource=progress');
+    const level = apiFetch('/api/quiz/roadmap?topic=html&level=1');
+    await Promise.all(publicReads.map((url) => apiFetch(url)));
+    expect(seen).toEqual(publicReads.map((path) => ({ path, authorization: null })));
+    expect(sb.createClient).not.toHaveBeenCalled();
+    await releaseDownload();
+    await Promise.all([account, progress, level]);
+    expect(seen.slice(publicReads.length).map((one) => one.authorization)).toEqual(['Bearer stored-access-token', 'Bearer stored-access-token', 'Bearer stored-access-token']);
+  });
+
+  it('counts only GETs of the documented shapes as public reads', async () => {
+    const { isPublicRead } = await import('../src/lib/api');
+    expect(isPublicRead('/api/settings', undefined)).toBe(true);
+    expect(isPublicRead('/api/quiz/roadmap', 'GET')).toBe(true);
+    expect(isPublicRead('/api/quiz/roadmap?resource=learning-path-catalog', 'get')).toBe(true);
+    expect(isPublicRead('/api/quiz/roadmap?resource=lesson&id=html-1', undefined)).toBe(true);
+    for (const url of [
+      '/api/quiz/roadmap?id=x&resource=lesson',
+      '/api/quiz/roadmap?resource=lesson&id=',
+      '/api/settings/',
+      '/api/quiz/roadmap?resource=progress',
+      '/api/quiz/roadmap?topic=html&level=1',
+      '/api/quiz/roadmap?topic=html',
+      '/api/quiz/roadmap?resource=lesson&id=x&level=1',
+      '/api/quiz/roadmap?resource=lesson&resource=lesson&id=x',
+      '/api/quiz/roadmap?resource=learning-path-start',
+      '/api/quiz/roadmap?resource=coding-task&id=x',
+      '/api/settings?admin=1',
+      '/api/leaderboard',
+      '/api/user/[op]?op=entitlement',
+      'https://elsewhere.example/api/settings',
+    ]) expect(isPublicRead(url, 'GET')).toBe(false);
+    expect(isPublicRead('/api/quiz/roadmap', 'POST')).toBe(false);
+    expect(isPublicRead('/api/settings', 'PUT')).toBe(false);
+  });
+
   it('sends nothing when the stored session is not read within the four-second limit, and says why', async () => {
     // A signed-in learner whose token refresh is slow: sent without the token,
     // a quiz submit would be graded as a guest's and its one-time claim spent.
     freshPageLoad('held');
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch, friendlyError } = await import('../src/lib/api');
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
@@ -342,7 +448,7 @@ describe('a returning visitor with a stored session', () => {
   it('sends nothing while supabase-js keeps a session it could not refresh', async () => {
     // An expired token whose refresh met a network error: supabase-js answers
     // no session and keeps the stored one for the next try.
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch } = await import('../src/lib/api');
     await waitFor(() => expect(sb.createClient).toHaveBeenCalledTimes(1));
@@ -356,7 +462,7 @@ describe('a returning visitor with a stored session', () => {
   it('sends a request without a token once supabase-js has removed a session it cannot refresh', async () => {
     // A revoked refresh token: supabase-js removes the session and signs out,
     // so this browser is a guest's again.
-    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(KEY, JSON.stringify(EXPIRING));
     const authorization = recordAuthorization();
     const { apiFetch } = await import('../src/lib/api');
     await waitFor(() => expect(sb.createClient).toHaveBeenCalledTimes(1));
@@ -523,6 +629,50 @@ describe('signing in', () => {
     await expect(current().signInWithGoogle('/premium')).rejects.toThrow();
     expect(sessionStorage.getItem('devshark:auth-return')).toBeNull();
     expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
+  });
+
+  // Perf baseline #587 C30: supabase-js says SIGNED_IN for the stored session
+  // each time the tab is shown again, and every new tab sent a sign-in report
+  // (an Auth call and a log row) on its first return.
+  it('reports no sign-in when supabase-js announces the restored session again as the tab is shown', async () => {
+    const jwt = (sessionId: string) => `e30.${btoa(JSON.stringify({ sub: 'user-stored', session_id: sessionId })).replace(/=+$/, '')}.sig`;
+    const restoredSession = { ...STORED, access_token: jwt('session-a') };
+    localStorage.setItem(KEY, JSON.stringify(restoredSession));
+    const reports = recordSignInReports();
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await settle();
+    // The tab is shown again: the same sign-in, its token refreshed meanwhile.
+    await act(async () => sb.clients[0].emit('SIGNED_IN', restoredSession));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', { ...restoredSession, access_token: jwt('session-a').replace('.sig', '.refreshed') }));
+    await settle();
+    expect(reports).toEqual([]);
+    // A sign-in in this tab is a new Auth session, and is reported once.
+    const signedInAgain = { ...restoredSession, access_token: jwt('session-b') };
+    localStorage.setItem(KEY, JSON.stringify(signedInAgain));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', signedInAgain));
+    await waitFor(() => expect(reports).toEqual([`Bearer ${jwt('session-b')}`]));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', signedInAgain));
+    await settle();
+    expect(reports).toHaveLength(1);
+  });
+
+  it('still reports a sign-in after a sign-out in a tab that restored a session', async () => {
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const reports = recordSignInReports();
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await settle();
+    await act(async () => sb.clients[0].emit('SIGNED_IN', STORED));
+    await settle();
+    expect(reports).toEqual([]);
+    localStorage.removeItem(KEY);
+    await act(async () => sb.clients[0].emit('SIGNED_OUT', null));
+    // The same account signs in again: a sign-in, though nothing in its
+    // non-JWT token tells the two sessions apart.
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    await act(async () => sb.clients[0].emit('SIGNED_IN', STORED));
+    await waitFor(() => expect(reports).toEqual(['Bearer stored-access-token']));
   });
 
   it('in another tab loads supabase-js here and restores the user', async () => {
