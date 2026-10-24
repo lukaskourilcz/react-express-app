@@ -7,7 +7,6 @@ import {
   isRpcMissing,
   requireAuthResult,
   requireAuthSub,
-  verifiedCallerId,
   logEvent as emit,
   withRequestContext,
   ServiceUnavailableError,
@@ -15,7 +14,7 @@ import {
 } from '../../lib/http';
 import { forgetVerifiedToken, getBearer, requireFreshAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
-import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
 import {
   SUBJECT_SCOPE_CATALOG,
@@ -163,12 +162,13 @@ const FRESH_AUTH_OPS: ReadonlySet<string> = new Set(['delete-account', 'fulfilme
 export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
   if (req.method === 'GET' || op === 'billing-webhook' || op === 'learning-path-draft') return true;
   const deleting = op === 'delete-account';
-  if (!(await enforceRateLimit(req, res, deleting ? RATE_LIMITS.accountDeleteAddress : RATE_LIMITS.userMutationAddress))) return false;
-  const callerId = await verifiedCallerId(req);
-  const perCaller = deleting ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation;
-  return callerId
-    ? enforceRateLimit(req, res, perCaller, `user:${callerId}`)
-    : enforceRateLimit(req, res, perCaller);
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  return enforceClassRateLimit(
+    req,
+    res,
+    deleting ? RATE_LIMITS.accountDeleteAddress : RATE_LIMITS.userMutationAddress,
+    deleting ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation,
+  );
 }
 
 /** GETs a script can drive for more than a row: the wallet settles grants,

@@ -179,3 +179,13 @@ export async function coldStartContracts(): Promise<void> {
     console.log('PASS cold start: api/quiz/roadmap.ts loads no grader or TypeScript before its first answer');
   }
 }
+
+/** Bundle a test script as the npm scripts do and run it in its own process,
+ * for a script that sets the settings modules read when they load. */
+export async function runIsolated(script: string): Promise<void> {
+  mkdirSync(out, { recursive: true });
+  const outfile = join(out, `${script.replace(/[/[\]]/g, '_').replace(/\.ts$/, '')}.mjs`);
+  await build({ entryPoints: [join(root, script)], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile, logLevel: 'warning', absWorkingDir: root });
+  const child = spawnSync(process.execPath, [outfile], { cwd: root, env: process.env, stdio: 'inherit' });
+  assert.equal(child.status, 0, `${script} passes`);
+}

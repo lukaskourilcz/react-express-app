@@ -1612,6 +1612,16 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   reports use it (`questionReportAddress`, then `questionReport`: three, then
   one every three minutes), so a class can report more than three questions
   at once.
+- **The prelude's round trips** (#587). `limitRead`, `enforceClassRateLimit`
+  and the writes to `api/user/[op].ts` check the caller's token while the
+  address bucket answers, then take the caller's own bucket: two waves where
+  there were three. The address bucket still decides first: a request it
+  refuses answers 429 and spends nothing of the caller's bucket. Once an
+  address bucket refused an address on an instance, that address's token is
+  checked only after its bucket admits it, for a minute, so a refused flood
+  stops reaching Supabase Auth after its first refusal (it was admitted, and
+  checked, until then under the old order too). `npm run test:performance`
+  (`scripts/test-prelude.ts`) pins the order against timed stand-ins.
 - **One-time claims.** `claimOnce` (one grade per placement round, one check
   per design walkthrough) is held in Upstash. Where Upstash is configured, a
   claim it cannot record is answered 503 `claim_unavailable` and nothing is

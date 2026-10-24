@@ -25,3 +25,5 @@ try {
 // What a fresh instance evaluates before it answers (#587): heavy modules
 // load behind dynamic import() in the ops that need them.
 await (await import('./cold-start-contracts')).coldStartContracts();
+// The rate-limit prelude's round trips (#587), in a process of its own.
+await (await import('./cold-start-contracts')).runIsolated('scripts/test-prelude.ts');
