@@ -1815,6 +1815,14 @@ analytics and the privacy policy".
   loader, then the page. `main.tsx` starts the first page's chunk
   (`preloadPath`) before anything renders, so the transition finds the import
   already running.
+- **The document head.** `lib/routeHead.ts` (titles, descriptions,
+  canonical links, structured data), with the public pages' metadata and the
+  topic catalogue it reads, is its own chunk: `App.tsx` starts it as it
+  evaluates and writes each route's head when it has arrived, the latest
+  route only. It was about 3 KB gzip of the first download. The share head a
+  coding task or a dated question of the day arrived with is read as the
+  chunk arrives, before any route writes; a failed load is asked again on the
+  next navigation.
 - **Motion.** `MotionProvider` (`client/src/lib/motion.tsx`) loads Motion's
   feature chunk (14 KB) in the background. A page that opens with
   `prefers-reduced-motion: reduce` loads none (`motionFeaturesFor`) and marks

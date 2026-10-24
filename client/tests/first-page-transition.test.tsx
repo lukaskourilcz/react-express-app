@@ -69,3 +69,13 @@ describe('the first page’s code', () => {
     expect(preload).toBeLessThan(main.indexOf('ReactDOM.createRoot('));
   });
 });
+
+describe('the route head', () => {
+  // lib/routeHead.ts brings the public pages' metadata and the topic
+  // catalogue (~3 KB gzip); it loads as its own chunk, beside the shell.
+  it('is not part of the shell’s first download', () => {
+    const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+    expect(app).not.toMatch(/^import [^;]* from '\.\/lib\/(routeHead|publicMetadata|topicCatalog)';/m);
+    expect(app).toContain("import('./lib/routeHead')");
+  });
+});

@@ -1,4 +1,3 @@
-import { applyRouteHead, readShareHead } from './lib/routeHead';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
@@ -168,9 +167,23 @@ const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 // The route box's width is the route's page width (.ss-route in app-shell.css).
 const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, display: 'flex', flexDirection: 'column' } as const;
 
-// The head a coding task or a dated question of the day arrived with
-// (vite.config.ts), read before any route writes its own (lib/routeHead.ts).
-const SHARE_HEAD = readShareHead();
+// The document head of each route (lib/routeHead.ts, with the public pages'
+// metadata and the topic catalogue it needs, ~3 KB gzip) loads as its own
+// chunk, started as this module evaluates, instead of inside the shell's
+// first download (perf audit #587). The head a coding task or a dated question
+// of the day arrived with (vite.config.ts) is read as the chunk arrives, before
+// any route writes its own; a load that fails is asked again on the next
+// navigation.
+type RouteHead = { apply: typeof import('./lib/routeHead').applyRouteHead; share: ReturnType<typeof import('./lib/routeHead').readShareHead> };
+let routeHead: Promise<RouteHead> | null = null;
+const loadRouteHead = (): Promise<RouteHead> => (routeHead ??= import('./lib/routeHead').then(
+  (head) => ({ apply: head.applyRouteHead, share: head.readShareHead() }),
+  (error: unknown) => {
+    routeHead = null;
+    throw error;
+  },
+));
+void loadRouteHead().catch(() => undefined);
 
 const MenuIcon = () => (
   <svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -443,7 +456,14 @@ function App() {
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
-    applyRouteHead(location.pathname, t, SHARE_HEAD);
+    // Only the latest route writes, however the loads finish.
+    let current = true;
+    loadRouteHead().then(({ apply, share }) => {
+      if (current) apply(location.pathname, t, share);
+    }, () => undefined);
+    return () => {
+      current = false;
+    };
   }, [location.pathname, t]);
 
   // Route focus follows the route box (lib/routePreload.ts), not the
