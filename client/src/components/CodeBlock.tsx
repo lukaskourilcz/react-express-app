@@ -73,65 +73,71 @@ async function importHighlighter() {
   const oneDark = (styleMod as { default: unknown }).default;
   return {
     default: function HighlightedCode({ language, code }: { language: string; code: string }) {
-      const t = useT();
       return (
-      <PrismLight
-        aria-label={t('a11y.codeBlock', { language })}
-        language={language}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        style={oneDark as any}
-        customStyle={{
-          width: '100%',
-          minWidth: 0,
-          boxSizing: 'border-box',
-          margin: '1rem 0',
-          borderRadius: 6,
-          fontSize: '0.75rem',
-          padding: '1rem',
-          maxWidth: '100%',
-          overflowX: 'auto',
-        }}
-        codeTagProps={{ style: { fontFamily: '"SF Mono", Consolas, Monaco, monospace' } }}
-      >
-        {code}
-      </PrismLight>
+        <PrismLight
+          language={language}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          style={oneDark as any}
+          PreTag={CodeBox}
+          codeTagProps={{ style: CODE_STYLE }}
+        >
+          {code}
+        </PrismLight>
       );
     },
   };
 }
 
-const PlainCode = ({ code, language }: { code: string; language: string }) => {
-  const t = useT();
-  return (
-    <pre
-      aria-label={t('a11y.codeBlock', { language })}
-      style={{
-        width: '100%',
-        minWidth: 0,
-        maxWidth: '100%',
-        boxSizing: 'border-box',
-        margin: '1rem 0',
-        padding: '1rem',
-        borderRadius: 6,
-        fontSize: '0.75rem',
-        background: '#1a1a1a',
-        color: '#e0e0e0',
-        overflowX: 'auto',
-        fontFamily: '"SF Mono", Consolas, Monaco, monospace',
-      }}
-    >
-      <code>{code}</code>
-    </pre>
-  );
+// The block's box: one-dark's `pre` rule with the app's size, spacing and
+// font. Plain and highlighted, the code sits in this same <pre>, so the
+// highlighter's arrival only colours the tokens: the element, its height, its
+// font and a learner's horizontal scroll stay. It used to swap the plain <pre>
+// for its own, a few hundred milliseconds after the block was drawn (React
+// holds a Suspense reveal 300 ms after the fallback), with another font and
+// line height.
+const PRE_STYLE: React.CSSProperties = {
+  width: '100%',
+  minWidth: 0,
+  maxWidth: '100%',
+  boxSizing: 'border-box',
+  margin: '1rem 0',
+  padding: '1rem',
+  borderRadius: 6,
+  fontSize: '0.75rem',
+  lineHeight: 1.5,
+  background: 'hsl(220, 13%, 18%)',
+  color: 'hsl(220, 14%, 71%)',
+  textShadow: '0 1px rgba(0, 0, 0, 0.3)',
+  direction: 'ltr',
+  textAlign: 'left',
+  whiteSpace: 'pre',
+  wordSpacing: 'normal',
+  wordBreak: 'normal',
+  tabSize: 2,
+  hyphens: 'none',
+  overflow: 'auto',
+  fontFamily: '"SF Mono", Consolas, Monaco, monospace',
 };
+const CODE_STYLE: React.CSSProperties = { whiteSpace: 'pre', fontFamily: PRE_STYLE.fontFamily };
+
+/** The highlighter draws its tokens into CodeBlock's own <pre>: its `pre`
+ * stands aside and passes its children through. */
+function CodeBox({ children }: { children?: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+const PlainCode = ({ code }: { code: string }) => <code style={CODE_STYLE}>{code}</code>;
 
 export function CodeBlock({ code, language }: { code: string; language: string }) {
+  const t = useT();
   return (
-    <Suspense fallback={<PlainCode code={code} language={language} />}>
-      <ShellPartBoundary fallback={() => <PlainCode code={code} language={language} />}>
-        <Highlighter code={code} language={language} />
-      </ShellPartBoundary>
-    </Suspense>
+    <pre aria-label={t('a11y.codeBlock', { language })} style={PRE_STYLE}>
+      <Suspense fallback={<PlainCode code={code} />}>
+        <ShellPartBoundary fallback={() => <PlainCode code={code} />}>
+          <Highlighter code={code} language={language} />
+        </ShellPartBoundary>
+      </Suspense>
+    </pre>
   );
 }
 
