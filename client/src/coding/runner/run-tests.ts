@@ -322,6 +322,9 @@ export function runCodeTests(input: RunInput): Promise<RunOutcome> {
   return runInWorker(request, input, budget, true);
 }
 
+/** The runner's script has answered once in this page. */
+let runnerWarm = false;
+
 /** Loads the runner's script while the learner reads the task, so the first
  * Run does not wait for it and still works if the connection drops
  * afterwards. The file stays in the browser's cache; the worker that fetched
@@ -331,6 +334,10 @@ export function runCodeTests(input: RunInput): Promise<RunOutcome> {
 export function warmRunner(track: 'javascript' | 'typescript'): () => void {
   if (typeof Worker === 'undefined') return () => {};
   if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return () => {};
+  // One script serves every track, and once it answered it is in the cache:
+  // the next task, or a return to this one, starts no worker to fetch it
+  // again (perf baseline #587 C23).
+  if (runnerWarm) return () => {};
   let worker: Worker | null = null;
   try {
     worker = runnerWorker();
@@ -339,7 +346,7 @@ export function warmRunner(track: 'javascript' | 'typescript'): () => void {
   }
   const close = () => { worker?.terminate(); worker = null; };
   const timer = window.setTimeout(close, COMPILE_TIMEOUT_MS);
-  worker.onmessage = () => { window.clearTimeout(timer); close(); };
+  worker.onmessage = () => { runnerWarm = true; window.clearTimeout(timer); close(); };
   worker.onerror = () => { window.clearTimeout(timer); close(); };
   const request: RunnerRequest = { track, code: '', calls: [], expectations: null, warm: true };
   worker.postMessage(request);

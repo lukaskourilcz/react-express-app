@@ -708,6 +708,11 @@ shown once it has loaded.
   the code or Run has no compiler for that Run (the runner says it could not
   load, never a failed attempt); the runner's own script still loads while
   the brief is read.
+- **The runner's script** is fetched by a short-lived worker once per page
+  (`warmRunner`); a later task or a return to one starts no worker for it
+  again. The task request itself is still made on every visit: it carries
+  the sealed session and the account draft, which must be current (C23,
+  part).
 - **The React sandbox frame** (`client/sandbox/`, about 216 KB gzip and a
   long task as it boots) mounts on the first Run or Submit, when the Preview
   tab opens, or when a pointer or the focus reaches the Run and Submit row,

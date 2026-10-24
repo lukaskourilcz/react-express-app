@@ -231,6 +231,21 @@ it('loads no compiler to warm the runner: that is holdCompiler\'s job', () => {
   expect(workers[0].requests[0].compiler).toBeUndefined();
 });
 
+// Perf baseline #587 C23: every visit to a task, a return included, started a
+// worker only to fetch the runner's script again. Once it has answered, the
+// script is in the cache for every track.
+it('warms the runner once per page, whichever track asks', async () => {
+  workers.length = 0;
+  script = (worker) => worker.post({ phase: 'warm', ready: true });
+  warmRunner('javascript');
+  await vi.advanceTimersByTimeAsync(0);
+  expect(workers).toHaveLength(1);
+  expect(workers[0].terminated).toBe(true);
+  warmRunner('javascript')();
+  warmRunner('typescript')();
+  expect(workers).toHaveLength(1);
+});
+
 // A checker that ran out of stack reported the raw RangeError as the
 // learner's code throwing, with the hint for a throw; the server and the
 // runner's own clock both call it a stopped type check.
