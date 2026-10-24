@@ -1,14 +1,15 @@
 # Release acceptance matrix
 
-## Current state (23 October 2026, after PR #571)
+## Current state (24 October 2026, after PR #591)
 
 This file is an append-style evidence ledger. Each dated entry records what someone checked that day, and later entries leave earlier ones as they were. The entries from 15 October back to 8 September sit at the top; from "2026-09-11 — eight free-tool recommendations" on, the file runs oldest to newest, so the newest entry is at the end.
 
 Released:
 
-- `main` is the merge of PR #571, the last of eight code audits run on 22 and 23 October with `.claude/skills/section-code-audit/SKILL.md`: FDE (#563), Web Developer (#564), Software Engineer (#565), Quiz, Play, Profile and Leaderboard (#566), sign-in and the grading sandboxes (#570), rewards and billing (#568), admin, the public site, consent, the GitHub garden and plumbing (#569), and a leftovers round (#571). Every product area has now been audited once. The entries at the end of this file say what each one fixed and left open. Vercel deploys `main` to https://devshark.app.
-- The audits added no SQL migration and kept the twelve handlers. Supabase project `rvlybcjdpafwyeuojvhl` has every migration through 066 (`accept_learning_path_quota_result`); see "Migration 066 in production".
-- The initial load is 235,190 gzip bytes after #571 (235,638 after #566), under the 241,651-byte budget in `docs/quality/bundle-budget.json`.
+- `main` is `4c4d3a94`, the merge of PR #591, the client half of the Learn paths performance and cost audit (#587). The server half (#590, `a5261979`) and a test fix for its Premium answer trust (#592, `bf75fb4f`) merged before it. Before them came Epic U, the UX system (#580 to #584, #586 and the closeout #588), the zod and undici advisories (#585, #589), and the eight code audits of 22 and 23 October run with `.claude/skills/section-code-audit/SKILL.md` (#563 to #571), so every product area has been audited once. The entries at the end of this file say what each one changed and left open. Vercel deploys `main` to https://devshark.app. This ledger records no production check of #590 or #591: their numbers come from local stand-ins and fixtures ("Paths performance and cost audit — 24 October 2026").
+- None of these added an SQL migration, and the twelve handlers stay twelve. Supabase project `rvlybcjdpafwyeuojvhl` has every migration through 066 (`accept_learning_path_quota_result`); see "Migration 066 in production".
+- The initial load is 231,223 gzip bytes on main `4c4d3a94` (231,204 on the final walk's branch), under the 241,651-byte budget in `docs/quality/bundle-budget.json`. It was 235,190 after #571 and 234,090 after Epic U.
+- Since #590 and #591 a read trusts a token Supabase Auth accepted on the same instance for up to a minute, the learning-path catalogue is shared by the CDN for five minutes, a free coding task's brief is a public read apart from the caller's part, and the browser loads the TypeScript compiler, Prettier, CodeMirror and the React sandbox when the learner reaches for them. `docs/product-architecture.md` describes each change and its bound; `NEEDED.md` lists the trade-offs for the owner to accept or turn off.
 - The progress PUT on `/api/quiz/roadmap` is retired and answers 405. The browser only reads progress.
 - Learn has three sections: Web Developer, Software Engineer and Forward Deployed Engineer. DSA lives in Learn as the topics `dsa` and `dsa-advanced`. The standalone DSA path is retired, and `/roadmap/paths/dsa-foundations/*` answers 308 to `/learn/software-engineer?topic=dsa`.
 - The FDE path is built and merged (epics A to E are closed) but switched off: Production does not set `LEARNING_PATH_FDE_ENABLED`. No Vercel environment sets an FDE or marketing-export variable, so the OwnDashboard marketing export stays inactive too.
@@ -16,9 +17,9 @@ Released:
 - Merchandise stays paused behind `MERCH_ENABLED`, and Stripe billing (#221) is not live.
 - Content review totals live in the "Current state" section of `docs/audit/devshark-content-audit.md`.
 
-Every open item lives in `NEEDED.md`. The owner items there include switching the FDE path on (the entry "B14 FDE release verification — 22 October 2026" is the evidence), the Terms line that still promises "the FDE and DSA learning paths", failure alerts and an uptime monitor for #190, the decisions under #391, #236 and #221, and the product decisions and migrations the audits raised. Nobody has run an authenticated walk-through on production or a preview, checked physical devices, or seen real learners' FDE data yet. The audits ran no browser, responsive or SQL tests themselves; CI runs those.
+Every open item lives in `NEEDED.md`. The owner items there include switching the FDE path on (the entry "B14 FDE release verification — 22 October 2026" is the evidence), the Terms line that still promises "the FDE and DSA learning paths", failure alerts and an uptime monitor for #190, the decisions under #391, #236 and #221, the performance trade-offs of #587, and the product decisions and migrations the audits raised. Nobody has run an authenticated walk-through on production or a preview, checked physical devices, or seen real learners' FDE data yet. The code audits ran no browser, responsive or SQL tests themselves; CI runs those.
 
-Of the issues these entries name, only #190, #221, #236 and #391 are still open. A "remains open" or "pending" line about any other issue or PR records the state on that entry's date. On 22 October 2026 the owner dropped Cloudflare Turnstile (#202), the workbench handoff with the unmerged `claude/elegant-cori-h9cdgb` work (#208; the branch survives as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`), the StudyShark promo video and the October marketing plan (#239). Entries that mention them describe past work, not plans.
+Of the issues these entries name, only #190, #221, #236, #391 and #587 are still open; #587 closes with the final walk's pull request. A "remains open" or "pending" line about any other issue or PR records the state on that entry's date. On 22 October 2026 the owner dropped Cloudflare Turnstile (#202), the workbench handoff with the unmerged `claude/elegant-cori-h9cdgb` work (#208; the branch survives as tag `archive/2026-10-22/claude/elegant-cori-h9cdgb`), the StudyShark promo video and the October marketing plan (#239). Entries that mention them describe past work, not plans.
 
 ## 15 October — local structuredClone own-key correction (#403)
 
@@ -6290,3 +6291,71 @@ The UX audit of 23 October (`docs/design/ux-audit.md`) recorded 116 findings, ea
 - **New problems:** none, apart from a third filled button on `/shop`, which the closeout fixed.
 - **Checks:** ci:parity passed 15 static and test steps and all 20 browser groups (188 tests). check:responsive passed in both themes.
 - **Initial load:** 234,090 gzip bytes, against 235,190 before U1.
+
+## Paths performance and cost audit — 24 October 2026
+
+Issue #587 measured what the three Learn paths (Web Developer, Software Engineer, Forward Deployed Engineer) cost the server and the browser, page by page, and fixed what it found in three pull requests:
+
+| Part | PR | Merged as | Commits |
+|---|---|---|---|
+| Server half: round trips, Auth calls, cold starts, CDN | #590 | `a5261979` | 42 |
+| Client half: what each page downloads and waits for | #591 (with the test fix #592) | `4c4d3a94` | 46 |
+| Final page-by-page walk at 1280 and 390 px, six fixes and these docs | `claude/paths-perf-final` | open | 11 before these docs |
+
+The baseline is main `86572cdb`. Every number below was measured on a laptop against local stand-ins and fixtures: nothing called production or a real API. The reports and their tools live outside the repository, in `devshark-perf/` (`baseline/inventory.md`, `baseline/server.md`, `baseline/client.md`, `server/after.md`, `client/after.md`, `final/walk.md`).
+
+**Per path (final walk).** 120 ms per `/api` answer, assets from localhost, median of three passes at 1x CPU. The sums cover the rows the baseline measured, at 1280 px.
+
+| | baseline | after #591 | final walk |
+|---|---:|---:|---:|
+| Initial load (`check:bundle`, gzip B) | 234,176 | 231,193 (main `4c4d3a94`: 231,223) | **231,204** |
+| Rows walked (pages and states × 2 widths) | 48 (1280, plus 1 at 390) | 48 | **110**, all clean (no console or page error, no failed request, no overflow, focus kept, every primary action completed) |
+| Web Developer, 26 rows measured before: mean content-at, ms | 417 | 221 | **211** |
+| Web Developer: API requests / API KB / JS KB over those rows | 135 / 320 / 17,119 | — | **123 / 81 / 11,264** |
+| Software Engineer, 13 rows: mean content-at, ms | 350 | 170 | **172** |
+| Software Engineer: API requests / API KB / JS KB | 56 / 157 / 6,336 | — | **49 / 38 / 4,911** |
+| FDE, 9 rows: mean content-at, ms | 391 | 226 | **230** |
+| FDE: API requests / API KB / JS KB | 59 / 296 / 3,390 | — | **57 / 300 / 3,126** |
+| Learn level coding step, Finish → editor (guest / signed in) | not reachable | 363 / 502 | **41-75 / 164-207** |
+| FDE code exercise opened directly: editor on screen | not reachable | 682-840 | **373-395** |
+| Focus lost to the page body (steps) | not checked | 3 steps on 3 pages | **0** |
+
+FDE's API bytes stay flat because its pages read the 30 KB catalogue they show, and the activity row now gets a real start answer where the baseline's fixture answered 503.
+
+**Server (#590).** The real handlers ran in-process against stand-ins for Supabase Auth, PostgREST and Upstash that answer after 25 ms each. `w` is waves (the longest chain of calls one after another), `U` Upstash, `A` Auth `getUser`, `D` PostgREST calls; a warm instance, one request after another.
+
+| Flow | Before (main) | After, warm instance |
+|---|---|---|
+| Learn map mount, signed in (in parallel: settings, entitlement, wallet, progress, structure, catalogue, enrollments, xp; slowest request) | 5 w · U5 A5 D12 · 138 ms (8 requests) | 4 w · U5 A1 D8 · 125 ms (8 requests) |
+| Free code level, open to completion (open, 7 answers, attempt-status, code Submit, complete; one after another) | 57 w · U23 A11 D28 · 1736 ms (11 requests) | 39 w · U23 A10 D27 · 1246 ms (11 requests) |
+| Premium level, open to completion (open, 8 answers, complete) | 56 w · U20 A10 D28 · 1659 ms (10 requests) | 33 w · U20 A9 D20 · 963 ms (10 requests) |
+| Coding task page load, signed in (in parallel: task, progress, entitlement, bookmarks, practice session) | 4 w · U2 A5 D9 · 119 ms (5 requests) | 3 w · U2 A0 D10 · 86 ms (5 requests) |
+| FDE module: open and submit one activity of each kind (lesson, check, code, write-up) | 51 w · U20 A8 D29 · 1450 ms (8 requests) | 38 w · U20 A8 D30 · 1156 ms (8 requests) |
+
+Cold start, as `@vercel/node` ships the handlers (CommonJS): `api/quiz/roadmap.ts` imports in 100 ms instead of 325 (heap 72 → 37 MB), `api/user/[op].ts` in 67 instead of 330 (71 → 28 MB), `api/settings.ts` in 28 instead of 325 (73 → 12 MB), `api/quiz/challenge.ts` in 57 instead of 217. A fresh instance's first wallet, enrollment or path-progress read takes 86 ms instead of 341-344.
+
+**What changed**
+- **Server.** A GET or HEAD trusts a token Auth accepted on the same instance for up to 60 s; writes, the wallet, admin, billing and deletion still ask every time. The token check runs while the address bucket answers. The routers load their heavy op families on first call (`lazyExport`), TypeScript loads on its first use, and `/api/settings` no longer imports the path handlers. A Learn completion takes 6 waves instead of 11, a Premium answer 3 instead of 5, a coding Submit 5 instead of 8, a path start 4 instead of 5 or 6, and a lesson, check or write-up submit 5 instead of 7 or 8. The learning-path catalogue is cached by the CDN (`s-maxage=300`). A free account no longer runs `settle_coin_milestones`. The wallet remembers settled states for 10 minutes. Task reads select only the passed ids and the JavaScript levels. The question set is served stale while one refresh runs. The map's handler CPU dropped from 10.9 to 0.5 ms. A task page warms a QuickJS grader thread.
+- **Client.** Heavy tools load when the learner reaches for them, not when a page opens: the TypeScript compiler (into one kept worker), Prettier (on the first Format press), CodeMirror, the React sandbox, Motion's features (never under reduced motion) and Sentry (after the load event). Pages avoid React's 300 ms hold on a revealed Suspense boundary. A level opens with a 200 ms delay and a 400 ms minimum instead of a 1.2 s minimum loader. Public reads leave without the session, and a stored token far from expiry is sent without supabase-js. A screen's first reads start before it renders. The path catalogue and enrollments are not read while the path is off. Progress and the map's XP are re-read after a minute, the plan after five minutes. `/learn/big-o` has its own chunk. A free task's brief is served apart from the caller's part (`coding-brief`, `coding-state`).
+- **Final walk.** A Learn level's coding step and the skill check keep keyboard focus. Today skips the path reads while no path is open. Approach comparisons are read only where their tab can show. An FDE code exercise starts loading its editor beside its start. A Learn level's coding step loads its workbench on the level's last question.
+
+**Bounded trade-offs.** Each is described with its bound in `docs/product-architecture.md`; `NEEDED.md` asks the owner to accept or turn off each one ("Accept or turn off the performance trade-offs of #587").
+- A session ended elsewhere can keep reading for up to a minute on an instance that accepted its token (`VERIFIED_TOKEN_TTL_MS`). A Learn level open, which is a GET, can still write its attempt row for an account deleted on another instance in that minute.
+- An account whose Premium ended keeps answering a Premium session it holds for up to a minute; its completion is refused.
+- A change to path availability reaches browsers up to five minutes later. A coding brief is cached for an hour at the CDN and 30 minutes in the tab, and a session sealed against another brief version reads it again.
+- The wallet skips two settlement routines for up to ten minutes once they answered a final state.
+- A change made in another tab or device shows on a map within a minute (progress, XP) or five minutes (the plan); this tab's own changes and every lock press read at once.
+- A stored token more than 90 s from expiry is sent without supabase-js; the server still verifies it.
+- Whether the FDE path is open is read once per tab from `/api/settings`.
+- The TypeScript compiler loads on intent, so a learner who goes offline before touching the code has no compiler for that Run (never counted as an attempt).
+- Format is on whenever the code differs from the starter or the last format; a press that changes nothing turns it off.
+- Under reduced motion, Motion's elements appear at once instead of fading in.
+
+**Checks**
+- #590 on its final branch: `typecheck:api`, `typecheck:scripts`, `test:performance`, `test:launch`, `test:paths`, `test:path-authority`, `test:grading-integrity`, `test:coding-auth`, `test:coding`, `check:unused`, `check:security`, `check:bundle` and `git diff --check` passed. Every behaviour change has a test that fails on the code before it.
+- #591 on its final branch: `check:bundle` 231,193 bytes, `check:design` ok, 172 client test files with 1,712 tests, `test:launch` and `tsc -b` passed.
+- Both merged through protected `main`, so `verify` and `sql` passed in CI.
+- The final walk on `4ad6f759`: `check:bundle` 231,204 bytes (budget 241,651; monitoring SDK 49,500), `check:design` ok (13 fixtures, 26 allowlisted), 182 client test files with 1,737 tests, `tsc -b`, `typecheck:api` and `test:launch` passed, and `check:responsive` against the walk's preview found 0 issues in 280 probes. Each of its six fixes has a test that fails on the code before it.
+- None of the three added a dependency or an SQL migration; the handlers stay twelve, and grading, tiers, XP, prices and legal wording are unchanged.
+
+**Left open (NEEDED.md).** Database work: one `record_concept_reviews` call for a completion's concepts; `complete_verified_roadmap_attempt_v2` returning the progress it wrote; one wallet read function; refusing writes for ids without an `auth.users` row, or sweeping the orphans; a `github_commits` row claim so the garden can leave the Submit response. Server work: one Upstash request for both rate-limit windows; reading a path's progress beside its enrollment, which changes a pinned contract. Owner settings: function memory and per-resource time budgets, and React grading's per-Submit VM and upload. The walk left an evolving stage's double draft write (one request, and the second save writes nothing since migration 059), the enrollment read before an FDE activity's start on a direct open, and the FDE shelf's full catalogue read.
