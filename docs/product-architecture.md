@@ -726,9 +726,31 @@ shown once it has loaded.
   the brief is read.
 - **The runner's script** is fetched by a short-lived worker once per page
   (`warmRunner`); a later task or a return to one starts no worker for it
-  again. The task request itself is still made on every visit: it carries
-  the sealed session and the account draft, which must be current (C23,
-  part).
+  again.
+- **The task brief and the caller's part** (C23, server inventory F07). A
+  free task outside a Learn link reads them apart (`coding/taskRead.ts`, by
+  the coding index's `free` flag). `?resource=coding-brief&id=` is the brief
+  alone, the same for every caller: it reads no token and no row, is a public
+  read in `isPublicRead`, answers `public, max-age=300, s-maxage=3600,
+  stale-while-revalidate=86400` (`CODING_BRIEF_CACHE`), and refuses Premium
+  content with the 402 a guest's task page gets, so a locked brief is exactly
+  as public as before. It carries nothing dealt per request: the puzzle's
+  shuffled lines and a design's shuffled options travel with the session that
+  keys them. `?resource=coding-state&id=` is the caller's part (the sealed
+  session, the lock, the progress, the draft and the dealt parts) with every
+  limit, read and gate of `coding-task`, plus the `briefVersion` its session
+  was sealed against. The tab keeps a brief per task for 30 minutes
+  (`BRIEF_STALE_MS`, gcTime by default) and reads the caller's part afresh on
+  every visit, kept by nobody once the screen is gone (gcTime 0), as the
+  combined answer was; a sign-out empties the cache, so no account's part
+  answers another. A session sealed against another brief version (a deploy
+  since) reads the brief again past the browser's cache before the page
+  draws, and a refresh after `task_changed` keeps what the page showed until
+  both are in. `coding-task` still answers both together, for the Learn link
+  (POST with its session) and for Premium tasks. A return to a task now sends
+  the caller's part alone (452 B gzip for js-digit-sum, against 1,487 B for
+  the combined answer); the server work of that part is unchanged (3 waves,
+  2 Upstash, 4 PostgREST calls signed in).
 - **The React sandbox frame** (`client/sandbox/`, about 216 KB gzip and a
   long task as it boots) mounts on the first Run or Submit, when the Preview
   tab opens, or when a pointer or the focus reaches the Run and Submit row,
@@ -849,9 +871,13 @@ here draws without suspending, so React's 300 ms reveal hold on a boundary
 that showed its fallback does not apply. The runner's code starts loading
 when a mouse rests on an open step of the map or the next-step card, when one
 takes keyboard focus, or on a press (#587 C28); a visitor who asked the
-browser to save data loads it on the press only. Prism, which the first code
-question loads, is not warmed yet: `CodeBlock.tsx` would have to export its
-loader.
+browser to save data loads it on the press only. In a topic whose questions
+carry code (`components/learn/codeTopics.ts`: JavaScript, TypeScript, React,
+DSA and Git, the topics where a fifth or more of the questions carry a fenced
+block, which a launch contract checks) the code highlighter starts with it
+(`preloadCodeHighlighter` in `CodeBlock.tsx`, the same memoised load the first
+code block uses); before, prism-light (about 15 KB gzip) loaded as the first
+code question drew.
 
 ## Learn sections
 
@@ -1308,7 +1334,8 @@ Premium opens through a manual grant or a voucher.
   `entitlement_unavailable`, and so does a cleared-content read that fails
   (the `cleared` callback throws), so a lapsed learner is never shown the
   upgrade sheet for work they passed. The call sites are the Learn level, part-test and
-  checkpoint seals and their answers, `coding-task`, `coding-submit`,
+  checkpoint seals and their answers, `coding-task`, `coding-state`,
+  `coding-brief` (as for a guest, whoever asks), `coding-submit`,
   `coding-reveal`, evolving stage two and up, `learning-path-start` and
   `learning-path-submit` in `api/quiz/roadmap.ts`, and
   `learning-path-enrollment` in `api/user/[op].ts`. Premium gates starting new
@@ -1757,8 +1784,9 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   browser with no stored session sends a request without a token, so a
   signed-in learner is never graded or refused as a guest. The one exception
   is the short list of public reads in `isPublicRead` (`/api/settings`, the
-  Learn map, the path catalog and a lesson): their handlers never read the
-  caller and the CDN shares their answers, so they leave at once without a
+  Learn map, the path catalog, a lesson and a coding task's brief): their
+  handlers never read the caller and the CDN shares their answers, so they
+  leave at once without a
   token instead of waiting for supabase-js and the session (#587 C10). A
   handler that starts reading the caller must leave that list. Every other
   request of a returning learner carries the stored access token straight from
@@ -1835,7 +1863,9 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   availability are the same for every caller; an availability flip on one
   instance, such as a storage migration found missing, reaches browsers up to
   five minutes later); a lesson
-  `public, max-age=300, s-maxage=86400` with its ETag; the curation coverage
+  `public, max-age=300, s-maxage=86400` with its ETag; a coding task's brief
+  `public, max-age=300, s-maxage=3600, stale-while-revalidate=86400` (#587
+  C23; its refusals stay private); the curation coverage
   `public, s-maxage=60, stale-while-revalidate=300`; settings and the
   Challenge board `public, s-maxage=15, stale-while-revalidate=60`. Health
   answers `no-store`.
