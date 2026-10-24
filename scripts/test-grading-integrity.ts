@@ -398,6 +398,52 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   console.log('PASS integrity: the React grader bundle is read once per instance and uploaded unchanged on every run');
 }
 
+// ── the verdict does not wait for the VM's stop (#587 item 14) ──────────
+// The stop is sent as soon as the verdict is read. Where the runtime keeps
+// the function alive for it (the request context's waitUntil), the verdict
+// goes on at once; elsewhere it waits for the stop, as before.
+{
+  const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))('./lib/coding/generated/vercel-sandbox.cjs') as { Sandbox: { create: (...args: unknown[]) => Promise<unknown> } };
+  const { runIsolatedReactSuite } = await import('../lib/coding/react-isolated');
+  const realCreate = Sandbox.create;
+  const contextKey = Symbol.for('@vercel/request-context');
+  const holder = globalThis as unknown as Record<symbol, unknown>;
+  const realContext = holder[contextKey];
+  let release: () => void = () => undefined;
+  let stopsSent = 0;
+  Sandbox.create = async () => ({
+    writeFiles: async () => undefined,
+    runCommand: async () => ({ exitCode: 124, stdout: async () => '' }),
+    stop: () => { stopsSent += 1; return new Promise<void>((resolve) => { release = resolve; }); },
+  });
+  process.env.REACT_RUNNER_SNAPSHOT_ID = 'snapshot-test';
+  const input = { suite: "test('renders', () => {});", appSource: 'export default function App() { return null; }' };
+  const within = (promise: Promise<unknown>, ms: number) => Promise.race([promise.then(() => true), new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms))]);
+  try {
+    const handed: Promise<unknown>[] = [];
+    holder[contextKey] = { get: () => ({ waitUntil: (promise: Promise<unknown>) => { handed.push(promise); } }) };
+    const outcome = await within(runIsolatedReactSuite(input), 2_000);
+    assert.equal(outcome, true, 'with waitUntil the verdict comes back while the stop is still open');
+    assert.equal(stopsSent, 1, 'the stop was sent');
+    assert.equal(handed.length, 1, 'and handed to the runtime');
+    assert.equal(await within(handed[0], 50), false, 'what was handed settles only with the stop');
+    release();
+    assert.equal(await within(handed[0], 1_000), true);
+
+    delete holder[contextKey];
+    const waiting = runIsolatedReactSuite(input);
+    assert.equal(await within(waiting, 100), false, 'without the hook the verdict waits for the stop, as before');
+    release();
+    assert.equal(await within(waiting, 1_000), true);
+    assert.equal(stopsSent, 2);
+  } finally {
+    Sandbox.create = realCreate;
+    if (realContext === undefined) delete holder[contextKey]; else holder[contextKey] = realContext;
+    delete process.env.REACT_RUNNER_SNAPSHOT_ID;
+  }
+  console.log('PASS integrity: a React verdict does not wait for the VM\'s stop where the runtime keeps the function alive for it');
+}
+
 // ── a checkpoint hands over nothing that passes its milestone ───────────
 // A pass of a checkpoint (`…-start`) and a reveal there serve that
 // checkpoint's own reference and no boards; that reference fails the

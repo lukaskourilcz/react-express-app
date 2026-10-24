@@ -12,6 +12,7 @@ import { GUEST_ENV, GUEST_NODE_FLAGS, readGuestRun, type GuestInput } from './re
 import { compileReactLearner } from './react-transpile';
 import { FETCH_STUB_SOURCE } from '../../shared/coding-react-support';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
+import { afterResponse } from './after-response';
 
 // Keep operational diagnostics useful without logging learner code, SDK request
 // bodies, credentials, or arbitrary error messages.
@@ -145,8 +146,10 @@ export async function runIsolatedReactSuite(input: {
     throw runnerFailure(signal.aborted ? 'Deadline' : 'Execution', error);
   } finally {
     // A bounded cleanup call plus the VM's expiry covers lost connections too.
-    await sandbox
-      .stop({ signal: AbortSignal.timeout(2_000) })
-      .catch(() => undefined);
+    // The stop is sent now; the verdict does not wait for its answer where
+    // the runtime keeps the function alive for it (after-response.ts), so a
+    // Submit is answered a Vercel API round trip sooner (#587, server item
+    // 14). Elsewhere it is awaited here, as before.
+    await afterResponse(sandbox.stop({ signal: AbortSignal.timeout(2_000) }));
   }
 }
