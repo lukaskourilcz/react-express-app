@@ -1751,6 +1751,14 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   questions of a Premium session it already holds for up to a minute, on an
   instance that saw it Premium just before; completing that session asks
   again and is refused, so no progress, XP or coin comes of it.
+- **Code level open** (#587, server item 11). A level of a code topic
+  records its attempt row when it opens, so a "Build it" link works before
+  the first answer. The attempt id is minted for that open (144 random
+  bits), so the row is inserted without a read for it first; only a failed
+  insert reads the row back, as before. The answer and the completion still
+  read before they insert, since their row may exist. One round trip fewer
+  per code level open, for an account and for a guest.
+  `npm run test:performance` (`scripts/test-learn-round-trips.ts`) pins it.
 - **Served question set** (#587, server item 19). `lib/questions-store.ts`
   merges the admin console's `question_edits` rows onto the bank and keeps
   the result for 15 seconds per instance. Up to a minute old, a good set is

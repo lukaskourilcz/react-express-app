@@ -249,8 +249,11 @@ async function playableResponse(input: {
   });
   // A coding link can be opened before the first question is answered.
   // Persist its parent now, with the same sealed task list and owner.
+  // The attempt id was minted a few lines up (144 random bits), so no row
+  // can hold it yet: the row is inserted without reading for it first
+  // (#587, server item 11), and only a failed insert reads it back.
   if (supabase && codingTasks.length > 0) {
-    const opened = await ensureAttempt(roadmapSession(sessionId)!, input.userId);
+    const opened = await ensureAttempt(roadmapSession(sessionId)!, input.userId, undefined, { minted: true });
     if (opened.error || !opened.data) throw new Error('Could not open the learning attempt');
   }
   return {
@@ -964,19 +967,23 @@ function roadmapSession(raw: unknown) {
 /** The attempt row of a session, inserted when no answer opened it yet.
  * `refused`, when given, is a tier gate that runs at the same time: the read
  * goes ahead, but nothing is inserted until the gate let the session through,
- * and nothing at all when it refused it. */
+ * and nothing at all when it refused it. `minted` says the attempt id was
+ * generated for this request, so there is no row to read before the insert. */
 async function ensureAttempt(
   session: NonNullable<ReturnType<typeof roadmapSession>>,
   userId: string | null,
   refused?: Promise<boolean>,
+  { minted = false }: { minted?: boolean } = {},
 ) {
-  const existing = await withTimeout(
-    supabase!
-      .from('roadmap_attempts')
-      .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
-      .eq('attempt_id', session.attemptId!)
-      .maybeSingle(),
-  );
+  const existing = minted
+    ? { data: null, error: null }
+    : await withTimeout(
+      supabase!
+        .from('roadmap_attempts')
+        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
+        .eq('attempt_id', session.attemptId!)
+        .maybeSingle(),
+    );
   if (existing.error) return { error: existing.error, data: null };
   if (!existing.data && refused && (await refused)) return existing;
   if (!existing.data) {

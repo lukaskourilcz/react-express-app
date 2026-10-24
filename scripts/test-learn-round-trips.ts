@@ -242,6 +242,27 @@ try {
   /** Whether two calls were in flight at the same time. */
   const together = (a: Call, b: Call) => a.start < b.end && b.start < a.end;
 
+  // ── server item 11: a code level open inserts its attempt directly ───
+  // The attempt id is minted for the open, so no row can hold it: the row is
+  // inserted without a read before it, for an account and for a guest.
+  {
+    passedLevels(LEARNER.id, 'javascript', 3);
+    for (const [token, level] of [[LEARNER.token, '3'], [undefined, '1']] as const) {
+      const { result, made } = await during(() => call('GET', { topic: 'javascript', level }, token));
+      const res = result as ReturnType<typeof mockResponse>;
+      assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      const session = tokens.decodeSessionEnvelope(res.body.sessionId)!;
+      assert.ok((session.codingTaskIds?.length ?? 0) > 0, 'the level seals a coding task');
+      assert.equal(made.filter((one) => one.name === 'GET roadmap_attempts').length, 0, `no read before the insert (${made.map((one) => one.name).join(', ')})`);
+      assert.equal(made.filter((one) => one.name === 'POST roadmap_attempts').length, 1, 'one insert');
+      const row = tables.roadmap_attempts.find((one) => one.attempt_id === session.attemptId);
+      assert.ok(row, 'the attempt row is written');
+      assert.equal(row.user_id ?? null, token ? LEARNER.id : null, 'with the sealed owner');
+      assert.deepEqual(row.coding_task_ids, session.codingTaskIds, 'and the sealed task list');
+    }
+  }
+  console.log('PASS round trips: a code level open inserts its attempt without reading for it first');
+
   // ── server item 5: a first pass of a code level ────────────────────────
   // JavaScript level 3 carries one coding task and seven questions that name
   // a concept. The record says the learner passed it before, so the
