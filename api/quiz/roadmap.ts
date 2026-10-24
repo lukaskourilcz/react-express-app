@@ -947,9 +947,14 @@ function roadmapSession(raw: unknown) {
   return session;
 }
 
+/** The attempt row of a session, inserted when no answer opened it yet.
+ * `refused`, when given, is a tier gate that runs at the same time: the read
+ * goes ahead, but nothing is inserted until the gate let the session through,
+ * and nothing at all when it refused it. */
 async function ensureAttempt(
   session: NonNullable<ReturnType<typeof roadmapSession>>,
   userId: string | null,
+  refused?: Promise<boolean>,
 ) {
   const existing = await withTimeout(
     supabase!
@@ -959,6 +964,7 @@ async function ensureAttempt(
       .maybeSingle(),
   );
   if (existing.error) return { error: existing.error, data: null };
+  if (!existing.data && refused && (await refused)) return existing;
   if (!existing.data) {
     const passPct = session.roadmapKind === 'level' ? LEVEL_PASS : PART_TEST_PASS;
     const inserted = await withTimeout(
@@ -1164,12 +1170,17 @@ function progressStepPassed(data: unknown, session: NonNullable<ReturnType<typeo
   return steps?.[String(session.ref)]?.passed === true;
 }
 
+/** The account's verified progress row. */
+function stepRow(userId: string) {
+  return withTimeout(supabase!.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle());
+}
+
 /** The same question asked of the stored progress, or null when it cannot be
  * read (then nothing is credited: a missed credit beats paying twice for a
  * level passed before coins existed). */
 async function stepPassed(userId: string, session: NonNullable<ReturnType<typeof roadmapSession>>): Promise<boolean | null> {
   if (!supabase) return null;
-  const row = await withTimeout(supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle()).catch(() => null);
+  const row = await stepRow(userId).catch(() => null);
   if (!row || row.error) return null;
   return progressStepPassed(row.data?.data, session);
 }
@@ -1183,13 +1194,19 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
   if (refuseForeignSession(res, session, userId)) return;
-  if (await refuseLockedSession(res, userId, session)) return;
-  // The attempt row, the served question set and the graded answers are
-  // independent reads, so they run together once the session's owner is
-  // confirmed. The answers are used only after the attempt is shown to be
-  // this session's, and only when none of its questions was retired.
-  const [attemptResult, served, answers] = await Promise.all([
-    ensureAttempt(session, userId),
+  // The attempt row, the served question set, the graded answers and, on a
+  // code level, the coding rows are independent reads, so they run together
+  // once the session's owner is confirmed, and with the tier gate (#587,
+  // server item 5: the gate and the coding rows were two more waves). The
+  // gate still decides first: an attempt no answer opened is inserted only
+  // after it let the session through, and a refused session writes nothing.
+  // The answers are used only after the attempt is shown to be this
+  // session's, and only when none of its questions was retired.
+  const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
+  const readsCoding = !codingUnverified && (session.codingTaskIds?.length ?? 0) > 0;
+  const locked = refuseLockedSession(res, userId, session);
+  const reads = Promise.all([
+    ensureAttempt(session, userId, locked),
     getEffectiveQuestionsById(session.subject),
     withTimeout(
       supabase
@@ -1197,7 +1214,18 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
         .select('question_id,is_correct')
         .eq('attempt_id', session.attemptId!),
     ),
+    // Needed only when the questions passed. A failure is kept, and answered
+    // below only if they did, as when the rows were read after the grade.
+    readsCoding
+      ? withTimeout(
+        supabase.from('roadmap_attempt_coding').select('task_id,passed,verified,revealed').eq('attempt_id', session.attemptId!),
+      ).then((read) => ({ read }), (thrown: unknown) => ({ thrown }))
+      : null,
   ]);
+  // Read below; a gate that refuses leaves it unread.
+  reads.catch(() => {});
+  if (await locked) return;
+  const [attemptResult, served, answers, codingRead] = await reads;
   if (attemptResult.error || !attemptResult.data) {
     if (isRpcMissing(attemptResult.error)) {
       return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
@@ -1265,11 +1293,9 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // response says the coding was not verified; nothing is recorded for a
   // guest here, and the browser keeps the pass locally until they sign in.
   let codingPending: string[] = [];
-  const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
-  if (passed && !codingUnverified && session.codingTaskIds && session.codingTaskIds.length > 0) {
-    const codingRows = await withTimeout(
-      supabase.from('roadmap_attempt_coding').select('task_id,passed,verified,revealed').eq('attempt_id', session.attemptId!),
-    );
+  if (passed && session.codingTaskIds && codingRead) {
+    if ('thrown' in codingRead) throw codingRead.thrown;
+    const codingRows = codingRead.read;
     if (codingRows.error) return jsonError(res, 500, 'db_error', 'Could not grade the coding tasks');
     const passedIds = new Set((codingRows.data ?? [])
       .filter((row) => row.passed === true && row.verified === true && row.revealed !== true)
@@ -1305,6 +1331,37 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const reviewStates = userId && reviewSubject && reviewItems.some((item) => conceptOf(item) !== null)
     ? loadReviewStates(supabase, userId, reviewSubject)
     : null;
+  // Concept-level review state, from the answers the server itself graded.
+  //
+  // Levels are where a devShark learner spends most of their time, so leaving
+  // this out left spaced practice inert for them: nothing was ever due, and
+  // Review had nothing to offer. Recorded here rather than per answer because
+  // the interval belongs to the concept and a level asking `reduce` three times
+  // is one review of `reduce`, not three; the attempt id makes it idempotent,
+  // so a retried completion reports the stored state and changes nothing.
+  //
+  // Every answer counts as independent retrieval: a level has no hint
+  // affordance, so unlike a quiz there is nothing to downgrade. Questions left
+  // unanswered when the hearts ran out are simply absent from the graded rows
+  // and are not recorded as failures — they were not attempted.
+  //
+  // Started once the attempt is closed, beside what else follows the close
+  // (#587, server item 5), and awaited before the answer, since a function
+  // can be frozen the moment it responds.
+  let reviewsRecorded: Promise<void> | null = null;
+  const recordReviews = (): Promise<void> => {
+    reviewsRecorded ??= userId && reviewSubject && reviewStates
+      ? reviewStates.then((states) => recordConceptReviews(
+        supabase,
+        { userId, subject: reviewSubject, eventId: session.attemptId!, items: reviewItems },
+        states,
+      ))
+      : Promise.resolve();
+    // Awaited below; this keeps a failure of the request meanwhile from
+    // leaving it unhandled.
+    reviewsRecorded.catch(() => {});
+    return reviewsRecorded;
+  };
 
   let progress: unknown;
   let applied = false;
@@ -1319,6 +1376,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       );
       if (closed.error) return jsonError(res, 500, 'db_error', 'Could not close the learning attempt');
       applied = true;
+      recordReviews();
       // A Learn level counts for the streak whether it was passed, failed or
       // lost on hearts. complete_verified_roadmap_attempt advances the streak
       // for the other two; this attempt closes without it, so the day is
@@ -1377,26 +1435,54 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     // XP only: a repeat credits no coins and is no first pass.
     repeatXp = typeof outcome === 'object' && outcome !== null ? learnRepeatXpOf(outcome.repeatXp) : null;
     const firstPass = typeof outcome === 'object' && outcome !== null ? outcome.firstPass === true : passedBefore === false;
-    const row = await withTimeout(
-      supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
-    );
-    if (row.error) return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
-    progress = sanitize(row.data?.data);
-    if (applied && firstPass && progressStepPassed(row.data?.data, session)) {
-      await creditLearnPass(supabase, {
-        userId,
-        subject: session.subject!,
-        topic: session.topic!,
-        kind: session.roadmapKind!,
-        ref: session.ref!,
-      });
-      // A friend's first passed Learn level pays both sides of an invitation
-      // once; the routine reads the verified progress itself (#228).
-      await creditReferral(supabase, userId, session.subject!);
-    }
+    // What follows a recorded completion ran one call after another: the
+    // reload, the coin credit, the referral, the milestones and the concept
+    // reviews (#587, server item 5). Only the reload feeds the answer, and
+    // each routine is idempotent under its own event id, so they run as
+    // three branches at once: the reload, then the first pass's coin and
+    // referral credits together (both read the reloaded record); the
+    // milestone settlement; the concept reviews. The settlement and the
+    // reviews read nothing the credits write that this answer reports.
+    //
     // A completed level or part test is a streak day from migration 048, passed
     // or not, and the last level of a topic is a Premium milestone.
-    if (applied) await settleMilestones(supabase, userId, session.subject!);
+    const settled = applied ? settleMilestones(supabase, userId, session.subject!) : null;
+    settled?.catch(() => {});
+    recordReviews();
+    const followers = () => Promise.allSettled([settled, reviewsRecorded]);
+    let row: Awaited<ReturnType<typeof stepRow>>;
+    try {
+      row = await stepRow(userId);
+    } catch (error) {
+      await followers();
+      throw error;
+    }
+    if (row.error) {
+      await followers();
+      return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
+    }
+    progress = sanitize(row.data?.data);
+    if (applied && firstPass && progressStepPassed(row.data?.data, session)) {
+      const credits = Promise.all([
+        creditLearnPass(supabase, {
+          userId,
+          subject: session.subject!,
+          topic: session.topic!,
+          kind: session.roadmapKind!,
+          ref: session.ref!,
+        }),
+        // A friend's first passed Learn level pays both sides of an invitation
+        // once; the routine reads the verified progress itself (#228).
+        creditReferral(supabase, userId, session.subject!),
+      ]);
+      try {
+        await credits;
+      } catch (error) {
+        await followers();
+        throw error;
+      }
+    }
+    await settled;
   } else if (!attempt.completed_at) {
     await withTimeout(
       supabase.from('roadmap_attempts').update({ completed_at: new Date().toISOString() }).eq('attempt_id', session.attemptId!),
@@ -1404,26 +1490,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     applied = true;
   }
 
-  // Concept-level review state, from the answers the server itself graded.
-  //
-  // Levels are where a devShark learner spends most of their time, so leaving
-  // this out left spaced practice inert for them: nothing was ever due, and
-  // Review had nothing to offer. Recorded here rather than per answer because
-  // the interval belongs to the concept and a level asking `reduce` three times
-  // is one review of `reduce`, not three; the attempt id makes it idempotent,
-  // so a retried completion reports the stored state and changes nothing.
-  //
-  // Every answer counts as independent retrieval: a level has no hint
-  // affordance, so unlike a quiz there is nothing to downgrade. Questions left
-  // unanswered when the hearts ran out are simply absent from the graded rows
-  // and are not recorded as failures — they were not attempted.
-  if (userId && reviewSubject && reviewStates) {
-    await recordConceptReviews(
-      supabase,
-      { userId, subject: reviewSubject, eventId: session.attemptId!, items: reviewItems },
-      await reviewStates,
-    );
-  }
+  await recordReviews();
 
   logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts, repeatXp: repeatXp?.xp ?? null });
   return res.json({

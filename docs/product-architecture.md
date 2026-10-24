@@ -1681,6 +1681,22 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   through `getUserById`. The GET keeps `getUserById`: a GET may trust an
   acceptance up to a minute old, whose metadata can predate a save made in
   that minute.
+- **Learn completion round trips** (#587, server item 5). A completion reads
+  the attempt, the graded answers, the served set and, on a code level, the
+  coding rows together, with the tier gate of a Premium level: one wave where
+  there were three. The gate still decides first: an attempt no answer opened
+  is inserted only once the gate let the session through, so a refused
+  session writes nothing (its reads are spent). The coding rows are read
+  whether or not the questions passed, and a failed read still answers only
+  when they did. After the completion routine, the progress reload (then the
+  first pass's coin and referral credits, together), the milestone
+  settlement and the concept reviews run at once instead of one after
+  another; each is idempotent under its own event id and the answer waits
+  for all of them. One difference on a failure path: when the reload fails
+  (500 "Progress saved but could not be reloaded"), the settlement and the
+  concept reviews have already run, where they used to be skipped.
+  `npm run test:performance` (`scripts/test-learn-round-trips.ts`) pins the
+  waves against a timed stand-in.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which
