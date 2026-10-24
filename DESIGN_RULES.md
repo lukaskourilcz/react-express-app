@@ -383,6 +383,12 @@ coming back. The tokens and the map are in
   in its default state says nothing about it; a recorded state is a glyph
   with its words for a screen reader (UX audit U4, #576).
 - **Say each fact once per screen**, and the sign-in verb is "Sign in".
+- **The check holds these rules.** `npm run check:design`, which
+  `check:public` runs in CI, fails on a pixel `max-width` of 560px or more
+  in `client/src`, an Astryx `Button` or `IconButton` with `size="sm"`, a
+  button selector under 44px (36px inside `.ss-compact`) and a 'Log in'
+  string in `client/src/i18n`. An intended exception goes into
+  `scripts/design-contract-allowlist.json` with its reason.
 
 ## 11. One question system
 
