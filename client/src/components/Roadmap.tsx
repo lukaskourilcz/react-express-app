@@ -470,6 +470,13 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   // Skill check (assessment) state. `open` controls the modal; the runner
   // owns its own in-progress state until the result screen reports back.
   const [skillCheckOpen, setSkillCheckOpen] = useState(false);
+  // The control that opened the skill check, to take focus back on return:
+  // the check replaces the map, so that control is gone while it runs.
+  const skillCheckOpener = useRef<'row' | 'gate' | null>(null);
+  const openSkillCheck = (from: 'row' | 'gate') => {
+    skillCheckOpener.current = from;
+    setSkillCheckOpen(true);
+  };
   const [unlockSnack, setUnlockSnack] = useState<string | null>(null);
 
   // The section follows the address, except while a level or the skill check
@@ -895,6 +902,15 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     if (target.topic !== topic) return;
     sectionBodyRef.current?.querySelector<HTMLElement>(`.rm-path-canvas [data-step="${target.step}"] button`)?.focus();
   }, [active, layout, topic]);
+  // Back on the map from the skill check (Cancel or the result's way back),
+  // focus returns to the control that opened it, as it does after a level.
+  useEffect(() => {
+    const from = skillCheckOpener.current;
+    if (skillCheckOpen || !from) return;
+    skillCheckOpener.current = null;
+    const selector = from === 'row' ? '.rm-skillcheck-cta' : '.rm-section-empty__actions > :last-child';
+    sectionBodyRef.current?.querySelector<HTMLElement>(selector)?.focus();
+  }, [skillCheckOpen]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -980,7 +996,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
         {!loadingStructure && <LockedNote entries={entries} t={t} />}
         <span>{t('roadmap.skillCheckSubtitle')}</span>
       </div>
-      <button type="button" className="rm-skillcheck-cta" onClick={() => setSkillCheckOpen(true)}>
+      <button type="button" className="rm-skillcheck-cta" onClick={() => openSkillCheck('row')}>
         <BoltIcon size={15} /> {t('roadmap.skillCheckCta')}
       </button>
     </div>
@@ -1086,7 +1102,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
               focusOnArrival.current = gate.prereqSection;
               switchSection(gate.prereqSection, gate.prereq as RoadmapTopic);
             }}
-            onSkillCheck={() => setSkillCheckOpen(true)}
+            onSkillCheck={() => openSkillCheck('gate')}
             quiet={headerJoins}
             t={t}
           />
@@ -1622,9 +1638,13 @@ function SkillCheckRunner({
   const [unapplied, setUnapplied] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  // The intro replaces the map, and the button that opened it is gone: its
+  // title takes focus, as a round's question and the result's heading do.
+  const introTitleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (phase === 'result') resultHeadingRef.current?.focus({ preventScroll: true });
+    if (phase === 'intro') introTitleRef.current?.focus({ preventScroll: true });
   }, [phase]);
   // Next disables itself on the question it opens (nothing is picked yet), and
   // a new round replaces the whole view, so focus fell to the page. Each
@@ -1762,7 +1782,7 @@ function SkillCheckRunner({
         questionId="placement-intro"
         focusable={false}
         stable={false}
-        header={<QuestionHeader title={learnText('placement.kicker')} tools={placementExit} />}
+        header={<QuestionHeader title={learnText('placement.kicker')} titleRef={introTitleRef} tools={placementExit} />}
         question={<p className="rm-placement-lead">{learnText('placement.subtitle')}</p>}
         actions={<QuestionActions primary={{ label: learnText('placement.start'), onClick: () => void start() }} />}
       />
