@@ -1590,7 +1590,13 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
   every answer before the handler runs, and the public reads set their own:
   the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,
-  s-maxage=60, stale-while-revalidate=300`, so the CDN shares it; a lesson
+  s-maxage=60, stale-while-revalidate=300`, so the CDN shares it; the
+  learning-path catalogue `public, max-age=60, s-maxage=300,
+  stale-while-revalidate=600` (#587, server item 12: the router replaces the
+  handler's browser-only header, since the manifests, versions and
+  availability are the same for every caller; an availability flip on one
+  instance, such as a storage migration found missing, reaches browsers up to
+  five minutes later); a lesson
   `public, max-age=300, s-maxage=86400` with its ETag; the curation coverage
   `public, s-maxage=60, stale-while-revalidate=300`; settings and the
   Challenge board `public, s-maxage=15, stale-while-revalidate=60`. Health

@@ -6,6 +6,8 @@
  * run together and which wait for another. It pins:
  *  - each Learn level's coding task list is worked out once per instance
  *    (server item 25);
+ *  - the learning-path catalogue is the same for every caller, costs no
+ *    round trip and is shared by the CDN (server item 12);
  * Run as its own process by scripts/test-request-timing.ts, since the
  * modules read these settings when they load. Nothing leaves the machine. */
 
@@ -23,6 +25,22 @@ const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   req.on('data', (chunk) => { text += chunk; });
   req.on('end', () => resolve(text));
 });
+
+function mockResponse() {
+  const res = {
+    statusCode: 200,
+    headers: {} as Record<string, string>,
+    body: undefined as any,
+    headersSent: false,
+    setHeader(key: string, value: string) { res.headers[key.toLowerCase()] = value; return res; },
+    getHeader(key: string) { return res.headers[key.toLowerCase()]; },
+    status(code: number) { res.statusCode = code; return res; },
+    json(body: unknown) { res.body = body; res.headersSent = true; return res; },
+    send(body: unknown) { res.body = body; res.headersSent = true; return res; },
+    end() { res.headersSent = true; return res; },
+  };
+  return res;
+}
 
 async function startStandIn() {
   const server = createServer(async (req, res) => {
@@ -73,6 +91,37 @@ try {
     }
   }
   console.log('PASS round trips: a Learn level\'s coding tasks are worked out once per instance');
+
+  let address = 0;
+  const call = async (method: string, query: Record<string, string>, token?: string, body?: unknown) => {
+    const res = mockResponse();
+    address += 1;
+    await roadmap.default({
+      method,
+      headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), 'x-forwarded-for': `10.40.0.${address % 250}` },
+      query,
+      url: '/api/quiz/roadmap',
+      body,
+    } as never, res as never);
+    return res;
+  };
+
+  // ── server item 12: the catalogue in the CDN ──────────────────────────
+  {
+    const before = calls.length;
+    const guest = await call('GET', { resource: 'learning-path-catalog' });
+    const signedIn = await call('GET', { resource: 'learning-path-catalog' }, 'any-token');
+    assert.equal(guest.statusCode, 200, JSON.stringify(guest.body));
+    assert.deepEqual(signedIn.body, guest.body, 'the same answer for a guest and an account');
+    assert.equal(calls.length, before, 'the catalogue reads no token and no table');
+    for (const res of [guest, signedIn]) {
+      assert.equal(res.headers['cache-control'], 'public, max-age=60, s-maxage=300, stale-while-revalidate=600', 'shared by the CDN for five minutes');
+    }
+    const refused = await call('POST', { resource: 'learning-path-catalog' });
+    assert.equal(refused.statusCode, 405);
+    assert.equal(refused.headers['cache-control'], 'private, no-store', 'a refusal keeps the private default');
+  }
+  console.log('PASS round trips: the learning-path catalogue is the same for everyone and shared by the CDN');
 } finally {
   server.close();
 }

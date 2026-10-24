@@ -1452,6 +1452,28 @@ async function handleAttemptStatus(req: VercelRequest, res: VercelResponse) {
   return res.json({ completed: Boolean(attempt.data.completed_at), coding: (coding.data ?? []).filter(row => session.codingTaskIds?.includes(String(row.task_id))).map(row => ({ taskId: String(row.task_id), passed: row.passed === true && row.verified === true && row.revealed !== true, revealed: row.revealed === true })) });
 }
 
+/* ──── the learning-path catalogue in the CDN ───────────────────────────── */
+
+/** The FDE catalogue is the same for every caller: the published manifests,
+ * their versions and each path's availability, which follows the
+ * deployment's switch and this instance's storage check, never the caller's
+ * token or address (lib/learning-paths/handlers.ts). Its handler answers
+ * `public, max-age=60, stale-while-revalidate=600` without s-maxage, which
+ * kept it out of the Vercel CDN, so every browser miss ran this function and
+ * sent about 30 KB gzip (#587, server item 12). The router lets the CDN share
+ * it for five minutes, as the Learn map is shared for one; browsers keep
+ * their minute. Bounded trade-off: an availability flip after a deploy (a
+ * storage migration found missing by one instance) reaches every browser up
+ * to five minutes later. Only the handler's public header is replaced; a
+ * refusal keeps the private default of withRequestContext. */
+export const LEARNING_PATH_CATALOG_CACHE = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600';
+function shareCatalogWithCdn(res: VercelResponse): VercelResponse {
+  const setHeader = res.setHeader.bind(res);
+  res.setHeader = ((name: string, value: number | string | readonly string[]) =>
+    setHeader(name, name.toLowerCase() === 'cache-control' && /^public\b/.test(String(value)) ? LEARNING_PATH_CATALOG_CACHE : value)) as typeof res.setHeader;
+  return res;
+}
+
 /* ──── handler ──────────────────────────────────────────────────────────── */
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
@@ -1485,7 +1507,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   //   POST ?resource=learning-path-submit  → server grading and the recorded evidence
   if (resource.startsWith('learning-path-')) {
     try {
-      if (resource === 'learning-path-catalog') return await handleLearningPathCatalog(req, res);
+      if (resource === 'learning-path-catalog') return await handleLearningPathCatalog(req, shareCatalogWithCdn(res));
       if (resource === 'learning-path-start') return await handleActivityStart(req, res, supabase);
       if (resource === 'learning-path-submit') return await handleActivitySubmit(req, res, supabase);
       return jsonError(res, 404, 'not_found', 'Unknown learning-path resource');
