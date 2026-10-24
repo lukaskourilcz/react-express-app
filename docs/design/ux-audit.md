@@ -2,6 +2,30 @@
 
 This audit reviewed every route at 1280px and 390px, signed out and signed in, including the key states: mid-question, graded, after a coding run, dialogs, locked and Premium. It found 116 problems. Each one is drawn on the screenshot it comes from in the visual plan, and each one names the code that causes it. Epic U and its six child issues track the work, and section 4 lists them.
 
+## Status: completed on 24 October 2026
+
+All six work packages merged: U1 #580, U6 #581, U5 #582, U2 #583, U3 #584 and U4 #586. The closeout branch `claude/ux-closeout` merged the two page headers into `PageHeader`, folded `SignedOutBlock` into `StatePanel inline`, put the glossary term chips and the last compact buttons on the 44px scale, and added `npm run check:design` to CI through `check:public`.
+
+What was decided, and is now the documented default for every new page (`DESIGN_RULES.md` §10–11, `docs/design/design-system.md`):
+
+- The route shell picks one of four widths per route (`pageWidth.ts`); a page sets no page `max-width`, and task columns are 640px.
+- Every control is 44px; only a component's own toolbar in `.ss-compact` is 36px, with a 44px hit area.
+- `SwimCta` md is the one filled primary on a screen.
+- Question screens, the coding workbench, operational headers and every empty, gate or signed-out state each have one shared component.
+- Each fact is said once per screen, and the verb is "Sign in".
+
+Open for the owner:
+
+- **Legal wording.** The privacy policy still says "your name" and "shark nickname" (`legal.privacy.friends.see`, `legal.privacy.leaderboards.body`). Agents do not change legal wording.
+- **VAT caption.** U5 removed ", before VAT" from the Premium column caption of the `/premium` table; the VAT lines beside the prices stay. Please confirm.
+- **Join wording.** The Learn join now reads "Add it to your plan" instead of "Add Software Engineer to your plan", so the section is named once. Please confirm.
+- **`/cards`.** It stays its own route. Redirecting it to `/collection` is your decision (social-account-05).
+- **Kept exceptions to one primary.** The `/premium` plan pair has two filled buttons; the Profile overview can show two (Save in 'Your name' and Connect GitHub); signed-out `/shop` shows several sign-in prompts, one of them filled.
+- **Billing primaries.** The checkout, success and cancel steps draw their one primary as an Astryx `primary` button, not `SwimCta` md. Say whether they should move.
+- **Partial targets.** The Profile at 390px is 3,746px tall against a target under 3,000px (social-account-18), and the coding editor starts at y≈368 rather than 320 because the "Show full brief" row holds Format and Reset (coding-01).
+
+The visual plan (the annotated screenshots and their metrics) stays on the owner's machine and is not in the repository. Each finding below keeps its id from that plan.
+
 ## 1. Method
 
 - A local production build (`vite preview` on 127.0.0.1) answered every `/api` request from fixtures. Nothing reached devshark.app.
