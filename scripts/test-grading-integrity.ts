@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
-import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, sandboxPool, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
 import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
@@ -37,6 +37,31 @@ import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 // the sources under test, exactly as the deployment runs it.
 checkQuickjsProvenance();
 await buildSandboxWorker();
+
+// ── a task page loads a grader thread ahead of its first Submit (#587) ───
+// Server item 30: the first Submit on an instance waited for a new thread to
+// load QuickJS. A page of a task QuickJS grades now loads one when the
+// instance has none, runs an empty program on it and leaves it idle, as any
+// run does; a second page loads nothing more, and a React page none.
+{
+  const page = async (id: string) => {
+    const out = { statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingTask({ method: 'GET', headers: { 'x-forwarded-for': '203.0.113.94' }, query: { id } } as never, out as never, null);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  };
+  assert.deepEqual(sandboxPool(), { idle: 0, warming: false }, 'no grader thread is loaded before any run');
+  await page(CODING_TASKS.find((task) => task.track === 'react' && isFreeCodingTask(task.id))!.id);
+  assert.deepEqual(sandboxPool(), { idle: 0, warming: false }, 'a React page loads no QuickJS thread');
+  await page('js-double-numbers');
+  assert.equal(sandboxPool().warming, true, 'a JavaScript page starts loading one');
+  for (let waited = 0; sandboxPool().warming && waited < 15_000; waited += 20) await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(sandboxPool(), { idle: 1, warming: false }, 'and leaves it loaded and idle');
+  await page('js-double-numbers');
+  assert.deepEqual(sandboxPool(), { idle: 1, warming: false }, 'a second page loads nothing more');
+  const graded = await runInSandbox({ code: 'function answer(){return 1}', calls: ['answer()'], expectations: [1] });
+  assert.equal(graded.results[0]?.pass, true, 'the warmed thread grades the next run');
+  console.log('PASS integrity: a task page loads one grader thread ahead of its first Submit, and only when the instance has none');
+}
 await checkCodingTaskRuntimePolicy();
 await checkSortParity();
 

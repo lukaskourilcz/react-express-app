@@ -22,7 +22,7 @@ import { assessComplexity } from './complexity';
 import { codingPassXp, type ComplexityReport } from '../../shared/coding-complexity';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
-import { runChecks } from './sandbox';
+import { runChecks, warmSandbox } from './sandbox';
 import { runtimePolicyForTask } from '../../shared/coding-task-runtime';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from './grader-capacity';
@@ -70,6 +70,9 @@ import type { TypeCheckResult } from '../../shared/coding-ts-check';
 
 const logEvent = createLogger('coding');
 const MAX_CODE_BYTES = CODING_CODE_LIMIT_BYTES;
+
+/** The tracks whose code the QuickJS sandbox grades. */
+const QUICKJS_GRADED: ReadonlySet<CodingTrack> = new Set<CodingTrack>(['javascript', 'typescript', 'algorithms']);
 
 const codingAvailable = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) => jsonError(res, 404, 'not_available', 'Coding challenges are not part of this product');
@@ -377,6 +380,10 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
 
   res.setHeader('Cache-Control', 'private, no-store');
   const body: CodingTaskResponse = { task: play, session, locked, progress, draft, draftUpdatedAt, signedIn: Boolean(userId) };
+  // A task this page can submit, graded in QuickJS (TypeScript after its
+  // type check): load a grader thread now if the instance has none, so the
+  // first Submit does not wait for it (#587, server item 30).
+  if (session && QUICKJS_GRADED.has(task.track)) warmSandbox();
   return res.json(body);
 }
 
