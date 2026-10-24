@@ -87,20 +87,48 @@ export function serverContentIndex(): ContentIndex {
  * (`OpenOptions.recentPremium`); every other gate, the level open and the
  * completion included, asks the database each time. Only a Premium answer
  * is kept, for at most a minute, and a free answer read anywhere on the
- * instance forgets it at once. The bounded trade-off, for the owner: an
+ * instance forgets it at once, along with a Premium answer asked before it
+ * that comes back later. The bounded trade-off, for the owner: an
  * account whose Premium ended keeps answering the questions of a Premium
  * session it already holds for up to a minute on an instance that saw it
  * Premium just before. Completing that session asks again and is refused. */
 const RECENT_PREMIUM_MS = 60_000;
 const RECENT_PREMIUM_LIMIT = 5_000;
 const recentPremium = new Map<string, number>();
+/** The `is_premium` calls in flight per account, and, while any is, when the
+ * latest free answer among them was asked. A Premium answer asked before that
+ * free one and back after it is older news: kept, it would trust the account
+ * again after the instance read it free. Once no call is in flight no older
+ * answer can arrive, so the mark goes with the last one. Both are bounded by
+ * the calls in flight. */
+const tierAsks = new Map<string, number>();
+const freeAskedAt = new Map<string, number>();
+
+function beginTierAsk(userId: string): void {
+  tierAsks.set(userId, (tierAsks.get(userId) ?? 0) + 1);
+}
+
+function endTierAsk(userId: string): void {
+  const left = (tierAsks.get(userId) ?? 1) - 1;
+  if (left > 0) {
+    tierAsks.set(userId, left);
+    return;
+  }
+  tierAsks.delete(userId);
+  freeAskedAt.delete(userId);
+}
 
 /** `askedAt` is when the `is_premium` call was sent, so the minute counts
  * from the question, not from an answer that arrived late (a slow reply, or
  * one an instance frozen after its response delivered when it thawed). */
 function notePremium(userId: string, premium: boolean, askedAt: number): void {
   recentPremium.delete(userId);
-  if (!premium) return;
+  if (!premium) {
+    freeAskedAt.set(userId, Math.max(freeAskedAt.get(userId) ?? askedAt, askedAt));
+    return;
+  }
+  const freeSince = freeAskedAt.get(userId);
+  if (freeSince !== undefined && askedAt <= freeSince) return;
   const until = askedAt + RECENT_PREMIUM_MS;
   if (until <= Date.now()) return;
   if (recentPremium.size >= RECENT_PREMIUM_LIMIT) recentPremium.delete(recentPremium.keys().next().value!);
@@ -122,13 +150,18 @@ export function resolveTier(userId: string): Promise<Tier> {
   return requestMemo(`tier:${userId}`, async () => {
     if (!supabase) return 'free';
     const askedAt = Date.now();
-    const { data, error } = await withTimeout(supabase.rpc('is_premium', { p_user: userId }));
-    if (error) {
-      if (isRpcMissing(error)) return 'free';
-      throw new EntitlementUnavailableError();
+    beginTierAsk(userId);
+    try {
+      const { data, error } = await withTimeout(supabase.rpc('is_premium', { p_user: userId }));
+      if (error) {
+        if (isRpcMissing(error)) return 'free';
+        throw new EntitlementUnavailableError();
+      }
+      notePremium(userId, data === true, askedAt);
+      return data === true ? 'premium' : 'free';
+    } finally {
+      endTierAsk(userId);
     }
-    notePremium(userId, data === true, askedAt);
-    return data === true ? 'premium' : 'free';
   });
 }
 
