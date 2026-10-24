@@ -10,6 +10,7 @@ document.documentElement.dataset.design = 'apple';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
+import { preloadPath } from './lib/routePreload';
 import { ColorModeProvider } from './theme/ColorModeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LanguageProvider } from './i18n/LanguageContext';
@@ -81,6 +82,10 @@ capturePublicGuide();
 // A returning learner's plan, asked now rather than once the header and the
 // page have rendered and auth has restored the user (lib/entitlement.ts).
 prefetchStoredAccountPlan();
+// The first page's code, asked now: App renders it in a transition after its
+// first commit (lib/routePreload.ts useFirstPageTransition), and the import
+// it then runs is this one.
+void preloadPath(window.location.pathname);
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>

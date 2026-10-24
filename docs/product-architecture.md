@@ -1812,7 +1812,9 @@ analytics and the privacy policy".
   boundary showed or hid (the header's account widget among them), so the
   first page of a visit used to wait up to 300 ms with its code and data in
   hand (#587 C04). What shows is unchanged: nothing for 200 ms, then the
-  loader, then the page.
+  loader, then the page. `main.tsx` starts the first page's chunk
+  (`preloadPath`) before anything renders, so the transition finds the import
+  already running.
 - **Motion.** `MotionProvider` (`client/src/lib/motion.tsx`) loads Motion's
   feature chunk (14 KB) in the background. A page that opens with
   `prefers-reduced-motion: reduce` loads none (`motionFeaturesFor`) and marks

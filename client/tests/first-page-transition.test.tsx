@@ -3,6 +3,7 @@
 // route boundary's fallback, it waited for React's reveal throttle: a boundary
 // that leaves its fallback on a retry commits no sooner than 300 ms after the
 // last fallback any boundary showed or hid (perf baseline #587 C04).
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { lazy, Suspense, type ComponentType } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -54,5 +55,17 @@ describe('the first page of a visit', () => {
     // The boundary’s own fallback: held until 300 ms after it showed.
     expect(throttled).toBeGreaterThan(150);
     expect(inTransition).toBeLessThan(100);
+  });
+});
+
+describe('the first page’s code', () => {
+  // The transition starts after the shell's first commit, so the page's
+  // import would start later than it did from the first render; main.tsx
+  // starts it before anything renders instead.
+  it('starts loading before the first render', () => {
+    const main = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8');
+    const preload = main.indexOf('void preloadPath(window.location.pathname);');
+    expect(preload).toBeGreaterThan(-1);
+    expect(preload).toBeLessThan(main.indexOf('ReactDOM.createRoot('));
   });
 });
