@@ -20,7 +20,6 @@ import { ROADMAP_TOPICS, topicLevelCount } from '../roadmap';
 import { EVOLVING_CHALLENGES } from '../../shared/evolving';
 import { learnCheckpointXp, learnLevelXp } from '../../shared/progression';
 import { tokensForVerifiedXp, type CoinSettings } from '../../shared/rewards';
-import type { Tier } from '../../shared/tiers';
 
 const logEvent = createLogger('coins');
 
@@ -192,22 +191,22 @@ export async function settleMilestones(
  * only inside `IF v_premium`, with `v_premium := is_premium(p_user_id)`, so
  * for an account `is_premium()` calls free it credits nothing and only reads
  * the streak, the progress blob, every passed coding task, the ledger and the
- * day's XP credits. `tier` is the caller's `resolveTier` (lib/access.ts: that
- * same `is_premium()` call, remembered for the request), passed in so this
- * module does not load lib/access.ts and the coding catalogue with it. A
- * free answer skips the routine; a tier that cannot be read settles anyway,
- * and the routine decides as before. An account that turns Premium after the
- * tier was read is settled by its next pass or wallet read (the wallet always
- * runs the routine), as an account that upgrades later always was.
+ * day's XP credits. `premium` is the caller's own answer to that same
+ * `is_premium()` question (its plan check, remembered for the request); this
+ * module never asks for a plan itself. A "no" skips the routine; a plan that
+ * cannot be read settles anyway, and the routine decides as before. An
+ * account that turns Premium after the plan was read is settled by its next
+ * pass or wallet read (the wallet always runs the routine), as an account
+ * that upgrades later always was.
  */
 export async function settleMilestonesAfterPass(
   supabase: SupabaseClient,
   userId: string,
   subject: string,
-  tier: () => Promise<Tier>,
+  premium: () => Promise<boolean>,
 ): Promise<void> {
-  const premium = await tier().then((one) => one === 'premium', () => true);
-  if (!premium) return;
+  const settle = await premium().catch(() => true);
+  if (!settle) return;
   await settleMilestones(supabase, userId, subject);
 }
 

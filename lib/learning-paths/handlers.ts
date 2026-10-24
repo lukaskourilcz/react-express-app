@@ -1268,7 +1268,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // A verified pass may reach a milestone. Only a Premium account can be
   // credited one, so a free account skips the routine (#587, server item 8).
   if (activity.kind === 'code' && stored.state === 'verified_pass') {
-    rewards.push(settleMilestonesAfterPass(supabase, userId, 'webdev', () => resolveTier(userId)));
+    rewards.push(settleMilestonesAfterPass(supabase, userId, 'webdev', async () => (await resolveTier(userId)) === 'premium'));
   }
   // Both are awaited before the answer, as they were one after the other.
   const failed = (await Promise.allSettled(rewards)).find((one): one is PromiseRejectedResult => one.status === 'rejected');
