@@ -62,6 +62,38 @@ async function getAccessToken(): Promise<string | null> {
   return null;
 }
 
+/**
+ * Reads whose handler never looks at the caller: the same answer for a guest
+ * and for every account, verified by no token, and cached publicly by the CDN
+ * (docs/product-architecture.md, "Caching"). They go out at once, without the
+ * token, so a signed-in visit no longer holds them behind the supabase-js
+ * download and the session read (perf baseline #587 C10), and the CDN sees the
+ * same request a guest's is. Only GETs of exactly these shapes qualify; a
+ * handler that starts reading the caller must leave this list.
+ *
+ *   /api/settings                               game settings (api/settings.ts)
+ *   /api/quiz/roadmap                           the Learn map (no topic, level, test or resource)
+ *   /api/quiz/roadmap?resource=learning-path-catalog   the published path manifests
+ *   /api/quiz/roadmap?resource=lesson&id=…      a Learn level's lesson
+ */
+export function isPublicRead(url: string, method: string | undefined): boolean {
+  if (method && method.toUpperCase() !== 'GET') return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(url, 'http://public.invalid');
+  } catch {
+    return false;
+  }
+  if (parsed.origin !== 'http://public.invalid') return false;
+  const keys = [...parsed.searchParams.keys()].sort().join(',');
+  const resource = parsed.searchParams.get('resource');
+  if (parsed.pathname === '/api/settings') return keys === '';
+  if (parsed.pathname !== '/api/quiz/roadmap') return false;
+  return keys === ''
+    || (keys === 'resource' && resource === 'learning-path-catalog')
+    || (keys === 'id,resource' && resource === 'lesson');
+}
+
 /** The server refused locked content; the upgrade sheet is already open. */
 export const isPremiumRequired = (err: unknown): boolean =>
   err instanceof ApiError && err.status === 402 && err.code === PREMIUM_REQUIRED;
@@ -80,7 +112,7 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   try {
     // Inside the try, so a token that cannot be read settles like any other
     // failure: the timer and the abort listener are released below.
-    const token = await getAccessToken();
+    const token = isPublicRead(url, rest.method) ? null : await getAccessToken();
     const res = await fetch(url, {
       ...rest,
       signal: controller.signal,

@@ -318,6 +318,60 @@ describe('a returning visitor with a stored session', () => {
     expect(authorization).toEqual(['Bearer stored-access-token']);
   });
 
+  // Perf baseline #587 C10: the settings, the Learn map, the path catalog and
+  // a lesson are the same for every caller, so they do not wait for the
+  // supabase-js download or the session read, and carry no token.
+  it('sends the public reads at once and without a token, while an account read still waits for it', async () => {
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const seen: { path: string; authorization: string | null }[] = [];
+    const record = ({ request }: { request: Request }) => {
+      const url = new URL(request.url);
+      seen.push({ path: `${url.pathname}${url.search}`, authorization: request.headers.get('authorization') });
+      return HttpResponse.json({ ok: true });
+    };
+    server.use(http.get('*/api/settings', record), http.get('*/api/quiz/roadmap', record), http.get('*/api/test', record));
+    const { apiFetch } = await import('../src/lib/api');
+    const publicReads = [
+      '/api/settings',
+      '/api/quiz/roadmap',
+      '/api/quiz/roadmap?resource=learning-path-catalog',
+      '/api/quiz/roadmap?resource=lesson&id=html-1',
+    ];
+    const account = apiFetch('/api/test');
+    const progress = apiFetch('/api/quiz/roadmap?resource=progress');
+    const level = apiFetch('/api/quiz/roadmap?topic=html&level=1');
+    await Promise.all(publicReads.map((url) => apiFetch(url)));
+    expect(seen).toEqual(publicReads.map((path) => ({ path, authorization: null })));
+    expect(sb.createClient).not.toHaveBeenCalled();
+    await releaseDownload();
+    await Promise.all([account, progress, level]);
+    expect(seen.slice(publicReads.length).map((one) => one.authorization)).toEqual(['Bearer stored-access-token', 'Bearer stored-access-token', 'Bearer stored-access-token']);
+  });
+
+  it('counts only GETs of the documented shapes as public reads', async () => {
+    const { isPublicRead } = await import('../src/lib/api');
+    expect(isPublicRead('/api/settings', undefined)).toBe(true);
+    expect(isPublicRead('/api/quiz/roadmap', 'GET')).toBe(true);
+    expect(isPublicRead('/api/quiz/roadmap?resource=learning-path-catalog', 'get')).toBe(true);
+    expect(isPublicRead('/api/quiz/roadmap?id=x&resource=lesson', undefined)).toBe(true);
+    for (const url of [
+      '/api/quiz/roadmap?resource=progress',
+      '/api/quiz/roadmap?topic=html&level=1',
+      '/api/quiz/roadmap?topic=html',
+      '/api/quiz/roadmap?resource=lesson&id=x&level=1',
+      '/api/quiz/roadmap?resource=lesson&resource=lesson&id=x',
+      '/api/quiz/roadmap?resource=learning-path-start',
+      '/api/quiz/roadmap?resource=coding-task&id=x',
+      '/api/settings?admin=1',
+      '/api/leaderboard',
+      '/api/user/[op]?op=entitlement',
+      'https://elsewhere.example/api/settings',
+    ]) expect(isPublicRead(url, 'GET')).toBe(false);
+    expect(isPublicRead('/api/quiz/roadmap', 'POST')).toBe(false);
+    expect(isPublicRead('/api/settings', 'PUT')).toBe(false);
+  });
+
   it('sends nothing when the stored session is not read within the four-second limit, and says why', async () => {
     // A signed-in learner whose token refresh is slow: sent without the token,
     // a quiz submit would be graded as a guest's and its one-time claim spent.

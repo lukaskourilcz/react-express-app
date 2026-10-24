@@ -1573,7 +1573,12 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   while keeping the stored one (a refresh that failed offline), nothing is
   sent: the caller gets a retryable `ApiError(0, 'auth_unavailable')`. Only a
   browser with no stored session sends a request without a token, so a
-  signed-in learner is never graded or refused as a guest.
+  signed-in learner is never graded or refused as a guest. The one exception
+  is the short list of public reads in `isPublicRead` (`/api/settings`, the
+  Learn map, the path catalog and a lesson): their handlers never read the
+  caller and the CDN shares their answers, so they leave at once without a
+  token instead of waiting for supabase-js and the session (#587 C10). A
+  handler that starts reading the caller must leave that list.
 - **The sign-in report** (`POST /api/user/authevent`, the `/dev` Logs tab)
   goes once per sign-in. supabase-js also says `SIGNED_IN` for the stored
   session each time a tab is shown again; `lib/auth.tsx` remembers the
