@@ -1481,20 +1481,20 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
     progress = sanitize(row.data?.data);
     if (applied && firstPass && progressStepPassed(row.data?.data, session)) {
-      const credits = Promise.all([
-        creditLearnPass(supabase, {
-          userId,
-          subject: session.subject!,
-          topic: session.topic!,
-          kind: session.roadmapKind!,
-          ref: session.ref!,
-        }),
-        // A friend's first passed Learn level pays both sides of an invitation
-        // once; the routine reads the verified progress itself (#228).
-        creditReferral(supabase, userId, session.subject!),
-      ]);
+      const coins = creditLearnPass(supabase, {
+        userId,
+        subject: session.subject!,
+        topic: session.topic!,
+        kind: session.roadmapKind!,
+        ref: session.ref!,
+      });
+      coins.catch(() => {});
       try {
-        await credits;
+        // A friend's first passed Learn level pays both sides of an invitation
+        // once; the routine reads the verified progress itself (#228). It
+        // runs while the coin credit does.
+        await creditReferral(supabase, userId, session.subject!);
+        await coins;
       } catch (error) {
         await followers();
         throw error;
