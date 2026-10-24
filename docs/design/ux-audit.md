@@ -22,7 +22,9 @@ Open for the owner:
 - **`/cards`.** It stays its own route. Redirecting it to `/collection` is your decision (social-account-05).
 - **Kept exceptions to one primary.** The `/premium` plan pair has two filled buttons; the Profile overview can show two (Save in 'Your name' and Connect GitHub); signed-out `/shop` shows several sign-in prompts, one of them filled.
 - **Billing primaries.** The checkout, success and cancel steps draw their one primary as an Astryx `primary` button, not `SwimCta` md. Say whether they should move.
-- **Partial targets.** The Profile at 390px is 3,746px tall against a target under 3,000px (social-account-18), and the coding editor starts at y≈368 rather than 320 because the "Show full brief" row holds Format and Reset (coding-01).
+- **FDE on `/premium`.** The plan table lists only what is open, so while the FDE flag is off `/premium` no longer names the FDE path (the separate includes list that did is gone). Say whether it should say it again before the path opens.
+- **Coding stage stepper.** The numbered stage links in an evolving challenge stay compact (allowlisted in `scripts/design-contract-allowlist.json`); they could move to the default size.
+- **Partial targets.** The final check on 24 October measured the Profile at 390px at 3,642px against a target under 3,000px (social-account-18); the phone footer still wraps 'Cancel Premium' onto a third row (shell-public-03); the phone plan table is 547px for six rows against 400px (shell-public-07), and the coding editor starts at y≈368 rather than 320 because the "Show full brief" row holds Format and Reset (coding-01).
 
 The visual plan (the annotated screenshots and their metrics) stays on the owner's machine and is not in the repository. Each finding below keeps its id from that plan.
 
