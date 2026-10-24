@@ -15,6 +15,7 @@ import { preloadTaskWorkbench, useWorkbench, useWarmWorkbench } from '../../codi
 import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
 import { releaseCodingTaskRead, startCodingTaskRead } from '../../coding/earlyTaskRead';
 import { queryClient as appQueryClient } from '../../lib/queryClient';
+import { freshStoredAccessToken, storedSessionUserId } from '../../lib/supabaseClient';
 import { autosaveDraft, deviceDraft, draftStoredBySubmit, flushAutosave, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
 import { DraftNote, useDraftChoice } from '../../coding/DraftNote';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
@@ -100,6 +101,22 @@ function learnSessionAt(taskId: string | undefined): string | undefined {
   if (first && taskId && isCodingSectionTrack(first[1])) {
     startCodingTaskRead(appQueryClient, taskId, learnSessionAt(taskId));
     void preloadTaskWorkbench().catch(() => undefined);
+  }
+  // A list address (perf baseline #587 C15): a signed-in list holds its first
+  // draw on the plan, the coding progress and the open run (home) or the
+  // saved stars (a track), which left only once the screen rendered. The
+  // plan already leaves as the app starts (lib/entitlement.ts
+  // prefetchStoredAccountPlan); the others leave now, for the stored
+  // session's account and only with a token supabase-js would hand out
+  // unchanged, under the keys the hold and the screen read, one attempt each
+  // as the hold's own reads (lib/routeData.ts readOnce). A session that turns
+  // out to have ended signs out, and the sign-out empties the cache.
+  const list = /^\/coding(?:\/([^/]+))?\/?$/.exec(window.location.pathname);
+  const screen = !list ? null : list[1] === undefined ? 'home' : list[1] === 'fullstack' ? 'fullstack' : isCodingSectionTrack(list[1]) ? 'track' : null;
+  if (screen && storedSessionUserId() && freshStoredAccessToken()) {
+    void appQueryClient.prefetchQuery({ ...codingProgressQuery, retry: false });
+    if (screen === 'home') void appQueryClient.prefetchQuery({ ...practiceSessionQuery, retry: false });
+    if (screen === 'track') void appQueryClient.prefetchQuery({ ...bookmarksQuery, retry: false });
   }
 }
 

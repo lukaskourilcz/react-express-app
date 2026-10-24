@@ -685,6 +685,15 @@ shown once it has loaded.
   still asks afresh and a stage never opens from an older draft. An answer
   the screen never takes is let go after 15 s. Before, the request left only
   once the screen had rendered (C16).
+- **The first page of a visit** to a coding list asks, as the section's
+  chunk evaluates, for what a signed-in list holds its first draw on: the
+  coding progress, and the open run on `/coding` or the saved stars on a
+  track (`/coding/fullstack` reads progress only). They go only for the
+  stored session's account and only with a token supabase-js would hand out
+  unchanged, under the keys the list's first-data hold reads, one attempt
+  each; the plan already leaves as the app starts. A hidden track, the
+  retired review address and a signed-out visit ask for nothing. Before,
+  the three reads left only once the screen rendered (C15).
 - **The coding lists** (`/coding`, a track, `/coding/fullstack`) warm the
   workbench (about 21 KB gzip) when the browser is idle, and no longer the
   editor with it: a list visit that opens no task, or opens one on a phone,
