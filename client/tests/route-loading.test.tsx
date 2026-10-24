@@ -18,6 +18,9 @@ vi.mock('../src/components/paths/LearningPathScreens', () => {
 // The pages whose chunk a prefix matcher used to preload for any deeper path.
 const pageChunks = vi.hoisted(() => new Set<string>());
 vi.mock('../src/components/Roadmap', () => { pageChunks.add('learn'); return { default: () => null, BigOIntroduction: () => null }; });
+// /learn/big-o's own module (#587 C17), apart from the Learn map's.
+const bigOIntroduction = vi.hoisted(() => ({ loaded: false }));
+vi.mock('../src/components/learn/BigOIntroduction', () => { bigOIntroduction.loaded = true; return { BigOIntroduction: () => null }; });
 vi.mock('../src/components/Play', () => { pageChunks.add('play'); return { PlayLanding: () => null, PlayMatch: () => null }; });
 vi.mock('../src/components/coding/CodingSection', () => {
   pageChunks.add('coding');
@@ -65,6 +68,18 @@ describe('the app\'s route chunks', () => {
     expect(pathScreens.loaded).toBe(false);
     await preloadPath('/learn/forward-deployed-engineer/path/m03');
     expect(pathScreens.loaded).toBe(true);
+  }, 60_000);
+
+  // Perf baseline #587 C17: the two-button /learn/big-o page downloaded the
+  // whole Learn map chunk. Before any other test here loads the map, so a
+  // map load would register.
+  it('loads the Big O introduction’s own module for /learn/big-o, and not the Learn map’s', async () => {
+    await import('../src/App');
+    pageChunks.clear();
+    await preloadPath('/learn/big-o');
+    await preloadPath('/learn/big-o/');
+    expect(bigOIntroduction.loaded).toBe(true);
+    expect(pageChunks.has('learn')).toBe(false);
   }, 60_000);
 
   // Software Engineer audit item 23: a deeper path no route serves draws the

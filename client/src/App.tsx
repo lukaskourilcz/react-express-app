@@ -73,8 +73,12 @@ const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
 // The FDE path's pages sit inside its Learn section (#489) but load the path
 // screens, not the Learn page. lib/learningPaths.ts names the same address.
 const FDE_PATH = '/learn/forward-deployed-engineer/path';
-// /learn/big-o is one of them: BigOIntroduction lives in the Learn chunk.
-const loadRoadmap = routeChunk(routes('/learn/:section?'), () => import('./components/Roadmap'));
+// /learn/big-o is not a section: its page is a module of its own
+// (learn/BigOIntroduction.tsx) that loads without the map's chunk (#587 C17).
+const BIG_O_INTRODUCTION = /^\/learn\/big-o\/?$/;
+const learnSection = routes('/learn/:section?');
+const loadRoadmap = routeChunk((pathname) => learnSection(pathname) && !BIG_O_INTRODUCTION.test(pathname), () => import('./components/Roadmap'));
+const loadBigOIntroduction = routeChunk((pathname) => BIG_O_INTRODUCTION.test(pathname), () => import('./components/learn/BigOIntroduction'));
 const loadBigO = routeChunk(exact('/big-o'), () => import('./components/BigOPage'));
 const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
 const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
@@ -103,7 +107,7 @@ const Home = lazyPage(loadHome);
 const Quiz = lazyPage(loadQuiz);
 const Roadmap = lazyPage(loadRoadmap);
 const BigOPage = lazyPage(loadBigO);
-const BigOIntroduction = lazyPage(() => loadRoadmap().then((m) => ({ default: m.BigOIntroduction })));
+const BigOIntroduction = lazyPage(() => loadBigOIntroduction().then((m) => ({ default: m.BigOIntroduction })));
 const CareerRoadmap = lazyPage(loadCareerRoadmap);
 const Profile = lazyPage(loadProfile);
 const Leaderboard = lazyPage(loadLeaderboard);

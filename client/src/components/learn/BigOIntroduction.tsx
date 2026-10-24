@@ -6,6 +6,11 @@
 // without the map's chunk (perf baseline #587 C17): the page is the Learn
 // header and two buttons, and the reader and the runner load when a lesson
 // is reached for (lessonParts.tsx).
+// The reader and the runner draw with the map's styles (`de-page`, the
+// result's `rm-*` classes), which the map's chunk used to bring along; first,
+// so the page's own styles still come after them, as they did then.
+import '../Roadmap.css';
+import '../DeepEndScreens.css';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

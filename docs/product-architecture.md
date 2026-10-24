@@ -950,9 +950,12 @@ same way). Migration 026's path tables and their old rows stay.
   (`isBigOIntroduction` in `shared/tiers.ts`) through the same lesson read.
   Level 3 onward follows ordinary progression. The `/learn/big-o` page is
   its own module (`components/learn/BigOIntroduction.tsx`), which imports
-  nothing of the Learn map (#587 C17); `Roadmap.tsx` re-exports it, and
-  App.tsx still loads it through the map's chunk (about 70 KB gzip) until
-  its route gets a loader of its own.
+  nothing of the Learn map (#587 C17), and its route loads that module
+  alone (App.tsx `loadBigOIntroduction`; the Learn sections' loader leaves
+  `/learn/big-o` out), about 43 KB gzip of JavaScript less than with the
+  map's chunk it came with before (309 against 266 KB, signed out). The module imports the map's `Roadmap.css` and
+  `DeepEndScreens.css` itself, ahead of its own styles, because the reader
+  and the runner draw with them. `Roadmap.tsx` still re-exports it.
 - **DSA Advanced** (`dsa-advanced`, opt-in through Software Engineer) has
   fifteen levels of eight reviewed questions and needs the first five
   Foundations levels. Its levels and part tests are Premium. Eight lessons in
