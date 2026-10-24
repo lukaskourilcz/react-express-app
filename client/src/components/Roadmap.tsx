@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
@@ -63,7 +63,7 @@ import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { learnText } from '../i18n/translations.learn';
-import { LearnLesson } from './learn/LearnLesson';
+import { LessonError, LessonReader, LessonRunner, LessonStage, loadLessonRunner, preloadLessonReader, preloadLessonRunner } from './learn/lessonParts';
 import { useAuth } from '../lib/auth';
 import { accountEpoch } from '../lib/accountData';
 import { friendlyError, isPremiumRequired } from '../lib/api';
@@ -116,29 +116,13 @@ import './DeepEndScreens.css';
 // Keep path screens and their styles outside the normal topic chunk.
 const PathShelf = lazyShellPart(() => import('./paths/PathShelf'));
 
-// An open level's runner, with the level intros and worked-example figures it
-// shows, was about two thirds of the Learn chunk, and the map needs none of
-// it. It loads when a level opens: open() starts the load beside the level's
-// own request, and LessonStage holds the loader meanwhile.
-type RunnerModule = typeof import('./learn/LessonRunner');
-let runnerModule: RunnerModule | null = null;
-const loadLessonRunner = () => import('./learn/LessonRunner').then((m) => (runnerModule = m));
-const preloadLessonRunner = () => { loadLessonRunner().catch(() => {}); };
-const LazyLessonRunner = lazyShellPart(() => loadLessonRunner().then((m) => ({ default: m.LessonRunner })));
-type RunnerProps = Parameters<RunnerModule['LessonRunner']>[0];
-/** The runner, drawn at once when its code is already here (perf baseline
- * #587 C05, C28). A lazy component suspends on its first render even then,
- * and React holds a boundary that showed its fallback for 300 ms before it
- * draws what arrived, so a level opened that much later than its answer.
- * Decided once per mount, so a runner never swaps one tree for the other. */
-function LessonRunner(props: RunnerProps) {
-  const [Loaded] = useState(() => runnerModule?.LessonRunner ?? null);
-  return Loaded ? <Loaded {...props} /> : <LazyLessonRunner {...props} />;
-}
-
+// An open level's runner and a DSA level's reading load only when a level
+// opens or the learner reaches for one (learn/lessonParts.tsx).
 /** A step a press opens: an enabled level or part test on the map, or the
  * next-step card's action. A Premium node opens the upgrade sheet instead. */
 const STEP_CONTROL = '.rm-path-canvas button:not([disabled]):not([aria-disabled="true"]), .rm-overview-card button';
+/** A step whose level opens with a reading (`data-lesson`). */
+const READING_STEP = '[data-lesson]';
 const savesData = (): boolean => (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
 /**
  * The runner's code starts loading when the learner shows they are about to
@@ -153,6 +137,8 @@ function warmRunnerOnIntent(event: { type: string; target: EventTarget | null; n
   if (event.type === 'pointerover' && (event.nativeEvent as PointerEvent).pointerType !== 'mouse') return;
   if (!press && savesData()) return;
   preloadLessonRunner();
+  // Only DSA levels open with a reading (#587 C19).
+  if (event.target.closest(READING_STEP)) preloadLessonReader();
 }
 const RUNNER_INTENT = {
   onPointerOver: warmRunnerOnIntent,
@@ -648,6 +634,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     const lessonId = a.kind === 'level' && !questions ? levels.find((level) => level.level === a.ref)?.lessonId : undefined;
     setReadingLessonId(lessonId ?? null);
     if (lessonId) {
+      preloadLessonReader();
       lessonAbortRef.current?.abort();
       setActive(a);
       setPlayable(null);
@@ -880,7 +867,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   // the moment the invite link is offered (#239).
   const noLevelPassedYet = (TOPICS as RoadmapTopic[]).every((one) => passedLevelCount(progress, one) === 0);
   if (active !== null) {
-    if (readingLessonId) return <LearnLesson key={readingLessonId} lessonId={readingLessonId} backLabel={t(categoryLabelKey(topic))} onStart={() => open(active, true)} onBack={exitLesson} />;
+    if (readingLessonId) return <LessonReader key={readingLessonId} lessonId={readingLessonId} backLabel={t(categoryLabelKey(topic))} onStart={() => open(active, true)} onBack={exitLesson} />;
     if (loadingLesson) {
       return <DelayedQuoteLoader since={waitSince} quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     }
@@ -1107,7 +1094,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
           {/* A next level Premium opens says so once, here, and its button
               says what it does (UX audit learn-22): it opens the upgrade
               sheet, not a level. */}
-          <div className="rm-overview-card">
+          <div className="rm-overview-card" data-lesson={continueLevel && continueLevel.lessonId ? '' : undefined}>
             <span className="rm-overview-fin" aria-hidden="true" />
             <div className="rm-overview-copy">
               <p id="rm-overview-step" className="rm-overview-step">
@@ -1183,6 +1170,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
                   <div
                     key={n.key}
                     data-step={n.key}
+                    data-lesson={n.level?.lessonId ? '' : undefined}
                     style={{ position: 'absolute', transform: 'translateX(-50%)', left: n.cx, top: n.cy - n.half }}
                   >
                     <div className="rm-node" style={{ animationDelay: `${n.i * 0.025}s` }}>
@@ -1512,31 +1500,6 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
         }}
       >
         {title}
-      </div>
-    </div>
-  );
-}
-
-/** The lazily loaded runner in a boundary of its own: code that did not load
- * leaves the learner a Try again and the way back to the map, not the page's
- * error screen. */
-function LessonStage({ since, onExit, t, children }: { since?: number; onExit: () => void; t: TFn; children: ReactNode }) {
-  return (
-    <Suspense fallback={<DelayedQuoteLoader since={since} quote={t('quiz.loadingQuote')} label={t('common.loading')} />}>
-      <ShellPartBoundary fallback={(retry) => <LessonError message={t('roadmap.error')} onRetry={retry} onExit={onExit} t={t} />}>
-        {children}
-      </ShellPartBoundary>
-    </Suspense>
-  );
-}
-
-function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry: () => void; onExit: () => void; t: TFn }) {
-  return (
-    <div style={{ maxWidth: 'var(--ss-width-task)', margin: '0 auto', textAlign: 'center', marginTop: 32 }}>
-      <div style={{ color: 'var(--ss-error)', marginBottom: 16 }} role="alert">{message}</div>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-        <AxButton variant="primary" label={t('roadmap.retry')} onClick={onRetry} />
-        <AxButton variant="secondary" label={t('roadmap.backToPath')} onClick={onExit} />
       </div>
     </div>
   );
@@ -1947,7 +1910,7 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
     setLevel(next);
   };
   if (level !== null) {
-    if (reading) return <LearnLesson lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={startQuestions} onBack={() => setLevel(null)} />;
+    if (reading) return <LessonReader lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={startQuestions} onBack={() => setLevel(null)} />;
     if (lesson.isPending) return <DelayedQuoteLoader since={since} quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
     return <LessonStage since={since} onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro

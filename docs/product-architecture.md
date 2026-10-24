@@ -791,7 +791,12 @@ rewards. A failed lesson read still permits the questions. The content
 contracts refuse a trace with no frames, and `LessonBody` shows one that
 slips through as its words instead of failing the lesson. The level runner
 (`components/learn/LessonRunner.tsx`) is a chunk of its own: Learn fetches it
-when a level opens, not with the map.
+when a level opens, not with the map. So is the reader (`LearnLesson.tsx`,
+with `LessonBody`, its code runner, the terms bar and `LearningPaths.css`,
+about 11 KB gzip), which only levels with a reading open: it loads when such
+a level opens or the learner reaches for one (`components/learn/lessonParts.tsx`,
+#587 C19). A reader whose code does not load says the lesson could not load
+and offers Try again and the questions, as a failed lesson read does.
 
 Opening a level, a part test or the skill check draws nothing for the first
 200 ms and then the quote loader, which stays at least 400 ms once shown

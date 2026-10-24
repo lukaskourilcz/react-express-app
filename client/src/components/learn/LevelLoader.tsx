@@ -8,7 +8,7 @@
 // in that time opens its screen at once and no loader ever shows. A slower
 // answer shows the loader, which then stays at least LOADER_MIN_SHOWN_MS, so
 // it reads as a beat and never as a flicker.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { QuoteLoader } from '../LoadingScreen';
 
 /** How long an answer may take before the loader shows. */
@@ -30,13 +30,13 @@ export function revealWhenReady(startedAt: number): Promise<void> {
   return wait === 0 ? Promise.resolve() : new Promise((resolve) => window.setTimeout(resolve, wait));
 }
 
-/** The quote loader, drawn only once the wait that started at `since` (by
- * default, when this mounts) passes LOADER_DELAY_MS. Before that it holds the
- * loader's place (it fills its flex parent the same way), so nothing under it
- * moves when it shows. Pass the wait's start where one wait shows more than
+/** `children` (a loader), drawn only once the wait that started at `since`
+ * (by default, when this mounts) passes LOADER_DELAY_MS. Before that it holds
+ * the loader's place (it fills its flex parent the same way), so nothing under
+ * it moves when it shows. Pass the wait's start where one wait shows more than
  * one loader in a row (the level's request, then the runner's code), so the
  * second does not hide again. */
-export function DelayedQuoteLoader({ quote, label, since }: { quote: string; label: string; since?: number }) {
+export function AfterLoaderDelay({ since, children }: { since?: number; children: ReactNode }) {
   const [start] = useState(() => since ?? Date.now());
   const [shown, setShown] = useState(() => Date.now() - start >= LOADER_DELAY_MS);
   useEffect(() => {
@@ -44,7 +44,10 @@ export function DelayedQuoteLoader({ quote, label, since }: { quote: string; lab
     const id = window.setTimeout(() => setShown(true), Math.max(0, LOADER_DELAY_MS - (Date.now() - start)));
     return () => window.clearTimeout(id);
   }, [shown, start]);
-  return shown
-    ? <QuoteLoader quote={quote} label={label} />
-    : <div data-loader="pending" style={{ flex: 1, minHeight: 0 }} />;
+  return shown ? children : <div data-loader="pending" style={{ flex: 1, minHeight: 0 }} />;
+}
+
+/** The quote loader of a level's wait, after LOADER_DELAY_MS (AfterLoaderDelay). */
+export function DelayedQuoteLoader({ quote, label, since }: { quote: string; label: string; since?: number }) {
+  return <AfterLoaderDelay since={since}><QuoteLoader quote={quote} label={label} /></AfterLoaderDelay>;
 }
