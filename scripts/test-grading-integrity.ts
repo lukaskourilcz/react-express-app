@@ -613,7 +613,10 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
 // ── a pass credits its coins and settles milestones at once (#587) ───────
 // Server item 10: the coin credit and the milestone settlement ran one after
 // the other although neither reads what the other writes. They now start
-// together, and the answer still waits for both.
+// together, and the answer still waits for both. Server item 8: the
+// settlement credits only a Premium account, so a free account's pass skips
+// it and still credits its XP coins. The tier comes from the request's
+// remembered plan (lib/access.ts reads no database here, which answers free).
 {
   const db = codingDatabase();
   const learner = 'user-parallel-0009';
@@ -629,16 +632,30 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     }, 25));
   };
   const out = { statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
-  await handleCodingSubmit({
+  const premiumReq = {
     method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.91' }, query: {},
     body: { session: encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null }), code: solutionFor('js-double-numbers')!.solution, user_id: learner },
-  } as never, out as never, db.client as never);
+  };
+  await withRequestContext(premiumReq as never, out as never, async () => {
+    void requestMemo(`tier:${learner}`, async () => 'premium');
+    await handleCodingSubmit(premiumReq as never, out as never, db.client as never);
+  });
   assert.equal(out.statusCode, 200, JSON.stringify(out.body));
   assert.equal(out.body?.verdict, 'passed');
   assert.ok((out.body?.xpAwarded ?? 0) > 0, 'the pass earns its XP');
   assert.deepEqual(timeline.slice(0, 2).sort(), ['start:credit_verified_xp_tokens', 'start:settle_coin_milestones'], `both routines start before either ends (${timeline.join(', ')})`);
   assert.equal(timeline.length, 4, 'and the answer waits for both');
-  console.log('PASS integrity: a pass credits its coins and settles milestones together, and answers after both');
+  // A free account: the XP coins, no settlement.
+  timeline.length = 0;
+  const free = { ...out, statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number } };
+  await handleCodingSubmit({
+    method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.92' }, query: {},
+    body: { session: encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null }), code: solutionFor('js-double-numbers')!.solution, user_id: 'user-parallel-free-0010' },
+  } as never, free as never, db.client as never);
+  assert.equal(free.statusCode, 200, JSON.stringify(free.body));
+  assert.ok((free.body?.xpAwarded ?? 0) > 0, 'a free account\'s pass earns its XP');
+  assert.deepEqual(timeline, ['start:credit_verified_xp_tokens', 'end:credit_verified_xp_tokens'], 'and credits its coins without settle_coin_milestones, which credits only Premium accounts');
+  console.log('PASS integrity: a pass credits its coins and settles milestones together for a Premium account, and a free account skips the settlement');
 }
 
 // ── a Submit reads what waits only on the caller while other work runs ───

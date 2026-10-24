@@ -284,14 +284,16 @@ try {
     const answers = one(made, 'GET roadmap_attempt_answers');
     assert.ok(together(one(made, 'GET roadmap_attempt_coding'), answers), 'the coding rows are read with the answers');
     assert.ok(together(one(made, 'GET roadmap_attempts'), answers), 'as is the attempt');
-    assert.equal(made.filter((call) => call.name === 'rpc:is_premium').length, 0, 'a free level asks for no tier');
+    // A free level's gate asks for no tier; the plan is read once, with the
+    // first reads, for the milestone settlement (server item 8).
+    assert.ok(together(one(made, 'rpc:is_premium'), answers), 'the plan is read with the first reads');
     const completion = one(made, 'rpc:complete_verified_roadmap_attempt_v2');
     const reload = made.find((call) => call.name === 'GET roadmap_progress' && call.start >= completion.end)!;
     assert.ok(reload, 'the progress is reloaded after the completion');
-    const settle = one(made, 'rpc:settle_coin_milestones');
+    assert.equal(made.filter((call) => call.name === 'rpc:settle_coin_milestones').length, 0, 'a free account skips settle_coin_milestones, which credits only Premium accounts');
     const reviews = made.filter((call) => call.name === 'rpc:record_concept_review');
     assert.ok(reviews.length > 0, 'the concepts the level graded are recorded');
-    for (const follower of [settle, ...reviews]) {
+    for (const follower of reviews) {
       assert.ok(follower.start >= completion.end, `${follower.name} waits for the completion`);
       assert.ok(together(follower, reload), `${follower.name} runs with the reload`);
     }
@@ -311,7 +313,12 @@ try {
     await answerAll(level.body.sessionId, PREMIUM_LEARNER.token);
     const { result, made } = await during(() => call('POST', { resource: 'complete' }, PREMIUM_LEARNER.token, { sessionId: level.body.sessionId }));
     assert.equal((result as ReturnType<typeof mockResponse>).statusCode, 200);
-    assert.ok(together(one(made, 'rpc:is_premium'), one(made, 'GET roadmap_attempts')), 'the tier is checked with the first reads');
+    assert.ok(together(one(made, 'rpc:is_premium'), one(made, 'GET roadmap_attempts')), 'the tier is checked with the first reads, once');
+    // A Premium account settles its milestones, beside the reload.
+    const completion = one(made, 'rpc:complete_verified_roadmap_attempt_v2');
+    const reload = made.find((call) => call.name === 'GET roadmap_progress' && call.start >= completion.end)!;
+    const settle = one(made, 'rpc:settle_coin_milestones');
+    assert.ok(settle.start >= completion.end && together(settle, reload), 'the settlement waits for the completion and runs with the reload');
 
     // A session issued while the account was Premium, completed after it
     // lapsed, with no answer that opened its attempt: 402, and no write.

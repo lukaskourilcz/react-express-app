@@ -33,7 +33,7 @@ import { approachesFor } from './approaches';
 import { evolvingPassed, evolvingStage, evolvingUnlocked } from '../../shared/evolving';
 import { codingContent, contentTier, type GatedContent } from '../../shared/tiers';
 import { refuseLocked, resolveTier, serverContentIndex } from '../access';
-import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
+import { codingAwardId, creditVerifiedXp, settleMilestonesAfterPass } from '../rewards/coins';
 import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
@@ -599,6 +599,15 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   // task) records the attempt and the progress row with no XP, so no coins.
   const xp = input.verified ? codingPassXp(input.complexity) : 0;
   const roadmapAttemptId = input.verified ? session.roadmapAttemptId ?? null : null;
+  // settle_coin_milestones credits only inside IF is_premium (migration 052),
+  // so after a verified pass it runs for a Premium account only (#587, server
+  // item 8), as after a path code pass. The plan is read while the verdict is
+  // recorded (remembered for the request, so a Premium task's gate answer is
+  // reused), and a plan that cannot be read settles: the routine decides.
+  const premium = input.verdict === 'passed' && input.verified
+    ? resolveTier(userId).then((tier) => tier === 'premium')
+    : null;
+  premium?.catch(() => {});
   const saved = await withTimeout(
     supabase.rpc('record_coding_verdict', {
       p_user_id: userId,
@@ -651,7 +660,7 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
       // From migration 048 every applied verified pass is also a streak day,
       // which can reach a Premium streak milestone; an unverified (checklist)
       // pass settles nothing.
-      data.applied === true && input.verdict === 'passed' && input.verified ? settleMilestones(supabase, userId, 'webdev') : null,
+      data.applied === true && premium ? settleMilestonesAfterPass(supabase, userId, 'webdev', () => premium) : null,
     ]);
     for (const one of settled) if (one.status === 'rejected') throw one.reason;
   };

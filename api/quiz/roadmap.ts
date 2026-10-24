@@ -87,7 +87,7 @@ import { itemReview, contentVersion } from '../../lib/curation';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 import { conceptOf } from '../../shared/concepts';
-import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
+import { creditLearnPass, settleMilestonesAfterPass } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
 import { isBigOIntroduction, type GatedContent } from '../../shared/tiers';
 import { learnRepeatXpOf, type LearnRepeatXp } from '../../shared/repeat-xp';
@@ -112,6 +112,7 @@ const handleLearningPathCatalog = lazyExport(pathHandlers, 'handleLearningPathCa
 // The tier check reads an index over the coding catalogue (lib/access.ts).
 const refuseLocked = lazyExport(() => import('../../lib/access'), 'refuseLocked');
 const prefetchTier = lazyExport(() => import('../../lib/access'), 'prefetchTier');
+const resolveTier = lazyExport(() => import('../../lib/access'), 'resolveTier');
 /** What a code level seals: its coding tasks, their playable projection and
  * one coding session each. Loaded with the level map or the first code level. */
 const learnCoding = async () => {
@@ -1230,6 +1231,13 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
   const readsCoding = !codingUnverified && (session.codingTaskIds?.length ?? 0) > 0;
   const locked = refuseLockedSession(res, userId, session);
+  // A completion that is recorded settles the milestones, whose every credit
+  // sits inside IF is_premium (migration 052): for a Premium account only
+  // (#587, server item 8). The plan is read with the first reads (remembered
+  // for the request, so a Premium step's gate reads the same answer), and a
+  // plan that cannot be read settles: the routine decides.
+  const premium = userId ? resolveTier(userId).then((tier) => tier === 'premium') : null;
+  premium?.catch(() => {});
   const reads = Promise.all([
     ensureAttempt(session, userId, locked),
     getEffectiveQuestionsById(session.subject),
@@ -1414,7 +1422,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
             logEvent({ status: 500, kind: 'streak_failed', reason: streak?.error?.code ?? 'timeout' });
           }
         } else {
-          await settleMilestones(supabase, userId, session.subject!);
+          await settleMilestonesAfterPass(supabase, userId, session.subject!, () => premium!);
         }
       }
     }
@@ -1471,7 +1479,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     //
     // A completed level or part test is a streak day from migration 048, passed
     // or not, and the last level of a topic is a Premium milestone.
-    const settled = applied ? settleMilestones(supabase, userId, session.subject!) : null;
+    const settled = applied ? settleMilestonesAfterPass(supabase, userId, session.subject!, () => premium!) : null;
     settled?.catch(() => {});
     recordReviews();
     const followers = () => Promise.allSettled([settled, reviewsRecorded]);
