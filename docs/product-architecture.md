@@ -1731,7 +1731,8 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   (`prefetchTier` in `lib/access.ts`), for a Premium step only; the
   progression guard still decides first. The eight answers of a Premium
   level trust a Premium answer the same instance read within the last
-  minute instead of asking again (`recentPremium`, at most 5,000 accounts);
+  minute, counted from when it asked, instead of asking again
+  (`recentPremium`, at most 5,000 accounts);
   only a Premium answer is kept, and a free answer read anywhere on the
   instance forgets it at once. Every other gate, the level open and the
   completion included, asks the database each time. The trade-off, for the

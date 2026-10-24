@@ -80,11 +80,16 @@ const RECENT_PREMIUM_MS = 60_000;
 const RECENT_PREMIUM_LIMIT = 5_000;
 const recentPremium = new Map<string, number>();
 
-function notePremium(userId: string, premium: boolean): void {
+/** `askedAt` is when the `is_premium` call was sent, so the minute counts
+ * from the question, not from an answer that arrived late (a slow reply, or
+ * one an instance frozen after its response delivered when it thawed). */
+function notePremium(userId: string, premium: boolean, askedAt: number): void {
   recentPremium.delete(userId);
   if (!premium) return;
+  const until = askedAt + RECENT_PREMIUM_MS;
+  if (until <= Date.now()) return;
   if (recentPremium.size >= RECENT_PREMIUM_LIMIT) recentPremium.delete(recentPremium.keys().next().value!);
-  recentPremium.set(userId, Date.now() + RECENT_PREMIUM_MS);
+  recentPremium.set(userId, until);
 }
 
 function heldPremium(userId: string): boolean {
@@ -101,12 +106,13 @@ function heldPremium(userId: string): boolean {
 export function resolveTier(userId: string): Promise<Tier> {
   return requestMemo(`tier:${userId}`, async () => {
     if (!supabase) return 'free';
+    const askedAt = Date.now();
     const { data, error } = await withTimeout(supabase.rpc('is_premium', { p_user: userId }));
     if (error) {
       if (isRpcMissing(error)) return 'free';
       throw new EntitlementUnavailableError();
     }
-    notePremium(userId, data === true);
+    notePremium(userId, data === true, askedAt);
     return data === true ? 'premium' : 'free';
   });
 }

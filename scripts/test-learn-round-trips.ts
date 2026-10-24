@@ -15,8 +15,8 @@
  *  - a Premium level or part test reads the tier with the learner's record,
  *    and a free one never reads it (server item 6);
  *  - the answers of a Premium level trust a Premium tier the instance read
- *    within the last minute, never longer, and never after a free answer
- *    (server item 6);
+ *    within the last minute, counted from when it was asked, never longer,
+ *    and never after a free answer (server item 6);
  * Run as its own process by scripts/test-request-timing.ts, since the
  * modules read these settings when they load. Nothing leaves the machine. */
 
@@ -33,6 +33,8 @@ const LEARNER = { id: '0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e', email: 'learner@ex
 const PREMIUM_LEARNER = { id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f', email: 'premium@example.invalid', token: 'round-trips-premium' };
 const USERS = [LEARNER, PREMIUM_LEARNER];
 const PREMIUM = new Set([PREMIUM_LEARNER.id]);
+/** Run once while the next `is_premium` call is in flight. */
+let duringTierRead: (() => void) | null = null;
 const tables: Record<string, Row[]> = {
   roadmap_progress: [],
   roadmap_attempts: [],
@@ -126,7 +128,12 @@ async function startStandIn() {
       const args = (raw ? JSON.parse(raw) : {}) as Row;
       if (rpc === 'record_roadmap_answer_v2') return send(`rpc:${rpc}`, 200, recordAnswer(args));
       if (rpc === 'complete_verified_roadmap_attempt_v2') return send(`rpc:${rpc}`, 200, completeAttempt(args));
-      if (rpc === 'is_premium') return send(`rpc:${rpc}`, 200, PREMIUM.has(String(args.p_user)));
+      if (rpc === 'is_premium') {
+        const hook = duringTierRead;
+        duringTierRead = null;
+        hook?.();
+        return send(`rpc:${rpc}`, 200, PREMIUM.has(String(args.p_user)));
+      }
       // Rewards and concept reviews: nothing to report.
       return send(`rpc:${rpc}`, 200, null);
     }
@@ -387,6 +394,18 @@ try {
       tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
       const completed = await during(() => call('POST', { resource: 'complete' }, PREMIUM_LEARNER.token, { sessionId: last.body.sessionId }));
       assert.deepEqual([statusOf(completed), tierReads(completed.made)], [402, 1], 'a completion asks for the tier every time');
+
+      // The minute counts from when the tier was asked: an answer that came
+      // back over a minute later serves its own request and is not trusted
+      // for the next one.
+      PREMIUM.add(PREMIUM_LEARNER.id);
+      passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
+      duringTierRead = () => { offset += 61_000; };
+      const slow = await during(() => call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token));
+      assert.deepEqual([statusOf(slow), tierReads(slow.made)], [200, 1], 'the level opens on the tier it read');
+      assert.equal(duringTierRead, null, 'the tier read was the slow one');
+      const next = await answerOne((slow.result as ReturnType<typeof mockResponse>).body.sessionId, 0);
+      assert.deepEqual([statusOf(next), tierReads(next.made)], [200, 1], 'a tier answered over a minute after it was asked is read again');
     } finally {
       Date.now = realNow;
       PREMIUM.add(PREMIUM_LEARNER.id);
