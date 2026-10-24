@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { timedSupabaseFetch } from './request-timing';
 import type { VercelRequest } from './vercel-types.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -75,21 +76,127 @@ export function authUndecided(error: { name?: string; status?: number }): boolea
  * account, or a refusal) is kept; anything else is asked again. */
 const tokenChecks = new WeakMap<VercelRequest, Map<string, Promise<AuthResult>>>();
 
+/* ── Accepted tokens, across requests (#587, server item 1) ──────────────
+ *
+ * Every signed-in request used to wait for one Supabase Auth round trip
+ * before any other work: a Learn map visit makes four to six such requests
+ * and a level about eleven, each with the same access token. So a token Auth
+ * accepted is trusted again on this instance, without asking, for at most
+ * VERIFIED_TOKEN_TTL_MS, and never past the token's own `exp`.
+ *
+ * The bounds, for the owner (docs/product-architecture.md, "Token checks"):
+ *  - Only an acceptance is kept. A refusal (401), an outage (503) or a
+ *    timeout (504) is asked again on the next request, so a session never
+ *    ends, or stays ended, because of a cached answer.
+ *  - Revocation. A session ended elsewhere (sign out everywhere, a password
+ *    change, a ban, an admin role taken away) keeps working on an instance
+ *    that accepted its token less than a minute before, until the minute is
+ *    up. Auth itself accepts a stolen access token until its `exp` (one
+ *    hour), so this widens nothing beyond that, only past Auth's own session
+ *    check. The account's data reads the same as in the request that asked.
+ *  - Exceptions: a request marked with `requireFreshAuth` (the admin API,
+ *    account deletion, billing, vouchers and the fulfilment desk) always asks
+ *    Auth, and a deleted account's token is forgotten at once on the
+ *    instance that deleted it (`forgetVerifiedToken`).
+ *  - Only a JWT whose `exp` and `sub` can be read is kept, keyed by the
+ *    SHA-256 of the token, so the token itself is never held as a key; at
+ *    most VERIFIED_TOKEN_LIMIT entries, the oldest dropped first.
+ * Requests on one instance that present the same token at the same time
+ * share one Auth call. */
+export const VERIFIED_TOKEN_TTL_MS = 60_000;
+const VERIFIED_TOKEN_LIMIT = 2_000;
+const acceptedTokens = new Map<string, { result: AuthResult; until: number }>();
+const sharedChecks = new Map<string, Promise<AuthResult>>();
+const freshRequests = new WeakSet<VercelRequest>();
+
+/** This request asks Supabase Auth itself, whatever this instance accepted
+ * before: for the admin API and for writes that move money or end an account.
+ * Call it before anything verifies the request. */
+export function requireFreshAuth(req: VercelRequest): void {
+  freshRequests.add(req);
+}
+
+const tokenKey = (token: string) => createHash('sha256').update(token).digest('base64url');
+
+/** Forget an accepted token on this instance (its account was deleted). */
+export function forgetVerifiedToken(token: string | null): void {
+  if (token) acceptedTokens.delete(tokenKey(token));
+}
+
+/** The `exp` (in ms) and `sub` of a JWT, read without checking the signature:
+ * only ever used for a token Auth has just accepted. */
+function jwtClaims(token: string): { exp: number; sub: string } | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as { exp?: unknown; sub?: unknown };
+    return typeof payload.exp === 'number' && Number.isFinite(payload.exp) && typeof payload.sub === 'string'
+      ? { exp: payload.exp * 1000, sub: payload.sub }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberAccepted(key: string, token: string, result: AuthResult): void {
+  const claims = jwtClaims(token);
+  const now = Date.now();
+  if (!claims || claims.sub !== result.sub || claims.exp <= now) return;
+  if (acceptedTokens.size >= VERIFIED_TOKEN_LIMIT) {
+    for (const [one, entry] of acceptedTokens) if (entry.until <= now) acceptedTokens.delete(one);
+    while (acceptedTokens.size >= VERIFIED_TOKEN_LIMIT) acceptedTokens.delete(acceptedTokens.keys().next().value!);
+  }
+  acceptedTokens.delete(key);
+  acceptedTokens.set(key, { result, until: Math.min(now + VERIFIED_TOKEN_TTL_MS, claims.exp) });
+}
+
+/** A copy, so no request can change what another one reads. */
+const copyOf = (result: AuthResult): AuthResult => ({ sub: result.sub, payload: structuredClone(result.payload) });
+
+async function askAuth(client: SupabaseClient, token: string): Promise<AuthResult> {
+  const { data, error } = await withAuthDeadline(client.auth.getUser(token));
+  if (error || !data?.user?.id) {
+    if (error && authUndecided(error)) {
+      throw new AuthError(503, 'auth_unavailable', 'Authentication service is unavailable');
+    }
+    throw new AuthError(401, 'invalid_token', 'Token verification failed');
+  }
+  return { sub: data.user.id, payload: data.user as unknown as Record<string, unknown> };
+}
+
+/** The decision for `token`: this instance's acceptance while it holds, a
+ * check already under way for the same token, or a new Auth call. */
+async function decideToken(client: SupabaseClient, req: VercelRequest, token: string): Promise<AuthResult> {
+  const key = tokenKey(token);
+  const fresh = freshRequests.has(req);
+  if (!fresh) {
+    const accepted = acceptedTokens.get(key);
+    if (accepted && accepted.until > Date.now()) return copyOf(accepted.result);
+    if (accepted) acceptedTokens.delete(key);
+    const shared = sharedChecks.get(key);
+    if (shared) return copyOf(await shared);
+  }
+  const check = askAuth(client, token);
+  if (!fresh) sharedChecks.set(key, check);
+  try {
+    const result = await check;
+    rememberAccepted(key, token, result);
+    return copyOf(result);
+  } catch (error) {
+    // A refusal ends whatever this instance accepted before.
+    if (error instanceof AuthError && error.status === 401) acceptedTokens.delete(key);
+    throw error;
+  } finally {
+    if (sharedChecks.get(key) === check) sharedChecks.delete(key);
+  }
+}
+
 function verifyTokenOnce(client: SupabaseClient, req: VercelRequest, token: string): Promise<AuthResult> {
   let checks = tokenChecks.get(req);
   if (!checks) tokenChecks.set(req, (checks = new Map()));
   const existing = checks.get(token);
   if (existing) return existing;
-  const pending = (async () => {
-    const { data, error } = await withAuthDeadline(client.auth.getUser(token));
-    if (error || !data?.user?.id) {
-      if (error && authUndecided(error)) {
-        throw new AuthError(503, 'auth_unavailable', 'Authentication service is unavailable');
-      }
-      throw new AuthError(401, 'invalid_token', 'Token verification failed');
-    }
-    return { sub: data.user.id, payload: data.user as unknown as Record<string, unknown> };
-  })();
+  const pending = decideToken(client, req, token);
   checks.set(token, pending);
   pending.catch((error: unknown) => {
     if (!(error instanceof AuthError && error.status === 401)) checks.delete(token);

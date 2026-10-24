@@ -13,7 +13,7 @@ import {
   ServiceUnavailableError,
   lazyExport,
 } from '../../lib/http';
-import type { AuthResult } from '../../lib/auth';
+import { forgetVerifiedToken, getBearer, requireFreshAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
 import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
@@ -96,6 +96,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
+  if (FRESH_AUTH_OPS.has(op)) requireFreshAuth(req);
   if (!(await limitUserWrite(req, res, op))) return;
   if (!(await limitUserRead(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
@@ -139,6 +140,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
+
+/** Ops that ask Supabase Auth on every request instead of trusting a token
+ * this instance accepted in the last minute (lib/auth.ts, "Accepted
+ * tokens"): ending an account, the admin fulfilment desk, and the writes that
+ * move money. A session ended elsewhere is refused here at once. */
+const FRESH_AUTH_OPS: ReadonlySet<string> = new Set(['delete-account', 'fulfilment', 'billing-checkout', 'billing-portal', 'billing-cancel', 'voucher']);
 
 /**
  * The rate limit every write here takes, in two tiers as play's routes do.
@@ -230,6 +237,8 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
     if (again.error) logEvent('delete-account', { status: 200, reason: 'second_cleanup_failed', error: again.error.message });
 
     logEvent('delete-account', { status: 200, user_id: auth.sub });
+    // The identity is gone: this instance no longer accepts its token.
+    forgetVerifiedToken(getBearer(req));
     return res.json({ ok: true });
   } catch (err) {
     // A timeout is the database busy for a moment: 503 with its code, as

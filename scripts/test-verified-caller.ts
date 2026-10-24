@@ -68,7 +68,31 @@ const SLOW: Account = { id: '1a2b3c4d-0000-4000-8000-000000000010', token: 'slow
 const HANDLES_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-000000000011', token: 'handles-down', email: 'handles@example.invalid', confirmed: true };
 // An account whose data erasure the database is too slow to run.
 const SLOW_ERASURE: Account = { id: '1a2b3c4d-0000-4000-8000-000000000012', token: 'slow-erasure', email: 'erasure@example.invalid', confirmed: true };
-const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE];
+/** A token shaped as Supabase issues them: a JWT whose payload names the
+ * account (`sub`) and its expiry (`exp`, seconds). Only such a token is
+ * accepted again across requests (lib/auth.ts, "Accepted tokens"); the plain
+ * tokens above never are, so the checks above count one Auth call each. */
+const jwt = (sub: string, lifetimeSeconds: number) => [
+  Buffer.from(JSON.stringify({ alg: 'ES256', typ: 'JWT' })).toString('base64url'),
+  Buffer.from(JSON.stringify({ sub, role: 'authenticated', exp: Math.floor(Date.now() / 1000) + lifetimeSeconds })).toString('base64url'),
+  'stand-in-signature',
+].join('.');
+const jwtAccount = (n: number, lifetimeSeconds = 3600, extra: Partial<Account> = {}): Account => {
+  const id = `1a2b3c4d-0000-4000-8000-0000000001${String(n).padStart(2, '0')}`;
+  return { id, token: jwt(id, lifetimeSeconds), email: `jwt-${n}@example.invalid`, confirmed: true, ...extra };
+};
+const JWT_LEARNER = jwtAccount(1);
+const JWT_TOGETHER = jwtAccount(2);
+const JWT_SHORT = jwtAccount(3, 30);
+const JWT_ADMIN = jwtAccount(4, 3600, { appMetadata: { role: 'admin' } });
+const JWT_DELETED = jwtAccount(5);
+const JWT_OUTAGE = jwtAccount(6);
+const JWT_ACCOUNTS = [JWT_LEARNER, JWT_TOGETHER, JWT_SHORT, JWT_ADMIN, JWT_DELETED, JWT_OUTAGE];
+const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL, SLOW, HANDLES_DOWN, SLOW_ERASURE, ...JWT_ACCOUNTS];
+/** Tokens the stand-in now refuses (a session ended elsewhere), and tokens
+ * for which it answers 500, as Supabase Auth does when it is down. */
+const revokedTokens = new Set<string>();
+const failingTokens = new Set<string>();
 // A token presented while Supabase Auth answers 500 (not one of ACCOUNTS).
 const AUTH_DOWN: Account = { id: '1a2b3c4d-0000-4000-8000-0000000000aa', token: 'auth-is-down', email: 'down@example.invalid', confirmed: true };
 // Tokens presented while Supabase Auth does not answer at all (the connection
@@ -126,6 +150,8 @@ async function startStandIns() {
       if (token === AUTH_DOWN.token) return send(500, { message: 'stand-in auth is down' });
       if (token === AUTH_UNREACHABLE.token) { req.socket.destroy(); return; }
       if (token === AUTH_THROTTLED.token) return send(429, { message: 'stand-in: request rate limit reached' });
+      if (failingTokens.has(token)) return send(500, { message: 'stand-in auth is down' });
+      if (revokedTokens.has(token)) return send(403, { code: 'session_not_found', message: 'Session from session_id claim in JWT does not exist' });
       const account = ACCOUNTS.find((one) => one.token === token);
       if (!account) return send(401, { message: 'invalid token' });
       return send(200, {
@@ -938,6 +964,89 @@ async function main() {
     assert.equal(slowErasure.statusCode, 503, `an erasure that timed out answers 503 like every other timeout, not 504 (${JSON.stringify(slowErasure.body)})`);
     assert.equal(errorCode(slowErasure), 'upstream_timeout');
     console.log('PASS verified caller: an account erasure that times out answers 503 upstream_timeout');
+
+    // ── a token Auth accepted, across requests (#587, server item 1) ─────
+    {
+      const realNow = Date.now;
+      let offset = 0;
+      Date.now = () => realNow() + offset;
+      try {
+        const identity = (account: Account) => user('identity', { account });
+        authChecks = 0;
+        assert.equal((await identity(JWT_LEARNER)).statusCode, 200);
+        assert.equal((await identity(JWT_LEARNER)).statusCode, 200);
+        assert.equal(authChecks, 1, 'a second request with a token Auth accepted is not asked again');
+        // Requests that arrive together share one Auth call.
+        authChecks = 0;
+        const together = await Promise.all([identity(JWT_TOGETHER), identity(JWT_TOGETHER), identity(JWT_TOGETHER)]);
+        assert.deepEqual(together.map((one) => one.statusCode), [200, 200, 200]);
+        assert.equal(authChecks, 1, 'three requests with one new token at once ask Auth once');
+        // A plain token (not a JWT) is never kept.
+        authChecks = 0;
+        await identity(A);
+        await identity(A);
+        assert.equal(authChecks, 2, 'a token without a readable expiry is asked every time');
+        // A refusal and an outage are never kept.
+        authChecks = 0;
+        const stranger = { ...JWT_LEARNER, token: jwt('1a2b3c4d-0000-4000-8000-0000000001ff', 3600) };
+        assert.equal((await identity(stranger)).statusCode, 401);
+        assert.equal((await identity(stranger)).statusCode, 401);
+        assert.equal(authChecks, 2, 'a refused token is asked again');
+        failingTokens.add(JWT_OUTAGE.token);
+        authChecks = 0;
+        assert.equal((await identity(JWT_OUTAGE)).statusCode, 503);
+        assert.equal((await identity(JWT_OUTAGE)).statusCode, 503);
+        failingTokens.delete(JWT_OUTAGE.token);
+        assert.equal((await identity(JWT_OUTAGE)).statusCode, 200, 'an outage is not remembered once Auth is back');
+        assert.equal(authChecks, 3, 'each request during an outage asks again');
+        // At most a minute.
+        offset += 59_000;
+        authChecks = 0;
+        await identity(JWT_LEARNER);
+        assert.equal(authChecks, 0, 'still accepted 59 s later');
+        offset += 2_000;
+        await identity(JWT_LEARNER);
+        assert.equal(authChecks, 1, 'asked again once the minute is up');
+        // Never past the token's own expiry.
+        authChecks = 0;
+        await identity(JWT_SHORT);
+        offset += 31_000;
+        await identity(JWT_SHORT);
+        assert.equal(authChecks, 2, 'a token is asked again once it has expired, within the minute');
+        // Revocation: a session ended elsewhere keeps working on reads that
+        // trust the acceptance for the rest of its minute, and no longer.
+        authChecks = 0;
+        assert.equal((await identity(JWT_LEARNER)).statusCode, 200);
+        revokedTokens.add(JWT_LEARNER.token);
+        assert.equal((await identity(JWT_LEARNER)).statusCode, 200, 'an ended session is trusted for the rest of its minute');
+        offset += 60_001;
+        assert.equal((await identity(JWT_LEARNER)).statusCode, 401, 'and refused once the minute is up');
+        assert.equal((await identity(JWT_LEARNER)).statusCode, 401, 'and stays refused');
+        assert.equal(authChecks, 2, 'the two reads inside the minute were not asked; both after it were');
+        // The admin desk asks Auth on every request, accepted or not.
+        authChecks = 0;
+        assert.equal((await identity(JWT_ADMIN)).statusCode, 200);
+        assert.equal((await user('fulfilment', { account: JWT_ADMIN })).statusCode, 200);
+        assert.equal((await user('fulfilment', { account: JWT_ADMIN })).statusCode, 200);
+        assert.equal(authChecks, 3, 'the admin gate asks Auth on every request');
+        revokedTokens.add(JWT_ADMIN.token);
+        const demoted = await user('fulfilment', { account: JWT_ADMIN });
+        assert.equal(demoted.statusCode, 403, `an admin whose session ended is refused at once (${JSON.stringify(demoted.body)})`);
+        // A deleted account's token is forgotten on the instance that deleted it.
+        authChecks = 0;
+        assert.equal((await identity(JWT_DELETED)).statusCode, 200);
+        const gone = await user('delete-account', { method: 'DELETE', account: JWT_DELETED, body: { confirmation: 'DELETE' } });
+        assert.equal(gone.statusCode, 200, JSON.stringify(gone.body));
+        assert.equal(authChecks, 2, 'a deletion asks Auth itself, even for an accepted token');
+        await identity(JWT_DELETED);
+        assert.equal(authChecks, 3, 'and its token is not accepted again without asking');
+      } finally {
+        Date.now = realNow;
+        revokedTokens.clear();
+        failingTokens.clear();
+      }
+      console.log('PASS verified caller: a token Auth accepted is trusted for at most a minute and never past its expiry, refusals and outages are asked again, the admin desk and deletion always ask');
+    }
 
     console.log('Verified-caller contracts passed: a token acts for its own account whatever user_id says, admin by confirmed address or role, private caching by default, read limits, and one-time claims that fail closed.');
   } finally {
