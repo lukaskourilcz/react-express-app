@@ -24,6 +24,9 @@
  *    catalogue, which lib/access.ts reads on first use;
  *  - api/quiz/roadmap.ts does the same for its coding and learning-path
  *    resources, the tier check and a code level's tasks (server item 4);
+ *  - the learning-path handlers load the attempt sessions, the graders and
+ *    the grading material only when an activity is opened or graded, so the
+ *    catalogue and the enrollment and progress reads evaluate none of them;
  *  - only the roadmap function ships the compiler's lib files and the grader
  *    bundles (server item 24): nothing in another function reads them. */
 
@@ -86,6 +89,15 @@ export async function loadFresh(entry: string, probe = 'null', extraEnv: Record<
   assert.equal(child.status, 0, `${entry} loads in a fresh process: ${child.stderr.slice(0, 800)}`);
   return JSON.parse(child.stdout.trim().split('\n').pop()!) as Loaded;
 }
+
+/** The learning-path handlers and what only grading a code submission or
+ * opening an attempt needs: the attempt sessions (./session through ./audit),
+ * the coding catalogue, the reference solutions, the protected harness and
+ * the QuickJS sandbox. */
+const PATH_GRADING_MARKERS = [
+  'lib/learning-paths/handlers.ts', 'lib/learning-paths/session.ts', 'lib/learning-paths/audit.ts', 'lib/coding/active.ts',
+  'lib/coding/solutions/index.ts', 'lib/learning-paths/solutions/index.ts', 'lib/learning-paths/harness.ts', 'lib/coding/sandbox.ts',
+];
 
 export async function coldStartContracts(): Promise<void> {
   // ── server item 15: the coding source versions are hashed on first read ──
@@ -194,6 +206,20 @@ export async function coldStartContracts(): Promise<void> {
       return { before, after: (globalThis.__evaluated ?? []).includes('lib/coding/active.ts'), free: Boolean(free), same: index.coding === mod.serverContentIndex().coding };
     })()`, {}, ['lib/coding/active.ts']);
     assert.deepEqual(gated.probe, { before: false, after: true, free: true, same: true }, 'the content index loads the coding summaries on first read, once');
+    // The learning-path enrollment and progress reads, made by every Learn
+    // section for a signed-in learner, load the path handlers without the
+    // attempt sessions, the graders or the grading material.
+    for (const op of ['learning-path-enrollment', 'learning-path-progress']) {
+      const read = await loadFresh('api/user/[op].ts', `(async () => {
+        const res = { statusCode: 200, headers: {}, body: undefined, headersSent: false,
+          setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; }, getHeader(k) { return this.headers[k.toLowerCase()]; },
+          status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; this.headersSent = true; return this; }, end() { this.headersSent = true; return this; } };
+        await mod.default({ method: 'GET', headers: { 'x-forwarded-for': '198.51.100.10' }, query: { op: ${JSON.stringify(op)}, enrollmentId: 'e' }, url: '/api/user/x', socket: {} }, res);
+        const grader = Object.keys(require.cache).some((path) => path.includes('/node_modules/quickjs-emscripten/') || path.includes('/node_modules/typescript/'));
+        return { evaluated: globalThis.__evaluated ?? [], grader, status: res.statusCode };
+      })()`, { SUPABASE_URL: 'http://127.0.0.1:9', SUPABASE_ANON_KEY: 'cold-start-anon', SUPABASE_SERVICE_ROLE_KEY: 'cold-start-service', LEARNING_PATH_FDE_ENABLED: 'true' }, PATH_GRADING_MARKERS);
+      assert.deepEqual(read.probe, { evaluated: ['lib/learning-paths/handlers.ts'], grader: false, status: 401 }, `${op} loads the path handlers without a grader or the grading material`);
+    }
     console.log('PASS cold start: api/user/[op].ts loads no grader, TypeScript, Stripe or coding catalogue before its first answer');
   }
 
@@ -204,17 +230,21 @@ export async function coldStartContracts(): Promise<void> {
       assert.ok(!fresh.packages.includes(heavy), `api/quiz/roadmap.ts does not load ${heavy} at import (${fresh.packages.join(', ')})`);
     }
     // The public path catalogue is served by the lazily loaded path handlers,
-    // which bring the graders with them, and answers as before.
+    // and answers as before. The handlers load the graders and the grading
+    // material only when a code submission is graded, so the catalogue
+    // evaluates neither (#587, server item 3).
     const called = await loadFresh('api/quiz/roadmap.ts', `(async () => {
       const res = { statusCode: 200, headers: {}, body: undefined, headersSent: false,
         setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; }, getHeader(k) { return this.headers[k.toLowerCase()]; },
         status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; this.headersSent = true; return this; }, end() { this.headersSent = true; return this; } };
-      const loaded = () => Object.keys(require.cache).some((path) => path.includes('/node_modules/quickjs-emscripten/'));
-      const before = loaded();
+      const loaded = () => Object.keys(require.cache).some((path) => path.includes('/node_modules/quickjs-emscripten/') || path.includes('/node_modules/typescript/'));
+      const handlers = () => (globalThis.__evaluated ?? []).includes('lib/learning-paths/handlers.ts');
+      const before = { grader: loaded(), handlers: handlers() };
       await mod.default({ method: 'GET', headers: { 'x-forwarded-for': '198.51.100.8' }, query: { resource: 'learning-path-catalog' }, url: '/api/quiz/roadmap', socket: {} }, res);
-      return { before, after: loaded(), status: res.statusCode, paths: Array.isArray(res.body && res.body.paths) };
-    })()`);
-    assert.deepEqual(called.probe, { before: false, after: true, status: 200, paths: true }, 'the path catalogue loads its handlers on first call and answers');
+      return { before, handlers: handlers(), grader: loaded(), material: (globalThis.__evaluated ?? []).filter((file) => file !== 'lib/learning-paths/handlers.ts'), status: res.statusCode, paths: Array.isArray(res.body && res.body.paths) };
+    })()`, {}, PATH_GRADING_MARKERS);
+    assert.deepEqual(called.probe, { before: { grader: false, handlers: false }, handlers: true, grader: false, material: [], status: 200, paths: true },
+      'the path catalogue loads its handlers on first call and answers, without a grader or the grading material');
     console.log('PASS cold start: api/quiz/roadmap.ts loads no grader or TypeScript before its first answer');
   }
 

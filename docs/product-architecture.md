@@ -1973,8 +1973,13 @@ in-thread check; the coding source versions are hashed on first read;
 `lib/access.ts` reads the coding catalogue's free flags on the first gate
 that asks about a coding task, so the wallet and the Learn and path gates do
 not evaluate the catalogue with its reference solutions (about 170 ms
-measured offline). The first request of an op still pays for its own
-family. `npm run test:performance` (`scripts/cold-start-contracts.ts`) pins
+measured offline). The learning-path handlers load the attempt sessions
+(which hash a code activity's authored and hidden material), the graders
+and the reference solutions only when an activity is opened or a code
+submission graded, so the catalogue and the enrollment and progress reads
+every Learn section makes load none of them (about 240 ms of a fresh
+instance's first such read, measured offline). The first request of an op
+still pays for its own family. `npm run test:performance` (`scripts/cold-start-contracts.ts`) pins
 what each function loads.
 
 The footer carries the legal links, devShark's own social profiles, and the

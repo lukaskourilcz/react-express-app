@@ -26,9 +26,7 @@ import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../coding/grader-capacity';
-import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession } from '../quiz-tokens';
-import { createLearningPathSession, pathCodeAttemptVersion } from './session';
 import { canonicalCodingTaskId } from './coding-task-id';
 import {
   activityIn,
@@ -106,6 +104,17 @@ import { LEARN_SECTION_IDS, isLearnSectionId } from '../../shared/learn-section-
 import { MAX_ADDRESS_FIELD, MERCH_ENABLED, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
 
 const logEvent = createLogger('learning-paths');
+
+/* Loaded on first use (#587, server item 3). The attempt sessions bind a code
+ * activity to its authored and hidden material (./session through ./audit),
+ * which reads the coding catalogue with its reference solutions, the path
+ * solutions and the curation registry: most of what this module cost a fresh
+ * user-function instance before its first enrollment or progress read, which
+ * every Learn section makes for a signed-in learner. Only starting and
+ * submitting an activity need them. A plain `require` keeps each call site
+ * synchronous and is what @vercel/node's file tracer follows. */
+const attemptSessions = () => require('./session') as typeof import('./session');
+const codingCatalogue = () => require('../coding/active') as typeof import('../coding/active');
 
 const pathsAvailable = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) =>
@@ -648,7 +657,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const needsBriefReview = activity.kind === 'code' && body.previousSession !== undefined && (
     !previousAttempt || previousAttempt.userId !== userId || previousAttempt.enrollmentId !== row.enrollment_id || previousAttempt.activityId !== activity.id
     || previousAttempt.curriculumVersion !== path.version || previousAttempt.rubricVersion !== path.rubric.version
-    || previousAttempt.version !== pathCodeAttemptVersion(activity, path.rubric.version)
+    || previousAttempt.version !== attemptSessions().pathCodeAttemptVersion(activity, path.rubric.version)
   );
 
   const attemptId = newId();
@@ -687,7 +696,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const { payload } = built;
   if ('error' in payload) return jsonError(res, payload.status, payload.code, payload.message);
 
-  const session = createLearningPathSession({
+  const session = attemptSessions().createLearningPathSession({
     attemptId,
     enrollmentId: row.enrollment_id,
     userId,
@@ -862,7 +871,7 @@ async function buildActivityPayload(
  * path evidence only. */
 function reusedCode(activity: MergedActivity) {
   if (!activity.reuseTaskId) return null;
-  const task = codingTaskById(activity.reuseTaskId);
+  const task = codingCatalogue().codingTaskById(activity.reuseTaskId);
   return task ? codeFromReusedTask(task) : null;
 }
 
@@ -1007,7 +1016,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     return jsonError(res, 409, 'session_mismatch', 'This attempt no longer matches the activity');
   }
 
-  if (activity.kind === 'code' && session.version !== pathCodeAttemptVersion(activity, path.rubric.version)) {
+  if (activity.kind === 'code' && session.version !== attemptSessions().pathCodeAttemptVersion(activity, path.rubric.version)) {
     // A response lost after an accepted write is still the recorded result,
     // even when the catalogue changed before its network retry. Read only the
     // bound attempt; never regrade it or pay its reward again.
@@ -1121,7 +1130,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       // Premium account only; its tier is read meanwhile.
       if (state === 'verified_pass') resolveTier(userId).catch(() => {});
       // A reused task resolved above (merged is non-null), so its lookup holds.
-      const task = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId) : undefined;
+      const task = activity.reuseTaskId ? codingCatalogue().codingTaskById(activity.reuseTaskId) : undefined;
       complexity = assessComplexity(task ?? { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
       coding = {
         track: task?.track ?? merged.language,
