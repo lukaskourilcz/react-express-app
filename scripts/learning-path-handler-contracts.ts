@@ -76,7 +76,7 @@ const code = (res: Captured) => (res.body as { error?: { code?: string } } | und
 function fakeSupabase(options: {
   rows?: Record<string, unknown>;
   lists?: Record<string, unknown[]>;
-  rpc?: (name: string, params: Record<string, unknown>) => { data?: unknown; error?: unknown };
+  rpc?: (name: string, params: Record<string, unknown>) => { data?: unknown; error?: unknown } | Promise<{ data?: unknown; error?: unknown }>;
   auth?: Record<string, unknown>;
   onQuery?: (table: string, operation: string, args: unknown[]) => void;
   rowErrors?: Record<string, unknown>;
@@ -94,7 +94,7 @@ function fakeSupabase(options: {
   };
   return {
     from,
-    rpc: async (name: string, params: Record<string, unknown>) => ({ data: null, error: null, ...(options.rpc?.(name, params) ?? {}) }),
+    rpc: async (name: string, params: Record<string, unknown>) => ({ data: null, error: null, ...((await options.rpc?.(name, params)) ?? {}) }),
     auth: { admin: options.auth ?? {} },
   } as never;
 }
@@ -573,12 +573,43 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     // `IF is_premium(...)` (migration 052), so after a verified pass a free
     // account (here a lapsed one resubmitting a passed exercise) skips it and
     // a Premium account still runs it. The XP coin credit runs for both.
+    // #587, server item 20: the tier of a Premium activity is asked before
+    // the enrollment read answers, the progress rows are read while the
+    // grader runs (and once, when the plan check's "already passed" exception
+    // read them first), and the XP credit and the settlement run together.
     {
       const passer = `user-paths-pass-${stamp}`;
       const codeModule = path.modules.find((module) => module.activities.some((activity) => activity.id === codeActivity.id))!;
       const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
       const passAs = async (tier: 'free' | 'premium', tag: string) => {
         const calls: string[] = [];
+        // What the handler asked for, in order: the tier (a subscription to
+        // the remembered tier answer), the enrollment read, the progress read.
+        const order: string[] = [];
+        let watching = false;
+        class WatchedTier<T> extends Promise<T> {
+          static get [Symbol.species]() { return Promise; }
+          then<A = T, B = never>(onDone?: ((value: T) => A | PromiseLike<A>) | null, onFail?: ((reason: unknown) => B | PromiseLike<B>) | null) {
+            if (watching) order.push('tier');
+            return super.then(onDone, onFail);
+          }
+        }
+        // Whether the progress read was issued while this submit held its
+        // grading slot: a probe for one more slot with a ceiling of one is
+        // refused exactly then.
+        let progressDuringGrading: boolean | null = null;
+        let progressReads = 0;
+        const probe = () => {
+          const slot = enterInFlight(request('POST', `pass-probe-${stamp}`, {}), 'grading',
+            { item: gradingItem.activity('fde', codeActivity.id), perItem: 1_000, perCaller: 1 }, `user:${passer}`);
+          slot?.();
+          return slot === null;
+        };
+        // The XP credit answers once the settlement has started, or after
+        // 300 ms: run one after the other, the settlement starts only then.
+        let settleStarted: () => void = () => {};
+        const settling = new Promise<void>((resolve) => { settleStarted = resolve; });
+        let creditWaited = false;
         const req = request('POST', `pass-${tag}-${stamp}`, {
           user_id: passer,
           session: encodeLearningPathSession({
@@ -591,21 +622,36 @@ export async function handlerContracts(fail: Fail): Promise<void> {
         });
         const res = response();
         await withRequestContext(req, res as never, async () => {
-          await requestMemo(`tier:${passer}`, async () => tier);
+          void requestMemo(`tier:${passer}`, () => new WatchedTier<'free' | 'premium'>((resolve) => resolve(tier)));
+          watching = true;
           await handleActivitySubmit(req, res as never, fakeSupabase({
             rows: { learning_path_enrollments: { ...enrollmentRow('active'), user_id: passer } },
             lists: { learning_path_progress: [{ module_id: codeModule.id, activity_states: { [codeActivity.id]: { state: 'verified_pass', score: 1 } }, completed_at: null }] },
-            rpc: (name, params) => {
+            onQuery: (table, op) => {
+              if (op !== 'select') return;
+              if (table === 'learning_path_enrollments') order.push('enrollment');
+              if (table === 'learning_path_progress') {
+                order.push('progress');
+                progressReads += 1;
+                progressDuringGrading ??= probe();
+              }
+            },
+            rpc: async (name, params) => {
               calls.push(name);
               if (name.startsWith('accept_learning_path')) {
                 const packet = (params.p_accept ?? params) as { p_result: SubmitActivityResponse };
                 return { data: { ok: true, replayed: false, result: { ...packet.p_result, xpAwarded: 20 }, coding: { xpKind: 'first' } } };
               }
+              if (name === 'settle_coin_milestones') settleStarted();
+              if (name === 'credit_verified_xp_tokens' && tier === 'premium') {
+                creditWaited = await Promise.race([settling.then(() => false), new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 300))]);
+              }
               return { data: name === 'credit_verified_xp_tokens' ? 2 : {} };
             },
           }));
         });
-        return { res, calls };
+        watching = false;
+        return { res, calls, order, progressDuringGrading, progressReads, creditWaited };
       };
       try {
         process.env.LEARNING_PATH_FDE_ENABLED = 'true';
@@ -620,6 +666,17 @@ export async function handlerContracts(fail: Fail): Promise<void> {
         if (!premium.calls.includes('credit_verified_xp_tokens') || !premium.calls.includes('settle_coin_milestones')) {
           fail(`a Premium verified pass must credit its XP coins and settle the milestones: ${premium.calls.join(', ')}`);
         }
+        // Item 20, on the Premium submit (no "already passed" read).
+        const firstTier = premium.order.indexOf('tier');
+        if (firstTier < 0 || firstTier > premium.order.indexOf('enrollment')) {
+          fail(`the tier of a Premium activity was not asked beside the enrollment read: ${premium.order.join(' > ')}`);
+        }
+        if (premium.progressDuringGrading !== true) fail('the progress rows were read after grading, not while the grader ran');
+        if (premium.progressReads !== 1) fail(`a submit read its progress rows ${premium.progressReads} times`);
+        if (premium.creditWaited) fail('the XP coin credit and the milestone settlement ran one after the other');
+        // On the lapsed account the plan check's "already passed" exception
+        // read the rows before grading, and the projection reuses that read.
+        if (free.progressReads !== 1) fail(`a lapsed account's submit read its progress rows ${free.progressReads} times, not once`);
         // A plan that cannot be read is not "free": the routine runs and decides.
         const unread: string[] = [];
         await settleMilestonesAfterPass(fakeSupabase({ rpc: (name) => { unread.push(name); return { data: {} }; } }), passer, 'webdev',

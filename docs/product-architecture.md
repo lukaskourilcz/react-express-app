@@ -1681,6 +1681,15 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   through `getUserById`. The GET keeps `getUserById`: a GET may trust an
   acceptance up to a minute old, whose metadata can predate a save made in
   that minute.
+- **Learning-path submit** (#587, server item 20). The tier of a Premium
+  activity is asked beside the enrollment read (`prefetchTier`; remembered
+  for the request, used only once the enrollment is proven the caller's).
+  One progress read serves the plan check's "already passed" exception and
+  the completion projection, and for a code activity it runs while the
+  grader does; it is still read before the accept call, which decides
+  completion again under its lock. After a verified code pass the XP coin
+  credit and the milestone settlement (Premium only, see "Where credits
+  happen") run together, both awaited before the answer.
 - **Learn completion round trips** (#587, server item 5). A completion reads
   the attempt, the graded answers, the served set and, on a code level, the
   coding rows together, with the tier gate of a Premium level: one wave where

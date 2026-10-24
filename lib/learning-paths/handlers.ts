@@ -20,7 +20,8 @@ import { codingPassXp, complexityGuidance, type ComplexityReport } from '../../s
 import { codingAwardId, creditVerifiedXp, settleMilestonesAfterPass } from '../rewards/coins';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
-import { refuseLocked, resolveTier } from '../access';
+import { refuseLocked, resolveTier, serverContentIndex } from '../access';
+import { contentTier, type GatedContent } from '../../shared/tiers';
 import { enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
@@ -309,6 +310,16 @@ function recommendedBridges(path: MergedPath, competencies: CompetencyResult[], 
     return { id: bridge.id, weight: gapHits * 4 + unknownHits + trackHit };
   });
   return scored.filter((one) => one.weight > 0).sort((a, b) => b.weight - a.weight).map((one) => one.id);
+}
+
+/** Ask for the caller's tier ahead of the plan check when `content` is
+ * Premium, so the check does not wait for it after the enrollment read
+ * (#587, server items 20 and 21). `resolveTier` remembers the answer for the
+ * request and `refuseLocked` reads that same answer; free content still
+ * costs no query. A failure is left for the plan check to ask again and
+ * answer (resolveTier forgets a failed read). */
+function prefetchTier(userId: string, content: GatedContent): void {
+  if (contentTier(content, serverContentIndex()) === 'premium') resolveTier(userId).catch(() => {});
 }
 
 /* ── preference ───────────────────────────────────────────────────────── */
@@ -948,6 +959,12 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (availability(path) !== 'available') {
     return jsonError(res, 503, 'path_unavailable', 'That learning path is not open right now');
   }
+  // The plan check of a Premium activity needs the caller's tier, which does
+  // not depend on the enrollment: it is asked beside the enrollment read
+  // (#587, server item 20) and remembered for the request, so refuseLocked
+  // below reads the same answer. It is the caller's own plan, and it is used
+  // only once the enrollment is proven to be theirs.
+  prefetchTier(userId, { kind: 'learning-path-activity', pathId: path.id, activityId: session.activityId });
   let enrollmentRow: EnrollmentRow | null;
   try {
     enrollmentRow = await loadEnrollment(supabase, userId, session.enrollmentId);
@@ -959,6 +976,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (enrollmentRow.status === 'paused') {
     return jsonError(res, 409, 'enrollment_paused', 'Resume this path before submitting work');
   }
+  const ownEnrollmentId = enrollmentRow.enrollment_id;
+  // One read of the progress rows serves the plan check's "already passed"
+  // exception and the completion projection below.
+  let progress: Promise<ProgressRow[]> | null = null;
+  const progressRows = () => (progress ??= loadProgressRows(supabase, ownEnrollmentId));
   if (session.curriculumVersion !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'The curriculum changed while this attempt was open. Start it again.');
   }
@@ -967,7 +989,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const { module, activity } = found;
   if (await refuseLocked(res, userId, { kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, {
     cleared: async () => {
-      const state = stateMap(await loadProgressRows(supabase, enrollmentRow.enrollment_id)).get(activity.id);
+      const state = stateMap(await progressRows()).get(activity.id);
       return state === 'verified_pass' || state === 'self_reviewed';
     },
   })) return;
@@ -1063,6 +1085,12 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       // recorded result.
       const done = enterInFlight(req, 'grading', { item: gradingItem.activity(path.id, activity.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${userId}`);
       if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'));
+      // The progress rows feed only the projection after grading and do not
+      // depend on it, so they are read while the grader runs (#587, server
+      // item 20). They are read before the accept call either way, and the
+      // routine decides completion again under its lock (see below). A
+      // failure is answered where the rows are awaited.
+      progressRows().catch(() => {});
       let graded;
       try {
         graded = await gradePathCode(activity, merged, body.code);
@@ -1080,6 +1108,9 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       score = graded.score;
       criteria = graded.criteria;
       code = graded.code;
+      // A verified pass settles the milestones after the accept call, for a
+      // Premium account only; its tier is read meanwhile.
+      if (state === 'verified_pass') resolveTier(userId).catch(() => {});
       // A reused task resolved above (merged is non-null), so its lookup holds.
       const task = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId) : undefined;
       complexity = assessComplexity(task ?? { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
@@ -1112,7 +1143,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // record, with this result folded in — the client never asserts it.
   let rows: ProgressRow[] = [];
   try {
-    rows = await loadProgressRows(supabase, session.enrollmentId);
+    rows = await progressRows();
   } catch (error) {
     if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
     return jsonError(res, 500, 'db_error', 'Could not load learning-path progress');
@@ -1218,14 +1249,22 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     state, replayed: outcome.replayed === true,
   });
   const stored = englishReplay((outcome.result ?? out) as SubmitActivityResponse);
+  // The XP coin credit and the milestone settlement are independent one-time
+  // routines (distinct event ids; only the credit takes the account's XP
+  // lock, the settlement never does), so they run together (#587, server
+  // item 20), as the wallet read already runs its settlements.
+  const rewards: Promise<unknown>[] = [];
   if (activity.kind === 'code' && stored.xpAwarded > 0 && outcome.coding?.xpKind !== 'repeat') {
-    await creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded });
+    rewards.push(creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded }));
   }
   // A verified pass may reach a milestone. Only a Premium account can be
   // credited one, so a free account skips the routine (#587, server item 8).
   if (activity.kind === 'code' && stored.state === 'verified_pass') {
-    await settleMilestonesAfterPass(supabase, userId, 'webdev', () => resolveTier(userId));
+    rewards.push(settleMilestonesAfterPass(supabase, userId, 'webdev', () => resolveTier(userId)));
   }
+  // Both are awaited before the answer, as they were one after the other.
+  const failed = (await Promise.allSettled(rewards)).find((one): one is PromiseRejectedResult => one.status === 'rejected');
+  if (failed) throw failed.reason;
   return res.json({ ...stored, replayed: outcome.replayed === true });
 }
 
