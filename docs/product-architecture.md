@@ -917,7 +917,11 @@ same way). Migration 026's path tables and their old rows stay.
   size and common growth rates and links to `/learn/big-o`, which opens DSA
   levels 1 and 2 without placement or a track prerequisite
   (`isBigOIntroduction` in `shared/tiers.ts`) through the same lesson read.
-  Level 3 onward follows ordinary progression.
+  Level 3 onward follows ordinary progression. The `/learn/big-o` page is
+  its own module (`components/learn/BigOIntroduction.tsx`), which imports
+  nothing of the Learn map (#587 C17); `Roadmap.tsx` re-exports it, and
+  App.tsx still loads it through the map's chunk (about 70 KB gzip) until
+  its route gets a loader of its own.
 - **DSA Advanced** (`dsa-advanced`, opt-in through Software Engineer) has
   fifteen levels of eight reviewed questions and needs the first five
   Foundations levels. Its levels and part tests are Premium. Eight lessons in

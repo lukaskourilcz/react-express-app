@@ -1,8 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
-import { BigOLessons } from './learn/BigOLessons';
 import { retirementOf } from '../../../shared/retired-content';
 import { Text } from '@astryxdesign/core/Text';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -1865,66 +1864,8 @@ function SkillCheckRunner({
   );
 }
 
-/** The same reviewed DSA lessons, with an entry point open before placement. */
-export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
-  const { t } = useLanguage();
-  const { isAuthenticated, user } = useAuth();
-  // /big-o's "Start lesson 1" opens a lesson directly (?lesson=1, UX audit
-  // learn-19): the lesson's reading is the first screen, and the parameter is
-  // dropped so Back and a reload land on the introduction.
-  const location = useLocation();
-  const navigate = useNavigate();
-  const asked = new URLSearchParams(location.search).get('lesson');
-  const [level, setLevel] = useState<1 | 2 | null>(() => (asked === '1' ? 1 : asked === '2' ? 2 : null));
-  const [generation, setGeneration] = useState(0);
-  const [reading, setReading] = useState(true);
-  // When the questions were asked for: the level's loader and the runner's
-  // code loader after it are one wait (learn/LevelLoader.tsx).
-  const [since, setSince] = useState(0);
-  const startQuestions = () => {
-    setSince(Date.now());
-    setReading(false);
-  };
-  const before = useRef(0);
-  useEffect(() => {
-    if (asked === null) return;
-    if (level !== null) {
-      preloadLessonRunner();
-      before.current = computeLearningXp(getRoadmapProgress());
-    }
-    navigate({ pathname: location.pathname, hash: location.hash }, { replace: true });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival
-  const lesson = useQuery({
-    queryKey: ['big-o-introduction', level, generation, user?.id ?? null],
-    enabled: level !== null && !reading,
-    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, signal),
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-  });
-  const open = (next: 1 | 2) => {
-    preloadLessonRunner();
-    before.current = computeLearningXp(getRoadmapProgress());
-    setGeneration((value) => value + 1);
-    setReading(true);
-    setLevel(next);
-  };
-  if (level !== null) {
-    if (reading) return <LessonReader lessonId={`dsa-v1-d01-l${level}`} backLabel={t('bigO.pathTitle')} onStart={startQuestions} onBack={() => setLevel(null)} />;
-    if (lesson.isPending) return <DelayedQuoteLoader since={since} quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
-    if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
-    return <LessonStage since={since} onExit={() => setLevel(null)} t={t}><LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data} skipIntro
-      topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
-      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} onActiveChange={onActiveChange} t={t}
-      onFinished={(pct, repeatXp) => {
-        recordLevelResult('dsa', level, pct, lesson.data!.passPct);
-        awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before.current, isAuthenticated);
-        if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
-      }} /></LessonStage>;
-  }
-  // The route shell sets the width. The Learn header, then lesson 1 as the one
-  // SwimCta md and lesson 2 a secondary, both 44px (UX audit learn-04, -15, -19).
-  return <BigOLessons onOpen={open} />;
-}
+// /learn/big-o's page lives in its own module, so that route can load it
+// without the map (#587 C17); App.tsx still reads it from here.
+export { BigOIntroduction } from './learn/BigOIntroduction';
 
 export default Roadmap;
