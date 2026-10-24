@@ -1804,6 +1804,15 @@ small (perf audit #587). The sign-in, token and plan rules are under
 "Sign-in, caching and limits"; error monitoring under "Cookie consent,
 analytics and the privacy policy".
 
+- **The first page.** The route box's Suspense boundary (`App.tsx`) draws
+  the loader as its content on the first commit, and the first page follows
+  in a transition (`useFirstPageTransition`, `client/src/lib/routePreload.ts`),
+  as every later navigation already did. React commits a boundary that leaves
+  its fallback on a retry no sooner than 300 ms after the last fallback any
+  boundary showed or hid (the header's account widget among them), so the
+  first page of a visit used to wait up to 300 ms with its code and data in
+  hand (#587 C04). What shows is unchanged: nothing for 200 ms, then the
+  loader, then the page.
 - **Motion.** `MotionProvider` (`client/src/lib/motion.tsx`) loads Motion's
   feature chunk (14 KB) in the background. A page that opens with
   `prefers-reduced-motion: reduce` loads none (`motionFeaturesFor`) and marks

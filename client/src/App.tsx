@@ -34,7 +34,7 @@ import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import SignInDialogHost from './components/auth/SignInDialogHost';
 import { useAuthLanding } from './lib/authLanding';
-import { installIntentPreloading, routeBoxKey, routeChunk } from './lib/routePreload';
+import { installIntentPreloading, routeBoxKey, routeChunk, useFirstPageTransition } from './lib/routePreload';
 import { lazyPage, lazyShellPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { pageMaxWidth } from './components/ui/pageWidth';
@@ -530,6 +530,12 @@ function App() {
   }, []);
   const showChrome = !isDev && !(quizActive && (isQuiz || isChallenge || isLearn));
 
+  // The first page of a visit renders in a transition, so it draws as soon as
+  // its code and data are in, without React's 300 ms reveal throttle
+  // (lib/routePreload.ts). What shows is the same: nothing for 200 ms, then
+  // the loader, then the page.
+  const booted = useFirstPageTransition();
+
   return (
     // One-screen shell: the app is exactly one viewport tall. Pages scroll
     // INSIDE <main>, so the header and the ocean footer (waterline + fins) are
@@ -804,7 +810,10 @@ function App() {
               300ms reveal throttle and only then drew the page. Outside it, the
               boundary has already revealed content, so the router's transition
               keeps the current page until the next one can render whole. The
-              fallback remains for the first page of a visit.
+              first page of a visit gets the same: the box first draws the
+              loader as content (`booted` false), and the page follows in a
+              transition (useFirstPageTransition). The fallback is left for
+              an update outside a transition that suspends.
               RouteErrorBoundary catches a page that fails, whether its code
               did not load or it threw. It sits inside this Suspense so that
               catching never unmounts the Suspense: a remounted one shows its
@@ -825,6 +834,7 @@ function App() {
               a desktop and 0.15 on a phone, and 0.98 when the header settled in
               the same frame. */}
           <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
+            {!booted ? <div style={ROUTE_BOX_STYLE}><RouteLoader /></div> : <>
             <m.div
               key={boxKey}
               className="ss-route"
@@ -889,6 +899,7 @@ function App() {
               </RouteErrorBoundary>
             </m.div>
             {showChrome && <BrandFooter />}
+            </>}
           </Suspense>
         </div>
       </main>
