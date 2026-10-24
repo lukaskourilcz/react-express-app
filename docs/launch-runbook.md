@@ -124,6 +124,21 @@ SMOKE_BASE_URL=<deployment> node node_modules/.cache/shark/grading-load.mjs
 
 Merge only after preflight and the smoke checks the change needs pass. After the deploy, watch Vercel function errors and latency, `/api/health`, Supabase database and Realtime health, 429 volume, 503 `upstream_timeout` answers (a Supabase call that outlasted `withTimeout` in `lib/http.ts`, logged at level error), sign-in failures, quiz submit failures, multiplayer reconnects and account deletion errors for at least 30 minutes. Never put access tokens, emails, answer tokens or submitted answers in logs.
 
+Every API answer carries a `Server-Timing` header: `app` (the handler's time), `db_http` with its count of database calls and `auth_http` with its count of Supabase Auth calls. A request that suddenly makes more of either after a deploy is the first sign that a read lost its cache or its parallel wave.
+
+Some answers are cached, so a change reaches learners after a bound rather than at once (`docs/product-architecture.md`, "Sign-in, caching and limits"):
+
+| What changed | When learners see it |
+|---|---|
+| A setting saved in `/dev` | new tabs within about 15 s (each instance and the CDN keep `/api/settings` that long); a tab already open keeps the settings it read, the path-open verdict included, until a reload |
+| `LEARNING_PATH_FDE_ENABLED` or anything else in the learning-path catalogue | up to five minutes (CDN `s-maxage=300`), then a reload in tabs already open |
+| The Learn map's structure | up to a minute (CDN `s-maxage=60`) |
+| A free coding task's brief | the CDN keeps it an hour, the browser five minutes and the tab 30 minutes; a task whose session names a new brief version reads it again |
+| A question edited in `/dev` | about 15 s per instance plus one request |
+| A session ended or a password changed elsewhere | reads may continue for up to a minute per instance; writes stop at once |
+| Premium ending | answers inside a Premium session already open may continue for up to a minute; its completion is refused |
+| A plan change made on another device | at the next lock pressed, or within five minutes of a tab being shown again |
+
 Two scheduled workflows watch production:
 
 - `.github/workflows/health.yml` probes `/api/health` four times an hour and fails after two consecutive unhealthy answers.
@@ -135,7 +150,7 @@ GitHub runs scheduled workflows on a best-effort basis (the health workflow ran 
 
 For a client or API regression, roll Vercel back to the last good deployment. Applied migrations stay: each one keeps the routines older code calls. If an older release depends on a browser write that a migration removed, forward-fix the release; do not reopen the table.
 
-The FDE path's rollback is its switch: unset `LEARNING_PATH_FDE_ENABLED` and the path returns to preview-only while everything else is untouched. Do not drop the `learning_path_*` tables: they hold learner evidence. An older client ignores `devquiz_learning_preference_v1` and reads `devquiz_track`, which every preference save still writes.
+The FDE path's rollback is its switch: unset `LEARNING_PATH_FDE_ENABLED` and the path returns to preview-only while everything else is untouched. Browsers see it within five minutes, the catalogue's CDN lifetime, and a tab already open after a reload. Do not drop the `learning_path_*` tables: they hold learner evidence. An older client ignores `devquiz_learning_preference_v1` and reads `devquiz_track`, which every preference save still writes.
 
 For a database regression, stop writes, preserve logs and the current database, then restore the verified backup into a separate project first. Validate row counts and the smoke test there before changing production environment values. Record the timeline, affected operations, recovery point and follow-up control. [Backup and restore](backup-restore.md) has the sequence.
 
