@@ -20,6 +20,7 @@ import { ROADMAP_TOPICS, topicLevelCount } from '../roadmap';
 import { EVOLVING_CHALLENGES } from '../../shared/evolving';
 import { learnCheckpointXp, learnLevelXp } from '../../shared/progression';
 import { tokensForVerifiedXp, type CoinSettings } from '../../shared/rewards';
+import type { Tier } from '../../shared/tiers';
 
 const logEvent = createLogger('coins');
 
@@ -181,6 +182,33 @@ export async function settleMilestones(
   };
   if (report.credited.length > 0) logEvent({ status: 200, kind: 'milestones_credited', count: report.credited.length });
   return report;
+}
+
+/**
+ * `settleMilestones` for a call site that discards the report: a verified
+ * pass that may have reached a milestone (#587, server item 8).
+ *
+ * `settle_coin_milestones` (migration 052, the latest definition) credits
+ * only inside `IF v_premium`, with `v_premium := is_premium(p_user_id)`, so
+ * for an account `is_premium()` calls free it credits nothing and only reads
+ * the streak, the progress blob, every passed coding task, the ledger and the
+ * day's XP credits. `tier` is the caller's `resolveTier` (lib/access.ts: that
+ * same `is_premium()` call, remembered for the request), passed in so this
+ * module does not load lib/access.ts and the coding catalogue with it. A
+ * free answer skips the routine; a tier that cannot be read settles anyway,
+ * and the routine decides as before. An account that turns Premium after the
+ * tier was read is settled by its next pass or wallet read (the wallet always
+ * runs the routine), as an account that upgrades later always was.
+ */
+export async function settleMilestonesAfterPass(
+  supabase: SupabaseClient,
+  userId: string,
+  subject: string,
+  tier: () => Promise<Tier>,
+): Promise<void> {
+  const premium = await tier().then((one) => one === 'premium', () => true);
+  if (!premium) return;
+  await settleMilestones(supabase, userId, subject);
 }
 
 /* ── the monthly top three ─────────────────────────────────────────────── */

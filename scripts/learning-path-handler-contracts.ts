@@ -42,6 +42,8 @@ import { LEARNER_PROFILE_META_KEY, isOffLoopModule } from '../shared/learning-pa
 import { MERCH_ENABLED } from '../shared/rewards';
 import { diagnosticEvidence } from '../lib/learning-paths/competencies';
 import { gradeCheck } from '../lib/learning-paths/grade';
+import { solutionFor } from '../lib/learning-paths/solutions';
+import { settleMilestonesAfterPass } from '../lib/rewards/coins';
 import type { StartActivityResponse, SubmitActivityResponse } from '../shared/learning-path-api';
 
 type Fail = (message: string) => void;
@@ -564,6 +566,69 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     } finally {
       if (switchBefore === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
       else process.env.LEARNING_PATH_FDE_ENABLED = switchBefore;
+    }
+
+    /* ── a verified code pass and the coin routines after it ─────────── */
+    // #587, server item 8: settle_coin_milestones credits only inside
+    // `IF is_premium(...)` (migration 052), so after a verified pass a free
+    // account (here a lapsed one resubmitting a passed exercise) skips it and
+    // a Premium account still runs it. The XP coin credit runs for both.
+    {
+      const passer = `user-paths-pass-${stamp}`;
+      const codeModule = path.modules.find((module) => module.activities.some((activity) => activity.id === codeActivity.id))!;
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      const passAs = async (tier: 'free' | 'premium', tag: string) => {
+        const calls: string[] = [];
+        const req = request('POST', `pass-${tag}-${stamp}`, {
+          user_id: passer,
+          session: encodeLearningPathSession({
+            attemptId: `PASS${tag}${stamp}`.padEnd(20, 'a'), enrollmentId, userId: passer, pathId: 'fde',
+            activityId: codeActivity.id, activityKind: codeActivity.kind, purpose: codeActivity.purpose,
+            curriculumVersion: path.version, rubricVersion: path.rubric.version,
+          }).token,
+          idempotencyKey: `KEYpass${tag}${stamp}`.slice(0, 24).padEnd(24, 'a'),
+          code: solutionFor(codeActivity.id)!.solution,
+        });
+        const res = response();
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${passer}`, async () => tier);
+          await handleActivitySubmit(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: { ...enrollmentRow('active'), user_id: passer } },
+            lists: { learning_path_progress: [{ module_id: codeModule.id, activity_states: { [codeActivity.id]: { state: 'verified_pass', score: 1 } }, completed_at: null }] },
+            rpc: (name, params) => {
+              calls.push(name);
+              if (name.startsWith('accept_learning_path')) {
+                const packet = (params.p_accept ?? params) as { p_result: SubmitActivityResponse };
+                return { data: { ok: true, replayed: false, result: { ...packet.p_result, xpAwarded: 20 }, coding: { xpKind: 'first' } } };
+              }
+              return { data: name === 'credit_verified_xp_tokens' ? 2 : {} };
+            },
+          }));
+        });
+        return { res, calls };
+      };
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const free = await passAs('free', 'free');
+        if (free.res.statusCode !== 200 || (free.res.body as SubmitActivityResponse).state !== 'verified_pass') {
+          fail(`a lapsed account's verified pass answered ${free.res.statusCode} ${JSON.stringify(free.res.body).slice(0, 200)}`);
+        }
+        if (!free.calls.includes('credit_verified_xp_tokens')) fail(`a free account's verified pass credited no XP coins: ${free.calls.join(', ')}`);
+        if (free.calls.includes('settle_coin_milestones')) fail('a free account ran settle_coin_milestones, which credits only Premium accounts');
+        const premium = await passAs('premium', 'prem');
+        if (premium.res.statusCode !== 200) fail(`a Premium verified pass answered ${premium.res.statusCode} ${code(premium.res)}`);
+        if (!premium.calls.includes('credit_verified_xp_tokens') || !premium.calls.includes('settle_coin_milestones')) {
+          fail(`a Premium verified pass must credit its XP coins and settle the milestones: ${premium.calls.join(', ')}`);
+        }
+        // A plan that cannot be read is not "free": the routine runs and decides.
+        const unread: string[] = [];
+        await settleMilestonesAfterPass(fakeSupabase({ rpc: (name) => { unread.push(name); return { data: {} }; } }), passer, 'webdev',
+          async () => { throw new Error('entitlement_unavailable'); });
+        if (!unread.includes('settle_coin_milestones')) fail('an unreadable plan skipped settle_coin_milestones instead of letting it decide');
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
     }
 
     /* ── a resubmitted write-up, and the requirements a submit sends ──── */

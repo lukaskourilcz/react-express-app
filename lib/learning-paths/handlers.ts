@@ -17,10 +17,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash, randomBytes } from 'node:crypto';
 import { assessComplexity } from '../coding/complexity';
 import { codingPassXp, complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
-import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
+import { codingAwardId, creditVerifiedXp, settleMilestonesAfterPass } from '../rewards/coins';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
-import { refuseLocked } from '../access';
+import { refuseLocked, resolveTier } from '../access';
 import { enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
@@ -1221,7 +1221,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (activity.kind === 'code' && stored.xpAwarded > 0 && outcome.coding?.xpKind !== 'repeat') {
     await creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded });
   }
-  if (activity.kind === 'code' && stored.state === 'verified_pass') await settleMilestones(supabase,userId,'webdev');
+  // A verified pass may reach a milestone. Only a Premium account can be
+  // credited one, so a free account skips the routine (#587, server item 8).
+  if (activity.kind === 'code' && stored.state === 'verified_pass') {
+    await settleMilestonesAfterPass(supabase, userId, 'webdev', () => resolveTier(userId));
+  }
   return res.json({ ...stored, replayed: outcome.replayed === true });
 }
 

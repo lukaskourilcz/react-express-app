@@ -1460,7 +1460,12 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   credits no coins. Everything that moves the streak (a verified quiz, a
   completed Learn level or part test, an applied coding pass, an awarded
   Challenge run) then settles the milestones, so a streak milestone reached on
-  a Learn or coding day pays at once. The first wallet read (`op=wallet` GET)
+  a Learn or coding day pays at once. After a verified learning-path code pass
+  the settlement runs only for an account `resolveTier` reads as Premium
+  (`settleMilestonesAfterPass`, #587 server item 8): the routine credits
+  nothing for a free account, and a plan that cannot be read still settles.
+  An account that turns Premium later is settled by its next pass or wallet
+  read. The first wallet read (`op=wallet` GET)
   pays the welcome coins, settles the month that just ended and the learner's
   milestones, and returns the rules and progress for "How to earn".
 - **Spending.** The crown (1,200) and streak protection (250) are open to
