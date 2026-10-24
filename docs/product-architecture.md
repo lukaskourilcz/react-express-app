@@ -826,7 +826,18 @@ to sign in, and an account with no saved plan gets a link to the plan card at
 counts levels passed over levels available across the topics the learner can
 work toward, plus the path's steps when the path is open; any passed level
 shows as at least 1%. Joining a section can lower the figure, since the
-joined topics and their prerequisites join the total.
+joined topics and their prerequisites join the total. Whether the path is
+open comes first from the public settings the app reads as it starts
+(`learningPaths` in `/api/settings`, the verdict the catalogue carries per
+entry; `useFdeOpenInSettings` in `components/learn/useFdePathSteps.ts`).
+While they say it is closed, the figure is the topics' alone and no section
+other than FDE, and not Career, reads the 30 KB catalogue, the account's
+enrollments or its path progress (#587 C06, C20); while their first read is
+out the figure waits for it, and when they failed the catalogue decides, as
+before. The settings are cached by the CDN for 15 s and kept for the tab's
+life, so a path switched on shows in a tab opened before the switch only
+after a reload. The FDE section still reads the catalogue for its path
+shelf.
 
 Today keeps unfinished → review → new priority, orders within those buckets by
 `planTopics(profile)`, and exposes one `startHereId`; joining a section adds
