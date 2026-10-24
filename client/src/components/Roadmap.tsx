@@ -93,7 +93,8 @@ import { isBarred, useContentLocks, type NonCodingContent } from '../lib/content
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef } from '../../../shared/tiers';
 import { readJSON, readString, writeJSON, writeString } from '../lib/storage';
-import { renderQuestion } from './CodeBlock';
+import { preloadCodeHighlighter, renderQuestion } from './CodeBlock';
+import { hasCodeQuestions } from './learn/codeTopics';
 import { DelayedQuoteLoader, revealWhenReady } from './learn/LevelLoader';
 import { IconTile, BoltIcon, TrophyIcon } from './ui/icons';
 import { SwimCta } from './landing/LandingKit';
@@ -123,13 +124,17 @@ const PathShelf = lazyShellPart(() => import('./paths/PathShelf'));
 const STEP_CONTROL = '.rm-path-canvas button:not([disabled]):not([aria-disabled="true"]), .rm-overview-card button';
 /** A step whose level opens with a reading (`data-lesson`). */
 const READING_STEP = '[data-lesson]';
+/** A step of a topic whose questions carry code (`data-code`). */
+const CODE_STEP = '[data-code]';
 const savesData = (): boolean => (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
 /**
  * The runner's code starts loading when the learner shows they are about to
  * open a step (perf baseline #587 C28): a mouse resting on it, keyboard focus,
  * or a press. It used to start on the click, beside the level's own request.
- * A visitor who asked the browser to save data loads it on the press only, as
- * the route preloads do (lib/routePreload.ts).
+ * In a topic whose questions carry code the code highlighter starts with it;
+ * it used to load as the first code question drew. A visitor who asked the
+ * browser to save data loads both on the press only, as the route preloads
+ * do (lib/routePreload.ts).
  */
 function warmRunnerOnIntent(event: { type: string; target: EventTarget | null; nativeEvent: Event }): void {
   if (!(event.target instanceof Element) || !event.target.closest(STEP_CONTROL)) return;
@@ -137,6 +142,7 @@ function warmRunnerOnIntent(event: { type: string; target: EventTarget | null; n
   if (event.type === 'pointerover' && (event.nativeEvent as PointerEvent).pointerType !== 'mouse') return;
   if (!press && savesData()) return;
   preloadLessonRunner();
+  if (event.target.closest(CODE_STEP)) preloadCodeHighlighter();
   // Only DSA levels open with a reading (#587 C19).
   if (event.target.closest(READING_STEP)) preloadLessonReader();
 }
@@ -666,6 +672,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   const open = (a: Active, questions = false) => {
     lateDeepLink.current = null;
     preloadLessonRunner();
+    if (hasCodeQuestions(topic)) preloadCodeHighlighter();
     const lessonId = a.kind === 'level' && !questions ? levels.find((level) => level.level === a.ref)?.lessonId : undefined;
     setReadingLessonId(lessonId ?? null);
     if (lessonId) {
@@ -1015,7 +1022,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
 
       {/* Keyed by section: a switch fades the section in (rmTrackIn, none
           under reduced motion) and re-measures the map. */}
-      <div key={section} ref={sectionBodyRef} className="rm-track-in rm-section-body" {...RUNNER_INTENT}>
+      <div key={section} ref={sectionBodyRef} className="rm-track-in rm-section-body" data-code={hasCodeQuestions(topic) ? '' : undefined} {...RUNNER_INTENT}>
         <SectionHeader
           section={section}
           name={sectionName}

@@ -9,10 +9,33 @@ import { ShellPartBoundary } from './ShellPartBoundary';
 // Saves ~180 KB gzip off the lazy code-block chunk.
 const SUPPORTED_LANGUAGES = ['javascript', 'typescript', 'jsx', 'tsx', 'css', 'markup', 'bash', 'json'] as const;
 
+// The highlighter's code, asked for once: by the first code block, or ahead of
+// it when the learner reaches for a step whose questions carry code
+// (`preloadCodeHighlighter`). A load that failed is asked for again next time.
+let highlighter: ReturnType<typeof importHighlighter> | null = null;
+function loadHighlighter(): ReturnType<typeof importHighlighter> {
+  highlighter ??= importHighlighter().catch((error: unknown) => {
+    highlighter = null;
+    throw error;
+  });
+  return highlighter;
+}
+
+/** Start loading the code highlighter (prism-light, its grammars and theme)
+ * without waiting for it: the Learn map calls it when a mouse rests on, or
+ * the focus reaches, a step of a topic whose questions carry code, as it does
+ * for the level runner's chunk (perf baseline #587 C28). The first code block
+ * then draws highlighted without its own wait. */
+export function preloadCodeHighlighter(): void {
+  loadHighlighter().catch(() => {});
+}
+
 // A `lazyShellPart` with a boundary of its own: when the highlighter's code does
 // not load, the block stays plain text, which already reads in full, and the
 // page around it stays. No Retry button: the next code block asks again.
-const Highlighter = lazyShellPart(async () => {
+const Highlighter = lazyShellPart(loadHighlighter);
+
+async function importHighlighter() {
   const [
     PrismLightMod,
     styleMod,
@@ -75,7 +98,7 @@ const Highlighter = lazyShellPart(async () => {
       );
     },
   };
-});
+}
 
 const PlainCode = ({ code, language }: { code: string; language: string }) => {
   const t = useT();

@@ -68,6 +68,7 @@ import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
 import { learnLessonContracts } from './learn-lesson-contract';
 import { codingBriefContracts } from './coding-brief-contract';
+import { learnCodeTopicsContracts } from './learn-code-topics-contract';
 import { dsaAdvancedContracts } from './dsa-advanced-contracts';
 import { applyEligibility, getEffectiveQuestions, getEffectiveQuestionsById, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
@@ -6343,6 +6344,7 @@ async function main() {
   await leaderboardVisibilityContracts();
   await learnLessonContracts();
   await codingBriefContracts();
+  learnCodeTopicsContracts();
   await dsaAdvancedContracts();
   consentContracts();
   classroomRevealContracts();
