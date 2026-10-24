@@ -179,6 +179,24 @@ export function requestMemo<T>(key: string, compute: () => Promise<T>): Promise<
   return pending;
 }
 
+/** The names of a module's exports that are async functions. */
+type AsyncExport<M> = { [K in keyof M]: M[K] extends (...args: never[]) => Promise<unknown> ? K : never }[keyof M];
+
+/** A stand-in for one of a module's async functions that loads the module on
+ * its first call. A router serves many ops from one function, and a module
+ * only some of them need (a grader, the coding catalogue, Stripe) used to
+ * evaluate on every cold start before the first answer, whichever op it was
+ * (#587, server items 3 and 4). The module is loaded once and kept, as a
+ * static import is; a module that fails to load rejects the call, which the
+ * request context answers with 500. Call sites read exactly as before. */
+export function lazyExport<M, K extends AsyncExport<M>>(load: () => Promise<M>, name: K): M[K] {
+  const call = async (...args: unknown[]) => {
+    const fn = (await load())[name] as unknown as (...rest: unknown[]) => Promise<unknown>;
+    return fn(...args);
+  };
+  return call as unknown as M[K];
+}
+
 /** Emit one structured single-line JSON log entry (Vercel ingests this natively). */
 export function logEvent(route: string, event: Record<string, unknown>) {
   console.log(JSON.stringify({

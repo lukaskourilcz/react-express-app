@@ -16,7 +16,11 @@
  *    and the in-thread fallback load it and still work;
  *  - api/settings.ts, read on every page load, loads neither the learning-
  *    path handlers nor a grader (server item 17), and publishes the same
- *    capability the handlers compute. */
+ *    capability the handlers compute;
+ *  - api/user/[op].ts loads its op families on first call (server item 3):
+ *    a fresh instance evaluates no grader, no TypeScript, no Stripe and no
+ *    coding catalogue before it answers, and an op that needs them loads them
+ *    and answers. */
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -37,7 +41,7 @@ interface Loaded {
 /** Bundle `entry` as @vercel/node would ship it and require it in a fresh
  * process. `probe` is a JavaScript expression evaluated in that process with
  * `mod` bound to the module's exports, after the require. */
-export async function loadFresh(entry: string, probe = 'null'): Promise<Loaded> {
+export async function loadFresh(entry: string, probe = 'null', extraEnv: Record<string, string> = {}): Promise<Loaded> {
   mkdirSync(out, { recursive: true });
   const outfile = join(out, `${entry.replace(/[/[\]]/g, '_').replace(/\.ts$/, '')}.cjs`);
   await build({
@@ -57,7 +61,7 @@ export async function loadFresh(entry: string, probe = 'null'): Promise<Loaded> 
     "  .filter((name) => name && name !== '.cache'))].sort();",
     `Promise.resolve(${probe}).then((probe) => { console.log(JSON.stringify({ packages, probe })); process.exit(0); });`,
   ].join('\n');
-  const env: Record<string, string> = { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', NODE_ENV: 'development' };
+  const env: Record<string, string> = { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', NODE_ENV: 'development', ...extraEnv };
   const child = spawnSync(process.execPath, ['-e', code], { cwd: root, env, encoding: 'utf8', maxBuffer: 1 << 26 });
   assert.equal(child.status, 0, `${entry} loads in a fresh process: ${child.stderr.slice(0, 800)}`);
   return JSON.parse(child.stdout.trim().split('\n').pop()!) as Loaded;
@@ -127,5 +131,28 @@ export async function coldStartContracts(): Promise<void> {
       else process.env.LEARNING_PATH_FDE_ENABLED = before;
     }
     console.log('PASS cold start: /api/settings publishes the learning-path capability without the handlers or a grader');
+  }
+
+  // ── server item 3: api/user/[op].ts loads op families on first call ──────
+  {
+    const fresh = await loadFresh('api/user/[op].ts');
+    for (const heavy of ['typescript', 'quickjs-emscripten', '@jitl/quickjs-singlefile-cjs-release-sync', 'stripe']) {
+      assert.ok(!fresh.packages.includes(heavy), `api/user/[op].ts does not load ${heavy} at import (${fresh.packages.join(', ')})`);
+    }
+    // An op served by a lazily loaded family loads it on its first call and
+    // answers. The database address is a closed local port and the request
+    // carries no token, so the op's own sign-in check answers 401 without
+    // any network call; QuickJS loading shows the coding handlers ran.
+    const called = await loadFresh('api/user/[op].ts', `(async () => {
+      const res = { statusCode: 200, headers: {}, body: undefined, headersSent: false,
+        setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; }, getHeader(k) { return this.headers[k.toLowerCase()]; },
+        status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; this.headersSent = true; return this; }, end() { this.headersSent = true; return this; } };
+      const loaded = () => Object.keys(require.cache).some((path) => path.includes('/node_modules/quickjs-emscripten/'));
+      const before = loaded();
+      await mod.default({ method: 'GET', headers: { 'x-forwarded-for': '198.51.100.7' }, query: { op: 'coding-progress' }, url: '/api/user/coding-progress', socket: {} }, res);
+      return { before, after: loaded(), status: res.statusCode, code: res.body && res.body.error && res.body.error.code };
+    })()`, { SUPABASE_URL: 'http://127.0.0.1:9', SUPABASE_ANON_KEY: 'cold-start-anon', SUPABASE_SERVICE_ROLE_KEY: 'cold-start-service' });
+    assert.deepEqual(called.probe, { before: false, after: true, status: 401, code: 'missing_token' }, 'a coding op loads its handlers on first call and answers');
+    console.log('PASS cold start: api/user/[op].ts loads no grader, TypeScript, Stripe or coding catalogue before its first answer');
   }
 }

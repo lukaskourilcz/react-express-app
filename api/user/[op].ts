@@ -11,6 +11,7 @@ import {
   logEvent as emit,
   withRequestContext,
   ServiceUnavailableError,
+  lazyExport,
 } from '../../lib/http';
 import type { AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
@@ -25,34 +26,53 @@ import {
 import { deploymentSubjectIds } from '../../lib/product-scope';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
 import { eligibleCodingBadges } from '../../shared/coding-catalog';
-import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { questionXpHeldOf } from '../../shared/repeat-xp';
-import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
-import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
 import { settleMilestones } from '../../lib/rewards/coins';
 import { handleReferral } from '../../lib/rewards/referral';
-import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
-import {
-  handleEnrollment,
-  handleLearningPreference,
-  handlePathDraft,
-  handlePathReward,
-  handlePathProgress,
-} from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
 import { handleFriends, handleIdentity } from '../../lib/friends-handlers';
 import { verifiedProfile as verifiedProfileOf } from '../../lib/public-identity';
 import { handleLeaderboardName } from '../../lib/leaderboard-identity';
 import { handleEntitlement } from '../../lib/entitlements';
-import { handleVoucherRedeem } from '../../lib/vouchers';
-import {
-  endBillingForDeletedAccount,
-  handleBillingCancel,
-  handleBillingCheckout,
-  handleBillingPortal,
-  handleBillingWebhook,
-} from '../../lib/billing/handlers';
+
+// The op families below load on their first call, not with this function
+// (#587, server item 3). Each one pulled in something most ops never touch:
+// the coding catalogue with its reference solutions, the QuickJS grader and
+// TypeScript (coding, practice and learning-path handlers), the tier index
+// over the coding catalogue (rewards, through lib/access.ts), or Stripe
+// (billing, vouchers). Statically imported, a new instance spent about 370 ms
+// evaluating them before it answered an entitlement or XP read. The names and
+// the dispatch lines are the same as with static imports.
+const codingHandlers = () => import('../../lib/coding/handlers');
+const handleCodingDraft = lazyExport(codingHandlers, 'handleCodingDraft');
+const handleCodingProgress = lazyExport(codingHandlers, 'handleCodingProgress');
+const practiceHandlers = () => import('../../lib/coding/practice-handlers');
+const handleCodingBookmarks = lazyExport(practiceHandlers, 'handleCodingBookmarks');
+const handleCodingSkip = lazyExport(practiceHandlers, 'handleCodingSkip');
+const handlePracticeSession = lazyExport(practiceHandlers, 'handlePracticeSession');
+const rewardsHandlers = () => import('../../lib/rewards/handlers');
+const creditVerifiedXp = lazyExport(rewardsHandlers, 'creditVerifiedXp');
+const handleCosmetic = lazyExport(rewardsHandlers, 'handleCosmetic');
+const handleStreakProtection = lazyExport(rewardsHandlers, 'handleStreakProtection');
+const handleFulfilment = lazyExport(rewardsHandlers, 'handleFulfilment');
+const handleOrders = lazyExport(rewardsHandlers, 'handleOrders');
+const handlePaymentWebhook = lazyExport(rewardsHandlers, 'handlePaymentWebhook');
+const handleShopCatalogue = lazyExport(rewardsHandlers, 'handleShopCatalogue');
+const handleWallet = lazyExport(rewardsHandlers, 'handleWallet');
+const pathHandlers = () => import('../../lib/learning-paths/handlers');
+const handleEnrollment = lazyExport(pathHandlers, 'handleEnrollment');
+const handleLearningPreference = lazyExport(pathHandlers, 'handleLearningPreference');
+const handlePathDraft = lazyExport(pathHandlers, 'handlePathDraft');
+const handlePathReward = lazyExport(pathHandlers, 'handlePathReward');
+const handlePathProgress = lazyExport(pathHandlers, 'handlePathProgress');
+const handleVoucherRedeem = lazyExport(() => import('../../lib/vouchers'), 'handleVoucherRedeem');
+const billingHandlers = () => import('../../lib/billing/handlers');
+const endBillingForDeletedAccount = lazyExport(billingHandlers, 'endBillingForDeletedAccount');
+const handleBillingCancel = lazyExport(billingHandlers, 'handleBillingCancel');
+const handleBillingCheckout = lazyExport(billingHandlers, 'handleBillingCheckout');
+const handleBillingPortal = lazyExport(billingHandlers, 'handleBillingPortal');
+const handleBillingWebhook = lazyExport(billingHandlers, 'handleBillingWebhook');
 
 const supabase = createServiceClient();
 
@@ -699,7 +719,7 @@ async function badges(req: VercelRequest, res: VercelResponse) {
     const passedCoding = new Set(((codingRows.data ?? []) as { task_id: string }[]).map((row) => row.task_id));
     const eligible = [
       ...eligibleServerBadges(summary),
-      ...(subject === 'webdev' ? eligibleCodingBadges(passedCoding, CODING_SUMMARIES) : []),
+      ...(subject === 'webdev' ? eligibleCodingBadges(passedCoding, (await import('../../lib/coding/active')).CODING_SUMMARIES) : []),
     ];
 
     const synced = await withTimeout(
