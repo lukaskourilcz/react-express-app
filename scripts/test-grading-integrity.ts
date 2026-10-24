@@ -510,6 +510,37 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   console.log('PASS integrity: an old unverified pass no longer blocks the first verified pass\'s XP and coins');
 }
 
+// ── a pass credits its coins and settles milestones at once (#587) ───────
+// Server item 10: the coin credit and the milestone settlement ran one after
+// the other although neither reads what the other writes. They now start
+// together, and the answer still waits for both.
+{
+  const db = codingDatabase();
+  const learner = 'user-parallel-0009';
+  const timeline: string[] = [];
+  const routine = db.client.rpc;
+  db.client.rpc = (name: string, args: Record<string, unknown>) => {
+    if (name !== 'credit_verified_xp_tokens' && name !== 'settle_coin_milestones') return routine(name, args);
+    db.rpcCalls.push({ name, args });
+    timeline.push(`start:${name}`);
+    return new Promise((resolve) => setTimeout(() => {
+      timeline.push(`end:${name}`);
+      resolve({ data: name === 'settle_coin_milestones' ? {} : 3, error: null });
+    }, 25));
+  };
+  const out = { statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit({
+    method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.91' }, query: {},
+    body: { session: encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null }), code: solutionFor('js-double-numbers')!.solution, user_id: learner },
+  } as never, out as never, db.client as never);
+  assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  assert.equal(out.body?.verdict, 'passed');
+  assert.ok((out.body?.xpAwarded ?? 0) > 0, 'the pass earns its XP');
+  assert.deepEqual(timeline.slice(0, 2).sort(), ['start:credit_verified_xp_tokens', 'start:settle_coin_milestones'], `both routines start before either ends (${timeline.join(', ')})`);
+  assert.equal(timeline.length, 4, 'and the answer waits for both');
+  console.log('PASS integrity: a pass credits its coins and settles milestones together, and answers after both');
+}
+
 // ── a task's XP again, after a reset and an hour (migration 058) ─────────
 // Signed in, Reset tells the server (coding-reset); a pass the routine pays as
 // a repeat is XP only, so the handler credits no coins for it, and the verdict

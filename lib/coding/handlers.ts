@@ -626,16 +626,21 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   // (#227). The last stage of a project or short path is a Premium milestone.
   // A task's repeat XP (058) is XP only: it credits no coins.
   const xpAwarded = data.xpAwarded === true && xp > 0;
+  // The credit and the settlement run together (#587, server item 10): the
+  // milestones settle on the streak, the Learn blob and the passed tasks,
+  // none of which the credit writes, and each routine is idempotent under
+  // its own event ids. The settlement's report is not used here.
   const rewards = async () => {
-    if (xpAwarded && data.xpKind !== 'repeat') {
-      await creditVerifiedXp(supabase, {
-        userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
-      });
-    }
-    // From migration 048 every applied verified pass is also a streak day,
-    // which can reach a Premium streak milestone; an unverified (checklist)
-    // pass settles nothing.
-    if (data.applied === true && input.verdict === 'passed' && input.verified) await settleMilestones(supabase, userId, 'webdev');
+    const settled = await Promise.allSettled([
+      xpAwarded && data.xpKind !== 'repeat'
+        ? creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp })
+        : null,
+      // From migration 048 every applied verified pass is also a streak day,
+      // which can reach a Premium streak milestone; an unverified (checklist)
+      // pass settles nothing.
+      data.applied === true && input.verdict === 'passed' && input.verified ? settleMilestones(supabase, userId, 'webdev') : null,
+    ]);
+    for (const one of settled) if (one.status === 'rejected') throw one.reason;
   };
   // The progress row the verdict wrote does not depend on the coins, so it is
   // read beside them. Both settle before the answer: a read that fails must
