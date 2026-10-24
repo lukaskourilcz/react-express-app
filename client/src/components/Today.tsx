@@ -21,6 +21,7 @@ import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress,
 } from '../lib/roadmap';
 import { conceptDueQuery, roadmapStructureQuery } from '../lib/queries';
 import { entitlementQuery } from '../lib/entitlement';
+import { anyLearningPathOpen, GAME_CONFIG_KEY, type GameConfig } from '../lib/gameConfig';
 import { enrollmentsQuery, pathCatalogQuery, pathProgressQuery } from '../lib/learningPaths';
 import { HELD_READ, lazyPart, readOnce, settled, useFirstData } from '../lib/routeData';
 import { ApiError } from '../lib/api';
@@ -146,7 +147,8 @@ function useTodayFirstData() {
           ...SIGNED_IN_PARTS.map((part) => part.load()),
           readOnce(queryClient, conceptDueQuery),
           import('../coding/practice').then(({ practiceSessionQuery }) => readOnce(queryClient, practiceSessionQuery)),
-          readOnce(queryClient, enrollmentsQuery(user.id)).then(({ enrollments }) => {
+          // No path open in the settings: the path rows read nothing (#587).
+          ...(pathsClosed(queryClient.getQueryData<GameConfig>(GAME_CONFIG_KEY)) ? [] : [readOnce(queryClient, enrollmentsQuery(user.id)).then(({ enrollments }) => {
             const active = enrollments.filter((one) => one.status === 'active');
             return settled(active.length
               ? [
@@ -154,11 +156,16 @@ function useTodayFirstData() {
                   ...active.map((one) => readOnce(queryClient, pathProgressQuery(user.id, one.enrollmentId, one.curriculumVersion))),
                 ]
               : []);
-          }),
+          })]),
         ]
       : []),
   ]));
 }
+
+/** The settings the app read as it started say no learning path is open.
+ * Not yet in, or without the capability: not closed, as before. */
+const pathsClosed = (config: GameConfig | undefined): boolean =>
+  config?.learningPaths ? !anyLearningPathOpen(config) : false;
 
 export default function Today() {
   useTodayFirstData();
