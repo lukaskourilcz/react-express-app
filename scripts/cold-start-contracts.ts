@@ -22,7 +22,9 @@
  *    coding catalogue before it answers, and an op that needs them loads them
  *    and answers;
  *  - api/quiz/roadmap.ts does the same for its coding and learning-path
- *    resources, the tier check and a code level's tasks (server item 4). */
+ *    resources, the tier check and a code level's tasks (server item 4);
+ *  - only the roadmap function ships the compiler's lib files and the grader
+ *    bundles (server item 24): nothing in another function reads them. */
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -177,6 +179,40 @@ export async function coldStartContracts(): Promise<void> {
     })()`);
     assert.deepEqual(called.probe, { before: false, after: true, status: 200, paths: true }, 'the path catalogue loads its handlers on first call and answers');
     console.log('PASS cold start: api/quiz/roadmap.ts loads no grader or TypeScript before its first answer');
+  }
+
+  // ── server item 24: only the roadmap function ships grading files ────────
+  {
+    const { readFileSync, readdirSync } = await import('node:fs');
+    const functions = (JSON.parse(readFileSync(join(root, 'vercel.json'), 'utf8')) as { functions: Record<string, { includeFiles?: string; maxDuration?: number }> }).functions;
+    const roadmap = functions['api/quiz/roadmap.ts'];
+    assert.ok(roadmap?.includeFiles?.includes('lib/coding/generated/*.cjs') && roadmap.includeFiles.includes('node_modules/typescript/lib/lib.*.d.ts'),
+      'the roadmap function ships the grader bundles and the compiler\'s lib files');
+    assert.equal(functions['api/**/*.ts']?.includeFiles, undefined, 'the other functions ship neither the compiler\'s lib files nor React\'s development builds');
+    // Why nothing else needs them. The lib files are read by the in-thread
+    // type checker, which never runs on a deployment (the checker's worker,
+    // in the roadmap function, reads them there) ...
+    const { inThreadGradingAllowed } = await import('../lib/coding/grader-capacity');
+    const env = { NODE_ENV: process.env.NODE_ENV, VERCEL: process.env.VERCEL };
+    try {
+      process.env.VERCEL = '1';
+      assert.equal(inThreadGradingAllowed(), false, 'no type check runs on a deployment\'s request thread');
+    } finally {
+      if (env.VERCEL === undefined) delete process.env.VERCEL; else process.env.VERCEL = env.VERCEL;
+    }
+    // ... and React's development builds by the in-process React runner,
+    // which the server reaches for its types only: React is graded in a
+    // Vercel Sandbox.
+    const serverFiles = (dir: string): string[] => readdirSync(join(root, dir), { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory() ? (entry.name === 'generated' ? [] : serverFiles(join(dir, entry.name))) : entry.name.endsWith('.ts') ? [join(dir, entry.name)] : []);
+    for (const file of [...serverFiles('api'), ...serverFiles('lib')]) {
+      const source = readFileSync(join(root, file), 'utf8');
+      if (file === 'lib/coding/react-runner.ts') continue;
+      for (const match of source.matchAll(/import\s+(type\s+)?[^;]*?from\s+'[^']*react-runner'|import\('[^']*react-runner'\)/g)) {
+        assert.ok(match[1], `${file} loads lib/coding/react-runner at run time; ship React's development builds with that function`);
+      }
+    }
+    console.log('PASS cold start: only the roadmap function ships the grader bundles and the compiler\'s lib files');
   }
 }
 
