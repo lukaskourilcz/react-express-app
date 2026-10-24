@@ -15,7 +15,7 @@ A Vite React SPA plus twelve Vercel functions (region `arn1`) and one Supabase p
 ## When to scale
 
 - Supabase Realtime connections and messages and database compute hit their ceilings first. Raise compute, or add retention and partitioning, under sustained load rather than at a user count.
-- Move Upstash, Sentry or PostHog to a paid tier only when their free quotas run out. Upstash runs out first: checking both rate-limit windows in one request would halve its count (`NEEDED.md`).
+- Move Upstash, Sentry or PostHog to a paid tier only when their free quotas run out. Upstash's count grows with every API request; checking both rate-limit windows in one request would halve it (`NEEDED.md`).
 - Watch Vercel Sandbox usage once React submissions become frequent.
 - If merchandise returns, raise a cap only while a month's redemptions cost less than that month's Premium income.
 
