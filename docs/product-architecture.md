@@ -665,6 +665,12 @@ shown once it has loaded.
   says why under the editor and turns Format off until the next edit. Before,
   the page formatted the whole program 350 ms after it opened and after every
   typing pause to decide whether Format was on (C02, C24).
+- **The React sandbox frame** (`client/sandbox/`, about 216 KB gzip and a
+  long task as it boots) mounts on the first Run or Submit, when the Preview
+  tab opens, or when a pointer or the focus reaches the Run and Submit row,
+  and stays for the visit. Before, it booted as a React task opened (C13). A
+  Run that arrives first waits for the frame within the run's own 20 s
+  ready budget, as a Run during the old boot did.
 - **A hidden track** (system design) is the not-found page before anything
   loads: the track page and its task addresses read no plan, progress, stars
   or run and warm no workbench (C26).
@@ -1662,7 +1668,10 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   sign-in sync, Today and a Learn map share one read and a return to the map
   reads nothing new (#587 C08, C22). Changes made in this tab come back in the
   answer that made them; one made in another tab or on another device shows
-  within the minute.
+  within the minute. A signed-in Learn map asks for the account's XP beside
+  the progress read rather than after it (#587 C08), and sets the rank marker
+  again, without a toast, once both have answered, so it counts the merged
+  learning XP as the chained reads did.
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
   every answer before the handler runs, and the public reads set their own:
   the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,

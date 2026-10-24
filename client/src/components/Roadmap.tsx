@@ -57,7 +57,7 @@ import {
 import type { PlacementReview } from '../../../shared/assessment';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
-import { announceLearnRepeat, awardLearningOutcome, syncXpWithServer } from '../lib/xp';
+import { announceLearnRepeat, awardLearningOutcome, primeRankMarker, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
 import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
@@ -499,11 +499,14 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     }
   }, [topic, ranges, progress, extraUnlocksSet, part, availability]);
 
-  // Pull account progress + XP on sign-in and merge with this device (progress
-  // first, so the merged learning XP is reflected before the XP reconcile).
+  // Pull account progress + XP on sign-in and merge with this device. The two
+  // reads leave together (perf baseline #587 C08): XP waited for progress,
+  // one round trip after it, so that the rank marker counted the merged
+  // learning XP. The marker is set again, silently, once both are in, which
+  // leaves it where the chained reads left it.
   useEffect(() => {
     if (!isAuthenticated) return;
-    syncProgressWithServer().then(() => syncXpWithServer()).catch(() => {});
+    void Promise.allSettled([syncProgressWithServer(), syncXpWithServer()]).then(() => primeRankMarker());
   }, [isAuthenticated]);
 
   // Show `next`, on the first unlocked, incomplete part of it.
