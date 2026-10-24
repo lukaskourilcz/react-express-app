@@ -472,6 +472,15 @@ export function LessonRunner({
   useEffect(() => {
     if (showingIntro) openAtTop(introTitleRef.current);
   }, [showingIntro]);
+  // The coding step (and each next task of it) takes focus like every other
+  // screen of the level: the last question's Continue that held it is gone,
+  // and focus fell to the page, so a keyboard learner started again at the
+  // site header. Its line says what the step is.
+  const codingIntroRef = useRef<HTMLParagraphElement>(null);
+  const showingCoding = codingPhase && !restart && !showingIntro && codingIndex < codingTasks.length;
+  useEffect(() => {
+    if (showingCoding) openAtTop(codingIntroRef.current);
+  }, [showingCoding, codingIndex]);
 
   // The one header row of every screen in a level (UX audit learn-03): the
   // level in the h1, progress and hearts (or the checkpoint score) on the
@@ -561,7 +570,7 @@ export function LessonRunner({
           </span>
           <Kicker style={{ marginLeft: 'auto' }}>{t('coding.lesson.kicker')} · {t('coding.lesson.counter', { n: codingIndex + 1, total: codingTasks.length })}</Kicker>
         </div>
-        <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
+        <p ref={codingIntroRef} tabIndex={-1} style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
         <div className="cd-actions">
           <a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${current.task.track}/${current.task.id}#learn=${encodeURIComponent(current.session)}`}>{t('coding.lesson.openTab')}</a>
           {user && <AxButton variant="secondary" label={t('coding.lesson.checkCompletion')} onClick={() => void checkCoding()} isDisabled={completing} />}
