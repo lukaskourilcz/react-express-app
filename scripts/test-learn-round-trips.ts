@@ -25,6 +25,10 @@ import { createServer, type IncomingMessage } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 const DELAY_MS = 40;
+/** The tier answers this much after the reads sent with it, as the reply sent
+ * a moment later does on a busy runner: a request that does not wait for its
+ * tier read then answers before the read lands, every run, not only there. */
+const TIER_LAG_MS = 5;
 type Row = Record<string, unknown>;
 interface Call { name: string; start: number; end: number }
 const calls: Call[] = [];
@@ -129,6 +133,7 @@ async function startStandIn() {
       if (rpc === 'record_roadmap_answer_v2') return send(`rpc:${rpc}`, 200, recordAnswer(args));
       if (rpc === 'complete_verified_roadmap_attempt_v2') return send(`rpc:${rpc}`, 200, completeAttempt(args));
       if (rpc === 'is_premium') {
+        await new Promise((resolve) => setTimeout(resolve, TIER_LAG_MS));
         const hook = duringTierRead;
         duringTierRead = null;
         hook?.();
@@ -406,9 +411,18 @@ try {
       const again = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
       assert.equal(again.statusCode, 200);
       PREMIUM.delete(PREMIUM_LEARNER.id);
+      // A record that opens the level without having passed it, so the
+      // request reaches the tier gate and waits for the free answer before it
+      // is refused. One refused before that gate (403) answers without waiting
+      // for the tier read it started beside the record, and that read can land
+      // while the next request runs: on a runner where the stand-in's replies
+      // fire a tick apart it was counted there (#587).
+      passedLevels(PREMIUM_LEARNER.id, 'nodejs', 9);
+      tables.roadmap_progress.find((row) => row.user_id === PREMIUM_LEARNER.id)!.extra = { unlocked: ['nodejs'] };
+      const elsewhere = await during(() => call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token));
+      assert.equal(statusOf(elsewhere), 402, JSON.stringify((elsewhere.result as ReturnType<typeof mockResponse>).body));
+      assert.equal(tierReads(elsewhere.made), 1, 'the free account is refused a new Premium level on the tier it read');
       tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
-      const elsewhere = await call('GET', { topic: 'nodejs', level: '11' }, PREMIUM_LEARNER.token);
-      assert.notEqual(elsewhere.statusCode, 200, 'the free account is refused a new Premium level');
       const forgotten = await answerOne(again.body.sessionId, 0);
       assert.deepEqual([statusOf(forgotten), tierReads(forgotten.made)], [402, 1], 'and its Premium answer is no longer trusted');
 
