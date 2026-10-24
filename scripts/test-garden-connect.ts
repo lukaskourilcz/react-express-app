@@ -473,6 +473,43 @@ async function main() {
   assert.equal(puts.filter((key) => key === queuedFile).length, 1, 'a retry writes one commit per file, not one per queued copy');
   assert.equal(retried.remaining, 0, 'the older copy is not left waiting');
 
+  //     #587 server item 28: after a committed pass the older queued rows go
+  //     out too, and nothing in the verdict reads how. Where the runtime
+  //     keeps the function alive after the answer (the request context's
+  //     waitUntil) the pass answers without waiting for them; elsewhere it
+  //     waits, as before. The pass's own status is the same either way.
+  {
+    const contextKey = Symbol.for('@vercel/request-context');
+    const holder = globalThis as unknown as Record<symbol, unknown>;
+    const queueOne = (user: string, path: string) => {
+      const id = `commit-${++commitSeq}`;
+      commitRows.set(id, { id, seq: commitSeq, user_id: user, task_id: 'js-queued', path, content: `${path} waiting\n`, message: 'm', attempts: 0, status: 'queued' });
+      return id;
+    };
+    const accountG = 'aaaaaaaa-0000-4000-8000-00000000f007';
+    table.set(accountG, { ...table.get(accountE)!, user_id: accountG, installation_id: 555_007 });
+    INSTALLATIONS[555_007] = { ...INSTALLATIONS[STRANGER_INSTALLATION], id: 555_007 };
+    const waitingG = queueOne(accountG, 'javascript/98-waiting.js');
+    const handed: Promise<unknown>[] = [];
+    holder[contextKey] = { get: () => ({ waitUntil: (promise: Promise<unknown>) => { handed.push(promise); } }) };
+    try {
+      const committed = await afterCodingPass(supabase, { userId: accountG, task, code: 'const answer = 5;', passedCount: 3, totalCount: 3, firstPass: false, codeChanged: true });
+      assert.equal(committed?.status, 'committed', 'the pass reports its own commit');
+      assert.equal(handed.length, 1, 'the retry of older rows is handed to the runtime');
+      await handed[0];
+      assert.equal(commitRows.get(waitingG)?.status, 'committed', 'and the older row still goes out');
+    } finally {
+      delete holder[contextKey];
+    }
+    const accountH = 'aaaaaaaa-0000-4000-8000-00000000f008';
+    table.set(accountH, { ...table.get(accountE)!, user_id: accountH, installation_id: 555_008 });
+    INSTALLATIONS[555_008] = { ...INSTALLATIONS[STRANGER_INSTALLATION], id: 555_008 };
+    const waitingH = queueOne(accountH, 'javascript/97-waiting.js');
+    const awaited = await afterCodingPass(supabase, { userId: accountH, task, code: 'const answer = 6;', passedCount: 3, totalCount: 3, firstPass: false, codeChanged: true });
+    assert.equal(awaited?.status, 'committed');
+    assert.equal(commitRows.get(waitingH)?.status, 'committed', 'without the hook the pass waits for the older rows, as before');
+  }
+
   // 17. A connection the database could not read is a failed garden write,
   //     never "not connected", which would ask a connected learner to connect.
   dbError = true;

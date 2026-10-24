@@ -17,6 +17,7 @@ import type { CodingGardenStatus } from '../shared/coding-api';
 import { gardenPathFor, hasLearnLevel, type CodingTask } from '../shared/coding-catalog';
 import type { GardenPassInput } from './github-garden';
 import { UpstreamTimeoutError, withTimeout } from './http';
+import { afterResponse } from './coding/after-response';
 
 const API = 'https://api.github.com';
 const USER_AGENT = 'devShark-garden';
@@ -386,7 +387,12 @@ export async function commitPassedTask(supabase: SupabaseClient, input: GardenPa
   // after this one, an older copy would put the older code back.
   await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: new Date().toISOString() }).eq('user_id', input.userId).eq('path', path).eq('status', 'queued').neq('id', row.id));
   const status = await deliver(supabase, connection, row);
-  if (status.status === 'committed') await retryQueued(supabase, input.userId, 5).catch(() => undefined);
+  // Older queued rows go out after a commit proved the connection works.
+  // Nothing in the verdict reads how that went, so where the runtime keeps
+  // the function alive after the answer (after-response.ts) the Submit no
+  // longer waits for it (#587, server item 28); elsewhere it does, as before.
+  // The pass's own status is still the delivery's, decided above.
+  if (status.status === 'committed') await afterResponse(retryQueued(supabase, input.userId, 5));
   return status;
 }
 
