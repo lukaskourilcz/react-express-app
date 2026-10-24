@@ -25,6 +25,10 @@ import { createServer, type IncomingMessage } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 const DELAY_MS = 40;
+/** The tier answers this much after the reads sent with it, as the reply sent
+ * a moment later does on a busy runner: a request that does not wait for its
+ * tier read then answers before the read lands, every run, not only there. */
+const TIER_LAG_MS = 5;
 type Row = Record<string, unknown>;
 interface Call { name: string; start: number; end: number }
 const calls: Call[] = [];
@@ -33,8 +37,9 @@ const LEARNER = { id: '0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e', email: 'learner@ex
 const PREMIUM_LEARNER = { id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f', email: 'premium@example.invalid', token: 'round-trips-premium' };
 const USERS = [LEARNER, PREMIUM_LEARNER];
 const PREMIUM = new Set([PREMIUM_LEARNER.id]);
-/** Run once while the next `is_premium` call is in flight. */
-let duringTierRead: (() => void) | null = null;
+/** Run once while the next `is_premium` call is in flight, after the stand-in
+ * read the answer; a promise it returns holds the reply until it settles. */
+let duringTierRead: (() => void | Promise<void>) | null = null;
 const tables: Record<string, Row[]> = {
   roadmap_progress: [],
   roadmap_attempts: [],
@@ -129,10 +134,12 @@ async function startStandIn() {
       if (rpc === 'record_roadmap_answer_v2') return send(`rpc:${rpc}`, 200, recordAnswer(args));
       if (rpc === 'complete_verified_roadmap_attempt_v2') return send(`rpc:${rpc}`, 200, completeAttempt(args));
       if (rpc === 'is_premium') {
+        await new Promise((resolve) => setTimeout(resolve, TIER_LAG_MS));
+        const premium = PREMIUM.has(String(args.p_user));
         const hook = duringTierRead;
         duringTierRead = null;
-        hook?.();
-        return send(`rpc:${rpc}`, 200, PREMIUM.has(String(args.p_user)));
+        await hook?.();
+        return send(`rpc:${rpc}`, 200, premium);
       }
       // Rewards and concept reviews: nothing to report.
       return send(`rpc:${rpc}`, 200, null);
@@ -406,9 +413,18 @@ try {
       const again = await call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token);
       assert.equal(again.statusCode, 200);
       PREMIUM.delete(PREMIUM_LEARNER.id);
+      // A record that opens the level without having passed it, so the
+      // request reaches the tier gate and waits for the free answer before it
+      // is refused. One refused before that gate (403) answers without waiting
+      // for the tier read it started beside the record, and that read can land
+      // while the next request runs: on a runner where the stand-in's replies
+      // fire a tick apart it was counted there (#587).
+      passedLevels(PREMIUM_LEARNER.id, 'nodejs', 9);
+      tables.roadmap_progress.find((row) => row.user_id === PREMIUM_LEARNER.id)!.extra = { unlocked: ['nodejs'] };
+      const elsewhere = await during(() => call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token));
+      assert.equal(statusOf(elsewhere), 402, JSON.stringify((elsewhere.result as ReturnType<typeof mockResponse>).body));
+      assert.equal(tierReads(elsewhere.made), 1, 'the free account is refused a new Premium level on the tier it read');
       tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
-      const elsewhere = await call('GET', { topic: 'nodejs', level: '11' }, PREMIUM_LEARNER.token);
-      assert.notEqual(elsewhere.statusCode, 200, 'the free account is refused a new Premium level');
       const forgotten = await answerOne(again.body.sessionId, 0);
       assert.deepEqual([statusOf(forgotten), tierReads(forgotten.made)], [402, 1], 'and its Premium answer is no longer trusted');
 
@@ -434,6 +450,25 @@ try {
       assert.equal(duringTierRead, null, 'the tier read was the slow one');
       const next = await answerOne((slow.result as ReturnType<typeof mockResponse>).body.sessionId, 0);
       assert.deepEqual([statusOf(next), tierReads(next.made)], [200, 1], 'a tier answered over a minute after it was asked is read again');
+
+      // A Premium answer asked before a free one, and back after it, is older
+      // news: it serves its own request and is not trusted for the next one.
+      offset += 61_000;
+      const slowSession = (slow.result as ReturnType<typeof mockResponse>).body.sessionId;
+      let release!: () => void;
+      duringTierRead = () => new Promise<void>((resolve) => { release = resolve; });
+      const held = answerOne(slowSession, 1);
+      while (duringTierRead) await new Promise((resolve) => setTimeout(resolve, 1));
+      PREMIUM.delete(PREMIUM_LEARNER.id);
+      passedLevels(PREMIUM_LEARNER.id, 'nodejs', 9);
+      tables.roadmap_progress.find((row) => row.user_id === PREMIUM_LEARNER.id)!.extra = { unlocked: ['nodejs'] };
+      const meanwhile = await during(() => call('GET', { topic: 'nodejs', level: '10' }, PREMIUM_LEARNER.token));
+      assert.deepEqual([statusOf(meanwhile), tierReads(meanwhile.made)], [402, 1], 'a free answer asked later comes back first');
+      tables.roadmap_progress = tables.roadmap_progress.filter((row) => row.user_id !== PREMIUM_LEARNER.id);
+      release();
+      assert.equal(statusOf(await held), 200, 'the held answer stands on the Premium tier it read');
+      const stale = await answerOne(slowSession, 2);
+      assert.deepEqual([statusOf(stale), tierReads(stale.made)], [402, 1], 'a Premium answer older than a free one is not trusted');
     } finally {
       Date.now = realNow;
       PREMIUM.add(PREMIUM_LEARNER.id);
