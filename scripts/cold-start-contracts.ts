@@ -10,7 +10,10 @@
  * They pin the cold-start properties the performance pass bought:
  *  - lib/coding/active.ts computes the per-task source versions on first
  *    read, not at import (server item 15), and the lazy map holds the same
- *    hashes as before. */
+ *    hashes as before;
+ *  - neither the complexity estimator nor the type-check pool loads the
+ *    TypeScript compiler at import (server item 16); the first assessment
+ *    and the in-thread fallback load it and still work. */
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -76,4 +79,26 @@ export async function coldStartContracts(): Promise<void> {
     assert.equal(CODING_SOURCE_VERSIONS.has('not-a-task'), false);
     console.log('PASS cold start: lib/coding/active.ts hashes source versions on first read, with the same values');
   }
+
+  // ── server item 16: TypeScript loads on first use, not at import ─────────
+  for (const entry of ['lib/coding/complexity.ts', 'lib/coding/ts-check-pool.ts']) {
+    const fresh = await loadFresh(entry);
+    assert.ok(!fresh.packages.includes('typescript'), `${entry} does not load the TypeScript compiler at import (${fresh.packages.join(', ')})`);
+  }
+  {
+    // The first assessment in a fresh process loads the compiler and answers
+    // as the eager import did.
+    const assessed = await loadFresh('lib/coding/complexity.ts', `(() => {
+      const report = mod.assessComplexity({ track: 'javascript', prompt: '', tests: [{ call: 'sum([1, 2, 3])', expected: 6 }] },
+        'function sum(xs) { let total = 0; for (let i = 0; i < xs.length; i++) total += xs[i]; return total; }');
+      return { time: report.time, typescript: Object.keys(require.cache).some((path) => path.includes('/node_modules/typescript/')) };
+    })()`);
+    assert.deepEqual(assessed.probe, { time: 'O(n)', typescript: true }, 'the first assessment loads TypeScript and estimates O(n)');
+    // The in-thread fallback (no worker bundle in a fresh checkout's probe,
+    // and in-thread grading allowed off a deployment) loads it too.
+    const checked = await loadFresh('lib/coding/ts-check-pool.ts', `(process.chdir(require('node:os').tmpdir()), mod.checkTypes('const n: number = 1;', [[{ code: 'const s: string = n;', rejects: true }]]).then((outcome) => ({ stopped: outcome.stopped, results: outcome.results?.length, javascript: typeof outcome.javascript })))`);
+    assert.deepEqual(checked.probe, { stopped: false, results: 1, javascript: 'string' }, 'the in-thread type check still answers');
+    console.log('PASS cold start: the complexity estimator and the type-check pool load TypeScript on first use');
+  }
+
 }
