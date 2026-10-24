@@ -35,7 +35,6 @@ import {
 } from './http';
 import { contentTier, type ContentIndex, type GatedContent, type Tier } from '../shared/tiers';
 import { EVOLVING_CHALLENGES } from '../shared/evolving';
-import { CODING_SUMMARIES } from './coding/active';
 import { ROADMAP_TOPICS, topicLevelCount } from './roadmap';
 
 export { PremiumRequiredError };
@@ -52,17 +51,68 @@ export class EntitlementUnavailableError extends Error {
   }
 }
 
+/** The issuable coding summaries, loaded when a gate first asks about a
+ * coding task. `./coding/active` evaluates the whole coding catalogue with
+ * its reference solutions and the eligibility gate (about 170 ms and 20 MB
+ * of heap, measured offline), and every importer of this module paid it at
+ * load: the wallet read on every signed-in page among them, through
+ * lib/rewards/handlers.ts (#587, server item 3). A Learn level, a learning
+ * path or the merchandise gate never reads them. A plain `require` keeps the
+ * load synchronous, as `contentTier` is, and is what @vercel/node's file
+ * tracer follows. */
+let codingSummaries: ContentIndex['coding'] | null = null;
+function loadCodingSummaries(): ContentIndex['coding'] {
+  codingSummaries ??= (require('./coding/active') as typeof import('./coding/active')).CODING_SUMMARIES;
+  return codingSummaries;
+}
+
 let index: ContentIndex | null = null;
 /** The server's `ContentIndex`: the issuable coding summaries with their
- * projected `free` flags, evolving registry, authored level counts and path manifests. */
+ * projected `free` flags (read on first use), evolving registry, authored
+ * level counts and path manifests. */
 export function serverContentIndex(): ContentIndex {
   index ??= {
     levelCounts: Object.fromEntries(ROADMAP_TOPICS.map((topic) => [topic, topicLevelCount(topic)])),
-    coding: CODING_SUMMARIES,
+    get coding() { return loadCodingSummaries(); },
     learningPaths: LEARNING_PATHS,
     evolving: EVOLVING_CHALLENGES,
   };
   return index;
+}
+
+/* Premium answers this instance read lately (#587, server item 6). A Learn
+ * level is eight answers, and each one asked is_premium again for a session
+ * issued to a Premium account a minute before: one round trip of four on
+ * every answer of a Premium level. Only the Learn answer gate trusts this
+ * (`OpenOptions.recentPremium`); every other gate, the level open and the
+ * completion included, asks the database each time. Only a Premium answer
+ * is kept, for at most a minute, and a free answer read anywhere on the
+ * instance forgets it at once. The bounded trade-off, for the owner: an
+ * account whose Premium ended keeps answering the questions of a Premium
+ * session it already holds for up to a minute on an instance that saw it
+ * Premium just before. Completing that session asks again and is refused. */
+const RECENT_PREMIUM_MS = 60_000;
+const RECENT_PREMIUM_LIMIT = 5_000;
+const recentPremium = new Map<string, number>();
+
+/** `askedAt` is when the `is_premium` call was sent, so the minute counts
+ * from the question, not from an answer that arrived late (a slow reply, or
+ * one an instance frozen after its response delivered when it thawed). */
+function notePremium(userId: string, premium: boolean, askedAt: number): void {
+  recentPremium.delete(userId);
+  if (!premium) return;
+  const until = askedAt + RECENT_PREMIUM_MS;
+  if (until <= Date.now()) return;
+  if (recentPremium.size >= RECENT_PREMIUM_LIMIT) recentPremium.delete(recentPremium.keys().next().value!);
+  recentPremium.set(userId, until);
+}
+
+function heldPremium(userId: string): boolean {
+  const until = recentPremium.get(userId);
+  if (until === undefined) return false;
+  if (until > Date.now()) return true;
+  recentPremium.delete(userId);
+  return false;
 }
 
 /** The account's tier: one `is_premium` call, remembered for the rest of the
@@ -71,13 +121,26 @@ export function serverContentIndex(): ContentIndex {
 export function resolveTier(userId: string): Promise<Tier> {
   return requestMemo(`tier:${userId}`, async () => {
     if (!supabase) return 'free';
+    const askedAt = Date.now();
     const { data, error } = await withTimeout(supabase.rpc('is_premium', { p_user: userId }));
     if (error) {
       if (isRpcMissing(error)) return 'free';
       throw new EntitlementUnavailableError();
     }
+    notePremium(userId, data === true, askedAt);
     return data === true ? 'premium' : 'free';
   });
+}
+
+/** Start the tier read for content Premium opens, without waiting for it.
+ * A handler that gates `content` once its other reads are back starts the
+ * read beside them, and `refuseLocked` then awaits the same answer, which is
+ * remembered for the request (#587, server item 6: the read was one more
+ * wave after the others). Free content and a guest cost nothing, as in
+ * `assertOpen`; a failure is answered where the gate awaits it. */
+export async function prefetchTier(userId: string | null, content: GatedContent): Promise<void> {
+  if (!userId || contentTier(content, serverContentIndex()) === 'free') return;
+  resolveTier(userId).catch(() => {});
 }
 
 export interface OpenOptions {
@@ -85,6 +148,9 @@ export interface OpenOptions {
    * tier refuses it; true keeps it open for review. A rejection answers 503
    * `entitlement_unavailable`, never 402. */
   cleared?: () => Promise<boolean>;
+  /** Accept a Premium answer this instance read within the last minute
+   * instead of asking again. Only the Learn answer gate passes it. */
+  recentPremium?: boolean;
 }
 
 /** Throws `PremiumRequiredError` when a guest, or a signed-in free account,
@@ -92,6 +158,7 @@ export interface OpenOptions {
 export async function assertOpen(userId: string | null, content: GatedContent, options: OpenOptions = {}): Promise<void> {
   if (contentTier(content, serverContentIndex()) === 'free') return;
   if (!userId) throw new PremiumRequiredError(content);
+  if (options.recentPremium && heldPremium(userId)) return;
   if ((await resolveTier(userId)) === 'premium') return;
   // A "cleared" read that failed is not a "no": answering 402 would show a
   // lapsed learner the upgrade sheet for work they passed, so it is the same

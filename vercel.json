@@ -11,8 +11,7 @@
       "includeFiles": "{lib/coding/generated/*.cjs,node_modules/typescript/lib/lib.*.d.ts}"
     },
     "api/**/*.ts": {
-      "maxDuration": 10,
-      "includeFiles": "node_modules/{typescript/lib/lib.*.d.ts,react/cjs/*.development.js,react-dom/cjs/*.development.js}"
+      "maxDuration": 10
     }
   },
   "routes": [

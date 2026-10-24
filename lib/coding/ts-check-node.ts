@@ -3,9 +3,27 @@
  * function bundle, since nothing imports them statically. */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import * as path from 'node:path';
-import * as ts from 'typescript';
+import type * as TS from 'typescript';
 import { createTypeScript, isCheckerLibFile, type TypeScriptChecker } from '../../shared/coding-ts-check';
+
+/** The compiler, loaded when the first in-thread checker is built. On a
+ * deployment the checks run on their worker thread, so the request thread that
+ * imports this module through ts-check-pool.ts never needs it there; loading it
+ * at import cost every instance of the roadmap, user and settings functions
+ * about 90 ms (#587, server item 16). Loaded synchronously, inside the call
+ * that builds the checker, so the check runs on the same stack as before.
+ *
+ * @vercel/node compiles this file to CommonJS, where the plain
+ * `require('typescript')` is what its file tracer follows. Scripts bundled as
+ * ESM have no real `require` (esbuild's stand-in has no `resolve`), so they
+ * load it from the working directory. */
+function loadTypeScript(): typeof TS {
+  return typeof require === 'function' && typeof require.resolve === 'function'
+    ? require('typescript') as typeof TS
+    : createRequire(path.join(process.cwd(), 'package.json'))('typescript') as typeof TS;
+}
 
 let checker: TypeScriptChecker | null = null;
 
@@ -57,6 +75,6 @@ export function nodeTypeScriptChecker(): TypeScriptChecker {
   const libs = Object.fromEntries(
     readdirSync(libDir).filter(isCheckerLibFile).map((name) => [name, readFileSync(path.join(libDir, name), 'utf8')]),
   );
-  checker = createTypeScript({ ts, libs });
+  checker = createTypeScript({ ts: loadTypeScript(), libs });
   return checker;
 }

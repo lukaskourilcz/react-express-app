@@ -2,7 +2,8 @@
 import './launch-test-env';
 import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
-import { handleCodingDraft, handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
+import { handleCodingDraft, handleCodingProgress, handleCodingSubmit, handleCodingReveal, handleCodingTask, JAVASCRIPT_LEVELS_SELECT } from '../lib/coding/handlers';
+import { requestMemo, withRequestContext } from '../lib/http';
 import { handleCodingBookmarks, canSaveCodingTask } from '../lib/coding/practice-handlers';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById } from '../lib/coding/active';
@@ -180,6 +181,68 @@ async function main() {
     assert.deepEqual([out.statusCode, errorCode(out.body)], [500, 'db_error'], `an unreadable draft is not answered as no draft (${JSON.stringify(out.body)})`);
     assert.ok(logged.some((line) => line.includes('"reason":"draft_unavailable"')), 'the failed draft read is logged');
   }
+  // #587 server item 9: the task page reads the account's passed ids and this
+  // task's own row, not every coding_progress row in full, and only the
+  // JavaScript levels of the roadmap row, not the whole blob. The answer is
+  // the same: ten cleared Learn levels open JavaScript tier 3, this task's
+  // progress comes back, and a passed task counts for the ladder.
+  {
+    const tierThree = CODING_TASKS.find((task) => codingTaskById(task.id) && task.track === 'javascript' && task.tier === 3 && !task.id.includes('evolving')
+      && contentTier(codingContent(task.id), serverContentIndex()) === 'free')
+      ?? CODING_TASKS.find((task) => codingTaskById(task.id) && task.track === 'javascript' && task.tier === 3 && !task.id.includes('evolving'))!;
+    const levels = Object.fromEntries(Array.from({ length: 10 }, (_, index) => [String(index + 1), { passed: true }]));
+    type Read = { table: string; columns: string; filters: Record<string, unknown>; single: boolean };
+    const reads: Read[] = [];
+    const ownRow = { task_id: tierThree.id, track: 'javascript', status: 'in_progress', passes: 0, review_stage: 0, next_review_at: null, reveal_count: 2, best_passed_at: null };
+    const progressDb = {
+      from: (table: string) => {
+        const read: Read = { table, columns: '', filters: {}, single: false };
+        const chain = {
+          select: (columns: string) => { read.columns = columns; return chain; },
+          eq: (column: string, value: unknown) => { read.filters[column] = value; return chain; },
+          maybeSingle: async () => {
+            read.single = true; reads.push(read);
+            // The stand-in answers what PostgREST would for the columns asked.
+            if (table === 'roadmap_progress') return { data: read.columns === 'data' ? { data: { javascript: { levels }, html: { levels } } } : read.columns === JAVASCRIPT_LEVELS_SELECT ? { levels } : null, error: null };
+            if (table === 'coding_progress' && read.filters.task_id === tierThree.id) return { data: ownRow, error: null };
+            return { data: null, error: null };
+          },
+          then: (resolve: (value: unknown) => unknown) => {
+            reads.push(read);
+            const rows = table === 'coding_progress' ? [{ ...ownRow }, { ...ownRow, task_id: 'js-double-numbers', status: 'passed', passes: 1 }] : [];
+            return resolve({ data: read.filters.status === 'passed' ? rows.filter((row) => row.status === 'passed').map(({ task_id, status }) => ({ task_id, status })) : rows, error: null });
+          },
+        };
+        return chain;
+      },
+    };
+    const out = response();
+    await withRequestContext({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: tierThree.id, user_id: 'account-ladder' } } as never, out as never, async () => {
+      await requestMemo('tier:account-ladder', async () => 'premium');
+      await handleCodingTask({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: tierThree.id, user_id: 'account-ladder' } } as never, out as never, progressDb as never);
+    });
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    const body = out.body as { locked: string | null; session: string | null; progress: { revealCount?: number } | null };
+    assert.equal(body.locked, null, 'ten cleared JavaScript Learn levels, read from the levels alone, open tier 3');
+    assert.ok(body.session, 'and the task page seals a session for it');
+    assert.equal(body.progress?.revealCount, 2, 'this task\'s own progress row comes back');
+    const progressReads = reads.filter((read) => read.table === 'coding_progress');
+    assert.deepEqual(progressReads.map((read) => [read.columns, read.filters, read.single]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))), [
+      ['task_id,status', { user_id: 'account-ladder', status: 'passed' }, false],
+      ['task_id,track,status,passes,review_stage,next_review_at,reveal_count,best_passed_at', { user_id: 'account-ladder', task_id: tierThree.id }, true],
+    ], 'the task page reads the passed ids and its own row, never every row in full');
+    assert.deepEqual(reads.filter((read) => read.table === 'roadmap_progress').map((read) => read.columns), [JAVASCRIPT_LEVELS_SELECT], 'only the JavaScript levels of the roadmap row are read');
+
+    reads.length = 0;
+    const listed = response();
+    await handleCodingProgress({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-ladder' } } as never, listed as never, progressDb as never);
+    assert.equal(listed.statusCode, 200, JSON.stringify(listed.body));
+    const progress = listed.body as { tasks: Record<string, unknown>; javascriptLevelsCleared: number };
+    assert.equal(progress.javascriptLevelsCleared, 10, 'coding-progress counts the cleared levels from the levels alone');
+    assert.deepEqual(Object.keys(progress.tasks).sort(), [tierThree.id, 'js-double-numbers'].sort(), 'and still lists every row the account has');
+    assert.deepEqual(reads.filter((read) => read.table === 'roadmap_progress').map((read) => read.columns), [JAVASCRIPT_LEVELS_SELECT], 'coding-progress reads only the JavaScript levels too');
+  }
+  console.log('Coding task page and coding-progress reads passed: passed ids, the own row and the JavaScript levels only, same answer (#587 item 9).');
   const other = await open('account-b');
   assert.equal(other.draft, null);
   assert.equal(other.draftUpdatedAt, null, 'no draft, no time');

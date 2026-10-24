@@ -29,14 +29,23 @@ import type {
 import type { EvidenceState, VerificationKind } from '../../shared/learning-paths';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 import type { CodingTask } from '../../shared/coding-catalog';
-import { runChecks } from '../coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from '../coding/ts-check-pool';
 import { secureShuffle } from '../quiz-runtime';
 import { codeOutcome } from '../coding/grade';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedCallTest, type MergedCode, type PathCodeSolution } from './types';
-import { solutionFor } from './solutions';
-import { solutionFor as codingSolutionFor } from '../coding/solutions';
-import { protectedPathHarness } from './harness';
+
+/* The grading material and the graders load when a code submission is
+ * graded (#587, server item 3): the path and coding reference solutions with
+ * their hidden assertions, the QuickJS sandbox and the protected harness
+ * (which parses with TypeScript). The checks, write-ups and hashes below,
+ * which the learning-path handlers import, need none of them, so the user
+ * function's enrollment and progress reads no longer evaluate them. A plain
+ * `require` keeps the lookups synchronous and is what @vercel/node's file
+ * tracer follows. */
+const pathSolutions = () => require('./solutions') as typeof import('./solutions');
+const codingSolutions = () => require('../coding/solutions') as typeof import('../coding/solutions');
+const sandbox = () => require('../coding/sandbox') as typeof import('../coding/sandbox');
+const harnesses = () => require('./harness') as typeof import('./harness');
 
 /** The share of non-critical weighted criteria a pass needs when the activity
  * does not state its own. Piloted, versioned with the rubric, and the same
@@ -259,12 +268,12 @@ function foldCriteria(
  * alone, and the hidden ones that force the intended method never ran. */
 function hiddenAssertionsFor(activity: MergedActivity): PathCodeSolution | undefined {
   if (activity.reuseTaskId) {
-    const reused = codingSolutionFor(activity.reuseTaskId);
+    const reused = codingSolutions().solutionFor(activity.reuseTaskId);
     return reused
       ? { solution: reused.solution, hiddenTests: reused.hiddenTests, hiddenTypeTests: reused.hiddenTypeTests }
       : undefined;
   }
-  return solutionFor(activity.id);
+  return pathSolutions().solutionFor(activity.id);
 }
 
 /**
@@ -325,7 +334,7 @@ export async function gradePathCodeWith(
     source = typed.javascript;
   }
 
-  const harness = code.harness ? protectedPathHarness(code.harness, [...visible, ...hidden].map(test => test.call), code.starter) : null;
+  const harness = code.harness ? harnesses().protectedPathHarness(code.harness, [...visible, ...hidden].map(test => test.call), code.starter) : null;
   // Provided APIs must exist for the starter's top-level scratch pad. Deferred
   // wrappers run once after learner declarations, before any graded call.
   const runnableSource = harness ? `${harness.before}\n;\n${source}\n;\n${harness.after}\n` : source;
@@ -333,7 +342,7 @@ export async function gradePathCodeWith(
   // learner sees. The hidden ones run in a fresh program, shuffled for this
   // submission, as in the coding section (runChecks): a program that counted
   // its calls could otherwise answer them in authored order.
-  const { visible: visibleRun, hidden: hiddenRun } = await runChecks({
+  const { visible: visibleRun, hidden: hiddenRun } = await sandbox().runChecks({
     code: runnableSource,
     runtimePolicy: code.runtimePolicy,
     visible,

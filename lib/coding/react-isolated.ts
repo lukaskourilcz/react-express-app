@@ -12,6 +12,7 @@ import { GUEST_ENV, GUEST_NODE_FLAGS, readGuestRun, type GuestInput } from './re
 import { compileReactLearner } from './react-transpile';
 import { FETCH_STUB_SOURCE } from '../../shared/coding-react-support';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
+import { afterResponse } from './after-response';
 
 // Keep operational diagnostics useful without logging learner code, SDK request
 // bodies, credentials, or arbitrary error messages.
@@ -51,6 +52,18 @@ const fixtures = () => compiledFixtureModules ??= {
   './localFetch': compileReactLearner(LOCAL_FETCH_SOURCE, false),
 };
 
+/** The grader bundle the VM runs, 2 MB, read from the deployment once per
+ * instance and reused (#587, server item 14): it is built with the
+ * deployment and cannot change under a running instance, and every Submit
+ * read it from disk again. Every run still uploads it, byte for byte. A
+ * failed read is not kept, so the next run reads again. */
+let runnerBytes: Promise<Buffer> | null = null;
+const runnerArtifact = (): Promise<Buffer> =>
+  runnerBytes ??= readFile(join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs')).catch((error) => {
+    runnerBytes = null;
+    throw runnerFailure('Artifact', error);
+  });
+
 /** No code, environment secrets, or writable state are shared between runs.
  * Authentication stays in this API process; only source + fixtures enter the
  * VM. No in-process fallback is allowed when infrastructure is unavailable.
@@ -73,9 +86,7 @@ export async function runIsolatedReactSuite(input: {
   }
   const snapshotId = process.env.REACT_RUNNER_SNAPSHOT_ID;
   if (!snapshotId) throw runnerFailure('Configuration');
-  const runner = await readFile(
-    join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'),
-  ).catch((error) => { throw runnerFailure('Artifact', error); });
+  const runner = await runnerArtifact();
   const signal = AbortSignal.timeout(22_000);
   const nonce = randomBytes(24).toString('hex');
   const compiledFixtures = fixtures();
@@ -135,8 +146,10 @@ export async function runIsolatedReactSuite(input: {
     throw runnerFailure(signal.aborted ? 'Deadline' : 'Execution', error);
   } finally {
     // A bounded cleanup call plus the VM's expiry covers lost connections too.
-    await sandbox
-      .stop({ signal: AbortSignal.timeout(2_000) })
-      .catch(() => undefined);
+    // The stop is sent now; the verdict does not wait for its answer where
+    // the runtime keeps the function alive for it (after-response.ts), so a
+    // Submit is answered a Vercel API round trip sooner (#587, server item
+    // 14). Elsewhere it is awaited here, as before.
+    await afterResponse(sandbox.stop({ signal: AbortSignal.timeout(2_000) }));
   }
 }

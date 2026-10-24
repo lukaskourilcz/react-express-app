@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { createServiceClient, jsonError, createLogger, ServiceUnavailableError, withTimeout, withRequestContext } from '../../lib/http';
 import { adminSubject, requireAdmin } from '../../lib/admin-auth';
+import { requireFreshAuth } from '../../lib/auth';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
   listAdminQuestions,
@@ -58,6 +59,10 @@ function holdsNul(value: unknown, depth = 0): boolean {
 }
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
+  // An admin is checked against Supabase Auth on every request, never against
+  // a token this instance accepted earlier (lib/auth.ts, "Accepted tokens"):
+  // a role taken away or a session ended elsewhere is refused at once.
+  requireFreshAuth(req);
   // Anti-brute-force: at most ~1 auth attempt per second per IP, small burst.
   // Runs before password check so wrong guesses count toward the budget.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.admin))) return;
