@@ -10,7 +10,7 @@
 // boundary that showed its fallback for 300 ms before it draws what arrived
 // (#587 C05). Decided once per mount, so a part never swaps one tree for the
 // other.
-import { Suspense, useState, type ComponentProps, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { Button as AxButton } from '@astryxdesign/core/Button';
 import { lazyShellPart } from '../../lib/routeRecovery';
 import { useT } from '../../i18n/LanguageContext';
@@ -66,7 +66,13 @@ export function LessonError({ message, onRetry, onExit, t, exitLabel }: { messag
 
 type ReaderModule = typeof import('./LearnLesson');
 let readerModule: ReaderModule | null = null;
-export const loadLessonReader = (): Promise<ReaderModule> => import('./LearnLesson').then((m) => (readerModule = m));
+// One import in flight at a time (the press, the reader and an earlier
+// intent all ask for it); a failed one is let go, so the next ask tries again.
+let readerLoad: Promise<ReaderModule> | null = null;
+export const loadLessonReader = (): Promise<ReaderModule> => (readerLoad ??= import('./LearnLesson').then(
+  (m) => (readerModule = m),
+  (error: unknown) => { readerLoad = null; throw error; },
+));
 export const preloadLessonReader = (): void => { loadLessonReader().catch(() => {}); };
 const LazyLearnLesson = lazyShellPart(() => loadLessonReader().then((m) => ({ default: m.LearnLesson })));
 type ReaderProps = ComponentProps<ReaderModule['LearnLesson']>;
@@ -74,11 +80,30 @@ type ReaderProps = ComponentProps<ReaderModule['LearnLesson']>;
 /** The optional reading before a level's questions. While its code loads the
  * page holds a loader, after LOADER_DELAY_MS; code that does not load says
  * the lesson could not load and still offers the questions, as a failed
- * lesson read does. */
+ * lesson read does.
+ *
+ * The code is awaited in state, not by suspending: a boundary that showed its
+ * fallback is held by React 300 ms before it draws what arrived, which made a
+ * reading open about 300 ms after its code was in (#587 C19 follow-up). Only a
+ * load that failed goes through the lazy boundary, which offers Try again
+ * (and, when the same chunk fails again, the reload) as before. */
 export function LessonReader(props: ReaderProps) {
   const t = useT();
-  const [Loaded] = useState(() => readerModule?.LearnLesson ?? null);
+  const [part, setPart] = useState<{ Loaded: ReaderModule['LearnLesson'] | null; failed: boolean }>(
+    () => ({ Loaded: readerModule?.LearnLesson ?? null, failed: false }),
+  );
+  useEffect(() => {
+    if (part.Loaded || part.failed) return;
+    let live = true;
+    loadLessonReader().then(
+      (m) => { if (live) setPart({ Loaded: m.LearnLesson, failed: false }); },
+      () => { if (live) setPart({ Loaded: null, failed: true }); },
+    );
+    return () => { live = false; };
+  }, [part]);
+  const { Loaded } = part;
   if (Loaded) return <Loaded {...props} />;
+  if (!part.failed) return <AfterLoaderDelay><LoadingScreen label={t('common.loading')} /></AfterLoaderDelay>;
   return (
     <Suspense fallback={<AfterLoaderDelay><LoadingScreen label={t('common.loading')} /></AfterLoaderDelay>}>
       <ShellPartBoundary fallback={(retry) => (

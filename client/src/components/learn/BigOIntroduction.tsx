@@ -8,7 +8,7 @@
 // is reached for (lessonParts.tsx).
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { friendlyError } from '../../lib/api';
@@ -18,6 +18,7 @@ import { computeLearningXp } from '../../lib/leveling';
 import { getCategoryHexColor } from '../../lib/categories';
 import { BigOLessons } from './BigOLessons';
 import { DelayedQuoteLoader, revealWhenReady } from './LevelLoader';
+import { prefetchLearnLesson } from './lessonQuery';
 import { LessonError, LessonReader, LessonRunner, LessonStage, loadLessonRunner, preloadLessonReader, preloadLessonRunner } from './lessonParts';
 
 const savesData = (): boolean => (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
@@ -37,6 +38,7 @@ function warmOnIntent(event: { type: string; target: EventTarget | null; nativeE
 export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active: boolean) => void } = {}) {
   const { t } = useLanguage();
   const { isAuthenticated, user } = useAuth();
+  const queryClient = useQueryClient();
   // /big-o's "Start lesson 1" opens a lesson directly (?lesson=1, UX audit
   // learn-19): the lesson's reading is the first screen, and the parameter is
   // dropped so Back and a reload land on the introduction.
@@ -58,6 +60,7 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
     if (asked === null) return;
     if (level !== null) {
       preloadLessonReader();
+      prefetchLearnLesson(queryClient, `dsa-v1-d01-l${level}`);
       preloadLessonRunner();
       before.current = computeLearningXp(getRoadmapProgress());
     }
@@ -82,6 +85,8 @@ export function BigOIntroduction({ onActiveChange }: { onActiveChange?: (active:
   });
   const open = (next: 1 | 2) => {
     preloadLessonReader();
+    // The lesson is asked for with the press, beside the reader's code.
+    prefetchLearnLesson(queryClient, `dsa-v1-d01-l${next}`);
     preloadLessonRunner();
     before.current = computeLearningXp(getRoadmapProgress());
     setGeneration((value) => value + 1);

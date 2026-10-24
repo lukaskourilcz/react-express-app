@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
-import { fetchLearnLesson } from '../../lib/roadmap';
+import { learnLessonQuery } from './lessonQuery';
 import { learnText } from '../../i18n/translations.learn';
 import { useT } from '../../i18n/LanguageContext';
 import { LessonView } from './LessonBody';
@@ -19,7 +19,8 @@ import '../paths/LearningPaths.css';
 export function LearnLesson({ lessonId, backLabel, onStart, onBack }: { lessonId: string; backLabel: string; onStart: () => void; onBack: () => void }) {
   const t = useT();
   const root = useRef<HTMLDivElement>(null);
-  const query = useQuery({ queryKey: ['learn-lesson', lessonId], queryFn: ({ signal }) => fetchLearnLesson(lessonId, signal), staleTime: 5 * 60_000, retry: false });
+  // The opener has usually started this read already (lessonQuery.ts).
+  const query = useQuery(learnLessonQuery(lessonId));
   useEffect(() => { root.current?.focus(); }, [lessonId]);
   return (
     // The root takes focus by script so a screen reader starts at the lesson;

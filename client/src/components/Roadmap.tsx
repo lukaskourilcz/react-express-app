@@ -63,6 +63,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { learnText } from '../i18n/translations.learn';
 import { LessonError, LessonReader, LessonRunner, LessonStage, loadLessonRunner, preloadLessonReader, preloadLessonRunner } from './learn/lessonParts';
+import { prefetchLearnLesson } from './learn/lessonQuery';
 import { useAuth } from '../lib/auth';
 import { accountEpoch } from '../lib/accountData';
 import { friendlyError, isPremiumRequired } from '../lib/api';
@@ -634,6 +635,8 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     setReadingLessonId(lessonId ?? null);
     if (lessonId) {
       preloadLessonReader();
+      // The lesson is asked for with the press, beside the reader's code.
+      prefetchLearnLesson(queryClient, lessonId);
       lessonAbortRef.current?.abort();
       setActive(a);
       setPlayable(null);

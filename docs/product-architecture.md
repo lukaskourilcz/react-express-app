@@ -817,7 +817,17 @@ with `LessonBody`, its code runner, the terms bar and `LearningPaths.css`,
 about 11 KB gzip), which only levels with a reading open: it loads when such
 a level opens or the learner reaches for one (`components/learn/lessonParts.tsx`,
 #587 C19). A reader whose code does not load says the lesson could not load
-and offers Try again and the questions, as a failed lesson read does.
+and offers Try again and the questions, as a failed lesson read does. The
+press that opens a reading also asks for the lesson
+(`components/learn/lessonQuery.ts`), so the read does not wait for the
+reader's code, and the reader draws from state once its code is in rather
+than by suspending, so React's 300 ms hold on a revealed boundary does not
+apply. The reader takes that read's answer: one lesson request per opening,
+none again within five minutes. A read that fails before the reader has
+drawn is asked once more when it draws (TanStack's retry on mount, as on any
+reopening after a failure), and the reader then shows the error. With the
+reader lazy and neither change, a reading opened about 0.4 s after the press
+(the 1.7 s level wait before #587 C05 had hidden it).
 
 Opening a level, a part test or the skill check draws nothing for the first
 200 ms and then the quote loader, which stays at least 400 ms once shown
