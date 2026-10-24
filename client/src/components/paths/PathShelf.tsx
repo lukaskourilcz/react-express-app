@@ -15,7 +15,7 @@ import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { useT } from '../../i18n/LanguageContext';
 import { learnText } from '../../i18n/translations.learn';
 import { useAuth } from '../../lib/auth';
-import { isBarred, useLocks } from '../../lib/locks';
+import { isBarred, useContentLocks } from '../../lib/contentLocks';
 import { entryFor, isOpen, pathHref, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
 import type { PathCatalogEntry, PathEnrollment } from '../../../../shared/learning-path-api';
 import type { LearningPathId } from '../../../../shared/learning-paths';
@@ -94,7 +94,7 @@ export default function PathShelf({ pathIds }: { pathIds: readonly LearningPathI
   const { user, isAuthenticated } = useAuth();
   const catalog = usePathCatalog();
   const enrollments = useEnrollments(isAuthenticated ? user?.id : undefined);
-  const { lockOf } = useLocks();
+  const { lockOf } = useContentLocks();
   const entries = pathIds.flatMap((pathId) => entryFor(catalog.data, pathId) ?? []);
 
   let body;

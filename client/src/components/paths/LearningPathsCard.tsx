@@ -22,7 +22,7 @@ import { useAuth } from '../../lib/auth';
 import { Kicker } from '../landing/LandingKit';
 import { useT } from '../../i18n/LanguageContext';
 import { friendlyError, isPremiumRequired } from '../../lib/api';
-import { isBarred, useLocks } from '../../lib/locks';
+import { isBarred, useContentLocks } from '../../lib/contentLocks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { lazyShellPart } from '../../lib/routeRecovery';
 import { ShellPartBoundary } from '../ShellPartBoundary';
@@ -83,7 +83,7 @@ export default function LearningPathsCard() {
   const gaps = useMemo(() => profileGapsOf(user), [user]);
   // A signed-out visitor owes nothing: there is no account to personalise yet.
   const needsProfile = isAuthenticated && gaps.length > 0;
-  const { lockOf } = useLocks();
+  const { lockOf } = useContentLocks();
 
   const fdeEntry = entryFor(catalog.data, 'fde');
 

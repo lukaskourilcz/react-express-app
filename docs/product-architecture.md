@@ -1293,7 +1293,13 @@ Premium opens through a manual grant or a voucher.
   text and opens the one `UpgradeSheet`, which leads a guest to sign-in and
   checkout. An unknown row carries no Premium mark, and the coding track page
   waits for the plan and says when it could not load. Today leaves barred
-  levels out, and the Profile shows the plan line.
+  levels out, and the Profile shows the plan line. Screens that lock no
+  coding task (the Learn map, Career, the FDE screens and cards) use
+  `useContentLocks()` (`client/src/lib/contentLocks.ts`), the same states
+  and rules over a content index without the generated coding index, whose
+  free list only a coding lock reads; its type refuses a coding task, so the
+  Learn map, Career and the FDE screens no longer download the 17 KB index
+  (#587 C11). `useLocks()` adds the coding tasks on top of it.
 
 ### Grants and vouchers
 

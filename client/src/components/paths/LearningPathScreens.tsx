@@ -19,7 +19,7 @@ import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
 import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { ApiError, friendlyError } from '../../lib/api';
-import { isBarred, useLocks } from '../../lib/locks';
+import { isBarred, useContentLocks } from '../../lib/contentLocks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { openSignIn } from '../../lib/signInDialog';
 import { SwimCta } from '../landing/LandingKit';
@@ -259,7 +259,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const { userId, isAuthenticated, catalog, entry, enrollment, enrollments, progress } = usePathState(pathId);
   const [track] = useTrack();
   const pathManifests = useMemo(() => entry ? [entry.manifest] : [], [entry]);
-  const { lockOf } = useLocks(undefined, { paths: pathManifests });
+  const { lockOf } = useContentLocks(undefined, { paths: pathManifests });
   const activityLock = useCallback((activityId: string, state: EvidenceState) =>
     state !== 'verified_pass' && state !== 'self_reviewed' && isBarred(lockOf({ kind: 'learning-path-activity', pathId, activityId })), [lockOf, pathId]);
   const [enrolling, setEnrolling] = useState(false);
@@ -668,7 +668,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const queryClient = useQueryClient();
   const { userId, isAuthenticated, catalog, entry, enrollment, enrollments, progress } = usePathState(pathId);
   const pathManifests = useMemo(() => entry ? [entry.manifest] : [], [entry]);
-  const { lockOf } = useLocks(undefined, { paths: pathManifests });
+  const { lockOf } = useContentLocks(undefined, { paths: pathManifests });
   const activityLock = useCallback((activityId: string, state: EvidenceState) =>
     state !== 'verified_pass' && state !== 'self_reviewed' && isBarred(lockOf({ kind: 'learning-path-activity', pathId, activityId })), [lockOf, pathId]);
 

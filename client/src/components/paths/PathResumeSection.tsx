@@ -17,7 +17,7 @@ import { Link } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
-import { isBarred, useLocks } from '../../lib/locks';
+import { isBarred, useContentLocks } from '../../lib/contentLocks';
 import { activityHref, entryFor, isOpen, pathProgressQuery, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
 import { isLearningPathId, type LearningPathId } from '../../../../shared/learning-paths';
 import type { PathEnrollment } from '../../../../shared/learning-path-api';
@@ -81,7 +81,7 @@ export function PathResumeSection() {
   const userId = isAuthenticated ? user?.id : undefined;
   const catalog = usePathCatalog();
   const manifests = useMemo(() => catalog.data?.paths.map(entry => entry.manifest) ?? [], [catalog.data]);
-  const { lockOf } = useLocks(undefined, { paths: manifests });
+  const { lockOf } = useContentLocks(undefined, { paths: manifests });
   const enrollments = useEnrollments(userId);
   // The server leaves out a stored enrollment of a retired path (E5, #496);
   // this guard keeps one that still arrives from costing a progress request.

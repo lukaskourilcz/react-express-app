@@ -37,7 +37,7 @@ import { readOnce, settled, useFirstData } from '../lib/routeData';
 import { useTrack, trackTopics, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { preferredLearningOf, saveLearningPreference } from '../lib/trackPref';
 import { eligibilityKeys, useInPlan, useLearnerSections } from '../lib/eligibility';
-import { useLocks } from '../lib/locks';
+import { useContentLocks } from '../lib/contentLocks';
 import { LEARN_SECTIONS } from '../../../shared/learn-sections';
 import { railEntries, sectionProgress } from './learn/sections';
 import { useFdeOpenInSettings, useFdePathSteps } from './learn/useFdePathSteps';
@@ -201,14 +201,14 @@ export default function CareerRoadmap() {
   const inPlan = useInPlan();
   const { hasPlan, members } = useLearnerSections();
   const extraUnlocks = useExtraUnlocks();
-  // Kept per structure, as on /learn: useLocks memoises its content index on
+  // Kept per structure, as on /learn: useContentLocks memoises its content index on
   // this object, and a fresh one each render rebuilt the index and lockOf.
   const levelCounts = useMemo(
     () => Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([topic, data]) => [topic, data.levels.length])),
     [structure],
   );
   const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
-  const { lockOf } = useLocks(levelCounts);
+  const { lockOf } = useContentLocks(levelCounts);
   const fde = useFdePathSteps();
   const sectionGroups = LEARN_SECTIONS.map((section) => {
     const entries = railEntries(section.id, {

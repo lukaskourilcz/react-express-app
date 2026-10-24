@@ -88,9 +88,9 @@ import { joinFde, joinSoftwareEngineer } from './learn/joinSection';
 import { useFdePathSteps } from './learn/useFdePathSteps';
 import { useMapReadsBesideHold } from './learn/mapReads';
 import { useOnline } from './learn/useOnline';
-import { isBarred, useLocks } from '../lib/locks';
+import { isBarred, useContentLocks, type NonCodingContent } from '../lib/contentLocks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
-import { gatedRef, type GatedContent } from '../../../shared/tiers';
+import { gatedRef } from '../../../shared/tiers';
 import { readJSON, readString, writeJSON, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
 import { DelayedQuoteLoader, revealWhenReady } from './learn/LevelLoader';
@@ -344,7 +344,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
     () => Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([id, one]) => [id, one.levels.length])),
     [structure],
   );
-  const { lockOf, loading: planLoading } = useLocks(levelCounts);
+  const { lockOf, loading: planLoading } = useContentLocks(levelCounts);
   const loadingStructure = structureQuery.isPending || planLoading;
   const structureError = structureQuery.error ? friendlyError(structureQuery.error) : null;
   // Topics for the active subject, in path order. The first is the default/
@@ -684,7 +684,7 @@ function Roadmap({ onActiveChange }: { onActiveChange?: (active: boolean) => voi
   };
 
   // A Premium step opens the upgrade sheet instead of a lesson.
-  const stepContent = (a: Active): GatedContent =>
+  const stepContent = (a: Active): NonCodingContent =>
     a.kind === 'level' ? { kind: 'learn-level', topic, level: a.ref } : { kind: 'learn-part-test', topic, part: a.ref };
   const openOrUpgrade = (a: Active) => {
     const content = stepContent(a);
