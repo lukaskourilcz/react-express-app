@@ -67,6 +67,7 @@ import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH }
 import { webdevBankContracts } from './webdev-bank-contract';
 import { vercelRoutingContracts } from './vercel-routing-contract';
 import { learnLessonContracts } from './learn-lesson-contract';
+import { codingBriefContracts } from './coding-brief-contract';
 import { dsaAdvancedContracts } from './dsa-advanced-contracts';
 import { applyEligibility, getEffectiveQuestions, getEffectiveQuestionsById, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
@@ -2483,6 +2484,8 @@ async function classroomLimitContracts() {
     { name: 'a Learn completion', handler: roadmapHandler, method: 'POST', query: { resource: 'complete' }, body: { sessionId: 'x' }, ...learnComplete },
     { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
     { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
+    // The caller's part of a task page alone (#587 C23) keeps the page's limits.
+    { name: 'a coding task state', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-state', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
     // A Submit's own budget is per task (owner decision 9), so it carries a
     // session for one; with no code it is refused after the limits.
     { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: encodeCodingSession({ taskId: freeTask.id, track: freeTask.track, userId: null }) }, perPerson: 30, own: 'codingSubmit', address: 'codingSubmitAddress' },
@@ -6339,6 +6342,7 @@ async function main() {
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
   await learnLessonContracts();
+  await codingBriefContracts();
   await dsaAdvancedContracts();
   consentContracts();
   classroomRevealContracts();
