@@ -83,3 +83,61 @@ describe('the plan read at start-up (C14)', () => {
     expect(loaded.queryClient.getQueryCache().getAll()).toEqual([]);
   });
 });
+
+describe('reading the plan again (C29)', () => {
+  /** The hook mounted for a signed-in account, with the app's query client. */
+  async function mountPlan() {
+    vi.resetModules();
+    vi.doMock('../src/lib/auth', () => ({ useAuth: () => ({ user: { id: 'user-a' }, isAuthenticated: true, isLoading: false }) }));
+    const entitlement = await import('../src/lib/entitlement');
+    const { queryClient } = await import('../src/lib/queryClient');
+    const { QueryClientProvider, focusManager } = await import('@tanstack/react-query');
+    const { renderHook } = await import('@testing-library/react');
+    const { createElement } = await import('react');
+    const hook = renderHook(() => entitlement.useEntitlement(), {
+      wrapper: ({ children }) => createElement(QueryClientProvider, { client: queryClient }, children),
+    });
+    return { ...entitlement, queryClient, focusManager, hook };
+  }
+  afterEach(() => {
+    vi.doUnmock('../src/lib/auth');
+    vi.useRealTimers();
+  });
+
+  it('re-reads on a tab return only once the plan is five minutes old, not after every minute', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const reads = recordPlanReads();
+    const { hook, focusManager, PLAN_FOCUS_REFRESH_MS } = await mountPlan();
+    await vi.waitFor(() => expect(hook.result.current.tier).toBe('free'));
+    expect(reads).toHaveLength(1);
+    const returnToTab = async () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    };
+    vi.setSystemTime(Date.now() + 65_000);
+    await returnToTab();
+    expect(reads).toHaveLength(1);
+    vi.setSystemTime(Date.now() + PLAN_FOCUS_REFRESH_MS);
+    await returnToTab();
+    await vi.waitFor(() => expect(reads).toHaveLength(2));
+    focusManager.setFocused(undefined);
+    hook.unmount();
+  });
+
+  it('tells the other tabs a plan that changed, and re-reads one another tab saw change', async () => {
+    const reads = recordPlanReads();
+    const { hook, PLAN_SEEN_KEY } = await mountPlan();
+    await vi.waitFor(() => expect(hook.result.current.tier).toBe('free'));
+    expect(localStorage.getItem(PLAN_SEEN_KEY)).toBe('user-a:free');
+    // Another tab read the same plan: nothing to do here.
+    window.dispatchEvent(new window.StorageEvent('storage', { key: PLAN_SEEN_KEY, newValue: 'user-a:free' }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(reads).toHaveLength(1);
+    // Another tab finished a purchase.
+    recordPlanReads('premium');
+    window.dispatchEvent(new window.StorageEvent('storage', { key: PLAN_SEEN_KEY, newValue: 'user-a:premium' }));
+    await vi.waitFor(() => expect(hook.result.current.tier).toBe('premium'));
+    hook.unmount();
+  });
+});

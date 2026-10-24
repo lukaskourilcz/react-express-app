@@ -34,11 +34,57 @@ export interface EntitlementState {
   refetch: () => void;
 }
 
+/**
+ * How old the plan may be before a tab shown again re-reads it (perf baseline
+ * #587 C29). Every return to the tab past the 60-second staleTime used to cost
+ * an Auth `getUser` and the `entitlement_summary` read. The plan changes on a
+ * purchase, a voucher, a grant, a cancellation or a lapse, and none of those
+ * waits on a tab return here: the billing pages and the voucher write or
+ * invalidate it, every refused lock and every upgrade sheet re-reads it
+ * (UpgradeSheetHost), and a plan another tab of this browser learns reaches
+ * this one at once (PLAN_SEEN_KEY below). What is left, a change made on
+ * another device, shows here within five minutes or at the next lock pressed.
+ */
+export const PLAN_FOCUS_REFRESH_MS = 5 * 60_000;
+
+/** The account and plan a tab of this browser read last, `<user id>:<tier>`.
+ * Under the app prefix, so a sign-out clears it with the account's data
+ * (lib/accountData.ts). */
+export const PLAN_SEEN_KEY = 'devshark:plan-seen';
+
+/** Tell the other tabs of this browser the plan this tab just read, when it
+ * differs from the last one any tab read: a purchase finished in one tab
+ * redraws the locks in the others without a tab return. */
+function sharePlan(userId: string, tier: Tier): void {
+  const value = `${userId}:${tier}`;
+  try {
+    if (localStorage.getItem(PLAN_SEEN_KEY) !== value) localStorage.setItem(PLAN_SEEN_KEY, value);
+  } catch {
+    // Blocked storage: the other tabs re-read on their own schedule.
+  }
+}
+
+/** Another tab read a plan that differs from what this tab holds for the
+ * same account: read it again here. */
+function onPlanSeen(event: StorageEvent): void {
+  if (event.key !== PLAN_SEEN_KEY || !event.newValue) return;
+  const cut = event.newValue.lastIndexOf(':');
+  const userId = event.newValue.slice(0, cut);
+  const tier = event.newValue.slice(cut + 1);
+  const held = queryClient.getQueryData<EntitlementResponse>(entitlementKeys.user(userId));
+  if (held && held.tier !== tier) void queryClient.invalidateQueries({ queryKey: entitlementKeys.user(userId) });
+}
+if (typeof window !== 'undefined') window.addEventListener('storage', onPlanSeen);
+
 /** One account's plan, as one set of options the hook and a page's first-data
  * prefetch share. */
 export const entitlementQuery = (userId: string) => queryOptions({
   queryKey: entitlementKeys.user(userId),
-  queryFn: ({ signal }) => fetchEntitlement(signal),
+  queryFn: async ({ signal }) => {
+    const plan = await fetchEntitlement(signal);
+    sharePlan(userId, plan.tier);
+    return plan;
+  },
   staleTime: 60_000,
 });
 
@@ -66,7 +112,9 @@ export function useEntitlement({ held = false }: { held?: boolean } = {}): Entit
   const query = useQuery({
     ...entitlementQuery(user?.id ?? 'signed-out'),
     enabled: isAuthenticated && Boolean(user),
-    refetchOnWindowFocus: true,
+    // A tab shown again re-reads a plan older than PLAN_FOCUS_REFRESH_MS
+    // (dataUpdatedAt is 0 while none was read, so a failed read is asked again).
+    refetchOnWindowFocus: (query) => Date.now() - query.state.dataUpdatedAt > PLAN_FOCUS_REFRESH_MS,
     retryOnMount: !held,
   });
   const data = isAuthenticated ? query.data ?? null : null;

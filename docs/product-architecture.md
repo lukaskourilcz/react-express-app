@@ -1593,7 +1593,16 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   `main.tsx`), for the stored session's account and only with a token
   supabase-js would hand out unchanged, so a Learn map's first-data hold finds
   it answered instead of starting it after auth has restored the user (#587
-  C14). It is the same request the header made anyway.
+  C14). It is the same request the header made anyway. A tab shown again
+  re-reads the plan only once it is five minutes old (`PLAN_FOCUS_REFRESH_MS`;
+  it was every return past the 60-second staleTime, an Auth `getUser` and an
+  `entitlement_summary` read each, #587 C29). The plan still changes at once
+  where it matters: the billing pages and the voucher write or invalidate it,
+  every refused lock and upgrade sheet re-reads it, and a tab that reads a
+  plan different from the last one this browser saw writes
+  `devshark:plan-seen` (`<user id>:<tier>`, cleared with the account's data),
+  which makes the other tabs re-read theirs. A change made on another device
+  shows within five minutes or at the next lock pressed.
 - **The sign-in report** (`POST /api/user/authevent`, the `/dev` Logs tab)
   goes once per sign-in. supabase-js also says `SIGNED_IN` for the stored
   session each time a tab is shown again; `lib/auth.tsx` remembers the
