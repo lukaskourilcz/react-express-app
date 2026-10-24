@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import { submitCoding } from '../src/coding/api';
-import { runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
+import { holdCompiler, runCodeTests, warmRunner } from '../src/coding/runner/run-tests';
 import { formatCode } from '../src/coding/runner/format';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 import { readFileSync } from 'node:fs';
@@ -19,6 +19,8 @@ vi.mock('../src/coding/runner/format', () => ({ formatCode: vi.fn(async (code: s
 vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/coding/runner/run-tests')>(),
   warmRunner: vi.fn(() => () => {}),
+  holdCompiler: vi.fn(() => () => {}),
+  compilerStarted: () => false,
   runCodeTests: vi.fn(() => new Promise(() => {})),
 }));
 
@@ -96,8 +98,57 @@ it('loads no runner while the screen waits for a bigger one, and loads it once t
   );
   expect(screen.getByText('This task works best on a bigger screen. Your code is kept.')).toBeVisible();
   expect(warmRunner).not.toHaveBeenCalled();
+  expect(holdCompiler).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Use the editor here' }));
   expect(warmRunner).toHaveBeenCalledWith('typescript');
+  // Choosing the editor is reaching for the code: the compiler loads too.
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+});
+
+// Perf baseline #587 C01: a TypeScript task downloaded the 1 MB compiler as
+// it opened, also for a learner who only read the brief. It loads once the
+// learner reaches for the code.
+it('loads the TypeScript compiler when the learner reaches for the code, not on open', () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  const typed = { ...task, track: 'typescript' as const };
+  const view = (id: string) => render(
+    <MemoryRouter><LanguageProvider>
+      <CodingWorkbench initialCode={null} task={{ ...typed, id }} session="test-session" locked={null} signedIn mode="section" />
+    </LanguageProvider></MemoryRouter>,
+  );
+  vi.mocked(holdCompiler).mockClear();
+  const pointer = view('ts-reach-pointer');
+  expect(warmRunner).toHaveBeenCalledWith('typescript');
+  expect(holdCompiler).not.toHaveBeenCalled();
+  fireEvent.pointerEnter(pointer.container.querySelector('.cd-editor-slot')!);
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+  pointer.unmount();
+
+  vi.mocked(holdCompiler).mockClear();
+  const typing = view('ts-reach-typing');
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = (): number => 2;' } });
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+  typing.unmount();
+
+  vi.mocked(holdCompiler).mockClear();
+  const keyboard = view('ts-reach-run');
+  act(() => { screen.getByRole('button', { name: 'Run' }).focus(); });
+  expect(holdCompiler).toHaveBeenCalledTimes(1);
+  keyboard.unmount();
+
+  // A JavaScript task has no compiler to load.
+  vi.mocked(holdCompiler).mockClear();
+  const plain = render(
+    <MemoryRouter><LanguageProvider>
+      <CodingWorkbench initialCode={null} task={task} session="test-session" locked={null} signedIn mode="section" />
+    </LanguageProvider></MemoryRouter>,
+  );
+  fireEvent.pointerEnter(plain.container.querySelector('.cd-editor-slot')!);
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = () => 2;' } });
+  expect(holdCompiler).not.toHaveBeenCalled();
 });
 
 // The display formatter ran 350 ms after the task opened, so a phone waiting

@@ -16,7 +16,7 @@ import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
 import { CodingCompletion, ComplexityInfo } from './CodingCompletion';
 import { formatCode } from './runner/format';
-import { runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
+import { compilerStarted, holdCompiler, runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { runtimePolicyForTask } from '../../../shared/coding-task-runtime';
 import { TYPE_CHECK_STOPPED_MESSAGE } from '../../../shared/coding-evaluate';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
@@ -221,6 +221,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // (perf baseline #587 C13). Once loaded it stays for the visit.
   const [frameWanted, setFrameWanted] = useState(false);
   const wantFrame = useCallback(() => { if (isReact) setFrameWanted(true); }, [isReact]);
+  // TypeScript's compiler (about 1 MB gzip) loads once the learner reaches
+  // for the code: a pointer or the focus in the editor or on the Run and
+  // Submit row, an edit, the first Run or Submit, or the choice of the editor
+  // on a narrow screen. It stays loaded in its own worker while the task is
+  // open (holdCompiler in runner/run-tests.ts, perf baseline #587 C01).
+  const [compilerWanted, setCompilerWanted] = useState(false);
+  const wantCompiler = useCallback(() => { if (isTypeScript) setCompilerWanted(true); }, [isTypeScript]);
+  const reachForRun = useCallback(() => { wantFrame(); wantCompiler(); }, [wantFrame, wantCompiler]);
   // What a narrow screen gets instead of an editor: the task's puzzle when it
   // has one, and an honest pending state when it does not. Neither is a pass.
   // Both offer the editor anyway, so neither is a dead end: a puzzle never
@@ -238,7 +246,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     try { sessionStorage.setItem(NARROW_EDITOR_KEY, '1'); } catch { /* the choice then lasts for this page only */ }
     focusEditorPane.current = true;
     setEditorHere(true);
-  }, []);
+    wantCompiler();
+  }, [wantCompiler]);
   // The button that made the choice is gone, so focus goes to the pane that
   // replaced it rather than back to the top of the page.
   useEffect(() => {
@@ -251,13 +260,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const taken = Math.min(hintsTaken, rungs.length);
 
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
-  // The runner, and TypeScript's compiler, load while the brief is read: the
-  // first Run does not wait for them, and Run still works if the connection
-  // drops afterwards. Not while a puzzle or the wait for a bigger screen
-  // stands in for the editor: a phone would download and start a compiler it
-  // has no Run for. Choosing the editor starts it.
+  // The runner's script loads while the brief is read: the first Run does not
+  // wait for it, and Run still works if the connection drops afterwards.
+  // TypeScript's compiler waits for the learner to reach for the code
+  // (compilerWanted above). Neither loads while a puzzle or the wait for a
+  // bigger screen stands in for the editor: a phone would download and start
+  // a runner it has no Run for. Choosing the editor starts them.
   const editorShown = !puzzleMode && !pendingOnDesktop;
   useEffect(() => (isReact || !editorShown ? undefined : warmRunner(codeTrack)), [isReact, editorShown, codeTrack]);
+  // A compiler another TypeScript task loaded is held at once: it costs no
+  // download, and the next Run finds it ready.
+  useEffect(() => (isTypeScript && editorShown && (compilerWanted || compilerStarted()) ? holdCompiler() : undefined), [isTypeScript, editorShown, compilerWanted]);
   // A Run, or a Submit's browser preview, has nowhere to report once the task
   // is left.
   useEffect(() => () => localRun.current?.abort(), []);
@@ -301,12 +314,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   }, [setSplit]);
 
   const onCodeChange = useCallback((next: string) => {
+    wantCompiler();
     setCode(next);
     onEdit?.(next);
     if (run || harness.run) setStale(true);
     if (verdict) setVerdictStale(true);
     setServerChecked(false);
-  }, [run, harness.run, verdict, onEdit]);
+  }, [run, harness.run, verdict, onEdit, wantCompiler]);
 
   const files = useCallback(() => ({ '/App.js': code, '/App.test.js': task.suite ?? '' }), [code, task.suite]);
 
@@ -315,6 +329,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     setDraftTooLarge(onDraft?.(code) === 'tooLarge');
     localRun.current?.abort();
     setPhase('running');
+    wantCompiler();
     setServerChecked(false);
     setFormatError(null);
     try {
@@ -368,6 +383,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       return;
     }
     setPhase('submitting');
+    wantCompiler();
     setSubmitError(null);
     setFormatError(null);
     // A new Submit replaces the last verdict. Left standing, the old one sat
@@ -1174,7 +1190,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const showReveal = mode !== 'landing' && Boolean(session) && !solution && !solutions;
   const showSkip = signedIn && mode === 'section' && !skipResult;
   const actionBar = (
-    <div className="cd-editor-actions" onPointerEnter={wantFrame} onFocus={wantFrame}>
+    <div className="cd-editor-actions" onPointerEnter={reachForRun} onFocus={reachForRun}>
       <div className="cd-actions cd-actions--commands">
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus
@@ -1290,7 +1306,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               whichever pane is showing. */}
           <section className="cd-pane cd-pane--editor" ref={editorPaneRef} tabIndex={-1} hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
             {!puzzleMode && !pendingOnDesktop && brief}
-            <div className="cd-editor-slot">
+            <div className="cd-editor-slot" onPointerEnter={wantCompiler} onFocus={wantCompiler}>
               {!puzzleMode && !pendingOnDesktop && editorBar}
               {/* In the frame (1024px and up) the editor takes what the brief
                   and the action bar leave and scrolls inside; stacked, it

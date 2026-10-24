@@ -8,6 +8,10 @@ import type { TaskRuntimePolicy } from '../../../../shared/coding-task-runtime';
 // becomes the grader's (shared/coding-run-realm.ts): UTC, the grader's
 // locale methods, and none of the globals the grader lacks, so Run
 // and Submit agree.
+//
+// One worker per task screen only compiles (`compileOnly`): it keeps the
+// TypeScript compiler loaded across Runs and never runs the learner's code,
+// so its realm stays the browser's (run-tests.ts, perf baseline #587 C01).
 import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../../../shared/coding-evaluate';
 import { prepareRunRealm } from '../../../../shared/coding-run-realm';
 import type { TypeTestInput } from '../../../../shared/coding-ts-check';
@@ -22,15 +26,22 @@ export interface RunnerRequest {
   calls: string[];
   expectations: unknown[] | null;
   typeTests?: TypeTestInput[];
-  /** Only load what a run would need (see warmRunner), then say so. */
+  /** Only load what a run would need (see warmRunner), then say so. With
+   * `compiler`, a TypeScript worker also loads the compiler. */
   warm?: boolean;
+  compiler?: boolean;
+  /** Type-check and transpile only, and answer `compiled` with the
+   * JavaScript; never run it (the compiler worker in run-tests.ts). */
+  compileOnly?: boolean;
 }
 
 self.onmessage = async (event: MessageEvent<RunnerRequest>) => {
   const request = event.data;
   if (request.warm) {
-    if (request.track === 'typescript') await import('./ts-compiler').catch(() => null);
-    self.postMessage({ phase: 'warm' });
+    // `ready` false: the compiler did not load, and this worker's module map
+    // keeps the failure, so the caller starts another.
+    const ready = request.track === 'typescript' && request.compiler ? Boolean(await import('./ts-compiler').catch(() => null)) : true;
+    self.postMessage({ phase: 'warm', ready });
     return;
   }
   try {
@@ -57,6 +68,11 @@ self.onmessage = async (event: MessageEvent<RunnerRequest>) => {
       // Nothing to run, but the types were checked: keep them on screen.
       if (compiled.js === null) {
         post({ phase: 'done', results: [], logs: [], codeError: compiled.transpileError, check: compiled.check });
+        return;
+      }
+      // The caller runs the JavaScript in a fresh worker of its own.
+      if (request.compileOnly) {
+        post({ phase: 'compiled', js: compiled.js, check: compiled.check });
         return;
       }
       self.postMessage({ phase: 'running' });

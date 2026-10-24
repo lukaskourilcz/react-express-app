@@ -13,7 +13,7 @@ import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
 vi.mock('../src/coding/Editor', () => ({ Editor: () => <textarea aria-label="Test editor" /> }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({ data: undefined }), submitCoding: vi.fn(), revealCoding: vi.fn(), resetCoding: vi.fn() }));
-vi.mock('../src/coding/runner/run-tests', () => ({ warmRunner: () => undefined, runCodeTests: vi.fn(), runPassed: () => false }));
+vi.mock('../src/coding/runner/run-tests', () => ({ warmRunner: () => undefined, holdCompiler: () => () => {}, compilerStarted: () => false, runCodeTests: vi.fn(), runPassed: () => false }));
 const harness = vi.hoisted(() => {
   const handle: { ready: boolean; run: HarnessRun | null; start: () => Promise<HarnessRun>; reload: () => void; iframeRef: () => void; frameKey: number } = {
     ready: true, run: null, reload: () => {}, iframeRef: () => {}, frameKey: 0,

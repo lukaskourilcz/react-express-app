@@ -665,6 +665,22 @@ shown once it has loaded.
   says why under the editor and turns Format off until the next edit. Before,
   the page formatted the whole program 350 ms after it opened and after every
   typing pause to decide whether Format was on (C02, C24).
+- **TypeScript's compiler** (about 1 MB gzip, 4 MB of JavaScript) loads
+  once the learner reaches for the code: a pointer or the focus in the editor
+  or on the Run and Submit row, an edit, the first Run or Submit, or the
+  choice of the editor on a narrow screen. It loads into one compiler worker
+  (`holdCompiler`, `client/src/coding/runner/run-tests.ts`) that stays while
+  the task is open and 30 s after (`COMPILER_KEEP_MS`), so the next
+  TypeScript task finds it. That worker only type-checks and transpiles and
+  never runs the learner's code; each Run's JavaScript still runs in a fresh
+  worker with the grader's realm, so no Run sees another's. A check that ran
+  past its 8 s, out of stack, or a compiler that did not load drops the
+  worker, as the server's type-check pool drops its thread. Before, the
+  compiler downloaded as the task opened and every Run evaluated it again in
+  a new worker (C01). Trade-off: a reader who goes offline before touching
+  the code or Run has no compiler for that Run (the runner says it could not
+  load, never a failed attempt); the runner's own script still loads while
+  the brief is read.
 - **The React sandbox frame** (`client/sandbox/`, about 216 KB gzip and a
   long task as it boots) mounts on the first Run or Submit, when the Preview
   tab opens, or when a pointer or the focus reaches the Run and Submit row,
