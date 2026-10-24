@@ -17,18 +17,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash, randomBytes } from 'node:crypto';
 import { assessComplexity } from '../coding/complexity';
 import { codingPassXp, complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
-import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
+import { codingAwardId, creditVerifiedXp, settleMilestonesAfterPass } from '../rewards/coins';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
-import { refuseLocked } from '../access';
-import { enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
+import { prefetchTier, refuseLocked, resolveTier } from '../access';
+import { enforceAddressRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../coding/grader-capacity';
-import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession } from '../quiz-tokens';
-import { createLearningPathSession, pathCodeAttemptVersion } from './session';
 import { canonicalCodingTaskId } from './coding-task-id';
 import {
   activityIn,
@@ -106,6 +104,17 @@ import { LEARN_SECTION_IDS, isLearnSectionId } from '../../shared/learn-section-
 import { MAX_ADDRESS_FIELD, MERCH_ENABLED, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
 
 const logEvent = createLogger('learning-paths');
+
+/* Loaded on first use (#587, server item 3). The attempt sessions bind a code
+ * activity to its authored and hidden material (./session through ./audit),
+ * which reads the coding catalogue with its reference solutions, the path
+ * solutions and the curation registry: most of what this module cost a fresh
+ * user-function instance before its first enrollment or progress read, which
+ * every Learn section makes for a signed-in learner. Only starting and
+ * submitting an activity need them. A plain `require` keeps each call site
+ * synchronous and is what @vercel/node's file tracer follows. */
+const attemptSessions = () => require('./session') as typeof import('./session');
+const codingCatalogue = () => require('../coding/active') as typeof import('../coding/active');
 
 const pathsAvailable = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) =>
@@ -236,10 +245,14 @@ interface ProgressRow {
   completed_at: string | null;
 }
 
-async function loadProgressRows(supabase: SupabaseClient, enrollmentId: string): Promise<ProgressRow[]> {
-  const { data, error } = await withTimeout(
-    supabase.from('learning_path_progress').select('module_id,activity_states,completed_at').eq('enrollment_id', enrollmentId),
-  );
+/** The enrollment's progress rows. With `userId`, only rows that account
+ * owns: every row carries the user_id of its enrollment's owner (the accept
+ * routines write it from the owner they checked), so for the caller's own
+ * enrollment this is the same set, and it can be read before the enrollment
+ * is proven theirs without reading anyone else's rows. */
+async function loadProgressRows(supabase: SupabaseClient, enrollmentId: string, userId?: string): Promise<ProgressRow[]> {
+  const query = supabase.from('learning_path_progress').select('module_id,activity_states,completed_at').eq('enrollment_id', enrollmentId);
+  const { data, error } = await withTimeout(userId ? query.eq('user_id', userId) : query);
   if (error) throw Object.assign(new Error('db_error'), { supabase: error });
   markStorageInstalled();
   return (data ?? []) as ProgressRow[];
@@ -313,6 +326,14 @@ function recommendedBridges(path: MergedPath, competencies: CompetencyResult[], 
 
 /* ── preference ───────────────────────────────────────────────────────── */
 
+/** The `user_metadata` of a user record Supabase Auth returned for the
+ * token, or null when the verified result carries none (lib/auth.ts's local
+ * development fallback is `{ sub }` alone). */
+function verifiedUserMetadata(payload: Record<string, unknown>): Record<string, unknown> | null {
+  const metadata = payload.user_metadata;
+  return metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? (metadata as Record<string, unknown>) : null;
+}
+
 /** GET/PUT /api/user/[op]?op=learning-preference */
 export async function handleLearningPreference(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!pathsAvailable()) return notAvailable(res);
@@ -373,13 +394,25 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
 
     // Read what the account already holds so a partial save — the Profile's
     // track toggle, which sends no profile answers — keeps the rest.
-    const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
-    // Without the saved answers a partial save would write empty goals,
-    // experience and study time over them, so nothing is written.
-    if (existingRead.error) {
-      return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
+    // The token check above already returned the account (#587, server item
+    // 23): a PUT never trusts an earlier acceptance (lib/auth.ts, "Reads
+    // only"), so `auth.payload` is Supabase Auth's answer for this very
+    // request, the same user record getUserById would fetch a moment later.
+    // Only a payload without `user_metadata` (the local development fallback)
+    // still asks the admin API.
+    const verifiedMeta = verifiedUserMetadata(auth.payload);
+    let existingMeta: Record<string, unknown>;
+    if (verifiedMeta) {
+      existingMeta = verifiedMeta;
+    } else {
+      const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
+      // Without the saved answers a partial save would write empty goals,
+      // experience and study time over them, so nothing is written.
+      if (existingRead.error) {
+        return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
+      }
+      existingMeta = (existingRead.data?.user?.user_metadata ?? {}) as Record<string, unknown>;
     }
-    const existingMeta = (existingRead.data?.user?.user_metadata ?? {}) as Record<string, unknown>;
     const existing = parseLearnerProfile(existingMeta[LEARNER_PROFILE_META_KEY])
       ?? profileFromPreference(parseLearningPreference(existingMeta[LEARNING_PREFERENCE_META_KEY]));
 
@@ -563,7 +596,8 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   }
   // Two tiers: an address backstop sized for a class behind one NAT, then the
   // learner's own bucket once the token says who they are.
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStartAddress))) return;
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  if (!(await enforceAddressRateLimit(req, res, RATE_LIMITS.learningPathStartAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStart, `user:${userId}`))) return;
@@ -577,6 +611,14 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     return jsonError(res, 400, 'bad_request', 'An activityId is required');
   }
 
+  // The enrollment names the path, but every published activity id belongs
+  // to one path, so a Premium activity's tier is asked beside the enrollment
+  // read (#587, server item 21). The plan check below still runs on the path
+  // the enrollment names, after ownership is proven; an id no path holds asks
+  // nothing ahead.
+  const requested = body.activityId;
+  const named = LEARNING_PATHS.find((one) => activityIn(one, requested));
+  if (named) void prefetchTier(userId, { kind: 'learning-path-activity', pathId: named.id, activityId: requested });
   let row: EnrollmentRow | null;
   try {
     row = await loadEnrollment(supabase, userId, body.enrollmentId);
@@ -615,7 +657,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const needsBriefReview = activity.kind === 'code' && body.previousSession !== undefined && (
     !previousAttempt || previousAttempt.userId !== userId || previousAttempt.enrollmentId !== row.enrollment_id || previousAttempt.activityId !== activity.id
     || previousAttempt.curriculumVersion !== path.version || previousAttempt.rubricVersion !== path.rubric.version
-    || previousAttempt.version !== pathCodeAttemptVersion(activity, path.rubric.version)
+    || previousAttempt.version !== attemptSessions().pathCodeAttemptVersion(activity, path.rubric.version)
   );
 
   const attemptId = newId();
@@ -654,7 +696,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const { payload } = built;
   if ('error' in payload) return jsonError(res, payload.status, payload.code, payload.message);
 
-  const session = createLearningPathSession({
+  const session = attemptSessions().createLearningPathSession({
     attemptId,
     enrollmentId: row.enrollment_id,
     userId,
@@ -829,7 +871,7 @@ async function buildActivityPayload(
  * path evidence only. */
 function reusedCode(activity: MergedActivity) {
   if (!activity.reuseTaskId) return null;
-  const task = codingTaskById(activity.reuseTaskId);
+  const task = codingCatalogue().codingTaskById(activity.reuseTaskId);
   return task ? codeFromReusedTask(task) : null;
 }
 
@@ -900,7 +942,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmitAddress))) return;
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  if (!(await enforceAddressRateLimit(req, res, RATE_LIMITS.learningPathSubmitAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
 
@@ -928,6 +971,23 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (availability(path) !== 'available') {
     return jsonError(res, 503, 'path_unavailable', 'That learning path is not open right now');
   }
+  // The plan check of a Premium activity needs the caller's tier, which does
+  // not depend on the enrollment: it is asked beside the enrollment read
+  // (#587, server item 20) and remembered for the request, so refuseLocked
+  // below reads the same answer. It is the caller's own plan, and it is used
+  // only once the enrollment is proven to be theirs.
+  void prefetchTier(userId, { kind: 'learning-path-activity', pathId: path.id, activityId: session.activityId });
+  // One read of the progress rows serves the plan check's "already passed"
+  // exception and the completion projection below. Outside a code activity
+  // (whose rows are read while the grader runs) it is issued beside the
+  // enrollment read, scoped to the caller's own rows, instead of after it
+  // (#587, server item 20): a lesson, check or artifact submit then goes from
+  // the enrollment straight to its accept call. The rows are used only once
+  // the enrollment is proven the caller's; a submit refused before that has
+  // spent the read. A failure is answered where the rows are awaited.
+  let progress: Promise<ProgressRow[]> | null = null;
+  const progressRows = () => (progress ??= loadProgressRows(supabase, session.enrollmentId, userId));
+  if (session.activityKind !== 'code') progressRows().catch(() => {});
   let enrollmentRow: EnrollmentRow | null;
   try {
     enrollmentRow = await loadEnrollment(supabase, userId, session.enrollmentId);
@@ -947,7 +1007,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const { module, activity } = found;
   if (await refuseLocked(res, userId, { kind: 'learning-path-activity', pathId: path.id, activityId: activity.id }, {
     cleared: async () => {
-      const state = stateMap(await loadProgressRows(supabase, enrollmentRow.enrollment_id)).get(activity.id);
+      const state = stateMap(await progressRows()).get(activity.id);
       return state === 'verified_pass' || state === 'self_reviewed';
     },
   })) return;
@@ -956,7 +1016,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     return jsonError(res, 409, 'session_mismatch', 'This attempt no longer matches the activity');
   }
 
-  if (activity.kind === 'code' && session.version !== pathCodeAttemptVersion(activity, path.rubric.version)) {
+  if (activity.kind === 'code' && session.version !== attemptSessions().pathCodeAttemptVersion(activity, path.rubric.version)) {
     // A response lost after an accepted write is still the recorded result,
     // even when the catalogue changed before its network retry. Read only the
     // bound attempt; never regrade it or pay its reward again.
@@ -1043,6 +1103,12 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       // recorded result.
       const done = enterInFlight(req, 'grading', { item: gradingItem.activity(path.id, activity.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${userId}`);
       if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'));
+      // The progress rows feed only the projection after grading and do not
+      // depend on it, so they are read while the grader runs (#587, server
+      // item 20). They are read before the accept call either way, and the
+      // routine decides completion again under its lock (see below). A
+      // failure is answered where the rows are awaited.
+      progressRows().catch(() => {});
       let graded;
       try {
         graded = await gradePathCode(activity, merged, body.code);
@@ -1060,8 +1126,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       score = graded.score;
       criteria = graded.criteria;
       code = graded.code;
+      // A verified pass settles the milestones after the accept call, for a
+      // Premium account only; its tier is read meanwhile.
+      if (state === 'verified_pass') resolveTier(userId).catch(() => {});
       // A reused task resolved above (merged is non-null), so its lookup holds.
-      const task = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId) : undefined;
+      const task = activity.reuseTaskId ? codingCatalogue().codingTaskById(activity.reuseTaskId) : undefined;
       complexity = assessComplexity(task ?? { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
       coding = {
         track: task?.track ?? merged.language,
@@ -1092,7 +1161,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // record, with this result folded in — the client never asserts it.
   let rows: ProgressRow[] = [];
   try {
-    rows = await loadProgressRows(supabase, session.enrollmentId);
+    rows = await progressRows();
   } catch (error) {
     if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
     return jsonError(res, 500, 'db_error', 'Could not load learning-path progress');
@@ -1198,10 +1267,22 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     state, replayed: outcome.replayed === true,
   });
   const stored = englishReplay((outcome.result ?? out) as SubmitActivityResponse);
+  // The XP coin credit and the milestone settlement are independent one-time
+  // routines (distinct event ids; only the credit takes the account's XP
+  // lock, the settlement never does), so they run together (#587, server
+  // item 20), as the wallet read already runs its settlements.
+  const rewards: Promise<unknown>[] = [];
   if (activity.kind === 'code' && stored.xpAwarded > 0 && outcome.coding?.xpKind !== 'repeat') {
-    await creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded });
+    rewards.push(creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded }));
   }
-  if (activity.kind === 'code' && stored.state === 'verified_pass') await settleMilestones(supabase,userId,'webdev');
+  // A verified pass may reach a milestone. Only a Premium account can be
+  // credited one, so a free account skips the routine (#587, server item 8).
+  if (activity.kind === 'code' && stored.state === 'verified_pass') {
+    rewards.push(settleMilestonesAfterPass(supabase, userId, 'webdev', async () => (await resolveTier(userId)) === 'premium'));
+  }
+  // Both are awaited before the answer, as they were one after the other.
+  const failed = (await Promise.allSettled(rewards)).find((one): one is PromiseRejectedResult => one.status === 'rejected');
+  if (failed) throw failed.reason;
   return res.json({ ...stored, replayed: outcome.replayed === true });
 }
 
@@ -1414,7 +1495,8 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
   // An autosave fires while the learner types, so a save is kept out of the
   // shared per-address bucket in `api/user/[op].ts`. Two tiers instead: an
   // address backstop sized for a class behind one NAT, then the learner's own.
-  if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraftAddress))) return;
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  if (req.method === 'PUT' && !(await enforceAddressRateLimit(req, res, RATE_LIMITS.learningPathDraftAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');

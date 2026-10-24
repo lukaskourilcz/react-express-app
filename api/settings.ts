@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import { jsonError, withRequestContext } from '../lib/http';
 import { getGameSettings } from '../lib/settings-store';
-import { learningPathCapability } from '../lib/learning-paths/handlers';
+import { learningPathCapability } from '../lib/learning-paths/capability';
 import { publicBillingSettings } from '../lib/billing/config';
 import { getMerchPromo } from '../lib/rewards/spreadshop';
 import { MERCH_ENABLED, merchRedemptionOpen } from '../shared/rewards';

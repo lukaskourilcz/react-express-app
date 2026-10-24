@@ -20,6 +20,7 @@ import {
   withRequestContext,
   tryAuthOnce,
   ServiceUnavailableError,
+  lazyExport,
 } from '../../lib/http';
 import { AuthError, confirmedEmail, tryAuth } from '../../lib/auth';
 import {
@@ -50,17 +51,8 @@ import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { claimOnce, enforceClassRateLimit, enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
-import { playable as playableCodingTask } from '../../lib/coding/catalog';
-import { levelCodingTasks } from '../../lib/coding/active';
-import { isLearnCodingTopic } from '../../shared/coding-catalog';
+import { isLearnCodingTopic, type CodingTask } from '../../shared/coding-catalog';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
-import { handleCodingApproaches, handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
-import {
-  handleActivityStart,
-  handleActivitySubmit,
-  handleLearningPathCatalog,
-} from '../../lib/learning-paths/handlers';
-import { createCodingSession } from '../../lib/coding/session';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
 import {
@@ -95,12 +87,66 @@ import { itemReview, contentVersion } from '../../lib/curation';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 import { conceptOf } from '../../shared/concepts';
-import { refuseLocked } from '../../lib/access';
-import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
+import { creditLearnPass, settleMilestonesAfterPass } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
 import { isBigOIntroduction, type GatedContent } from '../../shared/tiers';
 import { learnRepeatXpOf, type LearnRepeatXp } from '../../shared/repeat-xp';
 import { handleLessonRead } from '../../lib/learn-lessons/serve';
+
+// Modules only some resources need load on their first use, not with this
+// function (#587, server item 4). Statically imported, every new instance
+// evaluated the coding catalogue with its reference solutions, QuickJS and the
+// learning-path handlers (with TypeScript) before it answered a progress read
+// or a Learn answer: about 350 ms of import. The names and the dispatch lines
+// are the same as with static imports.
+const codingHandlers = () => import('../../lib/coding/handlers');
+const handleCodingApproaches = lazyExport(codingHandlers, 'handleCodingApproaches');
+const handleCodingReset = lazyExport(codingHandlers, 'handleCodingReset');
+const handleCodingReveal = lazyExport(codingHandlers, 'handleCodingReveal');
+const handleCodingSubmit = lazyExport(codingHandlers, 'handleCodingSubmit');
+const handleCodingTask = lazyExport(codingHandlers, 'handleCodingTask');
+const pathHandlers = () => import('../../lib/learning-paths/handlers');
+const handleActivityStart = lazyExport(pathHandlers, 'handleActivityStart');
+const handleActivitySubmit = lazyExport(pathHandlers, 'handleActivitySubmit');
+const handleLearningPathCatalog = lazyExport(pathHandlers, 'handleLearningPathCatalog');
+// The tier check reads an index over the coding catalogue (lib/access.ts).
+const refuseLocked = lazyExport(() => import('../../lib/access'), 'refuseLocked');
+const prefetchTier = lazyExport(() => import('../../lib/access'), 'prefetchTier');
+const resolveTier = lazyExport(() => import('../../lib/access'), 'resolveTier');
+/** What a code level seals: its coding tasks, their playable projection and
+ * one coding session each. Loaded with the level map or the first code level. */
+const learnCoding = async () => {
+  const [{ levelCodingTasks }, { playable }, { createCodingSession }] = await Promise.all([
+    import('../../lib/coding/active'),
+    import('../../lib/coding/catalog'),
+    import('../../lib/coding/session'),
+  ]);
+  return { levelCodingTasks: memoLevelTasks(levelCodingTasks), playableCodingTask: playable, createCodingSession };
+};
+
+/** `levelCodingTasks` filters every issuable task on each call, and the map
+ * asks it once per level of every code topic: about 10 ms of the map's 11 ms
+ * (#587, server item 25). The task catalogue is content fixed when the module
+ * loads, so each level's list is worked out once per instance and kept,
+ * frozen so no caller can change it for the next. */
+const levelTaskLists = new Map<string, readonly CodingTask[]>();
+function memoLevelTasks(levelCodingTasks: (topic: CodingTask['topic'], level: number) => CodingTask[]) {
+  return (topic: CodingTask['topic'], level: number): readonly CodingTask[] => {
+    const key = `${topic}:${level}`;
+    let tasks = levelTaskLists.get(key);
+    if (!tasks) {
+      tasks = Object.freeze(levelCodingTasks(topic, level));
+      levelTaskLists.set(key, tasks);
+    }
+    return tasks;
+  };
+}
+
+/** The tasks a Learn level seals, as the level map and a level open read
+ * them. Exported for the round-trip contract. */
+export async function learnLevelCodingTasks(topic: CodingTask['topic'], level: number): Promise<readonly CodingTask[]> {
+  return (await learnCoding()).levelCodingTasks(topic, level);
+}
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -119,7 +165,11 @@ const logEvent = createLogger('quiz/roadmap');
 /** The level map marks devShark code levels that end with coding tasks, so the
  * learner sees the extra work before opening the level. Counts only; the task
  * ids stay sealed in the level session. */
-function withCodingCounts(topic: string, live: RoadmapTopicStructure): RoadmapTopicStructure {
+function withCodingCounts(
+  topic: string,
+  live: RoadmapTopicStructure,
+  levelCodingTasks: (topic: CodingTask['topic'], level: number) => readonly CodingTask[],
+): RoadmapTopicStructure {
   if (!isLearnCodingTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
   return {
     ...live,
@@ -178,9 +228,10 @@ async function playableResponse(input: {
   // devShark Learn levels of the code topics carry coding tasks. Their ids are
   // sealed into the session so completion can insist on every one passing;
   // each task gets its own coding session bound to this level attempt.
-  const codingTasks = input.kind === 'level' && subject === 'webdev' && isLearnCodingTopic(input.topic)
-    ? levelCodingTasks(input.topic, input.ref)
-    : [];
+  const coding = input.kind === 'level' && subject === 'webdev' && isLearnCodingTopic(input.topic)
+    ? await learnCoding()
+    : null;
+  const codingTasks = coding && isLearnCodingTopic(input.topic) ? coding.levelCodingTasks(input.topic, input.ref) : [];
   const sessionId = encodeSession(built.answerKey, {
     scope: 'roadmap',
     subject,
@@ -199,8 +250,11 @@ async function playableResponse(input: {
   });
   // A coding link can be opened before the first question is answered.
   // Persist its parent now, with the same sealed task list and owner.
+  // The attempt id was minted a few lines up (144 random bits), so no row
+  // can hold it yet: the row is inserted without reading for it first
+  // (#587, server item 11), and only a failed insert reads it back.
   if (supabase && codingTasks.length > 0) {
-    const opened = await ensureAttempt(roadmapSession(sessionId)!, input.userId);
+    const opened = await ensureAttempt(roadmapSession(sessionId)!, input.userId, undefined, { minted: true });
     if (opened.error || !opened.data) throw new Error('Could not open the learning attempt');
   }
   return {
@@ -215,8 +269,8 @@ async function playableResponse(input: {
     ...(codingTasks.length > 0
       ? {
           coding: codingTasks.map((task) => ({
-            task: playableCodingTask(task),
-            session: createCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
+            task: coding!.playableCodingTask(task),
+            session: coding!.createCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
           })),
         }
       : {}),
@@ -567,6 +621,19 @@ async function learnerContext(
 
 type StepRequest = ProgressStep;
 
+/** Start the tier read of the step a signed-in learner asked for, beside the
+ * reads that come before its gates. `part` is the part test's number, when
+ * the request is for one; `ref` is the number asked for. A request whose
+ * number is not a step's, or that carries no token, reads nothing; a token
+ * that fails is answered by `learnerContext`. */
+async function prefetchStepTier(req: VercelRequest, topic: RoadmapTopic, part: string | undefined, ref: string | undefined): Promise<void> {
+  const n = Number.parseInt(ref ?? '', 10);
+  if (!Number.isInteger(n) || n < 1 || (part !== undefined && !isValidPart(n))) return;
+  const auth = await tryAuthOnce(req).catch(() => null);
+  if (!auth) return;
+  await prefetchTier(auth.sub, part !== undefined ? { kind: 'learn-part-test', topic, part: n } : { kind: 'learn-level', topic, level: n });
+}
+
 /** Why the server will not serve this step, or null when it will. */
 function stepRefusal(
   context: LearnerContext,
@@ -898,18 +965,28 @@ function roadmapSession(raw: unknown) {
   return session;
 }
 
+/** The attempt row of a session, inserted when no answer opened it yet.
+ * `refused`, when given, is a tier gate that runs at the same time: the read
+ * goes ahead, but nothing is inserted until the gate let the session through,
+ * and nothing at all when it refused it. `minted` says the attempt id was
+ * generated for this request, so there is no row to read before the insert. */
 async function ensureAttempt(
   session: NonNullable<ReturnType<typeof roadmapSession>>,
   userId: string | null,
+  refused?: Promise<boolean>,
+  { minted = false }: { minted?: boolean } = {},
 ) {
-  const existing = await withTimeout(
-    supabase!
-      .from('roadmap_attempts')
-      .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
-      .eq('attempt_id', session.attemptId!)
-      .maybeSingle(),
-  );
+  const existing = minted
+    ? { data: null, error: null }
+    : await withTimeout(
+      supabase!
+        .from('roadmap_attempts')
+        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
+        .eq('attempt_id', session.attemptId!)
+        .maybeSingle(),
+    );
   if (existing.error) return { error: existing.error, data: null };
+  if (!existing.data && refused && (await refused)) return existing;
   if (!existing.data) {
     const passPct = session.roadmapKind === 'level' ? LEVEL_PASS : PART_TEST_PASS;
     const inserted = await withTimeout(
@@ -980,9 +1057,13 @@ async function refuseLockedSession(
   res: VercelResponse,
   userId: string | null,
   session: NonNullable<ReturnType<typeof roadmapSession>>,
+  /** For an answer: a Premium tier this instance read in the last minute
+   * stands (lib/access.ts, #587 server item 6). A completion asks again. */
+  recentPremium = false,
 ): Promise<boolean> {
   const { content, step } = sessionContent(session);
   return refuseLocked(res, userId, content, {
+    recentPremium,
     cleared: async () => {
       if (!userId || !supabase) return false;
       const row = await withTimeout(supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle());
@@ -1029,7 +1110,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
   if (refuseForeignSession(res, session, userId)) return;
-  if (await refuseLockedSession(res, userId, session)) return;
+  if (await refuseLockedSession(res, userId, session, true)) return;
 
   const selectedIndex = Number(body.selectedIndex);
 
@@ -1115,12 +1196,17 @@ function progressStepPassed(data: unknown, session: NonNullable<ReturnType<typeo
   return steps?.[String(session.ref)]?.passed === true;
 }
 
+/** The account's verified progress row. */
+function stepRow(userId: string) {
+  return withTimeout(supabase!.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle());
+}
+
 /** The same question asked of the stored progress, or null when it cannot be
  * read (then nothing is credited: a missed credit beats paying twice for a
  * level passed before coins existed). */
 async function stepPassed(userId: string, session: NonNullable<ReturnType<typeof roadmapSession>>): Promise<boolean | null> {
   if (!supabase) return null;
-  const row = await withTimeout(supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle()).catch(() => null);
+  const row = await stepRow(userId).catch(() => null);
   if (!row || row.error) return null;
   return progressStepPassed(row.data?.data, session);
 }
@@ -1134,13 +1220,26 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
   if (refuseForeignSession(res, session, userId)) return;
-  if (await refuseLockedSession(res, userId, session)) return;
-  // The attempt row, the served question set and the graded answers are
-  // independent reads, so they run together once the session's owner is
-  // confirmed. The answers are used only after the attempt is shown to be
-  // this session's, and only when none of its questions was retired.
-  const [attemptResult, served, answers] = await Promise.all([
-    ensureAttempt(session, userId),
+  // The attempt row, the served question set, the graded answers and, on a
+  // code level, the coding rows are independent reads, so they run together
+  // once the session's owner is confirmed, and with the tier gate (#587,
+  // server item 5: the gate and the coding rows were two more waves). The
+  // gate still decides first: an attempt no answer opened is inserted only
+  // after it let the session through, and a refused session writes nothing.
+  // The answers are used only after the attempt is shown to be this
+  // session's, and only when none of its questions was retired.
+  const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
+  const readsCoding = !codingUnverified && (session.codingTaskIds?.length ?? 0) > 0;
+  const locked = refuseLockedSession(res, userId, session);
+  // A completion that is recorded settles the milestones, whose every credit
+  // sits inside IF is_premium (migration 052): for a Premium account only
+  // (#587, server item 8). The plan is read with the first reads (remembered
+  // for the request, so a Premium step's gate reads the same answer), and a
+  // plan that cannot be read settles: the routine decides.
+  const premium = userId ? resolveTier(userId).then((tier) => tier === 'premium') : null;
+  premium?.catch(() => {});
+  const reads = Promise.all([
+    ensureAttempt(session, userId, locked),
     getEffectiveQuestionsById(session.subject),
     withTimeout(
       supabase
@@ -1148,7 +1247,18 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
         .select('question_id,is_correct')
         .eq('attempt_id', session.attemptId!),
     ),
+    // Needed only when the questions passed. A failure is kept, and answered
+    // below only if they did, as when the rows were read after the grade.
+    readsCoding
+      ? withTimeout(
+        supabase.from('roadmap_attempt_coding').select('task_id,passed,verified,revealed').eq('attempt_id', session.attemptId!),
+      ).then((read) => ({ read }), (thrown: unknown) => ({ thrown }))
+      : null,
   ]);
+  // Read below; a gate that refuses leaves it unread.
+  reads.catch(() => {});
+  if (await locked) return;
+  const [attemptResult, served, answers, codingRead] = await reads;
   if (attemptResult.error || !attemptResult.data) {
     if (isRpcMissing(attemptResult.error)) {
       return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
@@ -1216,11 +1326,9 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // response says the coding was not verified; nothing is recorded for a
   // guest here, and the browser keeps the pass locally until they sign in.
   let codingPending: string[] = [];
-  const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
-  if (passed && !codingUnverified && session.codingTaskIds && session.codingTaskIds.length > 0) {
-    const codingRows = await withTimeout(
-      supabase.from('roadmap_attempt_coding').select('task_id,passed,verified,revealed').eq('attempt_id', session.attemptId!),
-    );
+  if (passed && session.codingTaskIds && codingRead) {
+    if ('thrown' in codingRead) throw codingRead.thrown;
+    const codingRows = codingRead.read;
     if (codingRows.error) return jsonError(res, 500, 'db_error', 'Could not grade the coding tasks');
     const passedIds = new Set((codingRows.data ?? [])
       .filter((row) => row.passed === true && row.verified === true && row.revealed !== true)
@@ -1256,6 +1364,37 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const reviewStates = userId && reviewSubject && reviewItems.some((item) => conceptOf(item) !== null)
     ? loadReviewStates(supabase, userId, reviewSubject)
     : null;
+  // Concept-level review state, from the answers the server itself graded.
+  //
+  // Levels are where a devShark learner spends most of their time, so leaving
+  // this out left spaced practice inert for them: nothing was ever due, and
+  // Review had nothing to offer. Recorded here rather than per answer because
+  // the interval belongs to the concept and a level asking `reduce` three times
+  // is one review of `reduce`, not three; the attempt id makes it idempotent,
+  // so a retried completion reports the stored state and changes nothing.
+  //
+  // Every answer counts as independent retrieval: a level has no hint
+  // affordance, so unlike a quiz there is nothing to downgrade. Questions left
+  // unanswered when the hearts ran out are simply absent from the graded rows
+  // and are not recorded as failures — they were not attempted.
+  //
+  // Started once the attempt is closed, beside what else follows the close
+  // (#587, server item 5), and awaited before the answer, since a function
+  // can be frozen the moment it responds.
+  let reviewsRecorded: Promise<void> | null = null;
+  const recordReviews = (): Promise<void> => {
+    reviewsRecorded ??= userId && reviewSubject && reviewStates
+      ? reviewStates.then((states) => recordConceptReviews(
+        supabase,
+        { userId, subject: reviewSubject, eventId: session.attemptId!, items: reviewItems },
+        states,
+      ))
+      : Promise.resolve();
+    // Awaited below; this keeps a failure of the request meanwhile from
+    // leaving it unhandled.
+    reviewsRecorded.catch(() => {});
+    return reviewsRecorded;
+  };
 
   let progress: unknown;
   let applied = false;
@@ -1270,6 +1409,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       );
       if (closed.error) return jsonError(res, 500, 'db_error', 'Could not close the learning attempt');
       applied = true;
+      recordReviews();
       // A Learn level counts for the streak whether it was passed, failed or
       // lost on hearts. complete_verified_roadmap_attempt advances the streak
       // for the other two; this attempt closes without it, so the day is
@@ -1282,7 +1422,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
             logEvent({ status: 500, kind: 'streak_failed', reason: streak?.error?.code ?? 'timeout' });
           }
         } else {
-          await settleMilestones(supabase, userId, session.subject!);
+          await settleMilestonesAfterPass(supabase, userId, session.subject!, () => premium!);
         }
       }
     }
@@ -1328,26 +1468,54 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     // XP only: a repeat credits no coins and is no first pass.
     repeatXp = typeof outcome === 'object' && outcome !== null ? learnRepeatXpOf(outcome.repeatXp) : null;
     const firstPass = typeof outcome === 'object' && outcome !== null ? outcome.firstPass === true : passedBefore === false;
-    const row = await withTimeout(
-      supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
-    );
-    if (row.error) return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
+    // What follows a recorded completion ran one call after another: the
+    // reload, the coin credit, the referral, the milestones and the concept
+    // reviews (#587, server item 5). Only the reload feeds the answer, and
+    // each routine is idempotent under its own event id, so they run as
+    // three branches at once: the reload, then the first pass's coin and
+    // referral credits together (both read the reloaded record); the
+    // milestone settlement; the concept reviews. The settlement and the
+    // reviews read nothing the credits write that this answer reports.
+    //
+    // A completed level or part test is a streak day from migration 048, passed
+    // or not, and the last level of a topic is a Premium milestone.
+    const settled = applied ? settleMilestonesAfterPass(supabase, userId, session.subject!, () => premium!) : null;
+    settled?.catch(() => {});
+    recordReviews();
+    const followers = () => Promise.allSettled([settled, reviewsRecorded]);
+    let row: Awaited<ReturnType<typeof stepRow>>;
+    try {
+      row = await stepRow(userId);
+    } catch (error) {
+      await followers();
+      throw error;
+    }
+    if (row.error) {
+      await followers();
+      return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
+    }
     progress = sanitize(row.data?.data);
     if (applied && firstPass && progressStepPassed(row.data?.data, session)) {
-      await creditLearnPass(supabase, {
+      const coins = creditLearnPass(supabase, {
         userId,
         subject: session.subject!,
         topic: session.topic!,
         kind: session.roadmapKind!,
         ref: session.ref!,
       });
-      // A friend's first passed Learn level pays both sides of an invitation
-      // once; the routine reads the verified progress itself (#228).
-      await creditReferral(supabase, userId, session.subject!);
+      coins.catch(() => {});
+      try {
+        // A friend's first passed Learn level pays both sides of an invitation
+        // once; the routine reads the verified progress itself (#228). It
+        // runs while the coin credit does.
+        await creditReferral(supabase, userId, session.subject!);
+        await coins;
+      } catch (error) {
+        await followers();
+        throw error;
+      }
     }
-    // A completed level or part test is a streak day from migration 048, passed
-    // or not, and the last level of a topic is a Premium milestone.
-    if (applied) await settleMilestones(supabase, userId, session.subject!);
+    await settled;
   } else if (!attempt.completed_at) {
     await withTimeout(
       supabase.from('roadmap_attempts').update({ completed_at: new Date().toISOString() }).eq('attempt_id', session.attemptId!),
@@ -1355,26 +1523,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     applied = true;
   }
 
-  // Concept-level review state, from the answers the server itself graded.
-  //
-  // Levels are where a devShark learner spends most of their time, so leaving
-  // this out left spaced practice inert for them: nothing was ever due, and
-  // Review had nothing to offer. Recorded here rather than per answer because
-  // the interval belongs to the concept and a level asking `reduce` three times
-  // is one review of `reduce`, not three; the attempt id makes it idempotent,
-  // so a retried completion reports the stored state and changes nothing.
-  //
-  // Every answer counts as independent retrieval: a level has no hint
-  // affordance, so unlike a quiz there is nothing to downgrade. Questions left
-  // unanswered when the hearts ran out are simply absent from the graded rows
-  // and are not recorded as failures — they were not attempted.
-  if (userId && reviewSubject && reviewStates) {
-    await recordConceptReviews(
-      supabase,
-      { userId, subject: reviewSubject, eventId: session.attemptId!, items: reviewItems },
-      await reviewStates,
-    );
-  }
+  await recordReviews();
 
   logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts, repeatXp: repeatXp?.xp ?? null });
   return res.json({
@@ -1401,6 +1550,28 @@ async function handleAttemptStatus(req: VercelRequest, res: VercelResponse) {
   if (!attempt.data || !attemptMatches(attempt.data, session, userId) || Date.parse(attempt.data.expires_at) <= Date.now()) return jsonError(res, 409, 'invalid_session', 'This learning attempt expired. Start the lesson again.');
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({ completed: Boolean(attempt.data.completed_at), coding: (coding.data ?? []).filter(row => session.codingTaskIds?.includes(String(row.task_id))).map(row => ({ taskId: String(row.task_id), passed: row.passed === true && row.verified === true && row.revealed !== true, revealed: row.revealed === true })) });
+}
+
+/* ──── the learning-path catalogue in the CDN ───────────────────────────── */
+
+/** The FDE catalogue is the same for every caller: the published manifests,
+ * their versions and each path's availability, which follows the
+ * deployment's switch and this instance's storage check, never the caller's
+ * token or address (lib/learning-paths/handlers.ts). Its handler answers
+ * `public, max-age=60, stale-while-revalidate=600` without s-maxage, which
+ * kept it out of the Vercel CDN, so every browser miss ran this function and
+ * sent about 30 KB gzip (#587, server item 12). The router lets the CDN share
+ * it for five minutes, as the Learn map is shared for one; browsers keep
+ * their minute. Bounded trade-off: an availability flip after a deploy (a
+ * storage migration found missing by one instance) reaches every browser up
+ * to five minutes later. Only the handler's public header is replaced; a
+ * refusal keeps the private default of withRequestContext. */
+export const LEARNING_PATH_CATALOG_CACHE = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600';
+function shareCatalogWithCdn(res: VercelResponse): VercelResponse {
+  const setHeader = res.setHeader.bind(res);
+  res.setHeader = ((name: string, value: number | string | readonly string[]) =>
+    setHeader(name, name.toLowerCase() === 'cache-control' && /^public\b/.test(String(value)) ? LEARNING_PATH_CATALOG_CACHE : value)) as typeof res.setHeader;
+  return res;
 }
 
 /* ──── handler ──────────────────────────────────────────────────────────── */
@@ -1436,7 +1607,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   //   POST ?resource=learning-path-submit  → server grading and the recorded evidence
   if (resource.startsWith('learning-path-')) {
     try {
-      if (resource === 'learning-path-catalog') return await handleLearningPathCatalog(req, res);
+      if (resource === 'learning-path-catalog') return await handleLearningPathCatalog(req, shareCatalogWithCdn(res));
       if (resource === 'learning-path-start') return await handleActivityStart(req, res, supabase);
       if (resource === 'learning-path-submit') return await handleActivitySubmit(req, res, supabase);
       return jsonError(res, 404, 'not_found', 'Unknown learning-path resource');
@@ -1568,7 +1739,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // The same for everyone, so only the address tier: verifying a token
     // here would cost a round trip the map never needed.
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
-    const byId = await getEffectiveQuestionsById();
+    const [byId, { levelCodingTasks }] = await Promise.all([getEffectiveQuestionsById(), learnCoding()]);
     const exists = (id: string) => byId.has(id);
     const topics = deploymentSubjectIds().flatMap((subject) => [...SUBJECT_SCOPE_CATALOG[subject].topics]);
     const topicSet = new Set<string>(topics);
@@ -1576,7 +1747,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       Object.entries(liveRoadmapStructure(exists))
         .filter(([topic]) => topicSet.has(topic))
         .map(([topic, live]) => {
-          const withCounts = withCodingCounts(topic, live);
+          const withCounts = withCodingCounts(topic, live, levelCodingTasks);
           const unavailableParts = unavailablePartsOf(withCounts.levels);
           return [topic, unavailableParts.length > 0 ? { ...withCounts, unavailableParts } : withCounts];
         }),
@@ -1598,7 +1769,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // step branches below. A guest has neither, and takes the preview path.
   // The served question set does not depend on who asks, so it loads at the
   // same time instead of waiting for the record.
-  const [learner, byId] = await Promise.all([learnerContext(req, res), getEffectiveQuestionsById(subject)]);
+  // The tier of a Premium step is read with them too (#587, server item 6),
+  // for the gate below, which still decides only after the progression one.
+  const [learner, byId] = await Promise.all([
+    learnerContext(req, res),
+    getEffectiveQuestionsById(subject),
+    prefetchStepTier(req, topic, testRaw ?? checkpointRaw, testRaw ?? checkpointRaw ?? levelRaw),
+  ]);
   if (learner === undefined) return;
   const exists = (id: string) => byId.has(id);
   const live = buildLiveTopic(topic, exists);

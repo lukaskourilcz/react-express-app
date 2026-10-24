@@ -358,6 +358,8 @@ const IDLE_WORKERS = 2;
 
 const idleWorkers: Worker[] = [];
 const slots = threadSlots({ threads: MAX_WORKERS, waiting: SANDBOX_MAX_WAITING, waitMs: SANDBOX_SLOT_WAIT_MS, name: 'sandbox' });
+/** Runs holding a slot now, warm-ups (`warmSandbox`) excluded. */
+let running = 0;
 const boot = bootBackoff();
 let workerFile: string | null | undefined;
 
@@ -472,6 +474,7 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
     throw new GraderBusyError('sandbox_worker_missing', 30);
   }
   await slots.acquire();
+  running++;
   try {
     const pause = idleWorkers.length === 0 ? boot.pause() : 0;
     if (pause > 0) {
@@ -486,9 +489,49 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
     if (inThreadGradingAllowed()) return runInQuickJS(input);
     throw new GraderBusyError(error.message, boot.pause() / 1000);
   } finally {
+    running--;
     slots.release();
   }
 }
+
+/* ── warming a thread ahead of the first Submit ──────────────────────── */
+
+let warming: Promise<void> | null = null;
+/** An empty program: loading QuickJS in a thread is what a warm-up is for. */
+const WARM_INPUT: SandboxInput = { code: '', calls: [], expectations: [] };
+
+/**
+ * Load one grader thread ahead of a Submit (#587, server item 30). A new
+ * thread loads QuickJS on its first run, which made the first Submit on an
+ * instance about 70 ms slower than the next (measured offline). A coding task
+ * page calls this as it answers; the thread runs an empty program and stays
+ * loaded among the idle ones, as any thread does after a run.
+ *
+ * Only when nothing would use it otherwise: no thread is loaded or being
+ * warmed, no run holds a slot, the worker bundle is there and no failed start
+ * is pausing new threads. It takes a slot like a run, so it never adds a
+ * thread beyond MAX_WORKERS, and a warm-up that fails is not counted as a
+ * failed start: the next run tries a thread of its own and decides that. No
+ * learner code is involved, and each run still gets a fresh QuickJS runtime
+ * and context. The cost is one idle thread on an instance that served a task
+ * page but never grades.
+ */
+export function warmSandbox(): void {
+  if (warming || running > 0 || idleWorkers.length > 0 || boot.pause() > 0) return;
+  const file = sandboxWorkerFile();
+  if (!file) return;
+  warming = (async () => {
+    await slots.acquire();
+    try {
+      if (running === 0 && idleWorkers.length === 0) await runOnWorker(file, WARM_INPUT);
+    } finally {
+      slots.release();
+    }
+  })().then(() => undefined, () => undefined).finally(() => { warming = null; });
+}
+
+/** The pool as tests and diagnostics see it. */
+export const sandboxPool = (): { idle: number; warming: boolean } => ({ idle: idleWorkers.length, warming: warming !== null });
 
 /** Runs one program in this thread. The worker entry calls this; everything
  * else goes through `runInSandbox`. */

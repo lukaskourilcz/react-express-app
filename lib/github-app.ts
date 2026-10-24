@@ -386,6 +386,14 @@ export async function commitPassedTask(supabase: SupabaseClient, input: GardenPa
   // after this one, an older copy would put the older code back.
   await withTimeout(supabase.from('github_commits').update({ status: 'skipped', updated_at: new Date().toISOString() }).eq('user_id', input.userId).eq('path', path).eq('status', 'queued').neq('id', row.id));
   const status = await deliver(supabase, connection, row);
+  // Older queued rows go out after a commit proved the connection works, and
+  // the Submit waits for them. Handing this retry to the runtime after the
+  // answer (#587, server item 28) was tried and undone: deliver() claims no
+  // row, so a Sync pressed on the verdict, or the next pass of one of those
+  // files, would then run beside a retry still writing. Two deliveries of
+  // one row race on its sha and can turn a committed row back to queued,
+  // and a retry that lands after a newer pass of the same file puts the
+  // older code back, which the skip above exists to prevent.
   if (status.status === 'committed') await retryQueued(supabase, input.userId, 5).catch(() => undefined);
   return status;
 }

@@ -19,7 +19,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
-import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
+import { isRpcMissing, jsonError, createLogger, requireAuthResult, requireAuthSub, withTimeout } from '../http';
 import { getGameSettings } from '../settings-store';
 import { adminSubject, requireAdmin } from '../admin-auth';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
@@ -27,9 +27,10 @@ import { deploymentSubjectIds } from '../product-scope';
 import { refuseLocked } from '../access';
 import { isScopeSubject } from '../../shared/subject-catalog';
 import { settleFinishedMonth, settleMilestones, type MilestoneReport } from './coins';
-import { creditReferral } from './referral';
+import { accountCreatedAt, creditReferral, type ReferralCreditStatus } from './referral';
 import {
   MERCH_ENABLED,
+  REFERRAL_SIGNUP_WINDOW_HOURS,
   crownAvailable,
   streakProtectionAvailable,
   STREAK_PROTECTION_CAP,
@@ -69,6 +70,77 @@ function walletSubject(req: VercelRequest): string | null {
   return allowed[0] ?? null;
 }
 
+/* ── settlements this instance has seen final (#587, server item 7) ──── */
+
+/**
+ * A wallet read runs four one-time routines before it reads the balance. Two
+ * of them reach a state no later call can change, and a warm instance that
+ * has seen that state skips them for the account, for at most
+ * SETTLED_TTL_MS. The database stays the authority: a miss only costs the
+ * call, and nothing here ever grants.
+ *
+ *  - The welcome grant is one ledger event per account (`signup:<account>`,
+ *    migration 028). Once `grant_signup_tokens` answered true (granted now)
+ *    or false (already in the ledger), every later call answers false and
+ *    credits nothing.
+ *  - The account's own invitation (`credit_referral`, migration 042) is
+ *    settled for good once it answers `already`, `credited`, `capped` or
+ *    `orphaned` (the referral row's `credited_at` is set and never cleared
+ *    while the account exists). `none` (no invitation) is final only when
+ *    `record_referral` can no longer bind one: it refuses an account older
+ *    than REFERRAL_SIGNUP_WINDOW_HOURS by the creation time Auth reported, or
+ *    one Auth reported none for. An hour of margin covers clock skew.
+ *    `waiting` and `off` are asked again every time.
+ *
+ * The bound, for the owner: the rows behind these answers disappear only
+ * with the account (`delete_user_data`). Should an erasure remove them while
+ * the sign-in identity survives (the deletion's Auth step failed), this
+ * instance would skip a welcome grant the database would pay again, for at
+ * most ten minutes. Keyed by account id, at most SETTLED_LIMIT entries per
+ * map, the oldest dropped first.
+ */
+const SETTLED_TTL_MS = 10 * 60_000;
+const SETTLED_LIMIT = 5_000;
+const REFERRAL_WINDOW_MARGIN_MS = 60 * 60_000;
+const welcomeSettled = new Map<string, number>();
+const referralSettled = new Map<string, number>();
+const FINAL_REFERRAL: ReadonlySet<ReferralCreditStatus> = new Set(['already', 'credited', 'capped', 'orphaned']);
+
+function seenSettled(map: Map<string, number>, userId: string, now = Date.now()): boolean {
+  const until = map.get(userId);
+  if (until === undefined) return false;
+  if (until > now) return true;
+  map.delete(userId);
+  return false;
+}
+
+function rememberSettled(map: Map<string, number>, userId: string, now = Date.now()): void {
+  map.delete(userId);
+  while (map.size >= SETTLED_LIMIT) map.delete(map.keys().next().value!);
+  map.set(userId, now + SETTLED_TTL_MS);
+}
+
+/** Whether `credit_referral`'s answer can never change for this account. */
+export function referralFinal(status: ReferralCreditStatus | null, createdAt: string | null, now = Date.now()): boolean {
+  if (status === null) return false;
+  if (FINAL_REFERRAL.has(status)) return true;
+  if (status !== 'none') return false;
+  if (createdAt === null) return true;
+  return Date.parse(createdAt) < now - REFERRAL_SIGNUP_WINDOW_HOURS * 3_600_000 - REFERRAL_WINDOW_MARGIN_MS;
+}
+
+/** Forget what this instance remembered, for one account or for all: the
+ * contracts use it. */
+export function forgetWalletSettlements(userId?: string): void {
+  if (userId === undefined) {
+    welcomeSettled.clear();
+    referralSettled.clear();
+    return;
+  }
+  welcomeSettled.delete(userId);
+  referralSettled.delete(userId);
+}
+
 /* ── GET/POST ?op=wallet ───────────────────────────────────────────────── */
 
 /**
@@ -86,8 +158,9 @@ function walletSubject(req: VercelRequest): string | null {
  * is idempotent, so reading twice credits nothing.
  */
 export async function handleWallet(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
-  const userId = await requireAuthSub(req, res);
-  if (!userId) return;
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
+  const userId = auth.sub;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
   const subject = walletSubject(req);
   if (!subject) return jsonError(res, 400, 'bad_request', 'Unknown subject');
@@ -95,8 +168,10 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
   if (req.method === 'GET') {
     const settings = await getGameSettings();
     const coins = settings.coins;
-    const [welcome, , milestones] = await Promise.all([
-      coins.welcomeGrant > 0
+    // A routine this instance has seen final for the account is skipped
+    // (see "settlements this instance has seen final" above).
+    const [welcome, , milestones, referral] = await Promise.all([
+      coins.welcomeGrant > 0 && !seenSettled(welcomeSettled, userId)
         ? withTimeout(
             supabase.rpc('grant_signup_tokens', { p_user_id: userId, p_subject: subject, p_amount: coins.welcomeGrant }),
           ).catch(() => null)
@@ -105,9 +180,11 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
       settleMilestones(supabase, userId, subject),
       // An invitation whose first level was passed outside a Learn completion
       // (or whose credit failed there) settles here (#228).
-      creditReferral(supabase, userId, subject),
+      seenSettled(referralSettled, userId) ? Promise.resolve(null) : creditReferral(supabase, userId, subject),
     ]);
     if (welcome?.error && isRpcMissing(welcome.error)) return migrationRequired(res);
+    if (welcome && !welcome.error && typeof welcome.data === 'boolean') rememberSettled(welcomeSettled, userId);
+    if (referralFinal(referral, accountCreatedAt(auth.payload))) rememberSettled(referralSettled, userId);
 
     const [balance, entries, cosmetics] = await Promise.all([
       withTimeout(supabase.from('token_balances').select('balance').eq('user_id', userId).eq('subject', subject).maybeSingle()),

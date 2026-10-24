@@ -25,6 +25,7 @@
 import { isIP } from 'node:net';
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { jsonError, ServiceUnavailableError, verifiedCallerId } from './http';
+import { getBearer } from './auth';
 
 interface Bucket {
   tokens: number;
@@ -460,6 +461,74 @@ export async function enforceRateLimit(
 /* Two tiers for a class behind one address                                   */
 /* -------------------------------------------------------------------------- */
 
+/* The caller's token is checked while the address bucket answers (#587,
+ * server item 2). The prelude used to be three round trips in series, the
+ * address bucket, Supabase Auth, the account bucket, before any handler work;
+ * for a Learn answer that was three of its four. The address bucket still
+ * decides first: the account bucket is taken only after it admitted the
+ * request, and a refused request answers 429 whatever the token check says.
+ *
+ * What the old order also bought was that an address flood refused by its
+ * bucket never reached Supabase Auth. That holds again after the first
+ * refusal: an address its bucket refused on this instance has its token
+ * checked only after the bucket admits it, for a minute
+ * (REFUSED_ADDRESS_HOLD_MS). Until that first refusal every request was
+ * admitted, and was checked under the old order too. A read whose token
+ * Auth accepted is not asked again for a minute either (lib/auth.ts). */
+const REFUSED_ADDRESS_HOLD_MS = 60_000;
+const REFUSED_ADDRESS_LIMIT = 10_000;
+const refusedAddresses = new Map<string, number>();
+
+/** Start the caller's token check now, unless there is no token or this
+ * address was refused by `address` lately; null when it waits. */
+function callerCheckDuringAddressBucket(req: VercelRequest, address: RateLimitConfig): Promise<string | null> | null {
+  if (!getBearer(req)) return null;
+  const key = `${address.key}:${clientIp(req)}`;
+  const until = refusedAddresses.get(key);
+  if (until !== undefined) {
+    if (until > Date.now()) return null;
+    refusedAddresses.delete(key);
+  }
+  return verifiedCallerId(req);
+}
+
+function noteAddressRefused(req: VercelRequest, address: RateLimitConfig): void {
+  const now = Date.now();
+  if (refusedAddresses.size >= REFUSED_ADDRESS_LIMIT) {
+    for (const [key, until] of refusedAddresses) if (until <= now) refusedAddresses.delete(key);
+    while (refusedAddresses.size >= REFUSED_ADDRESS_LIMIT) refusedAddresses.delete(refusedAddresses.keys().next().value!);
+  }
+  refusedAddresses.set(`${address.key}:${clientIp(req)}`, now + REFUSED_ADDRESS_HOLD_MS);
+}
+
+/** The address tier, with the caller's token checked meanwhile: the verified
+ * caller's id (null for none) once the address bucket admitted the request,
+ * or `false` after it sent the 429. */
+async function admitAddressThenCaller(req: VercelRequest, res: VercelResponse, address: RateLimitConfig): Promise<string | null | false> {
+  const caller = callerCheckDuringAddressBucket(req, address);
+  if (!(await enforceRateLimit(req, res, address))) {
+    noteAddressRefused(req, address);
+    return false;
+  }
+  return caller ?? verifiedCallerId(req);
+}
+
+/**
+ * The address tier of a route whose handler checks the caller and takes the
+ * caller's own bucket itself (a coding Submit, a learning-path start, submit
+ * or draft save): the same bucket as `enforceRateLimit(req, res, address)`,
+ * with the caller's token checked while it answers, as in
+ * `enforceClassRateLimit`. The check is remembered for the request, so the
+ * handler's `requireAuthSub` or `verifiedCallerId` reads it instead of asking
+ * Supabase Auth after the bucket (#587, server item 2). A refused request
+ * answers 429 whatever the token says, and an address refused on this
+ * instance has its token checked only after the bucket admits it, for a
+ * minute. Returns false after sending the 429.
+ */
+export async function enforceAddressRateLimit(req: VercelRequest, res: VercelResponse, address: RateLimitConfig): Promise<boolean> {
+  return (await admitAddressThenCaller(req, res, address)) !== false;
+}
+
 /**
  * Enforce a limit in two tiers, for a route a class uses at once. A school
  * puts thirty pupils behind one address, so a bucket keyed by address alone
@@ -467,7 +536,7 @@ export async function enforceRateLimit(
  *
  * `address` is keyed by the client address and holds a class; it is taken
  * before the credentials are read, so a flood from one address meets it
- * first. `perCaller` is the caller's own: keyed by the verified account
+ * first (the token is checked meanwhile, see above). `perCaller` is the caller's own: keyed by the verified account
  * (`user:<id>`), or, for a caller without one, by `sealedGuest` when the
  * handler holds an id the server sealed for it (a Challenge run,
  * `run:<runId>`), and otherwise by address, the rate the route had before the
@@ -485,8 +554,8 @@ export async function enforceClassRateLimit(
   perCaller: RateLimitConfig,
   sealedGuest?: `run:${string}`,
 ): Promise<boolean> {
-  if (!(await enforceRateLimit(req, res, address))) return false;
-  const callerId = await verifiedCallerId(req);
+  const callerId = await admitAddressThenCaller(req, res, address);
+  if (callerId === false) return false;
   return enforceRateLimit(req, res, perCaller, callerId ? `user:${callerId}` : sealedGuest);
 }
 
@@ -628,7 +697,7 @@ export async function claimOnce(key: string, ttlSeconds: number): Promise<boolea
  * nothing more. Returns false after sending the 429.
  */
 export async function limitRead(req: VercelRequest, res: VercelResponse): Promise<boolean> {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return false;
-  const callerId = await verifiedCallerId(req);
+  const callerId = await admitAddressThenCaller(req, res, RATE_LIMITS.readAddress);
+  if (callerId === false) return false;
   return callerId ? enforceRateLimit(req, res, RATE_LIMITS.readPerUser, `user:${callerId}`) : true;
 }

@@ -42,6 +42,8 @@ import { LEARNER_PROFILE_META_KEY, isOffLoopModule } from '../shared/learning-pa
 import { MERCH_ENABLED } from '../shared/rewards';
 import { diagnosticEvidence } from '../lib/learning-paths/competencies';
 import { gradeCheck } from '../lib/learning-paths/grade';
+import { solutionFor } from '../lib/learning-paths/solutions';
+import { settleMilestonesAfterPass } from '../lib/rewards/coins';
 import type { StartActivityResponse, SubmitActivityResponse } from '../shared/learning-path-api';
 
 type Fail = (message: string) => void;
@@ -74,7 +76,7 @@ const code = (res: Captured) => (res.body as { error?: { code?: string } } | und
 function fakeSupabase(options: {
   rows?: Record<string, unknown>;
   lists?: Record<string, unknown[]>;
-  rpc?: (name: string, params: Record<string, unknown>) => { data?: unknown; error?: unknown };
+  rpc?: (name: string, params: Record<string, unknown>) => { data?: unknown; error?: unknown } | Promise<{ data?: unknown; error?: unknown }>;
   auth?: Record<string, unknown>;
   onQuery?: (table: string, operation: string, args: unknown[]) => void;
   rowErrors?: Record<string, unknown>;
@@ -85,14 +87,14 @@ function fakeSupabase(options: {
       eq: (...args: unknown[]) => { options.onQuery?.(table, 'eq', args); return chain; },
       order: (...args: unknown[]) => { options.onQuery?.(table, 'order', args); return chain; },
       limit: (...args: unknown[]) => { options.onQuery?.(table, 'limit', args); return chain; },
-      maybeSingle: async () => ({ data: options.rows?.[table] ?? null, error: options.rowErrors?.[table] ?? null }),
+      maybeSingle: async () => { options.onQuery?.(table, 'maybeSingle', []); return { data: options.rows?.[table] ?? null, error: options.rowErrors?.[table] ?? null }; },
       then: <A>(resolve: (value: { data: unknown[]; error: null }) => A) => resolve({ data: options.lists?.[table] ?? [], error: null }),
     };
     return chain;
   };
   return {
     from,
-    rpc: async (name: string, params: Record<string, unknown>) => ({ data: null, error: null, ...(options.rpc?.(name, params) ?? {}) }),
+    rpc: async (name: string, params: Record<string, unknown>) => ({ data: null, error: null, ...((await options.rpc?.(name, params)) ?? {}) }),
     auth: { admin: options.auth ?? {} },
   } as never;
 }
@@ -353,6 +355,62 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a Premium activity start asks the tier beside the enrollment ── */
+    // #587, server item 21: the plan check's tier read does not wait for the
+    // enrollment read; a free activity still asks for no tier at all.
+    {
+      const fde = LEARNING_PATHS.find((one) => one.id === 'fde')!;
+      const premiumCheck = fde.modules.filter((one) => !isOffLoopModule(one)).slice(1).flatMap((one) => one.activities)
+        .find((activity) => activity.kind === 'check')!;
+      const freeActivity = fde.modules.find((one) => !isOffLoopModule(one))!.activities[0];
+      const id = `FDETIER${stamp}`.padEnd(20, 'a');
+      const starter = `user-paths-start-tier-${stamp}`;
+      const row = { ...enrollmentRow('active'), enrollment_id: id, user_id: starter, path_id: 'fde', curriculum_version: fde.version };
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      const startWatched = async (activityId: string) => {
+        const order: string[] = [];
+        let watching = false;
+        class WatchedTier<T> extends Promise<T> {
+          static get [Symbol.species]() { return Promise; }
+          then<A = T, B = never>(onDone?: ((value: T) => A | PromiseLike<A>) | null, onFail?: ((reason: unknown) => B | PromiseLike<B>) | null) {
+            if (watching) order.push('tier');
+            return super.then(onDone, onFail);
+          }
+        }
+        const req = request('POST', `start-tier-${stamp}`, { user_id: starter, enrollmentId: id, activityId });
+        const res = response();
+        await withRequestContext(req, res as never, async () => {
+          void requestMemo(`tier:${starter}`, () => new WatchedTier<'premium'>((resolve) => resolve('premium')));
+          watching = true;
+          await handleActivityStart(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: row },
+            lists: { learning_path_progress: [] },
+            onQuery: (table, op) => { if (op === 'select' && table === 'learning_path_enrollments') order.push('enrollment'); },
+            rpc: (name) => name === 'open_learning_path_attempt'
+              ? { data: { ok: true, expiresAt: new Date(Date.now() + 3_600_000).toISOString() } }
+              : {},
+          }));
+        });
+        watching = false;
+        return { res, order };
+      };
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const premium = await startWatched(premiumCheck.id);
+        if (premium.res.statusCode !== 200) fail(`a Premium start answered ${premium.res.statusCode} ${code(premium.res)}`);
+        const firstTier = premium.order.indexOf('tier');
+        if (firstTier < 0 || firstTier > premium.order.indexOf('enrollment')) {
+          fail(`a Premium activity start asked the tier only after the enrollment read: ${premium.order.join(' > ')}`);
+        }
+        const free = await startWatched(freeActivity.id);
+        if (free.res.statusCode !== 200) fail(`a free start answered ${free.res.statusCode} ${code(free.res)}`);
+        if (free.order.includes('tier')) fail('a free activity start asked for the tier');
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── a draft that cannot be read is logged, and the activity opens ─ */
     {
       const id = `DRAFTERR${stamp}`.padEnd(20, 'a');
@@ -564,6 +622,187 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     } finally {
       if (switchBefore === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
       else process.env.LEARNING_PATH_FDE_ENABLED = switchBefore;
+    }
+
+    /* ── a verified code pass and the coin routines after it ─────────── */
+    // #587, server item 8: settle_coin_milestones credits only inside
+    // `IF is_premium(...)` (migration 052), so after a verified pass a free
+    // account (here a lapsed one resubmitting a passed exercise) skips it and
+    // a Premium account still runs it. The XP coin credit runs for both.
+    // #587, server item 20: the tier of a Premium activity is asked before
+    // the enrollment read answers, the progress rows are read while the
+    // grader runs (and once, when the plan check's "already passed" exception
+    // read them first), and the XP credit and the settlement run together.
+    {
+      const passer = `user-paths-pass-${stamp}`;
+      const codeModule = path.modules.find((module) => module.activities.some((activity) => activity.id === codeActivity.id))!;
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      const passAs = async (tier: 'free' | 'premium', tag: string) => {
+        const calls: string[] = [];
+        // What the handler asked for, in order: the tier (a subscription to
+        // the remembered tier answer), the enrollment read, the progress read.
+        const order: string[] = [];
+        let watching = false;
+        class WatchedTier<T> extends Promise<T> {
+          static get [Symbol.species]() { return Promise; }
+          then<A = T, B = never>(onDone?: ((value: T) => A | PromiseLike<A>) | null, onFail?: ((reason: unknown) => B | PromiseLike<B>) | null) {
+            if (watching) order.push('tier');
+            return super.then(onDone, onFail);
+          }
+        }
+        // Whether the progress read was issued while this submit held its
+        // grading slot: a probe for one more slot with a ceiling of one is
+        // refused exactly then.
+        let progressDuringGrading: boolean | null = null;
+        let progressReads = 0;
+        const probe = () => {
+          const slot = enterInFlight(request('POST', `pass-probe-${stamp}`, {}), 'grading',
+            { item: gradingItem.activity('fde', codeActivity.id), perItem: 1_000, perCaller: 1 }, `user:${passer}`);
+          slot?.();
+          return slot === null;
+        };
+        // The XP credit answers once the settlement has started, or after
+        // 300 ms: run one after the other, the settlement starts only then.
+        let settleStarted: () => void = () => {};
+        const settling = new Promise<void>((resolve) => { settleStarted = resolve; });
+        let creditWaited = false;
+        const req = request('POST', `pass-${tag}-${stamp}`, {
+          user_id: passer,
+          session: encodeLearningPathSession({
+            attemptId: `PASS${tag}${stamp}`.padEnd(20, 'a'), enrollmentId, userId: passer, pathId: 'fde',
+            activityId: codeActivity.id, activityKind: codeActivity.kind, purpose: codeActivity.purpose,
+            curriculumVersion: path.version, rubricVersion: path.rubric.version,
+          }).token,
+          idempotencyKey: `KEYpass${tag}${stamp}`.slice(0, 24).padEnd(24, 'a'),
+          code: solutionFor(codeActivity.id)!.solution,
+        });
+        const res = response();
+        await withRequestContext(req, res as never, async () => {
+          void requestMemo(`tier:${passer}`, () => new WatchedTier<'free' | 'premium'>((resolve) => resolve(tier)));
+          watching = true;
+          await handleActivitySubmit(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: { ...enrollmentRow('active'), user_id: passer } },
+            lists: { learning_path_progress: [{ module_id: codeModule.id, activity_states: { [codeActivity.id]: { state: 'verified_pass', score: 1 } }, completed_at: null }] },
+            onQuery: (table, op) => {
+              if (op !== 'select') return;
+              if (table === 'learning_path_enrollments') order.push('enrollment');
+              if (table === 'learning_path_progress') {
+                order.push('progress');
+                progressReads += 1;
+                progressDuringGrading ??= probe();
+              }
+            },
+            rpc: async (name, params) => {
+              calls.push(name);
+              if (name.startsWith('accept_learning_path')) {
+                const packet = (params.p_accept ?? params) as { p_result: SubmitActivityResponse };
+                return { data: { ok: true, replayed: false, result: { ...packet.p_result, xpAwarded: 20 }, coding: { xpKind: 'first' } } };
+              }
+              if (name === 'settle_coin_milestones') settleStarted();
+              if (name === 'credit_verified_xp_tokens' && tier === 'premium') {
+                creditWaited = await Promise.race([settling.then(() => false), new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 300))]);
+              }
+              return { data: name === 'credit_verified_xp_tokens' ? 2 : {} };
+            },
+          }));
+        });
+        watching = false;
+        return { res, calls, order, progressDuringGrading, progressReads, creditWaited };
+      };
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const free = await passAs('free', 'free');
+        if (free.res.statusCode !== 200 || (free.res.body as SubmitActivityResponse).state !== 'verified_pass') {
+          fail(`a lapsed account's verified pass answered ${free.res.statusCode} ${JSON.stringify(free.res.body).slice(0, 200)}`);
+        }
+        if (!free.calls.includes('credit_verified_xp_tokens')) fail(`a free account's verified pass credited no XP coins: ${free.calls.join(', ')}`);
+        if (free.calls.includes('settle_coin_milestones')) fail('a free account ran settle_coin_milestones, which credits only Premium accounts');
+        const premium = await passAs('premium', 'prem');
+        if (premium.res.statusCode !== 200) fail(`a Premium verified pass answered ${premium.res.statusCode} ${code(premium.res)}`);
+        if (!premium.calls.includes('credit_verified_xp_tokens') || !premium.calls.includes('settle_coin_milestones')) {
+          fail(`a Premium verified pass must credit its XP coins and settle the milestones: ${premium.calls.join(', ')}`);
+        }
+        // Item 20, on the Premium submit (no "already passed" read).
+        const firstTier = premium.order.indexOf('tier');
+        if (firstTier < 0 || firstTier > premium.order.indexOf('enrollment')) {
+          fail(`the tier of a Premium activity was not asked beside the enrollment read: ${premium.order.join(' > ')}`);
+        }
+        if (premium.progressDuringGrading !== true) fail('the progress rows were read after grading, not while the grader ran');
+        if (premium.progressReads !== 1) fail(`a submit read its progress rows ${premium.progressReads} times`);
+        if (premium.creditWaited) fail('the XP coin credit and the milestone settlement ran one after the other');
+        // On the lapsed account the plan check's "already passed" exception
+        // read the rows before grading, and the projection reuses that read.
+        if (free.progressReads !== 1) fail(`a lapsed account's submit read its progress rows ${free.progressReads} times, not once`);
+        // A plan that cannot be read is not "free": the routine runs and decides.
+        const unread: string[] = [];
+        await settleMilestonesAfterPass(fakeSupabase({ rpc: (name) => { unread.push(name); return { data: {} }; } }), passer, 'webdev',
+          async () => { throw new Error('entitlement_unavailable'); });
+        if (!unread.includes('settle_coin_milestones')) fail('an unreadable plan skipped settle_coin_milestones instead of letting it decide');
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
+    /* ── a lesson, check or write-up submit reads its rows beside the enrollment ── */
+    // #587, server item 20: outside a code activity the progress rows are
+    // read beside the enrollment read, not after it, scoped to the caller's
+    // own rows; a paused enrollment still answers 409 and writes nothing.
+    {
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const reader = `user-paths-rows-${stamp}`;
+        const lesson = path.modules.filter((module) => !isOffLoopModule(module)).flatMap((module) => module.activities).find((activity) => activity.kind === 'lesson')!;
+        for (const status of ['active', 'paused'] as const) {
+          const events: string[] = [];
+          const progressScope: unknown[][] = [];
+          const written: string[] = [];
+          const req = request('POST', `rows-${status}-${stamp}`, {
+            user_id: reader,
+            session: encodeLearningPathSession({
+              attemptId: `ROWS${status}${stamp}`.slice(0, 20).padEnd(20, 'a'), enrollmentId, userId: reader, pathId: 'fde',
+              activityId: lesson.id, activityKind: lesson.kind, purpose: lesson.purpose,
+              curriculumVersion: path.version, rubricVersion: path.rubric.version,
+            }).token,
+            idempotencyKey: `KEYrows${status}${stamp}`.slice(0, 24).padEnd(24, 'a'),
+            acknowledged: true,
+          });
+          const res = response();
+          await withRequestContext(req, res as never, async () => {
+            await requestMemo(`tier:${reader}`, async () => 'premium');
+            await handleActivitySubmit(req, res as never, fakeSupabase({
+              rows: { learning_path_enrollments: { ...enrollmentRow(status), user_id: reader } },
+              lists: { learning_path_progress: [] },
+              onQuery: (table, op, args) => {
+                if (op === 'select') events.push(`select ${table}`);
+                if (op === 'maybeSingle') events.push(`answered ${table}`);
+                if (table === 'learning_path_progress' && op === 'eq') progressScope.push(args);
+              },
+              rpc: (name) => { written.push(name); return name.startsWith('accept_learning_path') ? { data: { ok: true, replayed: false } } : {}; },
+            }));
+          });
+          const reads = events.filter((one) => one === 'select learning_path_progress').length;
+          // A paused enrollment may have spent the early read; it uses nothing of it.
+          if (status === 'active' ? reads !== 1 : reads > 1) fail(`a ${status} lesson submit read its progress rows ${reads} times`);
+          if (events.indexOf('select learning_path_progress') > events.indexOf('answered learning_path_enrollments')) {
+            fail(`a lesson submit read its progress rows after the enrollment answered: ${events.join(' > ')}`);
+          }
+          if (!progressScope.some((args) => args[0] === 'user_id' && args[1] === reader)
+              || !progressScope.some((args) => args[0] === 'enrollment_id' && args[1] === enrollmentId)) {
+            fail(`the early progress read was not scoped to the caller's own enrollment rows: ${JSON.stringify(progressScope)}`);
+          }
+          if (status === 'active') {
+            if (res.statusCode !== 200 || (res.body as SubmitActivityResponse).state !== 'self_reviewed') fail(`a lesson submit answered ${res.statusCode} ${JSON.stringify(res.body).slice(0, 200)}`);
+          } else {
+            if (res.statusCode !== 409 || code(res) !== 'enrollment_paused') fail(`a lesson submit to a paused enrollment answered ${res.statusCode} ${code(res)}`);
+            if (written.length > 0) fail(`a lesson submit to a paused enrollment wrote ${written.join(', ')}`);
+          }
+        }
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
     }
 
     /* ── a resubmitted write-up, and the requirements a submit sends ──── */

@@ -7,14 +7,14 @@ import {
   isRpcMissing,
   requireAuthResult,
   requireAuthSub,
-  verifiedCallerId,
   logEvent as emit,
   withRequestContext,
   ServiceUnavailableError,
+  lazyExport,
 } from '../../lib/http';
-import type { AuthResult } from '../../lib/auth';
+import { forgetVerifiedToken, getBearer, requireFreshAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
-import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
 import {
   SUBJECT_SCOPE_CATALOG,
@@ -25,34 +25,53 @@ import {
 import { deploymentSubjectIds } from '../../lib/product-scope';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
 import { eligibleCodingBadges } from '../../shared/coding-catalog';
-import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { questionXpHeldOf } from '../../shared/repeat-xp';
-import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
-import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
 import { settleMilestones } from '../../lib/rewards/coins';
 import { handleReferral } from '../../lib/rewards/referral';
-import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
-import {
-  handleEnrollment,
-  handleLearningPreference,
-  handlePathDraft,
-  handlePathReward,
-  handlePathProgress,
-} from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
 import { handleFriends, handleIdentity } from '../../lib/friends-handlers';
 import { verifiedProfile as verifiedProfileOf } from '../../lib/public-identity';
 import { handleLeaderboardName } from '../../lib/leaderboard-identity';
 import { handleEntitlement } from '../../lib/entitlements';
-import { handleVoucherRedeem } from '../../lib/vouchers';
-import {
-  endBillingForDeletedAccount,
-  handleBillingCancel,
-  handleBillingCheckout,
-  handleBillingPortal,
-  handleBillingWebhook,
-} from '../../lib/billing/handlers';
+
+// The op families below load on their first call, not with this function
+// (#587, server item 3). Each one pulled in something most ops never touch:
+// the coding catalogue with its reference solutions, the QuickJS grader and
+// TypeScript (coding, practice and learning-path handlers), the tier index
+// over the coding catalogue (rewards, through lib/access.ts), or Stripe
+// (billing, vouchers). Statically imported, a new instance spent about 370 ms
+// evaluating them before it answered an entitlement or XP read. The names and
+// the dispatch lines are the same as with static imports.
+const codingHandlers = () => import('../../lib/coding/handlers');
+const handleCodingDraft = lazyExport(codingHandlers, 'handleCodingDraft');
+const handleCodingProgress = lazyExport(codingHandlers, 'handleCodingProgress');
+const practiceHandlers = () => import('../../lib/coding/practice-handlers');
+const handleCodingBookmarks = lazyExport(practiceHandlers, 'handleCodingBookmarks');
+const handleCodingSkip = lazyExport(practiceHandlers, 'handleCodingSkip');
+const handlePracticeSession = lazyExport(practiceHandlers, 'handlePracticeSession');
+const rewardsHandlers = () => import('../../lib/rewards/handlers');
+const creditVerifiedXp = lazyExport(rewardsHandlers, 'creditVerifiedXp');
+const handleCosmetic = lazyExport(rewardsHandlers, 'handleCosmetic');
+const handleStreakProtection = lazyExport(rewardsHandlers, 'handleStreakProtection');
+const handleFulfilment = lazyExport(rewardsHandlers, 'handleFulfilment');
+const handleOrders = lazyExport(rewardsHandlers, 'handleOrders');
+const handlePaymentWebhook = lazyExport(rewardsHandlers, 'handlePaymentWebhook');
+const handleShopCatalogue = lazyExport(rewardsHandlers, 'handleShopCatalogue');
+const handleWallet = lazyExport(rewardsHandlers, 'handleWallet');
+const pathHandlers = () => import('../../lib/learning-paths/handlers');
+const handleEnrollment = lazyExport(pathHandlers, 'handleEnrollment');
+const handleLearningPreference = lazyExport(pathHandlers, 'handleLearningPreference');
+const handlePathDraft = lazyExport(pathHandlers, 'handlePathDraft');
+const handlePathReward = lazyExport(pathHandlers, 'handlePathReward');
+const handlePathProgress = lazyExport(pathHandlers, 'handlePathProgress');
+const handleVoucherRedeem = lazyExport(() => import('../../lib/vouchers'), 'handleVoucherRedeem');
+const billingHandlers = () => import('../../lib/billing/handlers');
+const endBillingForDeletedAccount = lazyExport(billingHandlers, 'endBillingForDeletedAccount');
+const handleBillingCancel = lazyExport(billingHandlers, 'handleBillingCancel');
+const handleBillingCheckout = lazyExport(billingHandlers, 'handleBillingCheckout');
+const handleBillingPortal = lazyExport(billingHandlers, 'handleBillingPortal');
+const handleBillingWebhook = lazyExport(billingHandlers, 'handleBillingWebhook');
 
 const supabase = createServiceClient();
 
@@ -76,6 +95,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
+  if (FRESH_AUTH_OPS.has(op)) requireFreshAuth(req);
   if (!(await limitUserWrite(req, res, op))) return;
   if (!(await limitUserRead(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
@@ -120,6 +140,14 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 
+/** Ops that ask Supabase Auth on every request instead of trusting a token
+ * this instance accepted in the last minute (lib/auth.ts, "Accepted
+ * tokens"): ending an account, the admin fulfilment desk, the ops that move
+ * money, and the wallet, whose GET settles coin grants before it reads. Every
+ * other write asks Auth anyway (only GET and HEAD trust an acceptance). A
+ * session ended elsewhere is refused here at once. */
+const FRESH_AUTH_OPS: ReadonlySet<string> = new Set(['delete-account', 'fulfilment', 'billing-checkout', 'billing-portal', 'billing-cancel', 'voucher', 'wallet']);
+
 /**
  * The rate limit every write here takes, in two tiers as play's routes do.
  * The first token, before the credentials are read, comes from an address
@@ -136,12 +164,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
   if (req.method === 'GET' || op === 'billing-webhook' || op === 'learning-path-draft') return true;
   const deleting = op === 'delete-account';
-  if (!(await enforceRateLimit(req, res, deleting ? RATE_LIMITS.accountDeleteAddress : RATE_LIMITS.userMutationAddress))) return false;
-  const callerId = await verifiedCallerId(req);
-  const perCaller = deleting ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation;
-  return callerId
-    ? enforceRateLimit(req, res, perCaller, `user:${callerId}`)
-    : enforceRateLimit(req, res, perCaller);
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  return enforceClassRateLimit(
+    req,
+    res,
+    deleting ? RATE_LIMITS.accountDeleteAddress : RATE_LIMITS.userMutationAddress,
+    deleting ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation,
+  );
 }
 
 /** GETs a script can drive for more than a row: the wallet settles grants,
@@ -210,6 +239,8 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
     if (again.error) logEvent('delete-account', { status: 200, reason: 'second_cleanup_failed', error: again.error.message });
 
     logEvent('delete-account', { status: 200, user_id: auth.sub });
+    // The identity is gone: this instance no longer accepts its token.
+    forgetVerifiedToken(getBearer(req));
     return res.json({ ok: true });
   } catch (err) {
     // A timeout is the database busy for a moment: 503 with its code, as
@@ -699,7 +730,7 @@ async function badges(req: VercelRequest, res: VercelResponse) {
     const passedCoding = new Set(((codingRows.data ?? []) as { task_id: string }[]).map((row) => row.task_id));
     const eligible = [
       ...eligibleServerBadges(summary),
-      ...(subject === 'webdev' ? eligibleCodingBadges(passedCoding, CODING_SUMMARIES) : []),
+      ...(subject === 'webdev' ? eligibleCodingBadges(passedCoding, (await import('../../lib/coding/active')).CODING_SUMMARIES) : []),
     ];
 
     const synced = await withTimeout(

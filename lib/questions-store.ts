@@ -19,8 +19,21 @@ const supabase = createServiceClient();
 const TABLE = 'question_edits';
 // Short cache so edits propagate within seconds without a DB round-trip on
 // every quiz request. (Each serverless instance has its own cache, so this TTL
-// is also the upper bound on how long a stale instance serves old content.)
+// is also how long an instance serves an override set before it reads again.)
 const CACHE_TTL_MS = 15_000;
+/* Past that age, and up to this one, a good override set is still served
+ * while a newer one is read (#587, server item 19): the request that finds
+ * it old no longer waits for the read, which on an instance taking traffic
+ * was one request in every fifteen seconds. The next request is served the
+ * newer set. A read that fails meanwhile keeps the good set rather than
+ * dropping to the bare bank (which would serve hidden questions again), and
+ * the next request reads again. An older set, or none, waits for the read as
+ * before; a failure there serves the bank alone, as before. */
+const STALE_SERVE_MS = 60_000;
+/** The columns a `QuestionEditRow` reads. Rows written before devShark went
+ * English only also carry cs_* text nothing reads, which `select('*')` sent
+ * on every refresh. `importance` is migration 014's, which 044 requires. */
+const OVERRIDE_COLUMNS = 'question_id,is_custom,deleted,question,options,correct_index,explanation,introduction,category,tags,difficulty,importance';
 
 export const KNOWN_CATEGORIES: CategoryType[] = [
   'html', 'css', 'javascript', 'typescript', 'react',
@@ -185,27 +198,64 @@ function withImportance(q: Question): Question {
 
 let overrideCache: { at: number; value: Map<string, QuestionEditRow> | null } | null = null;
 let overrideInflight: Promise<Map<string, QuestionEditRow> | null> | null = null;
+/** Bumped by `invalidateQuestionsCache`: a read begun before an admin save
+ * must not become the cached set after it. */
+let overrideGeneration = 0;
 
-async function loadOverrides(): Promise<Map<string, QuestionEditRow> | null> {
-  if (overrideCache && Date.now() - overrideCache.at < CACHE_TTL_MS) return overrideCache.value;
-  if (overrideInflight) return overrideInflight;
-  if (!supabase) return null;
-  overrideInflight = (async () => {
+/** `withTimeout` ends a live read at four seconds, so a read still unsettled
+ * after this long was cut off by an instance frozen once its response went
+ * out: the read the stale path below starts in the background, which no
+ * response waits for. It is left behind. The next request starts a read of
+ * its own instead of waiting for it, and its answer, read before the freeze
+ * (or a failure on waking), never becomes the cached set. */
+const READ_ABANDON_MS = 5_000;
+let overrideInflightAt = 0;
+/** The latest read started: an older one that settles later caches nothing. */
+let overrideReadSeq = 0;
+
+/** Read the override rows, one read at a time per instance. */
+function refreshOverrides(): Promise<Map<string, QuestionEditRow> | null> {
+  if (overrideInflight && Date.now() - overrideInflightAt < READ_ABANDON_MS) return overrideInflight;
+  if (!supabase) return Promise.resolve(null);
+  const client = supabase;
+  const generation = overrideGeneration;
+  const seq = ++overrideReadSeq;
+  const startedAt = Date.now();
+  const previous = overrideCache;
+  const loading: Promise<Map<string, QuestionEditRow> | null> = (async () => {
+    let value: Map<string, QuestionEditRow> | null;
     try {
-      const { data, error } = await withTimeout(supabase.from(TABLE).select('*'), 4000);
-      const value = error || !data
-        ? null
-        : new Map((data as QuestionEditRow[]).map((r) => [r.question_id, r]));
-      overrideCache = { at: Date.now(), value };
-      return value;
+      const { data, error } = await withTimeout(client.from(TABLE).select(OVERRIDE_COLUMNS), 4000);
+      value = error || !data ? null : new Map((data as QuestionEditRow[]).map((r) => [r.question_id, r]));
     } catch {
-      overrideCache = { at: Date.now(), value: null };
-      return null;
-    } finally {
-      overrideInflight = null;
+      value = null;
     }
-  })();
-  return overrideInflight;
+    // An admin save since it began, a newer read, or a freeze: the read
+    // answers its own callers and caches nothing.
+    if (generation !== overrideGeneration || seq !== overrideReadSeq || Date.now() - startedAt >= READ_ABANDON_MS) return value;
+    if (!value && previous?.value && Date.now() - previous.at < STALE_SERVE_MS) return previous.value;
+    overrideCache = { at: Date.now(), value };
+    return value;
+  })().finally(() => {
+    if (overrideInflight === loading) overrideInflight = null;
+  });
+  overrideInflight = loading;
+  overrideInflightAt = startedAt;
+  return loading;
+}
+
+/** The override rows by id, or null when they cannot be read. `stale` lets a
+ * serving read take a good set up to `STALE_SERVE_MS` old while a newer one
+ * is read; without it the caller waits for anything older than the TTL. */
+async function loadOverrides(stale = false): Promise<Map<string, QuestionEditRow> | null> {
+  const cached = overrideCache;
+  const age = cached ? Date.now() - cached.at : Infinity;
+  if (cached && age < CACHE_TTL_MS) return cached.value;
+  if (stale && cached?.value && age < STALE_SERVE_MS) {
+    void refreshOverrides();
+    return cached.value;
+  }
+  return refreshOverrides();
 }
 
 function buildEffective(
@@ -230,6 +280,8 @@ function buildEffective(
 
 type EffectiveCache = {
   at: number;
+  /** The override set it was built from: rebuilt when that set changes. */
+  source: Map<string, QuestionEditRow> | null;
   /** What may be served: the merged set with the eligibility gate applied. */
   list: Question[];
   byId: Map<string, Question>;
@@ -242,7 +294,6 @@ type EffectiveCache = {
   withheld: Map<string, Eligibility['reason']>;
 };
 const caches = new Map<string, EffectiveCache>();
-const inflight = new Map<string, Promise<EffectiveCache>>();
 
 /**
  * The eligibility gate, applied once, here, to the merged set.
@@ -269,33 +320,31 @@ export function applyEligibility(merged: Question[]): { list: Question[]; withhe
 
 async function effective(subject?: ScopeSubjectId): Promise<EffectiveCache> {
   const key = subject ?? 'deployment';
+  // The bank (a module import on a cold instance, remembered after) and the
+  // override rows (a database read, cached above) do not depend on each
+  // other, so they load together.
+  const [baseQuestions, overrides] = await Promise.all([
+    subject ? loadSubjectQuestionBank(subject) : loadDeploymentQuestionBank(),
+    loadOverrides(true),
+  ]);
+  // Built once per override set. The build below runs without a pause, so
+  // callers that waited for the same set find the first one's build here.
   const cached = caches.get(key);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached;
-  const active = inflight.get(key);
-  if (active) return active;
-  const loading = (async () => {
-    // The bank (a module import on a cold instance) and the override rows (a
-    // database read) do not depend on each other, so they load together.
-    const [baseQuestions, overrides] = await Promise.all([
-      subject ? loadSubjectQuestionBank(subject) : loadDeploymentQuestionBank(),
-      loadOverrides(),
-    ]);
-    const merged = overrides
-      ? buildEffective(baseQuestions, overrides, subject)
-      : baseQuestions.map(withImportance);
-    const { list, withheld } = applyEligibility(merged);
-    const value: EffectiveCache = {
-      at: Date.now(),
-      list,
-      byId: new Map(list.map((q) => [q.id, q])),
-      historyById: new Map(merged.map((q) => [q.id, q])),
-      withheld,
-    };
-    caches.set(key, value);
-    return value;
-  })().finally(() => inflight.delete(key));
-  inflight.set(key, loading);
-  return loading;
+  if (cached && cached.source === overrides) return cached;
+  const merged = overrides
+    ? buildEffective(baseQuestions, overrides, subject)
+    : baseQuestions.map(withImportance);
+  const { list, withheld } = applyEligibility(merged);
+  const value: EffectiveCache = {
+    at: Date.now(),
+    source: overrides,
+    list,
+    byId: new Map(list.map((q) => [q.id, q])),
+    historyById: new Map(merged.map((q) => [q.id, q])),
+    withheld,
+  };
+  caches.set(key, value);
+  return value;
 }
 
 /** The live question set (base + overrides, eligibility applied), used by
@@ -344,9 +393,9 @@ export function overridesAvailable(): boolean {
 /** Clear the serving cache so the next request re-reads overrides. */
 export function invalidateQuestionsCache() {
   caches.clear();
-  inflight.clear();
   overrideCache = null;
   overrideInflight = null;
+  overrideGeneration += 1;
 }
 
 /**

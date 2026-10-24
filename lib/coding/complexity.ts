@@ -1,8 +1,28 @@
 /** Conservative, bounded AST inspection; submitted code is never executed here.
  * This reports structural estimates, not a proof or a runtime benchmark. */
-import ts from 'typescript';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import type * as TS from 'typescript';
 import { complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
 import type { CodingTask } from '../../shared/coding-catalog';
+
+/** The compiler, loaded on the first assessment instead of at import. Every
+ * function that grades code imports this module, and TypeScript costs about
+ * 90 ms and 15 MB of heap to load, which each new instance paid before its
+ * first answer even when that was a Learn level or a wallet read (#587,
+ * server item 16). The first Submit on an instance pays it instead.
+ *
+ * @vercel/node compiles this file to CommonJS, where the plain
+ * `require('typescript')` below is what its file tracer follows into the
+ * function bundle. Scripts bundled as ESM have no real `require` (esbuild's
+ * stand-in has no `resolve`), so they load it from the working directory. */
+let ts: typeof TS;
+function loadTypeScript(): void {
+  if (ts) return;
+  ts = typeof require === 'function' && typeof require.resolve === 'function'
+    ? require('typescript') as typeof TS
+    : createRequire(join(process.cwd(), 'package.json'))('typescript') as typeof TS;
+}
 
 /** Whether `text` mentions one of `names` as a whole identifier. One scan of
  * the text, not one RegExp per name: a loop condition was matched against a
@@ -47,23 +67,23 @@ const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delet
  * or mistaking map/Promise callbacks for functions returned to the caller.
  * Unresolved dynamic factories still require manual review; this is not a
  * general interprocedural type or lifetime analysis. */
-function returnsDeferredWork(fn: ts.FunctionLikeDeclaration, budget: AnalysisBudget): boolean {
+function returnsDeferredWork(fn: TS.FunctionLikeDeclaration, budget: AnalysisBudget): boolean {
   if (!fn.body) return false;
-  const bindings = new Map<string, ts.Node[]>();
+  const bindings = new Map<string, TS.Node[]>();
   const aliases = new Map<string, Set<string>>();
-  const containerWrites: [string, ts.Node][] = [];
+  const containerWrites: [string, TS.Node][] = [];
   let visited = 0;
   let limited = false;
-  const callable = (node: ts.Node): boolean => ts.isArrowFunction(node) || ts.isFunctionExpression(node)
+  const callable = (node: TS.Node): boolean => ts.isArrowFunction(node) || ts.isFunctionExpression(node)
     || ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)
     || ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)
     || ts.isClassExpression(node) || ts.isClassDeclaration(node);
-  const addValue = (name: string, value: ts.Node): void => {
+  const addValue = (name: string, value: TS.Node): void => {
     const values = bindings.get(name);
     if (values) values.push(value);
     else bindings.set(name, [value]);
   };
-  const bind = (name: string, value: ts.Node): void => {
+  const bind = (name: string, value: TS.Node): void => {
     addValue(name, value);
     if (ts.isIdentifier(value)) {
       for (const [left, right] of [[name, value.text], [value.text, name]]) {
@@ -73,7 +93,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration, budget: AnalysisBud
       }
     }
   };
-  const collect = (node: ts.Node): void => {
+  const collect = (node: TS.Node): void => {
     if (++visited > 12_000 || --budget.left < 0) { limited = true; return; }
     if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && node.name) bind(node.name.text, node);
     if (callable(node)) return;
@@ -106,7 +126,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration, budget: AnalysisBud
       for (const alias of aliases.get(name) ?? []) pending.push(alias);
     }
   }
-  const deferred = (node: ts.Node, seen = new Set<ts.Node>()): boolean => {
+  const deferred = (node: TS.Node, seen = new Set<TS.Node>()): boolean => {
     if (++visited > 12_000 || --budget.left < 0) return true;
     if (seen.has(node)) return false;
     // Reachability has no per-path type state: visit each value node once,
@@ -138,7 +158,7 @@ function returnsDeferredWork(fn: ts.FunctionLikeDeclaration, budget: AnalysisBud
   };
   if (!ts.isBlock(fn.body)) return limited || deferred(fn.body);
   let found = limited;
-  const returns = (node: ts.Node): void => {
+  const returns = (node: TS.Node): void => {
     if (++visited > 12_000 || --budget.left < 0) { found = true; return; }
     if (callable(node)) return;
     if (ts.isReturnStatement(node) && node.expression && deferred(node.expression)) found = true;
@@ -158,8 +178,8 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   if (guidance.targetTime && !targetCost(guidance.targetTime)) return unknown('The authored input-size model needs manual complexity review.');
   if (code.length > 20_000) return unknown('This submission is too large for the structural estimate.');
   const file = ts.createSourceFile('solution.ts', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  if ((file as ts.SourceFile & { parseDiagnostics: unknown[] }).parseDiagnostics.length) return unknown('Fix the syntax before assessing complexity.');
-  const functions = new Map<string, ts.FunctionLikeDeclaration>();
+  if ((file as TS.SourceFile & { parseDiagnostics: unknown[] }).parseDiagnostics.length) return unknown('Fix the syntax before assessing complexity.');
+  const functions = new Map<string, TS.FunctionLikeDeclaration>();
   // Name top-level helpers. Unresolved or recursive calls fail closed below.
   for (const statement of file.statements) {
     if (ts.isFunctionDeclaration(statement) && statement.name) functions.set(statement.name.text, statement);
@@ -168,10 +188,10 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     }
   }
   const entries = new Set<string>();
-  const testedStrings = new Map<ts.FunctionLikeDeclaration, Set<string>>();
+  const testedStrings = new Map<TS.FunctionLikeDeclaration, Set<string>>();
   for (const test of task.tests) {
     const expression = ts.createSourceFile('test.ts', test.call, ts.ScriptTarget.Latest, true);
-    const visit = (node: ts.Node) => {
+    const visit = (node: TS.Node) => {
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && functions.has(node.expression.text)) {
         entries.add(node.expression.text);
         const fn = functions.get(node.expression.text)!;
@@ -200,8 +220,8 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   let visited = 0;
   const budget: AnalysisBudget = { left: ANALYSIS_STEPS };
   // Whether a function returns deferred work depends on its source alone.
-  const deferredWork = new Map<ts.FunctionLikeDeclaration, boolean>();
-  const inspectFunction = (fn: ts.FunctionLikeDeclaration, stack: Set<string>, inherited: Set<string> = new Set(), inputParameters?: Set<string>): Cost => {
+  const deferredWork = new Map<TS.FunctionLikeDeclaration, boolean>();
+  const inspectFunction = (fn: TS.FunctionLikeDeclaration, stack: Set<string>, inherited: Set<string> = new Set(), inputParameters?: Set<string>): Cost => {
     let deferred = deferredWork.get(fn);
     if (deferred === undefined) deferredWork.set(fn, deferred = returnsDeferredWork(fn, budget));
     if (deferred) {
@@ -214,9 +234,9 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     for (const parameter of fn.parameters) if (ts.isIdentifier(parameter.name)) bounds.delete(parameter.name.text);
     for (const parameter of parameters) bounds.add(parameter);
     const fixedCollections = new Set<string>();
-    const numericLiteral = (node: ts.Node): number | null => ts.isNumericLiteral(node) ? Number(node.text)
+    const numericLiteral = (node: TS.Node): number | null => ts.isNumericLiteral(node) ? Number(node.text)
       : ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(node.operand) ? -Number(node.operand.text) : null;
-    const collectionKind = (node: ts.Node): 'input' | 'fixed' | 'unknown' => {
+    const collectionKind = (node: TS.Node): 'input' | 'fixed' | 'unknown' => {
       if (ts.isParenthesizedExpression(node)) return collectionKind(node.expression);
       if (ts.isIdentifier(node)) return fixedCollections.has(node.text) ? 'fixed' : bounds.has(node.text) ? 'input' : 'unknown';
       if (ts.isStringLiteral(node) || ts.isNumericLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return 'fixed';
@@ -254,7 +274,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       ts.isIdentifier(parameter.name) && parameter.type?.kind === ts.SyntaxKind.StringKeyword ? [parameter.name.text] : []));
     for (const name of testedStrings.get(fn) ?? []) strings.add(name);
     const regexes = new Map<string, string>();
-    const collect = (node: ts.Node) => {
+    const collect = (node: TS.Node) => {
       if (--budget.left < 0) return;
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.type?.kind === ts.SyntaxKind.StringKeyword) strings.add(node.name.text);
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
@@ -277,7 +297,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     const sizes = new Set(bounds);
     // A loop index can bound a nested scan (for j < i).
     if (fn.body) {
-      const indices = (node: ts.Node) => {
+      const indices = (node: TS.Node) => {
         if (--budget.left < 0) return;
         if (ts.isForStatement(node) && node.condition && inputNames(node.condition.getText(file), bounds) && node.initializer && ts.isVariableDeclarationList(node.initializer)) {
           const blockScoped = (node.initializer.flags & ts.NodeFlags.BlockScoped) !== 0;
@@ -290,26 +310,26 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       };
       indices(fn.body);
     }
-    const inputBound = (node: ts.Node): boolean => inputNames(node.getText(file), bounds);
+    const inputBound = (node: TS.Node): boolean => inputNames(node.getText(file), bounds);
     // A `let` index bounds a loop only inside the loop that declares it. Read
     // from `bounds`, which holds every index of the function, a later loop
     // that reuses the name (for (let i = 0; i < 26; i++)) counted as input-
     // sized, so an O(n) solution read as O(n^2), above target, with less XP.
-    const declaresIndex = (loop: ts.ForStatement, name: string): boolean => !!loop.initializer
+    const declaresIndex = (loop: TS.ForStatement, name: string): boolean => !!loop.initializer
       && ts.isVariableDeclarationList(loop.initializer)
       && loop.initializer.declarations.some((declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === name);
-    const indexLoops = new Map<ts.ForStatement, boolean>();
-    const indexBounded = (loop: ts.ForStatement): boolean => {
+    const indexLoops = new Map<TS.ForStatement, boolean>();
+    const indexBounded = (loop: TS.ForStatement): boolean => {
       let known = indexLoops.get(loop);
       if (known === undefined) indexLoops.set(loop, known = !!loop.condition && loopInputBound(loop, loop.condition));
       return known;
     };
-    const loopInputBound = (loop: ts.Node, condition: ts.Expression): boolean => {
+    const loopInputBound = (loop: TS.Node, condition: TS.Expression): boolean => {
       const names = condition.getText(file).match(IDENTIFIER_TOKEN) ?? [];
       if (names.some((name) => sizes.has(name))) return true;
       return names.some((name) => {
         if (!bounds.has(name)) return false;
-        for (let scope: ts.Node | undefined = loop; scope; scope = scope.parent) {
+        for (let scope: TS.Node | undefined = loop; scope; scope = scope.parent) {
           if (--budget.left < 0) return false;
           // A loop's own index is not its bound.
           if (ts.isForStatement(scope) && declaresIndex(scope, name)) return scope !== loop && indexBounded(scope);
@@ -317,7 +337,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
         return false;
       });
     };
-    const fixedBound = (operand: ts.Expression): boolean => {
+    const fixedBound = (operand: TS.Expression): boolean => {
       if (ts.isParenthesizedExpression(operand)) return fixedBound(operand.expression);
       if (numericLiteral(operand) !== null) return true;
       if (ts.isIdentifier(operand)) return fixedCollections.has(operand.text);
@@ -325,7 +345,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       return ts.isBinaryExpression(operand) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken].includes(operand.operatorToken.kind)
         && numericLiteral(operand.right) !== null && fixedBound(operand.left);
     };
-    const walk = (node: ts.Node): Cost => {
+    const walk = (node: TS.Node): Cost => {
       visited += 1;
       if (visited > 12_000 || budget.left < 0) { uncertainty = ANALYSIS_LIMIT_MESSAGE; return constant; }
       if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && strings.has(node.left.text) && [ts.SyntaxKind.PlusEqualsToken, ts.SyntaxKind.EqualsToken].includes(node.operatorToken.kind)) uncertainty = 'Growing immutable strings need a manual review of copying costs.';
@@ -333,7 +353,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
         uncertainty = 'Input-dependent string construction needs a manual review of output costs.';
       }
       if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-        const stringOperand = (operand: ts.Expression): boolean => ts.isStringLiteral(operand)
+        const stringOperand = (operand: TS.Expression): boolean => ts.isStringLiteral(operand)
           || ts.isNoSubstitutionTemplateLiteral(operand) || ts.isTemplateExpression(operand)
           || (ts.isIdentifier(operand) && strings.has(operand.text));
         if ((stringOperand(node.left) || stringOperand(node.right))
@@ -366,7 +386,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
         }
         if (ts.isBinaryExpression(condition) && (ts.isCallExpression(condition.left) || ts.isCallExpression(condition.right))) uncertainty = 'A computed loop bound needs manual iteration-count review.';
         if (ts.isBinaryExpression(condition)) {
-          const canonical = (operand: ts.Expression): boolean => ts.isIdentifier(operand) || numericLiteral(operand) !== null
+          const canonical = (operand: TS.Expression): boolean => ts.isIdentifier(operand) || numericLiteral(operand) !== null
             || (ts.isPropertyAccessExpression(operand) && operand.name.text === 'length')
             || (ts.isBinaryExpression(operand) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken].includes(operand.operatorToken.kind)
               && canonical(operand.left) && numericLiteral(operand.right) !== null);
@@ -378,7 +398,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
             : ts.isBinaryExpression(node.initializer) ? [node.initializer.right] : [node.initializer];
           if (starts.some(start => start && inputBound(start))) uncertainty = 'A loop starts from an input-dependent or shared position.';
         }
-        const inspectControl = (child: ts.Node) => {
+        const inspectControl = (child: TS.Node) => {
           if (ts.isFunctionDeclaration(child) || ts.isArrowFunction(child) || ts.isFunctionExpression(child)) return;
           if (ts.isBreakStatement(child)) uncertainty = 'Early loop termination needs manual iteration-count review.';
           if (ts.isReturnStatement(child)) loopReturns = true;
@@ -490,6 +510,9 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
  * nested adversarial submissions can exhaust a parser's call stack even while
  * remaining under the submission byte limit. */
 export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>, code: string): ComplexityReport {
+  // Outside the catch: a compiler that cannot load is a broken deployment,
+  // which fails as loudly as the import it replaces, never an "unknown".
+  loadTypeScript();
   try {
     return inspectComplexity(task, code);
   } catch {

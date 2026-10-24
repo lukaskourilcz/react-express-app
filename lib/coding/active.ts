@@ -23,9 +23,32 @@ import { evolvingStage } from '../../shared/evolving';
 
 const verdicts = CODING_TASKS.map((task) => ({ task, eligibility: codingTaskEligibility(task, solutionFor(task.id)) }));
 
-/** Server-only source revisions include grader edits without exporting graders. */
-export const CODING_SOURCE_VERSIONS: ReadonlyMap<string, string> = new Map(
-  CODING_TASKS.map((task) => [task.id, taskHash(task, solutionFor(task.id))]),
+/** A read-only map whose entries are computed on first read. Every handler
+ * that issues a coding task imports this module, and hashing all 814 tasks
+ * with their solutions costs about 25 ms of every cold start (baseline #587,
+ * server item 15); only the marketing export reads these versions. */
+class LazyReadonlyMap<K, V> implements ReadonlyMap<K, V> {
+  #entries: Map<K, V> | null = null;
+  constructor(private readonly build: () => Iterable<readonly [K, V]>) {}
+  /** Whether the entries were computed yet; for the cold-start contract. */
+  get built(): boolean { return this.#entries !== null; }
+  #map(): Map<K, V> { return (this.#entries ??= new Map(this.build())); }
+  get size() { return this.#map().size; }
+  get(key: K) { return this.#map().get(key); }
+  has(key: K) { return this.#map().has(key); }
+  forEach(callback: (value: V, key: K, map: ReadonlyMap<K, V>) => void, thisArg?: unknown) {
+    this.#map().forEach((value, key) => callback.call(thisArg, value, key, this));
+  }
+  entries() { return this.#map().entries(); }
+  keys() { return this.#map().keys(); }
+  values() { return this.#map().values(); }
+  [Symbol.iterator]() { return this.#map()[Symbol.iterator](); }
+}
+
+/** Server-only source revisions include grader edits without exporting graders.
+ * The same `taskHash` values as before; computed on first read, not at import. */
+export const CODING_SOURCE_VERSIONS: ReadonlyMap<string, string> = new LazyReadonlyMap(() =>
+  CODING_TASKS.map((task) => [task.id, taskHash(task, solutionFor(task.id))] as const),
 );
 
 /** Tasks that may be issued, in catalogue order: the ones the gate passed, on

@@ -183,6 +183,33 @@ export async function settleMilestones(
   return report;
 }
 
+/**
+ * `settleMilestones` for a call site that discards the report: a verified
+ * pass that may have reached a milestone (#587, server item 8).
+ *
+ * `settle_coin_milestones` (migration 052, the latest definition) credits
+ * only inside `IF v_premium`, with `v_premium := is_premium(p_user_id)`, so
+ * for an account `is_premium()` calls free it credits nothing and only reads
+ * the streak, the progress blob, every passed coding task, the ledger and the
+ * day's XP credits. `premium` is the caller's own answer to that same
+ * `is_premium()` question (its plan check, remembered for the request); this
+ * module never asks for a plan itself. A "no" skips the routine; a plan that
+ * cannot be read settles anyway, and the routine decides as before. An
+ * account that turns Premium after the plan was read is settled by its next
+ * pass or wallet read (the wallet always runs the routine), as an account
+ * that upgrades later always was.
+ */
+export async function settleMilestonesAfterPass(
+  supabase: SupabaseClient,
+  userId: string,
+  subject: string,
+  premium: () => Promise<boolean>,
+): Promise<void> {
+  const settle = await premium().catch(() => true);
+  if (!settle) return;
+  await settleMilestones(supabase, userId, subject);
+}
+
 /* ── the monthly top three ─────────────────────────────────────────────── */
 
 /** `yyyy-mm` of the calendar month before `now`, in UTC. */

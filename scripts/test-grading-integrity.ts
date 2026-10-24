@@ -6,10 +6,11 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
-import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, sandboxPool, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
 import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { requestMemo, withRequestContext } from '../lib/http';
 import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { type CodingDesignKey } from '../lib/quiz-tokens';
 import { gradeDesign, prepareDesign } from '../lib/coding/grade';
@@ -36,6 +37,31 @@ import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 // the sources under test, exactly as the deployment runs it.
 checkQuickjsProvenance();
 await buildSandboxWorker();
+
+// ── a task page loads a grader thread ahead of its first Submit (#587) ───
+// Server item 30: the first Submit on an instance waited for a new thread to
+// load QuickJS. A page of a task QuickJS grades now loads one when the
+// instance has none, runs an empty program on it and leaves it idle, as any
+// run does; a second page loads nothing more, and a React page none.
+{
+  const page = async (id: string) => {
+    const out = { statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingTask({ method: 'GET', headers: { 'x-forwarded-for': '203.0.113.94' }, query: { id } } as never, out as never, null);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  };
+  assert.deepEqual(sandboxPool(), { idle: 0, warming: false }, 'no grader thread is loaded before any run');
+  await page(CODING_TASKS.find((task) => task.track === 'react' && isFreeCodingTask(task.id))!.id);
+  assert.deepEqual(sandboxPool(), { idle: 0, warming: false }, 'a React page loads no QuickJS thread');
+  await page('js-double-numbers');
+  assert.equal(sandboxPool().warming, true, 'a JavaScript page starts loading one');
+  for (let waited = 0; sandboxPool().warming && waited < 15_000; waited += 20) await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(sandboxPool(), { idle: 1, warming: false }, 'and leaves it loaded and idle');
+  await page('js-double-numbers');
+  assert.deepEqual(sandboxPool(), { idle: 1, warming: false }, 'a second page loads nothing more');
+  const graded = await runInSandbox({ code: 'function answer(){return 1}', calls: ['answer()'], expectations: [1] });
+  assert.equal(graded.results[0]?.pass, true, 'the warmed thread grades the next run');
+  console.log('PASS integrity: a task page loads one grader thread ahead of its first Submit, and only when the instance has none');
+}
 await checkCodingTaskRuntimePolicy();
 await checkSortParity();
 
@@ -163,6 +189,8 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const xp = new Set<string>();
   const attemptIds: string[] = [];
   const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+  // Every read and routine call in the order the handler made it.
+  const events: string[] = [];
   const result = (data: unknown) => Promise.resolve({ data, error: null });
   const progressRow = (taskId: unknown, row: ProgressFake) => ({
     task_id: taskId, track: 'javascript', status: row.status, passes: row.passes,
@@ -175,6 +203,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
       eq: (column: string, value: unknown) => { filters[column] = value; return chain; },
       in: () => chain,
       maybeSingle: () => {
+        events.push(`read:${table}`);
         if (table === 'roadmap_attempts') return result(levels.get(String(filters.attempt_id)) ?? null);
         if (table === 'coding_progress') {
           const row = progress.get(`${filters.user_id}:${filters.task_id}`);
@@ -183,17 +212,18 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
         return result(null);
       },
       // A list read of coding_progress returns the account's rows.
-      then: (resolve: (value: unknown) => unknown) => resolve({
+      then: (resolve: (value: unknown) => unknown) => (events.push(`list:${table}`), resolve({
         data: table === 'coding_progress'
           ? [...progress].filter(([key]) => key.startsWith(`${filters.user_id}:`)).map(([key, row]) => progressRow(key.slice(key.indexOf(':') + 1), row))
           : [],
         error: null,
-      }),
+      })),
     };
     return chain;
   };
   const rpc = (name: string, args: Record<string, unknown>) => {
     rpcCalls.push({ name, args });
+    events.push(`rpc:${name}`);
     if (name === 'record_coding_reveal') {
       const key = `${args.p_user_id}:${args.p_task_id}`;
       const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
@@ -233,7 +263,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     }
     return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass, ...(options.firstVerifiedPass ? { xpForfeited } : {}) });
   };
-  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls, levels };
+  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls, levels, events };
 }
 
 {
@@ -365,6 +395,80 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   console.log('PASS integrity: a slow React VM is a runner outage, not the learner\'s timeout');
 }
 
+// ── the React grader bundle is read once per instance (#587 item 14) ────
+// Every Submit read the 2 MB bundle from disk again. It is read once and the
+// same bytes are uploaded on every run, exactly the deployed file.
+{
+  const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))('./lib/coding/generated/vercel-sandbox.cjs') as { Sandbox: { create: (...args: unknown[]) => Promise<unknown> } };
+  const { runIsolatedReactSuite } = await import('../lib/coding/react-isolated');
+  const realCreate = Sandbox.create;
+  const uploaded: Buffer[] = [];
+  Sandbox.create = async () => ({
+    writeFiles: async (files: { path: string; content: Buffer }[]) => { uploaded.push(files.find((file) => file.path.endsWith('/runner.cjs'))!.content); },
+    runCommand: async () => ({ exitCode: 124, stdout: async () => '' }),
+    stop: async () => undefined,
+  });
+  process.env.REACT_RUNNER_SNAPSHOT_ID = 'snapshot-test';
+  try {
+    const input = { suite: "test('renders', () => {});", appSource: 'export default function App() { return null; }' };
+    await runIsolatedReactSuite(input);
+    await runIsolatedReactSuite(input);
+    assert.equal(uploaded.length, 2, 'every run uploads the bundle');
+    assert.equal(uploaded[0], uploaded[1], 'the bytes read once are reused');
+    assert.ok(uploaded[0].equals(readFileSync(join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'))), 'and they are the deployed bundle, byte for byte');
+  } finally {
+    Sandbox.create = realCreate;
+    delete process.env.REACT_RUNNER_SNAPSHOT_ID;
+  }
+  console.log('PASS integrity: the React grader bundle is read once per instance and uploaded unchanged on every run');
+}
+
+// ── the verdict does not wait for the VM's stop (#587 item 14) ──────────
+// The stop is sent as soon as the verdict is read. Where the runtime keeps
+// the function alive for it (the request context's waitUntil), the verdict
+// goes on at once; elsewhere it waits for the stop, as before.
+{
+  const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))('./lib/coding/generated/vercel-sandbox.cjs') as { Sandbox: { create: (...args: unknown[]) => Promise<unknown> } };
+  const { runIsolatedReactSuite } = await import('../lib/coding/react-isolated');
+  const realCreate = Sandbox.create;
+  const contextKey = Symbol.for('@vercel/request-context');
+  const holder = globalThis as unknown as Record<symbol, unknown>;
+  const realContext = holder[contextKey];
+  let release: () => void = () => undefined;
+  let stopsSent = 0;
+  Sandbox.create = async () => ({
+    writeFiles: async () => undefined,
+    runCommand: async () => ({ exitCode: 124, stdout: async () => '' }),
+    stop: () => { stopsSent += 1; return new Promise<void>((resolve) => { release = resolve; }); },
+  });
+  process.env.REACT_RUNNER_SNAPSHOT_ID = 'snapshot-test';
+  const input = { suite: "test('renders', () => {});", appSource: 'export default function App() { return null; }' };
+  const within = (promise: Promise<unknown>, ms: number) => Promise.race([promise.then(() => true), new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms))]);
+  try {
+    const handed: Promise<unknown>[] = [];
+    holder[contextKey] = { get: () => ({ waitUntil: (promise: Promise<unknown>) => { handed.push(promise); } }) };
+    const outcome = await within(runIsolatedReactSuite(input), 2_000);
+    assert.equal(outcome, true, 'with waitUntil the verdict comes back while the stop is still open');
+    assert.equal(stopsSent, 1, 'the stop was sent');
+    assert.equal(handed.length, 1, 'and handed to the runtime');
+    assert.equal(await within(handed[0], 50), false, 'what was handed settles only with the stop');
+    release();
+    assert.equal(await within(handed[0], 1_000), true);
+
+    delete holder[contextKey];
+    const waiting = runIsolatedReactSuite(input);
+    assert.equal(await within(waiting, 100), false, 'without the hook the verdict waits for the stop, as before');
+    release();
+    assert.equal(await within(waiting, 1_000), true);
+    assert.equal(stopsSent, 2);
+  } finally {
+    Sandbox.create = realCreate;
+    if (realContext === undefined) delete holder[contextKey]; else holder[contextKey] = realContext;
+    delete process.env.REACT_RUNNER_SNAPSHOT_ID;
+  }
+  console.log('PASS integrity: a React verdict does not wait for the VM\'s stop where the runtime keeps the function alive for it');
+}
+
 // ── a checkpoint hands over nothing that passes its milestone ───────────
 // A pass of a checkpoint (`…-start`) and a reveal there serve that
 // checkpoint's own reference and no boards; that reference fails the
@@ -424,7 +528,14 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const run = play(after048, learner);
   await run.reveal();
   assert.equal(after048.progress.get(`${learner}:js-double-numbers`)?.status, 'revealed');
+  const readsBefore = after048.events.length;
   const forfeited = await run.submit(reference.solution);
+  // #587 server item 10: the pass reads its progress row once, after the
+  // verdict is written; no read before the write, which only a pre-058
+  // database needed and which the row read back now answers.
+  const passEvents = after048.events.slice(readsBefore);
+  assert.deepEqual(passEvents.filter((event) => event === 'read:coding_progress' || event === 'rpc:record_coding_verdict'), ['rpc:record_coding_verdict', 'read:coding_progress'],
+    `a pass reads its progress row only after the verdict is written (${passEvents.join(', ')})`);
   assert.equal(forfeited.verdict, 'passed');
   assert.equal(forfeited.firstPass, true);
   assert.equal(forfeited.xpAwarded, 0, 'migration 048 pays nothing for a first pass after a reveal');
@@ -489,11 +600,117 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
 
   const revealed = 'user-legacy-0002';
   db.progress.set(`${revealed}:${id}`, { status: 'passed', passes: 1, revealCount: 1, verified: false });
+  const readsBefore = db.events.length;
   const forfeited = await submit(revealed, reference.solution);
+  assert.deepEqual(db.events.slice(readsBefore).filter((event) => event === 'read:coding_progress' || event === 'rpc:record_coding_verdict'), ['rpc:record_coding_verdict', 'read:coding_progress'],
+    'on 058 a pass reads its progress row once, after the verdict (#587 item 10)');
   assert.equal(forfeited.xpAwarded, 0, 'a reveal before the first verified pass still costs its XP');
   assert.equal(forfeited.xpForfeited, true, 'and the verdict says so, though the row already read passed');
   assert.equal(coinCredits(revealed).length, 0, 'no coins either');
   console.log('PASS integrity: an old unverified pass no longer blocks the first verified pass\'s XP and coins');
+}
+
+// ── a pass credits its coins and settles milestones at once (#587) ───────
+// Server item 10: the coin credit and the milestone settlement ran one after
+// the other although neither reads what the other writes. They now start
+// together, and the answer still waits for both. Server item 8: the
+// settlement credits only a Premium account, so a free account's pass skips
+// it and still credits its XP coins. The tier comes from the request's
+// remembered plan (lib/access.ts reads no database here, which answers free).
+{
+  const db = codingDatabase();
+  const learner = 'user-parallel-0009';
+  const timeline: string[] = [];
+  const routine = db.client.rpc;
+  db.client.rpc = (name: string, args: Record<string, unknown>) => {
+    if (name !== 'credit_verified_xp_tokens' && name !== 'settle_coin_milestones') return routine(name, args);
+    db.rpcCalls.push({ name, args });
+    timeline.push(`start:${name}`);
+    return new Promise((resolve) => setTimeout(() => {
+      timeline.push(`end:${name}`);
+      resolve({ data: name === 'settle_coin_milestones' ? {} : 3, error: null });
+    }, 25));
+  };
+  const out = { statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  const premiumReq = {
+    method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.91' }, query: {},
+    body: { session: encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null }), code: solutionFor('js-double-numbers')!.solution, user_id: learner },
+  };
+  await withRequestContext(premiumReq as never, out as never, async () => {
+    void requestMemo(`tier:${learner}`, async () => 'premium');
+    await handleCodingSubmit(premiumReq as never, out as never, db.client as never);
+  });
+  assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  assert.equal(out.body?.verdict, 'passed');
+  assert.ok((out.body?.xpAwarded ?? 0) > 0, 'the pass earns its XP');
+  assert.deepEqual(timeline.slice(0, 2).sort(), ['start:credit_verified_xp_tokens', 'start:settle_coin_milestones'], `both routines start before either ends (${timeline.join(', ')})`);
+  assert.equal(timeline.length, 4, 'and the answer waits for both');
+  // A free account: the XP coins, no settlement.
+  timeline.length = 0;
+  const free = { ...out, statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number } };
+  await handleCodingSubmit({
+    method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.92' }, query: {},
+    body: { session: encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null }), code: solutionFor('js-double-numbers')!.solution, user_id: 'user-parallel-free-0010' },
+  } as never, free as never, db.client as never);
+  assert.equal(free.statusCode, 200, JSON.stringify(free.body));
+  assert.ok((free.body?.xpAwarded ?? 0) > 0, 'a free account\'s pass earns its XP');
+  assert.deepEqual(timeline, ['start:credit_verified_xp_tokens', 'end:credit_verified_xp_tokens'], 'and credits its coins without settle_coin_milestones, which credits only Premium accounts');
+  console.log('PASS integrity: a pass credits its coins and settles milestones together for a Premium account, and a free account skips the settlement');
+}
+
+// ── a Submit reads what waits only on the caller while other work runs ───
+// Server item 10: a Learn-linked Submit of Premium content asked the plan,
+// then read the level attempt, after both per-task buckets had answered; a
+// signed-in stage Submit read its passed stages after the code was graded.
+// The attempt is now read as soon as the token check answers, while the
+// plan is still being asked, and the stages while the code is graded. The
+// gates still decide in their order on what was read.
+{
+  const db = codingDatabase();
+  const learner = 'user-prefetch-0010';
+  const levelAttempt = 'prefetchattempt0123456789';
+  db.levels.set(levelAttempt, { user_id: learner, coding_task_ids: ['alg-dsa-stack'], completed_at: null, expires_at: new Date(Date.now() + 60 * 60_000).toISOString() });
+  const session = encodeCodingSession({ taskId: 'alg-dsa-stack', track: 'algorithms', userId: learner, roadmapAttemptId: levelAttempt });
+  const req = { method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.92' }, query: {}, body: { session, code: solutionFor('alg-dsa-stack')!.solution, user_id: learner } };
+  const out = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await withRequestContext(req as never, out as never, async () => {
+    // A Premium account whose plan takes a moment to answer.
+    void requestMemo(`tier:${learner}`, () => new Promise((resolve) => setTimeout(() => { db.events.push('tier:answered'); resolve('premium'); }, 30)));
+    await handleCodingSubmit(req as never, out as never, db.client as never);
+  });
+  assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  assert.equal(out.body?.verdict, 'passed');
+  assert.equal(out.body?.applied, true, 'the linked pass is recorded');
+  const attemptRead = db.events.indexOf('read:roadmap_attempts');
+  assert.ok(attemptRead >= 0 && attemptRead < db.events.indexOf('tier:answered'), `the level attempt is read while the plan is asked (${db.events.join(', ')})`);
+  assert.equal(db.events.filter((event) => event === 'read:roadmap_attempts').length, 1, 'and read once');
+
+  // The stage gate's read starts while the code holds its grading slot: a
+  // probe of the same in-flight count, one per task, finds it taken.
+  const stageId = 'js-evolving-calculator-1-start';
+  const stageLearner = 'user-prefetch-0011';
+  const probes: boolean[] = [];
+  const stageDb = codingDatabase();
+  const list = stageDb.client.from;
+  stageDb.client.from = (table: string) => {
+    const chain = list(table) as { then: (resolve: (value: unknown) => unknown) => unknown };
+    const then = chain.then;
+    if (table === 'coding_progress') chain.then = (resolve) => {
+      const slot = enterInFlight(stageReq as never, 'grading', { item: gradingItem.task(stageId), perItem: 1, perCaller: 99 }, `user:${stageLearner}`);
+      probes.push(slot === null);
+      slot?.();
+      return then(resolve);
+    };
+    return chain as never;
+  };
+  const stageReq = { method: 'POST', headers: { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.93' }, query: {}, body: { session: encodeCodingSession({ taskId: stageId, track: 'javascript', userId: stageLearner }), code: solutionFor(stageId)!.solution, user_id: stageLearner } };
+  const stageOut = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit(stageReq as never, stageOut as never, stageDb.client as never);
+  assert.equal(stageOut.statusCode, 200, JSON.stringify(stageOut.body));
+  assert.equal(stageOut.body?.verdict, 'passed');
+  assert.equal(stageOut.body?.applied, true, 'the open stage is recorded');
+  assert.deepEqual(probes, [true], 'the stage gate reads the passed stages once, while the code is graded');
+  console.log('PASS integrity: a Submit reads the Learn attempt while the plan is asked and a stage\'s passed stages while it is graded');
 }
 
 // ── a task's XP again, after a reset and an hour (migration 058) ─────────

@@ -1461,7 +1461,17 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   credits no coins. Everything that moves the streak (a verified quiz, a
   completed Learn level or part test, an applied coding pass, an awarded
   Challenge run) then settles the milestones, so a streak milestone reached on
-  a Learn or coding day pays at once. The first wallet read (`op=wallet` GET)
+  a Learn or coding day pays at once. After a recorded Learn completion, a
+  verified coding pass and a verified learning-path code pass the settlement
+  runs only for an account `resolveTier` reads as Premium
+  (`settleMilestonesAfterPass`, #587 server item 8): every credit in the
+  routine sits inside `IF is_premium`, so it credits nothing for a free
+  account, and a plan that cannot be read still settles. The plan is read
+  beside the completion's first reads and beside the coding verdict, so no
+  wave is added; a Premium account spends one `is_premium` call where its
+  step's gate did not already ask, and a free account one `is_premium`
+  call in place of the settlement's reads. An account that turns Premium
+  later is settled by its next pass or wallet read. The first wallet read (`op=wallet` GET)
   pays the welcome coins, settles the month that just ended and the learner's
   milestones, and returns the rules and progress for "How to earn".
 - **Spending.** The crown (1,200) and streak protection (250) are open to
@@ -1591,7 +1601,13 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
 - **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
   every answer before the handler runs, and the public reads set their own:
   the shared boards `public, s-maxage=60`; the Learn map `public, max-age=60,
-  s-maxage=60, stale-while-revalidate=300`, so the CDN shares it; a lesson
+  s-maxage=60, stale-while-revalidate=300`, so the CDN shares it; the
+  learning-path catalogue `public, max-age=60, s-maxage=300,
+  stale-while-revalidate=600` (#587, server item 12: the router replaces the
+  handler's browser-only header, since the manifests, versions and
+  availability are the same for every caller; an availability flip on one
+  instance, such as a storage migration found missing, reaches browsers up to
+  five minutes later); a lesson
   `public, max-age=300, s-maxage=86400` with its ETag; the curation coverage
   `public, s-maxage=60, stale-while-revalidate=300`; settings and the
   Challenge board `public, s-maxage=15, stale-while-revalidate=60`. Health
@@ -1613,6 +1629,22 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   reports use it (`questionReportAddress`, then `questionReport`: three, then
   one every three minutes), so a class can report more than three questions
   at once.
+- **The prelude's round trips** (#587). `limitRead`, `enforceClassRateLimit`
+  and the writes to `api/user/[op].ts` check the caller's token while the
+  address bucket answers, then take the caller's own bucket: two waves where
+  there were three. The address bucket still decides first: a request it
+  refuses answers 429 and spends nothing of the caller's bucket. Once an
+  address bucket refused an address on an instance, that address's token is
+  checked only after its bucket admits it, for a minute, so a refused flood
+  stops reaching Supabase Auth after its first refusal (it was admitted, and
+  checked, until then under the old order too). A coding Submit and the
+  learning-path start, submit and draft save take their address bucket the
+  same way (`enforceAddressRateLimit`) and read that check where they need
+  the caller, so their token check no longer waits for the bucket either;
+  a Submit or start its address bucket admits but whose body is then
+  refused has spent one Auth call, as any two-tier route does.
+  `npm run test:performance` (`scripts/test-prelude.ts`) pins the order
+  against timed stand-ins.
 - **One-time claims.** `claimOnce` (one grade per placement round, one check
   per design walkthrough) is held in Upstash. Where Upstash is configured, a
   claim it cannot record is answered 503 `claim_unavailable` and nothing is
@@ -1626,6 +1658,170 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   their session ended. `lib/auth.ts` verifies a token at most once per request
   (`tryAuthOnce`), and admin writes log the admin account that made them
   (`by`).
+- **Token checks across requests** (#587). An access token Supabase Auth
+  accepted is trusted again on the same function instance, without another
+  Auth round trip, for at most 60 seconds (`VERIFIED_TOKEN_TTL_MS` in
+  `lib/auth.ts`) and never past the token's own `exp`, and only by reads:
+  a GET or HEAD request. Every other method (answers, completions, claims,
+  purchases, drafts, deletions) asks Auth on every request, so no XP, coin or
+  one-time claim is earned on a session Auth has ended, and no write lands
+  for an account deleted on another instance. Only acceptances are kept: a
+  refusal, an outage or a timeout is asked again on the next request.
+  Requests on one instance that present the same new token at once share one
+  Auth call. Only a JWT whose `exp` and `sub` can be read is kept, keyed by
+  the SHA-256 of the token, at most 2,000 per instance. The trade-off, for
+  the owner to accept: a session ended elsewhere (sign out everywhere, a
+  password change, a ban, an admin role removed) can keep reading for up to
+  a minute on an instance that accepted its token just before. Auth itself
+  accepts a stolen access token until it expires (one hour); the minute only
+  postpones Auth's own session lookup. A few reads write a row of their own
+  (a Learn level open records its attempt), and for an account deleted on
+  another instance in that minute such a row can still be written; nothing
+  erases it again, since the tables do not reference `auth.users`. Among
+  reads, the admin API, the fulfilment desk and the wallet (its GET settles
+  coin grants) call `requireFreshAuth` and ask Auth on every request, as do
+  account deletion, billing checkout, portal and cancellation, and voucher
+  redemption, and a deleted account's token is forgotten at once on the
+  instance that deleted it (`forgetVerifiedToken`). `npm run test:launch`
+  (verified-caller suite) pins each bound.
+- **Learning-preference save** (#587, server item 23). A PUT merges the new
+  answers with the `user_metadata` Supabase Auth returned for the request's
+  own token check (a PUT never trusts an earlier acceptance, so it is the
+  account as Auth holds it now), then writes once with `updateUserById`: one
+  admin API round trip where there were two. Only a verified result without
+  `user_metadata` (the local development fallback) still reads the account
+  through `getUserById`. The GET keeps `getUserById`: a GET may trust an
+  acceptance up to a minute old, whose metadata can predate a save made in
+  that minute.
+- **Learning-path submit** (#587, server item 20). The tier of a Premium
+  activity is asked beside the enrollment read (`prefetchTier`; remembered
+  for the request, used only once the enrollment is proven the caller's).
+  One progress read serves the plan check's "already passed" exception and
+  the completion projection, and for a code activity it runs while the
+  grader does; for a lesson, check or write-up it is issued beside the
+  enrollment read, scoped to the caller's own rows by `user_id` as well as
+  the enrollment (every row carries its enrollment owner's id), so those
+  submits go from the enrollment straight to the accept call. It is used
+  only once the enrollment is proven the caller's; a submit refused before
+  that (a paused or unknown enrollment) has spent the read. It is still read
+  before the accept call, which decides completion again under its lock. After a verified code pass the XP coin
+  credit and the milestone settlement (Premium only, see "Where credits
+  happen") run together, both awaited before the answer.
+- **Learning-path activity start** (#587, server item 21). Every published
+  activity id belongs to one path, so a Premium activity's tier is asked
+  beside the enrollment read; the plan check still runs on the path the
+  enrollment names, after ownership is proven, and a free activity asks for
+  no tier.
+- **Wallet read settlements** (#587, server item 7). A wallet GET runs
+  `grant_signup_tokens`, `settle_month_top3`, `settle_coin_milestones` and
+  `credit_referral` before it reads. A warm instance skips, for an account and
+  at most ten minutes, the two that answered a state no later call can
+  change: the welcome grant once it answered at all (`signup:<account>` is in
+  the ledger), and the account's own invitation once it is credited
+  (`already`, `credited`, `capped`, `orphaned`) or absent past the sign-up
+  window plus an hour (`none` when `record_referral` can no longer bind one).
+  The month already had its per-instance memory, and the milestones always
+  run because the screen shows their report. A miss only costs the call; the
+  database stays the authority and nothing is granted from memory. The bound
+  for the owner: should an erasure remove the ledger while the sign-in
+  identity survives (the deletion's Auth step failed), that instance skips a
+  welcome grant the database would pay again for up to ten minutes. At most
+  5,000 accounts per instance. `npm run test:launch` pins it.
+- **Learn completion round trips** (#587, server item 5). A completion reads
+  the attempt, the graded answers, the served set and, on a code level, the
+  coding rows together, with the tier gate of a Premium level: one wave where
+  there were three. The gate still decides first: an attempt no answer opened
+  is inserted only once the gate let the session through, so a refused
+  session writes nothing (its reads are spent). The coding rows are read
+  whether or not the questions passed, and a failed read still answers only
+  when they did. After the completion routine, the progress reload (then the
+  first pass's coin and referral credits, together), the milestone
+  settlement and the concept reviews run at once instead of one after
+  another; each is idempotent under its own event id and the answer waits
+  for all of them. One difference on a failure path: when the reload fails
+  (500 "Progress saved but could not be reloaded"), the settlement and the
+  concept reviews have already run, where they used to be skipped.
+  `npm run test:performance` (`scripts/test-learn-round-trips.ts`) pins the
+  waves against a timed stand-in.
+- **Learn tier reads** (#587, server item 6). A level or part test opened by
+  an account starts its `is_premium` read with the learner's record
+  (`prefetchTier` in `lib/access.ts`), for a Premium step only; the
+  progression guard still decides first. The eight answers of a Premium
+  level trust a Premium answer the same instance read within the last
+  minute, counted from when it asked, instead of asking again
+  (`recentPremium`, at most 5,000 accounts);
+  only a Premium answer is kept, and a free answer read anywhere on the
+  instance forgets it at once. Every other gate, the level open and the
+  completion included, asks the database each time. The trade-off, for the
+  owner to accept: an account whose Premium ended keeps answering the
+  questions of a Premium session it already holds for up to a minute, on an
+  instance that saw it Premium just before; completing that session asks
+  again and is refused, so no progress, XP or coin comes of it.
+- **Code level open** (#587, server item 11). A level of a code topic
+  records its attempt row when it opens, so a "Build it" link works before
+  the first answer. The attempt id is minted for that open (144 random
+  bits), so the row is inserted without a read for it first; only a failed
+  insert reads the row back, as before. The answer and the completion still
+  read before they insert, since their row may exist. One round trip fewer
+  per code level open, for an account and for a guest.
+  `npm run test:performance` (`scripts/test-learn-round-trips.ts`) pins it.
+- **Served question set** (#587, server item 19). `lib/questions-store.ts`
+  merges the admin console's `question_edits` rows onto the bank and keeps
+  the result for 15 seconds per instance. Up to a minute old, a good set is
+  served at once while one read of the rows runs, and the next request gets
+  the new set; only an older set, or none, waits for the read. A read that
+  fails within that minute keeps the good set, so a hidden question stays
+  hidden, and the next request reads again (one read in flight per
+  instance); past the minute a failure serves the bank alone, as before. The
+  read names the twelve columns the store uses instead of `*`, which also
+  sent the retired cs_* text. A read begun before an admin save never
+  becomes the cached set after it, and neither does a background read still
+  unsettled after five seconds (cut off by an instance frozen once its
+  response went out): the next request reads for itself instead of waiting
+  for it. Edits reach every instance within about
+  15 seconds plus one request. `npm run test:performance`
+  (`scripts/test-questions-cache.ts`) pins each bound.
+- **Coding reads and Submit round trips** (#587, server items 9 and 10). The
+  task page reads the account's passed task ids and its own progress row,
+  not every row in full, and `roadmap_progress` only as
+  `data->javascript->levels` (PostgREST JSON path selection); coding-progress
+  and the practice gates read the levels the same way. A verified pass
+  reads its progress row once, after `record_coding_verdict`: on a database
+  before migration 058 the forfeit claim comes from that row's reveal
+  count, which the routine leaves alone. The XP coin credit and the
+  milestone settlement run together, both awaited. A Submit asks the plan
+  (Premium content) and reads the Learn level attempt (a linked session)
+  as soon as the token check answers, beside the per-task and ceiling
+  buckets, and a stage Submit reads its passed stages while the code is
+  graded; every gate still decides in its order on what was read, and
+  nothing is written before it. The trade-off, for the owner to accept: a
+  Submit one of those two buckets refuses has spent an `is_premium` call
+  and a `roadmap_attempts` read, from a signed-in caller its address bucket
+  (`codingSubmitAddress`) already bounds; a session bound to another
+  account is refused before anything is read. `npm run test:coding-auth`
+  and `npm run test:grading-integrity` pin the reads and the overlaps.
+- **Work after the answer** (#587, server items 14 and 28).
+  `lib/coding/after-response.ts` hands work whose result the answer does
+  not use to the request context's `waitUntil`, the hook
+  `@vercel/functions` wraps, read without that dependency: the React VM's
+  stop call, sent the moment the verdict is read. The function stays alive
+  for it after it answers, within its `maxDuration`; where the runtime
+  offers no hook it is awaited as before. The garden stays inside the
+  Submit: a pass reports its own delivery, since answering `queued` before
+  the commit would make "Commit queued; it will be retried" say something
+  else, and the retry of older queued rows after it is awaited too.
+  `deliver` claims no row, so a retry still writing after the answer would
+  race a Sync pressed on the verdict or the next pass of the same file and
+  could put older code back. The React grader bundle is read from the
+  deployment once per instance and uploaded unchanged on every run.
+- **Grader warm-up** (#587, server item 30). A page of a JavaScript,
+  TypeScript or Algorithms task that can be submitted loads one QuickJS
+  grader thread on an empty program when the instance has none loaded, none
+  warming and no run in flight, and leaves it idle, as a run does. It takes
+  a slot like a run, so the pool stays at four threads, and a warm-up that
+  fails is not counted as a failed start. The cost: one idle thread on an
+  instance that serves task pages and never grades. The TypeScript
+  checker's thread still loads on its first check.
 - **Timeouts.** `withTimeout` (`lib/http.ts`) rejects a Supabase call that
   has not settled in time with `UpstreamTimeoutError`, a
   `ServiceUnavailableError`, so the caller gets 503 `upstream_timeout`, which
@@ -1772,6 +1968,25 @@ switches and integrations:
   which needs all five.
 - `DEVSHARK_MARKETING_EXPORT_SECRET` for the marketing source export; no
   environment sets it.
+
+What a new function instance evaluates before its first answer (#587): the
+user and roadmap routers load their heavy op families (coding, learning
+paths, rewards, billing, the tier check) on first call (`lazyExport` in
+`lib/http.ts`); TypeScript loads on the first complexity estimate or
+in-thread check; the coding source versions are hashed on first read;
+`/api/settings` publishes the path capability from
+`lib/learning-paths/capability.ts` without the path handlers; and
+`lib/access.ts` reads the coding catalogue's free flags on the first gate
+that asks about a coding task, so the wallet and the Learn and path gates do
+not evaluate the catalogue with its reference solutions (about 170 ms
+measured offline). The learning-path handlers load the attempt sessions
+(which hash a code activity's authored and hidden material), the graders
+and the reference solutions only when an activity is opened or a code
+submission graded, so the catalogue and the enrollment and progress reads
+every Learn section makes load none of them (about 240 ms of a fresh
+instance's first such read, measured offline). The first request of an op
+still pays for its own family. `npm run test:performance` (`scripts/cold-start-contracts.ts`) pins
+what each function loads.
 
 The footer carries the legal links, devShark's own social profiles, and the
 appearance and sound controls, and promotes no other product.
