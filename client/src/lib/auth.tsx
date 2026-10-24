@@ -74,16 +74,15 @@ function reportSignIn(): void {
  * (`session_id`, the same through every token refresh, new on every sign-in),
  * or, for a token without one, the account and its last sign-in time. */
 export function signInIdOf(session: { access_token?: string; user?: { id?: string; last_sign_in_at?: string } | null } | null): string | null {
-  if (!session?.user?.id) return null;
+  const user = session?.user;
+  if (!user?.id) return null;
   try {
-    const payload = (session.access_token ?? '').split('.')[1] ?? '';
-    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '='));
-    const sid = (JSON.parse(json) as { session_id?: unknown }).session_id;
-    if (typeof sid === 'string' && sid) return `session:${sid}`;
+    const sid = (JSON.parse(atob(session!.access_token!.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { session_id?: unknown }).session_id;
+    if (typeof sid === 'string' && sid) return sid;
   } catch {
-    // Not a JWT this module can read: fall back to the account.
+    // Not a JWT this module can read: the account and its last sign-in say it.
   }
-  return `user:${session.user.id}:${session.user.last_sign_in_at ?? ''}`;
+  return `${user.id} ${user.last_sign_in_at}`;
 }
 /** supabase-js's AuthRetryableFetchError (no answer, or a 502/503/504) or any
  * other 5xx: the server did not decide anything. Read by name and status, as

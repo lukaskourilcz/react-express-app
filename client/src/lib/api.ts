@@ -72,31 +72,18 @@ async function getAccessToken(): Promise<string | null> {
  * (docs/product-architecture.md, "Caching"). They go out at once, without the
  * token, so a signed-in visit no longer holds them behind the supabase-js
  * download and the session read (perf baseline #587 C10), and the CDN sees the
- * same request a guest's is. Only GETs of exactly these shapes qualify; a
- * handler that starts reading the caller must leave this list.
+ * same request a guest's is. Only GETs of exactly these addresses, as the
+ * client writes them, qualify; a handler that starts reading the caller must
+ * leave this list.
  *
  *   /api/settings                               game settings (api/settings.ts)
  *   /api/quiz/roadmap                           the Learn map (no topic, level, test or resource)
  *   /api/quiz/roadmap?resource=learning-path-catalog   the published path manifests
  *   /api/quiz/roadmap?resource=lesson&id=…      a Learn level's lesson
  */
-export function isPublicRead(url: string, method: string | undefined): boolean {
-  if (method && method.toUpperCase() !== 'GET') return false;
-  let parsed: URL;
-  try {
-    parsed = new URL(url, 'http://public.invalid');
-  } catch {
-    return false;
-  }
-  if (parsed.origin !== 'http://public.invalid') return false;
-  const keys = [...parsed.searchParams.keys()].sort().join(',');
-  const resource = parsed.searchParams.get('resource');
-  if (parsed.pathname === '/api/settings') return keys === '';
-  if (parsed.pathname !== '/api/quiz/roadmap') return false;
-  return keys === ''
-    || (keys === 'resource' && resource === 'learning-path-catalog')
-    || (keys === 'id,resource' && resource === 'lesson');
-}
+const PUBLIC_READ = /^\/api\/(?:settings|quiz\/roadmap(?:\?resource=(?:learning-path-catalog|lesson&id=[a-z0-9-]+))?)$/;
+export const isPublicRead = (url: string, method?: string): boolean =>
+  (!method || method.toUpperCase() === 'GET') && PUBLIC_READ.test(url);
 
 /** The server refused locked content; the upgrade sheet is already open. */
 export const isPremiumRequired = (err: unknown): boolean =>

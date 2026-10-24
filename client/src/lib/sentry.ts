@@ -24,7 +24,9 @@
 // browserTracingIntegration in lib/sentry-sdk.ts for errors-only reporting.
 
 type SentryModule = typeof import('./sentry-sdk');
-type Hint = Parameters<SentryModule['captureException']>[1];
+/** An error from before the SDK: the error, a reportError context, or the
+ * global handler that saw it uncaught. */
+export type EarlyError = [error: unknown, context?: Record<string, unknown>, uncaughtBy?: 'onerror' | 'onunhandledrejection'];
 
 /** The longest the SDK waits for an idle moment once the page has loaded. */
 export const SENTRY_IDLE_TIMEOUT_MS = 4_000;
@@ -32,65 +34,53 @@ export const SENTRY_IDLE_TIMEOUT_MS = 4_000;
 export const EARLY_ERROR_LIMIT = 20;
 
 let sentry: SentryModule | null = null;
-let dsnInUse: string | null = null;
+let dsnInUse: string | undefined;
 let loading = false;
-const early: { error: unknown; hint?: Hint }[] = [];
+const early: EarlyError[] = [];
 
-function queue(error: unknown, hint?: Hint): void {
-  if (early.length < EARLY_ERROR_LIMIT) early.push({ error, hint });
+function keep(entry: EarlyError): void {
+  if (early.length < EARLY_ERROR_LIMIT) early.push(entry);
   load();
 }
-
-// The SDK installs its own global handlers when it starts; until then these
-// keep what the window reports.
-function onError(event: ErrorEvent): void {
-  queue(event.error ?? event.message, { mechanism: { type: 'onerror', handled: false } });
-}
-function onRejection(event: PromiseRejectionEvent): void {
-  queue(event.reason, { mechanism: { type: 'onunhandledrejection', handled: false } });
-}
+// The SDK installs its own global handlers when it starts; until then this
+// keeps what the window reports.
+const uncaught = (event: Event): void => keep('reason' in event
+  ? [(event as PromiseRejectionEvent).reason, undefined, 'onunhandledrejection']
+  : [(event as ErrorEvent).error ?? (event as ErrorEvent).message, undefined, 'onerror']);
+const listen = (on: boolean): void => {
+  for (const type of ['error', 'unhandledrejection']) window[on ? 'addEventListener' : 'removeEventListener'](type, uncaught);
+};
 
 function load(): void {
-  if (loading || !dsnInUse) return;
-  loading = true;
   const dsn = dsnInUse;
+  if (loading || !dsn) return;
+  loading = true;
   void import('./sentry-sdk')
     .then((Sentry) => {
       // The options, consent-free monitoring's privacy rules among them, are
-      // in lib/sentry-sdk.ts with the SDK.
-      Sentry.start(dsn, import.meta.env.MODE);
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onRejection);
+      // in lib/sentry-sdk.ts with the SDK, which also sends the early errors.
+      listen(false);
+      Sentry.start(dsn, import.meta.env.MODE, early.splice(0));
       sentry = Sentry;
-      for (const { error, hint } of early.splice(0)) Sentry.captureException(error, hint);
     })
     .catch(() => {});
-}
-
-/** After the load event, at the browser's next idle moment (or a beat later
- * where there is no requestIdleCallback, as in Safari). */
-function whenIdle(run: () => void): void {
-  const later = () => {
-    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run, { timeout: SENTRY_IDLE_TIMEOUT_MS });
-    else window.setTimeout(run, 200);
-  };
-  if (document.readyState === 'complete') later();
-  else window.addEventListener('load', later, { once: true });
 }
 
 export function initSentry(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
   if (!dsn || dsnInUse) return;
   dsnInUse = dsn;
-  window.addEventListener('error', onError);
-  window.addEventListener('unhandledrejection', onRejection);
-  whenIdle(load);
+  listen(true);
+  // After the load event, at the browser's next idle moment (or a beat later
+  // where there is no requestIdleCallback, as in Safari).
+  const later = () => (typeof requestIdleCallback === 'function' ? requestIdleCallback(load, { timeout: SENTRY_IDLE_TIMEOUT_MS }) : setTimeout(load, 200));
+  if (document.readyState === 'complete') later();
+  else window.addEventListener('load', later, { once: true });
 }
 
-/** Report a caught error. Before the SDK has loaded it is queued, and the
- * SDK starts loading at once; without a DSN it does nothing. */
+/** Report a caught error. Before the SDK has loaded it is kept, and the SDK
+ * starts loading at once; without a DSN it does nothing. */
 export function reportError(error: unknown, context?: Record<string, unknown>): void {
-  const hint = context ? { extra: context } : undefined;
-  if (sentry) sentry.captureException(error, hint);
-  else if (dsnInUse) queue(error, hint);
+  if (sentry) sentry.captureException(error, context ? { extra: context } : undefined);
+  else if (dsnInUse) keep([error, context]);
 }

@@ -403,8 +403,11 @@ describe('a returning visitor with a stored session', () => {
     expect(isPublicRead('/api/settings', undefined)).toBe(true);
     expect(isPublicRead('/api/quiz/roadmap', 'GET')).toBe(true);
     expect(isPublicRead('/api/quiz/roadmap?resource=learning-path-catalog', 'get')).toBe(true);
-    expect(isPublicRead('/api/quiz/roadmap?id=x&resource=lesson', undefined)).toBe(true);
+    expect(isPublicRead('/api/quiz/roadmap?resource=lesson&id=html-1', undefined)).toBe(true);
     for (const url of [
+      '/api/quiz/roadmap?id=x&resource=lesson',
+      '/api/quiz/roadmap?resource=lesson&id=',
+      '/api/settings/',
       '/api/quiz/roadmap?resource=progress',
       '/api/quiz/roadmap?topic=html&level=1',
       '/api/quiz/roadmap?topic=html',

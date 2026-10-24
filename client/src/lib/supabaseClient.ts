@@ -129,10 +129,9 @@ export function freshStoredAccessToken(now: number = Date.now()): string | null 
   if (!sessionKey || openedOnAuthRedirect) return null;
   try {
     const stored = JSON.parse(readStorage(sessionKey) || 'null') as { access_token?: unknown; refresh_token?: unknown; expires_at?: unknown } | null;
-    if (!stored || typeof stored !== 'object') return null;
-    const { access_token: token, refresh_token: refresh, expires_at: expiresAt } = stored;
-    if (typeof token !== 'string' || !token || typeof refresh !== 'string' || typeof expiresAt !== 'number') return null;
-    return expiresAt * 1000 - now > TOKEN_EXPIRY_MARGIN_MS ? token : null;
+    const token = stored?.access_token;
+    return typeof token === 'string' && token && typeof stored!.refresh_token === 'string' && typeof stored!.expires_at === 'number'
+      && stored!.expires_at * 1000 - now > TOKEN_EXPIRY_MARGIN_MS ? token : null;
   } catch {
     return null;
   }

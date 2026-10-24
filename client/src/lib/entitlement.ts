@@ -10,6 +10,7 @@ import { apiFetch } from './api';
 import { useAuth } from './auth';
 import { queryClient } from './queryClient';
 import { freshStoredAccessToken, storedSessionUserId } from './supabaseClient';
+import { readString, writeString } from './storage';
 import type { EntitlementResponse, Tier } from '../../../shared/tiers';
 import { ENTITLEMENT_QUERY_ROOT } from './upgradeSheet';
 
@@ -57,11 +58,7 @@ export const PLAN_SEEN_KEY = 'devshark:plan-seen';
  * redraws the locks in the others without a tab return. */
 function sharePlan(userId: string, tier: Tier): void {
   const value = `${userId}:${tier}`;
-  try {
-    if (localStorage.getItem(PLAN_SEEN_KEY) !== value) localStorage.setItem(PLAN_SEEN_KEY, value);
-  } catch {
-    // Blocked storage: the other tabs re-read on their own schedule.
-  }
+  if (readString(PLAN_SEEN_KEY) !== value) writeString(PLAN_SEEN_KEY, value);
 }
 
 /** Another tab read a plan that differs from what this tab holds for the

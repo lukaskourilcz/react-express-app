@@ -62,14 +62,7 @@ export function motionFeaturesFor(
   return new Promise<Features>(() => undefined);
 }
 
-const reducedAtStart = (): boolean => {
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
-};
-const loadFeatures = () => motionFeaturesFor(reducedAtStart());
+const loadFeatures = () => motionFeaturesFor(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 /** Wrap the app once so every `m.*` element below has its features. */
 export function MotionProvider({ children }: { children: ReactNode }) {
