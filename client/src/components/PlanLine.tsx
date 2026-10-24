@@ -81,7 +81,7 @@ function ManageBilling() {
   };
   return (
     <>
-      <Button variant="secondary" size="sm" label={t('profile.plan.manage')} onClick={() => void open()} isLoading={busy} isDisabled={busy} />
+      <Button variant="secondary" label={t('profile.plan.manage')} onClick={() => void open()} isLoading={busy} isDisabled={busy} />
       {error && <Text type="supporting" color="secondary"><span role="alert">{error}</span></Text>}
     </>
   );
@@ -117,7 +117,7 @@ export default function PlanLine() {
             <Text type="supporting" color="secondary">{t('profile.plan.freeBody', { level: FREE_LEARN_LEVELS.react ?? 0 })}</Text>
           </span>
           <span className="de-plan-line__actions">
-            <Button variant="ghost" size="sm" label={t('profile.plan.see')} onClick={() => openUpgradeSheet()} />
+            <Button variant="ghost" label={t('profile.plan.see')} onClick={() => openUpgradeSheet()} />
             {cancellable && data?.billingAccount === true && <ManageBilling />}
           </span>
         </>

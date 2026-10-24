@@ -12,10 +12,10 @@
  * editor.
  */
 
+/* The page fills the route box; the route shell picks its width (narrow, or
+   wide while a code activity's .ss-wide-page is mounted). */
 .lp-page {
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;

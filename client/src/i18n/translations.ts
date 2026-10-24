@@ -327,16 +327,12 @@ export const en = {
   'profile.preferences': 'Preferences',
   'common.skipToContent': 'Skip to content',
   'common.loading': 'Loading…',
-  'common.darkMode': 'Switch to dark mode',
-  'common.lightMode': 'Switch to light mode',
-  'common.soundOn': 'Turn sound on',
-  'common.soundOff': 'Turn sound off',
-  // The footer's visible toggle labels; the common.* lines above stay their
-  // accessible names (UX audit shell-public-03).
+  // The appearance and sound toggles (footer and drawer): each label says what
+  // pressing it does and is the button's whole accessible name (WCAG 2.5.3).
   'footer.darkMode': 'Dark mode',
   'footer.lightMode': 'Light mode',
-  'footer.soundOn': 'Sound on',
-  'footer.soundOff': 'Sound off',
+  'footer.soundOn': 'Turn sound on',
+  'footer.soundOff': 'Turn sound off',
 
   // Auth
   'auth.logIn': 'Sign in',

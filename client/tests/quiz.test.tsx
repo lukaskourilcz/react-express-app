@@ -205,13 +205,14 @@ describe('touch targets', () => {
 });
 
 describe('the setup screen (UX audit U2)', () => {
-  it('opens on the Page header, stacks Questions over Difficulty, and starts with the one SwimCta md', async () => {
+  it('opens on the shared PageHeader, stacks Questions over Difficulty, and starts with the one SwimCta md', async () => {
     renderQuiz();
     const start = await screen.findByRole('button', { name: /start quiz/i });
     const headings = screen.getAllByRole('heading', { level: 1 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent('Build your quiz.');
-    expect(headings[0].closest('.ss-info-page__header')).not.toBeNull();
+    expect(headings[0].closest('header.ss-page-header')).not.toBeNull();
+    expect(document.querySelector('.ss-info-page__header')).toBeNull();
     // Each setting is a full-width group of its own, label above its pills.
     const groups = [...document.querySelectorAll('.quiz-setup__settings > .quiz-setup__group')];
     expect(groups.map((group) => group.firstElementChild?.textContent)).toEqual(['Questions', 'Difficulty']);

@@ -17,7 +17,6 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { ToggleButtonGroup } from '@astryxdesign/core/ToggleButton';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { openSignIn } from '../lib/signInDialog';
 import {
   createMatch,
   joinMatch,
@@ -117,9 +116,7 @@ function PlayUnavailable() {
 function PlaySignIn() {
   const t = useT();
   return (
-    <StatePanel level={1} title={t('play.signInTitle')} body={t('play.signInBody')}>
-      <Button variant="primary" label={t('authPage.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
-    </StatePanel>
+    <StatePanel level={1} title={t('play.signInTitle')} body={t('play.signInBody')} signIn />
   );
 }
 
@@ -1332,10 +1329,9 @@ function RunningQuestion({
             no-limit match mid-question) or end the match early. */}
         {isHost && mode === 'multiplayer' && (
           <HStack gap={1} justify="between">
-            <Button variant="ghost" size="sm" label={t('play.endMatch')} isDisabled={controlPending} onClick={onFinish} />
+            <Button variant="ghost" label={t('play.endMatch')} isDisabled={controlPending} onClick={onFinish} />
             <Button
               variant="ghost"
-              size="sm"
               label={lastQuestion ? t('play.showResults') : t('play.skipQuestion')}
               isDisabled={controlPending}
               onClick={onAdvance}

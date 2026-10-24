@@ -550,7 +550,7 @@
   max-width: 100%;
   text-align: start;
 }
-.rm-section-error { width: 100%; max-width: 620px; }
+.rm-section-error { width: 100%; max-width: var(--ss-width-task); }
 /* From 768px the line and its action are one row (UX audit learn-08): the
    line takes the rest of the column on the left, the action sits on the
    right, and the note, an error or the saved status run under both. The

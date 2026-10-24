@@ -46,7 +46,7 @@ import { useLaunchOffer } from '../lib/launchOffer';
 import { LaunchOfferNote, OfferAmount, PremiumPriceSentence } from './LaunchOffer';
 import { Page } from './PublicInfoPages';
 import PremiumCheckoutButton from './PremiumCheckoutButton';
-import { SignedOutBlock } from './SignedOutBlock';
+import { StatePanel } from './ui/StatePanel';
 import { planText } from './PlanLine';
 import './PremiumPage.css';
 import './PremiumBillingPages.css';
@@ -188,8 +188,8 @@ export function PremiumCheckoutPage() {
         : !billing.enabled ? <p>{t('billing.checkout.soon')}</p>
           : !isAuthenticated ? <>
               {summary}
-              {/* The money screens' one signed-out state (money-05), under the plan. */}
-              <SignedOutBlock message={t('billing.checkout.signedOut')} label={t('billing.checkout.signIn')} returnTo={`/premium/checkout?plan=${plan}`} />
+              {/* The inline signed-out state (money-05), under the plan. */}
+              <StatePanel inline body={t('billing.checkout.signedOut')} signIn={{ label: t('billing.checkout.signIn'), returnTo: `/premium/checkout?plan=${plan}` }} />
             </>
             : paying ? <PremiumCheckoutButton plan={plan} /> : <>
               {summary}

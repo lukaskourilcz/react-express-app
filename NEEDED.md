@@ -56,6 +56,18 @@ The code for email and password sign-in is done (`client/src/lib/emailAuth.ts`).
 - [ ] **Decide whether learners can download their own data** — erasure covers every table, but there is no export of a learner's progress, attempts and settings. The privacy policy's access right is answered by email today. A self-serve export is a new feature. [imp:2] [owner:me] [time:10m] [kind:decision]
 - [ ] **Decide whether the main chunk's source map stays public** — the site audit (#569) found that `vercel.json` serves the main chunk's `.map` file as an immutable asset, so anyone can read the shipped client source with its comments. `scripts/vercel-routing-contract.ts` pins that on purpose. Say whether to keep it (easier debugging, Sentry can also take uploaded maps) or block `*.map` in production. [imp:2] [owner:me] [time:5m] [kind:decision]
 - [ ] **Decide how React tasks stop an infinite loop** — the sandbox audit (#570) found that a React task's preview runs in a sandboxed iframe on the same site, so an endless loop in learner code freezes the learner's own tab until the browser offers to stop it. The server grade is not affected. Fixing it means serving the frame from another origin or moving the suite into a worker. Say whether it matters before launch. [imp:2] [owner:me] [time:10m] [kind:decision]
+- [ ] **Confirm the open UX decisions from Epic U** — `docs/design/ux-audit.md`, section "Status", lists them:
+  - **Privacy wording:** the policy still says "your name" and "shark nickname" (`legal.privacy.friends.see`, `legal.privacy.leaderboards.body`).
+  - **VAT caption:** ", before VAT" was removed from the `/premium` table caption.
+  - **Join label:** it now reads "Add it to your plan".
+  - **`/cards` route:** it stays its own route.
+  - **FDE on `/premium`:** `/premium` no longer names the FDE path while the flag is off.
+  - **Kept exceptions to one primary:** the plan pair, the Profile, and signed-out `/shop`.
+  - **Billing primaries:** the billing steps use the Astryx primary rather than SwimCta.
+  - **Coding stepper:** the coding stage stepper stays compact.
+  - **Partial targets:** the Profile at 390px, the phone footer and the phone plan table missed their targets.
+
+  Say which to change; an agent applies them. [imp:2] [owner:me] [time:20m] [kind:decision]
 - [ ] **Decide on the old interview-prepper progress** — get the legacy Firestore export, or decide to discard that progress. To import: `npm run import:interview-prepper -- --input export.json --user-id <id>` as a dry run, then with `--apply`, and check the result. Only then retire interview-prepper's Firebase and Vercel projects and its old OpenAI key; deleting them first loses the progress. [imp:2] [owner:me] [time:1h] [kind:decision]
 
 ## Payments (#221)

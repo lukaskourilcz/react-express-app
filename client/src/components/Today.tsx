@@ -4,6 +4,7 @@ import { useCallback, useMemo, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { DayChangeNote } from './DayChangeNote';
+import { PageHeader } from './ui/PageHeader';
 import { Link } from 'react-router-dom';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
@@ -296,11 +297,7 @@ function TodayShell({ t, progress, children }: { t: TFn; progress?: { done: numb
   const pct = progress && progress.target > 0 ? Math.round((progress.done / progress.target) * 100) : 0;
   return (
     <div className="de-page today-page">
-      <header className="today-heading">
-        <div className="today-heading__row">
-          <h1 className="today-heading__title">{t('today.title')}</h1>
-          {progress && <span className="today-heading__count">{label}</span>}
-        </div>
+      <PageHeader title={t('today.title')} aside={progress ? <span className="today-heading__count">{label}</span> : null}>
         {progress && (
           <>
             <div
@@ -316,7 +313,7 @@ function TodayShell({ t, progress, children }: { t: TFn; progress?: { done: numb
             <DayChangeNote />
           </>
         )}
-      </header>
+      </PageHeader>
       {children}
     </div>
   );

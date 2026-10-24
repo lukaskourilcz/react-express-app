@@ -6263,3 +6263,30 @@ PR #571 (12 fixes) took the items the three audits above left because the file b
 - A second Run on a lesson example aborts the first; the toast's live region stays mounted; the query cache empties before the new account's first render; a second Copy of an invite link is announced again.
 
 **Checks:** ci:parity, 16 steps passed before and 9 after merging `main` (initial load 235,190 gzip bytes). Two items were not changed: the settings read already serves the last good copy, and `TRANSPILE_FAILED_MESSAGE` is not duplicated.
+
+## Epic U, one consistent UX system — 23 and 24 October 2026
+
+The UX audit of 23 October (`docs/design/ux-audit.md`) recorded 116 findings, each drawn on its screenshot. Six work packages closed them, and a closeout followed:
+
+| Package | Issue | PR | Findings |
+|---|---|---|---|
+| U1 foundations | #573 | #580 | 18 |
+| U2 question system | #574 | #583 | 21 |
+| U3 coding | #575 | #584 | 19 |
+| U4 Learn and FDE | #576 | #586 | 18 |
+| U5 public and money | #577 | #582 | 25 |
+| U6 social and account | #578 | #581 | 15 |
+
+**Each package.** Its own workflow ran implementers on disjoint files, a skeptical reviewer, then a rebuild and a re-capture of its screens at 1280px and 390px. Every screen was compared with the audit's before shot, and anything partial got a fix round. The CI-parity, browser and responsive checks ran last. CI passed every job before each merge. The CI failures along the way were tests that still asserted the old design, and two timing-sensitive tests made robust; the zod advisory was handled in #585.
+
+**Closeout (`claude/ux-closeout`).**
+- **One header and one state panel.** `PageHeader` is the one operational page header, and `StatePanel`, including its `inline` look, is the one panel for gates and signed-out states.
+- **Remaining fixes.** The glossary chips meet the 44px scale. The last self-capped page width is gone. The footer toggles' visible labels now match their accessible names.
+- **`npm run check:design`.** The new check runs inside `check:public`. It fails on page max-widths, `size="sm"` buttons, button heights under 44px (36px in `.ss-compact`) and the words "Log in". It ships with 13 fixture tests and an allowlist of 26 entries, each with a reason.
+- **Docs.** The design system, `DESIGN_RULES.md` §10–11, the design skills and agents, and CLAUDE.md now describe the system as the default for new pages.
+
+**Final check on 24 October.** I rebuilt from the closeout branch and captured all 168 audit screens again, with every `/api` call answered by local fixtures.
+- **Findings:** 112 resolved, 4 partial (the defect is gone but a predicted number was not reached), 0 regressed.
+- **New problems:** none, apart from a third filled button on `/shop`, which the closeout fixed.
+- **Checks:** ci:parity passed 15 static and test steps and all 20 browser groups (188 tests). check:responsive passed in both themes.
+- **Initial load:** 234,090 gzip bytes, against 235,190 before U1.

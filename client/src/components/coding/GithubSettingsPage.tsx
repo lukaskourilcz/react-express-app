@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../../lib/auth';
-import { openSignIn } from '../../lib/signInDialog';
 import { ApiError, friendlyError } from '../../lib/api';
 import { accountEpoch } from '../../lib/accountData';
 import { useClearOnPageRestore } from '../../lib/pageRestore';
@@ -142,8 +141,7 @@ export function GithubSettingsPage() {
   // (UX audit social-account-21). The body is a polite status, so a phase
   // that changes in place is read out.
   return (
-    <StatePanel level={1} kicker={t('github.title')} title={heading} body={body} live>
-      {phase.kind === 'signin' && <Button variant="primary" label={t('github.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />}
+    <StatePanel level={1} kicker={t('github.title')} title={heading} body={body} live signIn={phase.kind === 'signin'}>
       {phase.kind === 'error' && phase.next === 'retry' && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
       {phase.kind === 'error' && phase.next === 'connect' && (
         <Button variant="primary" label={opening ? t('github.connecting') : t('github.connectAgain')} isDisabled={opening} onClick={connectAgain} />

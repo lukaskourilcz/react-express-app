@@ -155,6 +155,8 @@ describe('Invite a friend', () => {
     expect(screen.getByText('3 of 20')).toBeInTheDocument();
     expect(screen.getByText('Signed up, first level still to finish')).toBeInTheDocument();
     expect(screen.getByText('You see how many friends joined, not who they are.')).toBeInTheDocument();
+    // A utility beside its field: secondary, so Buy stays the page's filled action.
+    expect(screen.getByRole('button', { name: 'Copy link' })).toHaveClass('secondary');
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/?ref=abcd2345`));
     expect(await screen.findByText('Link copied.')).toBeInTheDocument();

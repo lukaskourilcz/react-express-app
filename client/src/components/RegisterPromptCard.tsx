@@ -117,8 +117,8 @@ export default function RegisterPromptCard({ open, onClose, onSignIn }: {
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
-              <Button size="sm" variant="ghost" label={t('register.dismiss')} onClick={onClose} />
-              <Button size="sm" variant="primary" label={t('register.cta')} onClick={onSignIn} />
+              <Button variant="ghost" label={t('register.dismiss')} onClick={onClose} />
+              <Button variant="primary" label={t('register.cta')} onClick={onSignIn} />
             </div>
           </m.div>
         )}

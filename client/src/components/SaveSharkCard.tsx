@@ -47,10 +47,9 @@ export function SaveSharkCard({
       <Tooltip content={t('sharkCards.save')}>
       <Button
         variant="secondary"
-        size="sm"
         isIconOnly
         aria-pressed={pressed}
-        icon={pressed ? <CheckCircleIcon size={16} /> : <BookmarkIcon size={16} />}
+        icon={pressed ? <CheckCircleIcon size={20} /> : <BookmarkIcon size={20} />}
         label={pressed ? t('sharkCards.savedButton') : t('sharkCards.save')}
         isDisabled={busy}
         onClick={toggle}

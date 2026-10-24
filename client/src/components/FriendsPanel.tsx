@@ -4,8 +4,8 @@
  * Three things, in the order a learner meets them: your own sharkname (without
  * one nobody can find you), anyone waiting for an answer, and the people you
  * have already added. The sharkname is the handle: it is chosen, rolled and
- * saved in "Your sharkname" on the Overview tab (SharknameCard), which this
- * tab links to rather than repeating.
+ * saved in the 'Your name' panel on the Overview tab (SharknameCard, its
+ * 'Sharkname' field), which this tab links to rather than repeating.
  *
  * There is no directory and no browsing. You reach somebody by typing the
  * handle they chose, exactly. That is the whole discovery model, and the copy

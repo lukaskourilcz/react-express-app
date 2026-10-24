@@ -258,120 +258,122 @@ per-component scrollbar rules.
 
 ## 10. One button scale, one page width per route
 
-The UX audit of 23 October 2026 (U1, #573) found 28, 32, 36, 41 and 44px
-buttons on one mouse and 21 different page max-widths. These rules stop that
-coming back. The tokens and the map are in
-[the design system](docs/design/design-system.md#page-widths).
+The UX audit of 23 October 2026 (Epic U, #572) found 28, 32, 36, 41 and 44px
+buttons on one mouse and 21 page max-widths. These rules keep them out. The
+tokens, the route map and the component catalogue are in
+[the design system](docs/design/design-system.md#page-widths). Each rule names
+the check that holds it; "Review" means no automated check exists and a
+reviewer or the visual QA pass holds it.
 
-- **The shell picks the page width.** One route width per route, from
-  `pageMaxWidth` in `client/src/components/ui/pageWidth.ts`: 1000px
+**`npm run check:design`** (`scripts/check-design-contract.mjs`, run by
+`check:public` in CI) fails on four things: a pixel `max-width` of 560px or more
+in `client/src`, an Astryx `Button` or `IconButton` with `size="sm"`, a button
+selector under 44px (36px inside `.ss-compact`) and a 'Log in' string in
+`client/src/i18n`. An intended exception goes into
+`scripts/design-contract-allowlist.json` with its reason; an entry that matches
+nothing fails, so the list only shrinks. `scripts/test-design-contract.mjs`
+proves each rule fails on a bad sample.
+
+- **The shell picks the page width.** `pageMaxWidth` in
+  `client/src/components/ui/pageWidth.ts` gives each route one width: 1000px
   (`--ss-width-standard`) for home, `/profile` and `/play`; 1200px
   (`--ss-width-wide`) for `/coding/*`; 800px (`--ss-width-narrow`) for every
   other route; `/dev` uncapped. A page never sets its own page `max-width`. A
-  part that needs the wide page while mounted (a Learn or FDE coding phase)
-  puts the class `ss-wide-page` on its root. A new route goes into the map
-  and its test, not into a stylesheet. The same goes for the shared page
-  roots (`.de-page`, `.cd-page`, `.lb`) and a page's own top stack: they fill
-  the column, so header, controls and content share one left edge
-  (`client/tests/page-own-width.test.ts`). A part inside the page (a deck,
-  a form) does not take a narrower width of its own either; only text keeps
-  a measure (`68ch`).
-- **Task cards are 640px.** Auth, billing and checkout cards, and the question
-  column, use `--ss-width-task` inside the 800px column. Do not add another
-  card width. The page lead above a task card wraps at the same 640px, so the
-  header and the card share both edges.
-- **The chrome does not move.** The header and the footer share
+  part that needs the wide page while mounted puts `ss-wide-page` on its root.
+  A new route goes into the map and its test. The shared page roots
+  (`.de-page`, `.cd-page`, `.lb`) and a page's top stack fill the column; only
+  text keeps a measure (`68ch`).
+  Check: `check:design` (page-width), `client/tests/page-width.test.tsx`,
+  `client/tests/page-own-width.test.ts`.
+- **Task columns are 640px.** Auth, billing and checkout cards, the question
+  column, `StatePanel` and the Play lobby use `--ss-width-task`. No other card
+  width. The lead above a task card wraps at the same 640px.
+  Check: `client/tests/info-page.test.tsx`, `page-own-width.test.ts`,
+  `state-panel.test.tsx`.
+- **The chrome does not move.** The header and footer share
   `--ss-width-chrome` (1168px) on every route.
+  Check: `tests/browser/first-load.spec.ts`.
 - **Every control is 44px on every pointer.** `--ss-control-height` is the
   floor for Astryx buttons, segmented items and text fields, set once in
   `app-shell.css`. Only controls inside `.ss-compact` (a component's own
-  toolbar) are `--ss-control-height-compact` (36px) on a fine pointer, and
-  each keeps a 44px hit area. Never size a button page by page.
-- **A small control still takes a 44px press.** A control the app draws
-  itself (a map cell, a part cell) may look smaller than 44px, but a
-  transparent layer inside it extends its target to 44px on every pointer
-  (see "Hit areas" in `docs/design/design-system.md`).
+  toolbar) are `--ss-control-height-compact` (36px) on a fine pointer, each
+  with a 44px hit area. A control the app draws smaller (a map cell) extends
+  its target to 44px with a transparent layer. No `size="sm"` on a page or a
+  card; a Retry inside a banner or a Remove on a list row is the only small
+  button, and each is allowlisted.
+  Check: `check:design` (small-button, button-height),
+  `client/tests/touch-and-motion.test.ts`,
+  `client/tests/profile-card-actions.test.ts`.
 - **Page actions share one type.** 44px, 20px inline padding, 16px/600 text,
-  pill: `.ss-action`, or any button in `.ss-info-actions` /
-  `.ss-auth__actions`. The primary is never the smallest control in its row.
-- **One filled primary per screen**, and it is `SwimCta` md (44px). Other
-  actions are Astryx secondary or ghost. The coding workbench's Submit is
-  `SwimCta` md beside Run in the page-action type; nothing in the workbench
-  uses `SwimCta` sm. A second task's button turns
-  primary only once its own input is complete (Join on `/play` with a whole
-  code).
-- **One coding frame wherever a task opens** (UX audit U3, #575). `/coding`,
-  a Learn level's coding phase and a path's code activity share the
-  workbench frame: from 1024px one row of `--cd-frame-h`, a code pane of
-  `BriefZone` (the prompt capped at `--cd-brief-cap`, with "Show full
-  brief"), the editor filling the rest from `--cd-editor-min`, and one 44px
-  action row at its foot, beside a results pane that scrolls inside. Run and
-  Submit keep their words at every width; Format and Reset live in the
-  editor's own `.ss-compact` toolbar, and below 1024px Hint, Solution, Skip
-  and Report fold into one "More actions" menu. Never give a task's brief,
-  editor or actions a height or width of their own.
-  code). A row of buttons that switches the view is never filled: the open
-  one is secondary with `aria-current`, the rest ghost (the `/collection`
-  shelf tabs).
-- **Card actions are the default size.** No `size="sm"` on a card's actions;
-  a Retry inside a banner or a Remove on a list row is the only small
-  button.
-- **A control group's label sits above it**, never as a suffix, and the
-  group is the default size, so a form has one control height.
-- **A secondary path is a row, not a card.** A short form that is not the
-  page's task (the voucher with checkout on) is one row: its title on the
-  left, the field and a secondary button beside it.
-- **One operational header.** An operational page's title is the shared
-  `PageHeader` (`components/ui/PageHeader.tsx`): optional `<Kicker>`, an ink
-  `h1` at `display-3`, one lead line, 8px apart. Do not hand-build an `h1`
-  with its own size, weight or gap.
-- **The scope sentence is the page lead.** An operational page says what it
-  shows under the `h1`, and its controls sit right on what they filter.
-- **Icon buttons are 44×44** with a 20px glyph and keep their tooltip and
-  `aria-label`. A dialog's close button is the Astryx one, which the floor
-  makes 44px. Icons in one row share one drawing: the header's Leaderboard,
-  Premium and Coins are stroke icons in the text colour (`CoinsIcon`, not the
-  filled `CoinIcon`, which reads as a status light at 20px).
-- **Every `Page` h1 sits at one x and one y.** The `Page` layout fills the
-  column and always draws its kicker line.
-- **One section-title size.** A public page's section `h2` takes
-  `.ss-section-title` (1.75rem, 1.5rem under 600px); a section never sets its
-  own heading size inline or in its own stylesheet.
+  pill: `.ss-action`, or any button in `.ss-info-actions`, `.ss-auth__actions`
+  or `.ss-state-panel__actions`.
+  Check: `info-page.test.tsx`.
+- **One filled primary per screen**, and it is `SwimCta` md (44px). Every other
+  action is Astryx secondary or ghost. The primary is never the smallest
+  control in its row. A second task's button turns primary only once its own
+  input is complete (Join on `/play` with a whole code). A row of buttons that
+  switches the view is never filled: the open one is secondary with
+  `aria-current`, the rest ghost.
+  Check: `question-actions.test.tsx`, `touch-and-motion.test.ts` (coding
+  Submit), `learn-section-layout.test.ts`; Review elsewhere.
+- **Icon buttons are 44×44** with a 20px glyph, a tooltip and an
+  `aria-label`. Icons in one row share one drawing (`CoinsIcon`, not the
+  filled `CoinIcon`, in the header).
+  Check: `question-header.test.tsx`, `coins-icon.test.tsx`.
+- **A control group's label sits above it**, never as a suffix, at the
+  default size, so a form has one control height. Review.
+- **One coding frame wherever a task opens** (U3, #575). `/coding`, a Learn
+  level's coding phase and a path's code activity share the workbench frame:
+  from 1024px one row of `--cd-frame-h`, `BriefZone` capped at
+  `--cd-brief-cap`, the editor from `--cd-editor-min`, one 44px action row at
+  its foot. Run and Submit (`SwimCta` md) keep their words at every width;
+  Format and Reset sit in the editor's `.ss-compact` toolbar; below 1024px
+  Hint, Solution, Skip and Report fold into one "More actions" menu. Never give
+  a task's brief, editor or actions a size of their own.
+  Check: `client/tests/coding-frame-hosts.test.tsx`, `brief-zone.test.tsx`,
+  `coding-workbench-state.test.tsx`, `tests/browser/coding-workbench.spec.ts`.
+- **One operational header.** An operational page's title is `PageHeader`
+  (`components/ui/PageHeader.tsx`): optional `<Kicker>`, an ink `h1` at
+  `display-3`, one lead line, 8px apart. Do not hand-build an `h1` or add a
+  second header component. A public page keeps the editorial `Page` header
+  (every `Page` h1 at one x and one y); a Learn-area page that is not a
+  section uses `LearnPageHeader`.
+  Check: `page-header.test.tsx`, `info-page.test.tsx`,
+  `learn-page-header.test.tsx`.
+- **One section-title size.** A public section `h2` takes `.ss-section-title`;
+  no section sets its own heading size.
+  Check: `home-sections.test.tsx`, `premium-page.test.tsx`.
 - **One state panel.** A sign-in gate, an empty shelf or a callback state is
-  the shared `StatePanel` (`components/ui/StatePanel.tsx`): centred in the
-  640px task column, one heading, one body line, the one primary first at
-  44px. Do not build a gate card by hand.
-- **One panel per subject on the Profile.** Every Profile card is `.ss-panel`
-  with 24px padding and a `<Kicker as="h2">`. The learner's names live in one
-  'Your name' panel with 'Friends see' and 'Leaderboards show' side by side;
-  the two settings stay independent. Account actions are settings rows whose
-  title never repeats the button. The banner does not repeat the footer's
-  appearance and sound controls (UX audit U6, #578).
-- **A Learn section names itself once** (UX audit U4, #576). The h1 is
-  'Learn' in every auth state; the section switcher is the only place the
-  section's name appears, and the section line is the one supporting line.
-  A locked topic carries one lock signal (the lock glyph, plus 'Premium'
-  only where Premium opens it), and Premium is said once per topic, on its
-  tile and in the next-step card, whose button then says 'See Premium'
-  rather than 'Continue'. An empty section sits on the column's left edge
-  with one row of next steps, not a centred card. While the header offers
-  the join, the join is the one `SwimCta` and every action under it is a
-  secondary.
-- **One Learn page header** (UX audit learn-15). A Learn-area page that is
-  not a section (`/roadmap`, `/big-o`, `/learn/big-o`) opens with
-  `LearnPageHeader` (`components/learn/LearnPageHeader.tsx`): the Learn
-  title (`<Kicker as="h1">`, 800 weight, wave) on the `PageHeader` frame, one
-  supporting line, and at most one context link above the title. It sets no
-  width; the route shell's 800px column holds it. A link in the Learn area
-  is the accent with a 1px underline (`.learn-link`), never the browser's
-  blue; a heading that links somewhere stays in the text colour with an
-  accent arrow.
-- **A summary on request goes below what it sums up.** Evidence, counts and
-  other recaps of a page's content follow that content as one closed
-  disclosure (`.lp-disclosure`), not a long section before it. A row that is
-  in its default state says nothing about it; a recorded state is a glyph
-  with its words for a screen reader (UX audit U4, #576).
-- **Say each fact once per screen**, and the sign-in verb is "Sign in".
+  `StatePanel` (`components/ui/StatePanel.tsx`); when one part of a drawn
+  screen waits for sign-in it is `StatePanel inline`. The sign-in action is
+  its `signIn` prop, one "Sign in" that opens the dialog. Do not build a gate
+  card or a sign-in button by hand. A money screen never shows a placeholder
+  number for a visitor, and a button the visitor cannot use yet reads "Sign in
+  to …" and opens sign-in instead of sitting disabled.
+  Check: `state-panel.test.tsx`, `play-gates.test.tsx`.
+- **One panel per subject on the Profile** (U6, #578). Every Profile card is
+  `.ss-panel` with 24px padding and a `<Kicker as="h2">`. The names live in one
+  'Your name' panel with 'Friends see' and 'Leaderboards show' saved apart.
+  Account actions are settings rows whose title never repeats the button. The
+  banner does not repeat the footer's appearance and sound controls.
+  Check: `profile-layout.test.tsx`, `sharkname-card.test.tsx`.
+- **A Learn section names itself once** (U4, #576). The h1 is 'Learn' in every
+  auth state; the switcher is the only place the section's name appears. A
+  locked topic carries one lock signal, and Premium is said once per topic,
+  on its tile and in the next-step row ('See Premium'). An empty section sits
+  on the column's left edge. While the header offers the join, the join is the
+  one `SwimCta`.
+  Check: `learn-section-layout.test.ts`, `tests/browser/learn-sections.spec.ts`.
+- **A Learn link is the accent with a 1px underline** (`.learn-link`), never
+  the browser's blue. Check: `learn-page-header.test.tsx`.
+- **A list is hairline rows, not a card per row.** A summary on request goes
+  below what it sums up, as one closed disclosure (`.lp-disclosure`). A row in
+  its default state says nothing about it. A secondary form that is not the
+  page's task is one row. Check: `coding-lists-layout.test.ts`; Review
+  elsewhere.
+- **Say each fact once per screen, no kicker that repeats the `h1`, and the
+  sign-in verb is "Sign in".** Check: `check:design` (sign-in-verb); Review
+  for repetition.
 
 ## 11. One question system
 
@@ -381,68 +383,54 @@ built from the shared parts in `client/src/components/question/`
 ([the design system](docs/design/design-system.md#question-screens) lists
 their props), never drawn again by hand.
 
-- **One shell.** `QuestionShell` is the `--ss-width-task` (640px) column with
-  one `.ss-panel` surface and no accent edge. A runner sets no width, card or
-  `flex: 1` of its own. The question block keeps one reserved height
-  (`--ss-question-block-min`) and scrolls past `--ss-question-block-max`, so
-  the answers start at the same y on every question. On a phone the header's
-  tag row keeps two lines (`--ss-question-tags-min`) whether a topic's tag
-  wraps or not, for the same reason.
-- **One answer list.** `AnswerOptionList`: 48px rows 8px apart, a 26px
-  number chip, the brand accent for the selection (never a track colour), no
-  border or radius of a runner's own. A graded row says what it is in a
-  glyph as well as colour, a ✓ or ✕ in a 20px slot every row keeps at its
-  end, graded or not, so grading never rewraps a row; "Correct answer" and
-  "Your pick" are in the row's accessible name.
-- **One action row.** `QuestionActions` sits 16px under the panel: the
-  secondaries on the left, the one primary (`SwimCta` md) on the right. On a
-  phone the primary is the last row at full width and the secondaries share
-  the row above, so the next step is in the same place on every runner.
-  When grading moves focus to the primary, the page scrolls the least that
-  shows it and never past the top of the answers: the learner sees their
-  pick, the right answer and the verdict together, at 360px too.
+- **One shell.** `QuestionShell` is the `--ss-width-task` column with one
+  `.ss-panel` and no accent edge. A runner sets no width, card or `flex: 1` of
+  its own. The question block keeps `--ss-question-block-min` and scrolls past
+  `--ss-question-block-max`, so the answers start at one y; on a phone the tag
+  row keeps two lines (`--ss-question-tags-min`).
+  Check: `question-shell.test.tsx`.
+- **One answer list.** `AnswerOptionList`: 48px rows 8px apart, a 26px chip,
+  the brand accent for the selection (never a track colour). A graded row
+  says what it is in a ✓ or ✕ as well as colour, in a 20px slot every row
+  keeps, so grading never rewraps a row; "Correct answer" and "Your pick" are
+  in the accessible name.
+  Check: `answer-option-list.test.tsx`, `daily-question.test.tsx`.
+- **One action row.** `QuestionActions` sits 16px under the panel:
+  secondaries left, the one `SwimCta` md right; on a phone the primary is the
+  last row at full width. When grading moves focus to the primary, the page
+  scrolls the least that shows it and never past the top of the answers.
+  Check: `question-actions.test.tsx`.
 - **One header with the screen's h1.** `QuestionHeader` names the run in the
-  `h1` ("Quiz · Question 3 of 10") at one compact size, with progress and
-  status on the first row and tags plus 44px icon buttons (hint, report,
-  exit) on the second. The question text and code span the whole panel; no
-  icon sits beside them.
-- **One keyboard hint, on a reserved line.** `QuestionHint` says "Press 1–4
-  to {select|answer} · Enter to {continue|submit}" under the answers, on a
-  desktop with a fine pointer only. Grading hides its words, never its line.
-- **Feedback under the answers, never over them.** `QuestionFeedback` is the
-  verdict and explanation in normal flow below the list, inside the panel,
-  and it takes focus when it appears. Nothing on a question screen is
-  absolutely positioned over the answers.
-- **A live run hides the site chrome.** An active Quiz, a live Challenge
-  run and a Learn level's questions (on a Learn section or Big O) report it
-  through `onActiveChange`, and `App.tsx` hides the header and footer on that
-  route; their setup, intro, result and error screens bring them back, and
-  so does a page that fails. With no nav on screen, the run's
-  `QuestionHeader` carries its own way out: an Exit icon button that asks
-  first in an `AlertDialog`.
+  `h1` ("Quiz · Question 3 of 10"), with progress and status on the first row
+  and tags plus 44px icon buttons (hint, report, exit) on the second. The
+  question text and code span the panel.
+  Check: `question-header.test.tsx`.
+- **One keyboard hint, on a reserved line.** `QuestionHint`, on a desktop with
+  a fine pointer only. Grading hides its words, never its line.
+  Check: `question-hint.test.tsx`.
+- **Feedback under the answers, never over them.** `QuestionFeedback` sits in
+  normal flow below the list, inside the panel, and takes focus. Nothing on a
+  question screen is positioned over the answers.
+  Check: `question-feedback.test.tsx`.
+- **A live run hides the site chrome.** An active Quiz, Challenge run or Learn
+  level reports it through `onActiveChange`; setup, intro, result and error
+  screens bring the chrome back. The run's `QuestionHeader` carries an Exit
+  icon button that asks first.
+  Check: `challenge-run.test.tsx`, `learn-plan.test.tsx`.
 - **A setup screen is laid out like the Quiz setup.** One `--ss-width-task`
-  column: the h1 and lead above one panel, the choices in it with a Select
-  all / Deselect all link on their label row, then the one `SwimCta` md.
-  Anything else (the Challenge's top scores) sits under the panel as a short
-  list, never in a side column beside it. A stat row does not repeat what the
-  lead already says.
-- **A page says each fact once.** /daily's day is the kicker over its h1, and
-  its lead says once that nothing is recorded. /today opens on a visible h1
-  with the day's count on the same row, and a card line that would be the
-  same on every card in a section is left out.
-- **A card deck is a question screen too.** Shark Cards keep the route
-  column but use the shared Page header and the one `QuestionActions` row
-  (Previous and Next together on the left). Their one filled primary is the
-  next step: "Show the answer" face down, Got it once the card is turned. Got
-  it stays in one place and only its fill changes.
-- **A run's other screens share its shell.** A Learn level's intro and its
-  result, the screens that start a level again (timed out, sign-in changed,
-  a retired question) and every skill-check screen render inside
-  `QuestionShell` with the same header, so the exit button does not move
-  when Start is pressed. Each has one primary in `QuestionActions`; a track
-  or checkpoint colour may tint the confetti and the result's icon tile,
-  never text or a button (JavaScript's yellow is under 3:1 on the panel).
-- **One signed-out state.** A money screen asks a visitor to sign in with
-  `SignedOutBlock`: one sentence and one "Sign in" button, in place of the
-  content, never a placeholder number or a silently disabled button. A
-  button the visitor cannot use yet reads "Sign in to …" and opens sign-in.
+  column: `PageHeader`, one panel with the choices and a Select all / Deselect
+  all link on their label row, then the one `SwimCta` md. Anything else sits
+  under the panel as a short list. Check: `challenge-relaxed.test.tsx`.
+- **A card deck is a question screen too.** Shark Cards keep the route column
+  but use the shared header and the one `QuestionActions` row (Previous and
+  Next together on the left). Face down the primary is "Show the answer";
+  turned, Got it, in the same place.
+  Check: `shark-cards.test.tsx`.
+- **A run's other screens share its shell.** A Learn level's intro and
+  result, the restart screens and every skill-check screen render inside
+  `QuestionShell`, so the exit button does not move. A track colour may tint
+  confetti and the result's icon tile, never text or a button.
+  Check: `learn-plan.test.tsx`.
+- **One copy home.** The parts' words are `question.*` keys in
+  `translations.question.ts`, loaded only by the question chunks.
+  Check: `question-copy.test.ts`.

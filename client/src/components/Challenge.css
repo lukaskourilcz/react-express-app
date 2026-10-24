@@ -43,6 +43,7 @@
    --ss-width-task column with the h1 and lead above one panel, then the top
    scores as a short list under it. */
 .challenge-setup { width: 100%; max-width: var(--ss-width-task); margin: 0 auto; }
+.challenge-setup > .ss-page-header { margin-bottom: 24px; }
 .challenge-setup__panel { display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: var(--radius-container); }
 .challenge-setup__group { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .challenge-setup__label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

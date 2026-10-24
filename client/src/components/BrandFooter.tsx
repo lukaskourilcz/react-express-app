@@ -15,25 +15,22 @@ const SOCIAL_ICON: Record<SocialPlatform, typeof InstagramIcon> = {
   threads: ThreadsIcon,
 };
 
-/** The appearance and sound toggles: short visible labels, the full action as
- * the accessible name (which contains the visible words). The footer shows
- * them from 1024px; below that the mobile drawer holds them (App.tsx, UX
- * audit shell-public-15), so they live in one place at every width. */
+/** The appearance and sound toggles. Each says what pressing it does, and
+ * its visible words are its whole accessible name (WCAG 2.5.3, label in
+ * name): "Dark mode" names the mode it switches to, "Turn sound on" the
+ * change it makes. The footer shows them from 1024px; below that the mobile
+ * drawer holds them (App.tsx, UX audit shell-public-15), so they live in one
+ * place at every width. */
 export function SettingsToggles({ className }: { className?: string }) {
   const t = useT();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
   return (
     <>
-      <button type="button" className={className} onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
+      <button type="button" className={className} onClick={toggle}>
         {mode === 'light' ? t('footer.darkMode') : t('footer.lightMode')}
       </button>
-      <button
-        type="button"
-        className={className}
-        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-        aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-      >
+      <button type="button" className={className} onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}>
         {settings.soundEffects ? t('footer.soundOff') : t('footer.soundOn')}
       </button>
     </>
