@@ -119,8 +119,32 @@ const learnCoding = async () => {
     import('../../lib/coding/catalog'),
     import('../../lib/coding/session'),
   ]);
-  return { levelCodingTasks, playableCodingTask: playable, createCodingSession };
+  return { levelCodingTasks: memoLevelTasks(levelCodingTasks), playableCodingTask: playable, createCodingSession };
 };
+
+/** `levelCodingTasks` filters every issuable task on each call, and the map
+ * asks it once per level of every code topic: about 10 ms of the map's 11 ms
+ * (#587, server item 25). The task catalogue is content fixed when the module
+ * loads, so each level's list is worked out once per instance and kept,
+ * frozen so no caller can change it for the next. */
+const levelTaskLists = new Map<string, readonly CodingTask[]>();
+function memoLevelTasks(levelCodingTasks: (topic: CodingTask['topic'], level: number) => CodingTask[]) {
+  return (topic: CodingTask['topic'], level: number): readonly CodingTask[] => {
+    const key = `${topic}:${level}`;
+    let tasks = levelTaskLists.get(key);
+    if (!tasks) {
+      tasks = Object.freeze(levelCodingTasks(topic, level));
+      levelTaskLists.set(key, tasks);
+    }
+    return tasks;
+  };
+}
+
+/** The tasks a Learn level seals, as the level map and a level open read
+ * them. Exported for the round-trip contract. */
+export async function learnLevelCodingTasks(topic: CodingTask['topic'], level: number): Promise<readonly CodingTask[]> {
+  return (await learnCoding()).levelCodingTasks(topic, level);
+}
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -142,7 +166,7 @@ const logEvent = createLogger('quiz/roadmap');
 function withCodingCounts(
   topic: string,
   live: RoadmapTopicStructure,
-  levelCodingTasks: (topic: CodingTask['topic'], level: number) => CodingTask[],
+  levelCodingTasks: (topic: CodingTask['topic'], level: number) => readonly CodingTask[],
 ): RoadmapTopicStructure {
   if (!isLearnCodingTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
   return {
