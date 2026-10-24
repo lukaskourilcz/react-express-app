@@ -145,7 +145,7 @@ Selling Premium needs `BILLING_ENABLED=true` plus `STRIPE_SECRET_KEY`, `VITE_STR
 
 ## API surface
 
-The twelve physical handlers multiplex related operations to stay within the deployment budget:
+The twelve physical handlers multiplex related operations to stay within the deployment budget. The two routers load each family of operations on its first call, so a new instance starts without the coding catalogue, the graders or TypeScript; `docs/product-architecture.md` ("Deployment" and "Sign-in, caching and limits") has what each one loads, caches and checks:
 
 | Handler | Purpose |
 |---|---|
@@ -153,7 +153,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | `/api/quiz/submit` | One-time grading, result proofs, and reports |
 | `/api/quiz/daily` | UTC daily session; the public question of the day (`?qotd=<date|today>`) |
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
-| `/api/quiz/roadmap` | Structure (the public Learn map, shared by the CDN for a minute), attempts, answers, completion, adaptive placement, the progress read (the retired progress PUT answers 405); coding tasks, submissions, reports, and reveals; learning-path catalogue, activity start and submit |
+| `/api/quiz/roadmap` | Structure (the public Learn map, shared by the CDN for a minute), attempts, answers, completion, adaptive placement, the progress read (the retired progress PUT answers 405); coding tasks (a free task's brief is a public read the CDN shares for an hour, apart from the caller's part), submissions, reports, and reveals; the learning-path catalogue (shared by the CDN for five minutes), activity start and submit |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
 | `/api/leaderboard` | 30-day, all-time, daily, and category boards |
 | `/api/flashcards` | Shark Cards: save, list and remove the questions a learner saved |
