@@ -308,7 +308,8 @@ try {
   // ── server item 6: a Premium step reads its tier with the record ──────
   {
     passedLevels(PREMIUM_LEARNER.id, 'nodejs', 10);
-    for (const query of [{ topic: 'nodejs', level: '10' }, { topic: 'nodejs', test: '1' }]) {
+    const steps: Record<string, string>[] = [{ topic: 'nodejs', level: '10' }, { topic: 'nodejs', test: '1' }];
+    for (const query of steps) {
       const { result, made } = await during(() => call('GET', query, PREMIUM_LEARNER.token));
       const res = result as ReturnType<typeof mockResponse>;
       assert.equal(res.statusCode, 200, `${JSON.stringify(query)}: ${JSON.stringify(res.body)}`);
