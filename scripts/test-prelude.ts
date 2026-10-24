@@ -143,6 +143,57 @@ try {
     Date.now = realNow;
   }
   console.log('PASS prelude: a refused address answers 429 without the caller\'s bucket, and reaches Auth only after its bucket admits it for a minute');
+
+  // The handlers that take the address tier themselves and check the caller
+  // after it (a coding Submit, a learning-path start, submit and draft save)
+  // check the token while the address bucket answers too, and the caller's
+  // bucket still waits for both.
+  {
+    const [{ handleCodingSubmit }, paths] = await Promise.all([import('../lib/coding/handlers'), import('../lib/learning-paths/handlers')]);
+    const cases: [string, string, (req: never, res: never) => Promise<unknown>, string | null][] = [
+      ['coding-submit', 'POST', (req, res) => handleCodingSubmit(req, res, null), null],
+      ['learning-path-start', 'POST', (req, res) => paths.handleActivityStart(req, res, null), 'learning_path_start:'],
+      ['learning-path-submit', 'POST', (req, res) => paths.handleActivitySubmit(req, res, null), null],
+      ['learning-path-draft', 'PUT', (req, res) => paths.handlePathDraft(req, res, null), null],
+    ];
+    let n = 10;
+    for (const [name, method, run, own] of cases) {
+      calls.length = 0;
+      const req = { method, headers: { authorization: `Bearer ${n}`, 'x-forwarded-for': `198.51.100.${n}` }, query: {}, url: '/api/prelude', socket: {}, body: {} };
+      const res = response();
+      n += 1;
+      await withRequestContext(req as never, res as never, async () => { await run(req as never, res as never); });
+      // A request answered before its token check returned leaves it running.
+      await later();
+      assert.notEqual(res.statusCode, 429, `${name}: admitted`);
+      const address = calls.find((one) => one.kind === 'upstash' && one.key?.includes('_address:'));
+      const check = calls.find((one) => one.kind === 'auth');
+      assert.ok(address && check, `${name}: an address bucket and a token check (${JSON.stringify(calls)})`);
+      assert.ok(check.start < address.end, `${name}: the token check starts before the address bucket has answered`);
+      assert.equal(calls.filter((one) => one.kind === 'auth').length, 1, `${name}: the handler reads the same check`);
+      if (own) {
+        const caller = calls.find((one) => one.kind === 'upstash' && one.key?.includes(own));
+        assert.ok(caller && caller.start >= address.end && caller.start >= check.end, `${name}: the caller's bucket waits for both`);
+      }
+    }
+    // A refused address: 429, and the hold keeps its next request away from Auth.
+    const flood = '203.0.113.77';
+    refused.add(flood);
+    try {
+      for (const expectAuth of [true, false]) {
+        calls.length = 0;
+        const req = { method: 'PUT', headers: { authorization: 'Bearer 99', 'x-forwarded-for': flood }, query: {}, url: '/api/prelude', socket: {}, body: {} };
+        const res = response();
+        await withRequestContext(req as never, res as never, async () => { await paths.handlePathDraft(req as never, res as never, null); });
+        await later();
+        assert.equal(res.statusCode, 429, 'a refused address answers 429');
+        assert.equal(calls.filter((one) => one.kind === 'auth').length, expectAuth ? 1 : 0, expectAuth ? 'the first refusal was checked meanwhile' : 'a refused address no longer reaches Supabase Auth');
+      }
+    } finally {
+      refused.delete(flood);
+    }
+  }
+  console.log('PASS prelude: a coding Submit and the learning-path start, submit and draft save check the token while their address bucket answers');
 } finally {
   upstash.close();
   auth.close();

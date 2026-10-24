@@ -514,6 +514,22 @@ async function admitAddressThenCaller(req: VercelRequest, res: VercelResponse, a
 }
 
 /**
+ * The address tier of a route whose handler checks the caller and takes the
+ * caller's own bucket itself (a coding Submit, a learning-path start, submit
+ * or draft save): the same bucket as `enforceRateLimit(req, res, address)`,
+ * with the caller's token checked while it answers, as in
+ * `enforceClassRateLimit`. The check is remembered for the request, so the
+ * handler's `requireAuthSub` or `verifiedCallerId` reads it instead of asking
+ * Supabase Auth after the bucket (#587, server item 2). A refused request
+ * answers 429 whatever the token says, and an address refused on this
+ * instance has its token checked only after the bucket admits it, for a
+ * minute. Returns false after sending the 429.
+ */
+export async function enforceAddressRateLimit(req: VercelRequest, res: VercelResponse, address: RateLimitConfig): Promise<boolean> {
+  return (await admitAddressThenCaller(req, res, address)) !== false;
+}
+
+/**
  * Enforce a limit in two tiers, for a route a class uses at once. A school
  * puts thirty pupils behind one address, so a bucket keyed by address alone
  * and sized for one person refused pupil twenty-one.

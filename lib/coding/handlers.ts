@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, verifiedCallerId, withTimeout } from '../http';
-import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceAddressRateLimit, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -776,7 +776,8 @@ function prefetchSubmitReads(req: VercelRequest, supabase: SupabaseClient | null
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingSubmitAddress))) return;
+  // The caller's token is checked while the address bucket answers.
+  if (!(await enforceAddressRateLimit(req, res, RATE_LIMITS.codingSubmitAddress))) return;
   const body = (req.body || {}) as Partial<CodingSubmitRequest>;
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');

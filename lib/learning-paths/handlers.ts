@@ -21,7 +21,7 @@ import { codingAwardId, creditVerifiedXp, settleMilestonesAfterPass } from '../r
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
 import { prefetchTier, refuseLocked, resolveTier } from '../access';
-import { enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
+import { enforceAddressRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
@@ -583,7 +583,8 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   }
   // Two tiers: an address backstop sized for a class behind one NAT, then the
   // learner's own bucket once the token says who they are.
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStartAddress))) return;
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  if (!(await enforceAddressRateLimit(req, res, RATE_LIMITS.learningPathStartAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStart, `user:${userId}`))) return;
@@ -928,7 +929,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmitAddress))) return;
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  if (!(await enforceAddressRateLimit(req, res, RATE_LIMITS.learningPathSubmitAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
 
@@ -1474,7 +1476,8 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
   // An autosave fires while the learner types, so a save is kept out of the
   // shared per-address bucket in `api/user/[op].ts`. Two tiers instead: an
   // address backstop sized for a class behind one NAT, then the learner's own.
-  if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraftAddress))) return;
+  // The token is checked while the address bucket answers (lib/rate-limit.ts).
+  if (req.method === 'PUT' && !(await enforceAddressRateLimit(req, res, RATE_LIMITS.learningPathDraftAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');

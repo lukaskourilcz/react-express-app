@@ -1631,8 +1631,14 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   address bucket refused an address on an instance, that address's token is
   checked only after its bucket admits it, for a minute, so a refused flood
   stops reaching Supabase Auth after its first refusal (it was admitted, and
-  checked, until then under the old order too). `npm run test:performance`
-  (`scripts/test-prelude.ts`) pins the order against timed stand-ins.
+  checked, until then under the old order too). A coding Submit and the
+  learning-path start, submit and draft save take their address bucket the
+  same way (`enforceAddressRateLimit`) and read that check where they need
+  the caller, so their token check no longer waits for the bucket either;
+  a Submit or start its address bucket admits but whose body is then
+  refused has spent one Auth call, as any two-tier route does.
+  `npm run test:performance` (`scripts/test-prelude.ts`) pins the order
+  against timed stand-ins.
 - **One-time claims.** `claimOnce` (one grade per placement round, one check
   per design walkthrough) is held in Upstash. Where Upstash is configured, a
   claim it cannot record is answered 503 `claim_unavailable` and nothing is
