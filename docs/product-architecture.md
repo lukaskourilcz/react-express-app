@@ -1774,7 +1774,12 @@ seeds a row in every such table.
   `setUser`. Its scrub hooks (in the lazy `client/src/lib/sentry-sdk.ts`)
   remove query strings, fragments, e-mail addresses, tokens, request data and
   the user from every error, breadcrumb and trace. Adding any of those moves
-  it under analytics consent. PostHog sends each event as it is captured, so
+  it under analytics consent. The SDK chunk loads after the page's load event,
+  at the browser's next idle moment, or at once on the first error (#587 C09);
+  an error reported or thrown before that waits in memory (at most 20) and is
+  sent through the same scrub hooks when the SDK starts. The pageload trace
+  still reads its timings from the browser's buffered performance entries.
+  PostHog sends each event as it is captured, so
   nothing batched before a withdrawal leaves after it.
 - **The privacy policy** (`PRIVACY` in `client/src/components/LegalPages.tsx`,
   keys `legal.privacy.*` in `client/src/i18n/translations.privacy.ts`, which

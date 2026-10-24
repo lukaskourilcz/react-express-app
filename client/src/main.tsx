@@ -32,7 +32,9 @@ if (import.meta.hot) import.meta.hot.dispose(() => { void scrollbarReady.then(di
 const disposeChunkErrorTracking = installChunkErrorTracking();
 if (import.meta.hot) import.meta.hot.dispose(disposeChunkErrorTracking);
 
-// Start error/performance reporting before anything renders (no-op without a DSN).
+// Error/performance reporting (no-op without a DSN). Errors are caught from
+// here on; the SDK itself loads once the page is idle, or on the first error
+// (lib/sentry.ts).
 initSentry();
 // PostHog product analytics, only after the visitor's yes to analytics in the
 // cookie banner (lib/consent.ts). Before it the SDK is not downloaded and
