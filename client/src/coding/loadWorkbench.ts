@@ -27,7 +27,7 @@ const importWorkbench = () => {
  * puzzle or the "bigger screen" note does not fetch CodeMirror (C12). Settles
  * with the workbench once the editor has settled too, so the task draws whole;
  * an editor that failed fails alone, in its own box, when it is drawn. */
-const loadWorkbench = routeChunk(
+export const preloadTaskWorkbench = routeChunk(
   (pathname) => /^\/coding\/(?!system-design\/)[^/]+\/[^/]+$/.test(pathname),
   () => {
     const editor = editorWantedHere() ? loadEditor().catch(() => undefined) : undefined;
@@ -53,7 +53,7 @@ export function useWorkbench(needed: boolean, attempt: number) {
     if (!needed || View) return;
     let live = true;
     let grace = 0;
-    loadWorkbench().then((module) => {
+    preloadTaskWorkbench().then((module) => {
       if (live) { setFailed(false); setView(() => module.CodingWorkbench); }
     }, async (error: unknown) => {
       if (live && attempt > 0 && isChunkLoadError(error)) {

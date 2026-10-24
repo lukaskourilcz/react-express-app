@@ -676,6 +676,15 @@ shown once it has loaded.
   editor that fails to load offers Try again in that box alone. The editor's
   code is evaluated in a task of its own, apart from the workbench's (C12,
   C21).
+- **The first page of a visit** to a task address asks for the task, and
+  fetches the workbench and editor, as the section's chunk evaluates, before
+  the screen renders (`client/src/coding/earlyTaskRead.ts`); the screen's
+  own read takes that answer instead of asking again. A task's answer counts
+  as this visit's for 5 s (`TASK_HANDOFF_MS`) so the screen does not ask a
+  second time; nothing outlives the screen (`gcTime: 0`), so every visit
+  still asks afresh and a stage never opens from an older draft. An answer
+  the screen never takes is let go after 15 s. Before, the request left only
+  once the screen had rendered (C16).
 - **The coding lists** (`/coding`, a track, `/coding/fullstack`) warm the
   workbench (about 21 KB gzip) when the browser is idle, and no longer the
   editor with it: a list visit that opens no task, or opens one on a phone,

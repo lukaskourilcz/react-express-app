@@ -11,8 +11,10 @@ import { accountEpoch } from '../../lib/accountData';
 import { FadeFinCta, Kicker, SwimCta } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
-import { useWorkbench, useWarmWorkbench } from '../../coding/loadWorkbench';
+import { preloadTaskWorkbench, useWorkbench, useWarmWorkbench } from '../../coding/loadWorkbench';
 import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
+import { releaseCodingTaskRead, startCodingTaskRead } from '../../coding/earlyTaskRead';
+import { queryClient as appQueryClient } from '../../lib/queryClient';
 import { autosaveDraft, deviceDraft, draftStoredBySubmit, flushAutosave, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
 import { DraftNote, useDraftChoice } from '../../coding/DraftNote';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
@@ -78,6 +80,27 @@ function difficultyParam(params: URLSearchParams): Difficulty | 'all' {
   if (isDifficulty(value)) return value;
   const tier = Number(params.get('tier'));
   return isCodingTier(tier) ? TIER_DIFFICULTY[tier] : 'all';
+}
+
+/** The sealed Learn session a task tab was opened with: in the address's
+ * fragment when the Build-it link opened it, then in this tab's storage. */
+function learnSessionAt(taskId: string | undefined): string | undefined {
+  const sealed = new URLSearchParams(window.location.hash.slice(1)).get('learn');
+  try { return sealed ?? sessionStorage.getItem(`devshark:learn-coding:${taskId}`) ?? undefined; } catch { return sealed ?? undefined; }
+}
+
+// The first page of a visit (perf baseline #587 C16): a task address asks for
+// its task, and fetches its workbench and editor, as this chunk evaluates,
+// before the screen renders. The screen's own read then takes the answer
+// (coding/earlyTaskRead.ts); a hidden track asks for nothing.
+{
+  const first = /^\/coding\/([^/]+)\/([^/]+)\/?$/.exec(window.location.pathname);
+  let taskId: string | null = null;
+  try { taskId = first ? decodeURIComponent(first[2]) : null; } catch { taskId = null; }
+  if (first && taskId && isCodingSectionTrack(first[1])) {
+    startCodingTaskRead(appQueryClient, taskId, learnSessionAt(taskId));
+    void preloadTaskWorkbench().catch(() => undefined);
+  }
 }
 
 /** A track, or a challenge, that does not exist (or no longer does): a
@@ -769,10 +792,7 @@ function CodingTaskView({ track, taskId }: { track: CodingTrack; taskId: string 
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf, premiumOf, passed: passedIds } = useStatuses(progress.data);
-  const [learnLink, setLearnLink] = useState(() => {
-    const sealed = new URLSearchParams(window.location.hash.slice(1)).get('learn');
-    try { return { taskId, session: sealed ?? sessionStorage.getItem(`devshark:learn-coding:${taskId}`) ?? undefined }; } catch { return { taskId, session: sealed ?? undefined }; }
-  });
+  const [learnLink, setLearnLink] = useState(() => ({ taskId, session: learnSessionAt(taskId) }));
   const learnSession = learnLink.taskId === taskId ? learnLink.session : undefined;
   useEffect(() => {
     if (!learnSession || !taskId) return;
@@ -780,6 +800,8 @@ function CodingTaskView({ track, taskId }: { track: CodingTrack; taskId: string 
     if (new URLSearchParams(window.location.hash.slice(1)).has('learn')) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
   }, [learnSession, taskId]);
   const task = useCodingTask(taskId, learnSession);
+  // This screen's read is on: an early read of the first page lets go.
+  useEffect(() => { releaseCodingTaskRead(); }, []);
   useEffect(() => {
     if (learnSession && task.data?.session && task.data.session !== learnSession && task.data.task.id === taskId) {
       setLearnLink({ taskId, session: task.data.session });
