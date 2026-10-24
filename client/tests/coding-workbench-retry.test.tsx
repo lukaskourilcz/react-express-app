@@ -123,10 +123,11 @@ it('gives the button back when no reload starts, offline or with the server unre
   expect(screen.getByRole('alert')).toHaveTextContent('Could not load this task.');
 });
 
-// The lists warm the workbench (CodeMirror, about 190 kB gzipped) once the
-// browser is idle, even for a visitor who asked it to save data; the runner
-// already waits for their first Run instead.
-it('warms the workbench from a list only when the browser is not saving data', async () => {
+// The lists warmed the workbench (with CodeMirror, about 190 kB gzipped)
+// once the browser was idle, even for a visitor who asked it to save data; the
+// runner already waits for their first Run instead. Since perf baseline #587
+// C03 the warm-up leaves CodeMirror (about 170 kB of it) to the task.
+it('warms the workbench from a list only when the browser is not saving data, and never the editor', async () => {
   vi.stubGlobal('requestIdleCallback', (run: () => void) => { run(); return 1; });
   vi.stubGlobal('cancelIdleCallback', () => {});
   vi.stubGlobal('navigator', { ...navigator, connection: { saveData: true } });
@@ -137,6 +138,7 @@ it('warms the workbench from a list only when the browser is not saving data', a
     vi.stubGlobal('navigator', { ...navigator, connection: { saveData: false } });
     renderHook(() => useWarmWorkbench()).unmount();
     expect(state.loads).toBe(1);
+    expect(state.editorImports).toBe(0);
   } finally {
     vi.unstubAllGlobals();
   }

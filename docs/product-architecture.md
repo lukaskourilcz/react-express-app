@@ -676,6 +676,13 @@ shown once it has loaded.
   editor that fails to load offers Try again in that box alone. The editor's
   code is evaluated in a task of its own, apart from the workbench's (C12,
   C21).
+- **The coding lists** (`/coding`, a track, `/coding/fullstack`) warm the
+  workbench (about 21 KB gzip) when the browser is idle, and no longer the
+  editor with it: a list visit that opens no task, or opens one on a phone,
+  costs no CodeMirror, and a pointer, focus or touch on a task link starts
+  the editor beside the workbench (`useWarmWorkbench`,
+  `client/src/coding/loadWorkbench.ts`). Before, every list visit downloaded
+  both, 190 KB gzip (C03).
 - **TypeScript's compiler** (about 1 MB gzip, 4 MB of JavaScript) loads
   once the learner reaches for the code: a pointer or the focus in the editor
   or on the Run and Submit row, an edit, the first Run or Submit, or the
