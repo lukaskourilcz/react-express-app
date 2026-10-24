@@ -1690,6 +1690,11 @@ Do not rename the schema. The browser keeps no coin balance of its own; old
   completion again under its lock. After a verified code pass the XP coin
   credit and the milestone settlement (Premium only, see "Where credits
   happen") run together, both awaited before the answer.
+- **Learning-path activity start** (#587, server item 21). Every published
+  activity id belongs to one path, so a Premium activity's tier is asked
+  beside the enrollment read; the plan check still runs on the path the
+  enrollment names, after ownership is proven, and a free activity asks for
+  no tier.
 - **Learn completion round trips** (#587, server item 5). A completion reads
   the attempt, the graded answers, the served set and, on a code level, the
   coding rows together, with the tier gate of a Premium level: one wave where

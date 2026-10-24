@@ -608,6 +608,14 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     return jsonError(res, 400, 'bad_request', 'An activityId is required');
   }
 
+  // The enrollment names the path, but every published activity id belongs
+  // to one path, so a Premium activity's tier is asked beside the enrollment
+  // read (#587, server item 21). The plan check below still runs on the path
+  // the enrollment names, after ownership is proven; an id no path holds asks
+  // nothing ahead.
+  const requested = body.activityId;
+  const named = LEARNING_PATHS.find((one) => activityIn(one, requested));
+  if (named) prefetchTier(userId, { kind: 'learning-path-activity', pathId: named.id, activityId: requested });
   let row: EnrollmentRow | null;
   try {
     row = await loadEnrollment(supabase, userId, body.enrollmentId);

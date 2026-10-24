@@ -355,6 +355,62 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
     }
 
+    /* ── a Premium activity start asks the tier beside the enrollment ── */
+    // #587, server item 21: the plan check's tier read does not wait for the
+    // enrollment read; a free activity still asks for no tier at all.
+    {
+      const fde = LEARNING_PATHS.find((one) => one.id === 'fde')!;
+      const premiumCheck = fde.modules.filter((one) => !isOffLoopModule(one)).slice(1).flatMap((one) => one.activities)
+        .find((activity) => activity.kind === 'check')!;
+      const freeActivity = fde.modules.find((one) => !isOffLoopModule(one))!.activities[0];
+      const id = `FDETIER${stamp}`.padEnd(20, 'a');
+      const starter = `user-paths-start-tier-${stamp}`;
+      const row = { ...enrollmentRow('active'), enrollment_id: id, user_id: starter, path_id: 'fde', curriculum_version: fde.version };
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      const startWatched = async (activityId: string) => {
+        const order: string[] = [];
+        let watching = false;
+        class WatchedTier<T> extends Promise<T> {
+          static get [Symbol.species]() { return Promise; }
+          then<A = T, B = never>(onDone?: ((value: T) => A | PromiseLike<A>) | null, onFail?: ((reason: unknown) => B | PromiseLike<B>) | null) {
+            if (watching) order.push('tier');
+            return super.then(onDone, onFail);
+          }
+        }
+        const req = request('POST', `start-tier-${stamp}`, { user_id: starter, enrollmentId: id, activityId });
+        const res = response();
+        await withRequestContext(req, res as never, async () => {
+          void requestMemo(`tier:${starter}`, () => new WatchedTier<'premium'>((resolve) => resolve('premium')));
+          watching = true;
+          await handleActivityStart(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: row },
+            lists: { learning_path_progress: [] },
+            onQuery: (table, op) => { if (op === 'select' && table === 'learning_path_enrollments') order.push('enrollment'); },
+            rpc: (name) => name === 'open_learning_path_attempt'
+              ? { data: { ok: true, expiresAt: new Date(Date.now() + 3_600_000).toISOString() } }
+              : {},
+          }));
+        });
+        watching = false;
+        return { res, order };
+      };
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const premium = await startWatched(premiumCheck.id);
+        if (premium.res.statusCode !== 200) fail(`a Premium start answered ${premium.res.statusCode} ${code(premium.res)}`);
+        const firstTier = premium.order.indexOf('tier');
+        if (firstTier < 0 || firstTier > premium.order.indexOf('enrollment')) {
+          fail(`a Premium activity start asked the tier only after the enrollment read: ${premium.order.join(' > ')}`);
+        }
+        const free = await startWatched(freeActivity.id);
+        if (free.res.statusCode !== 200) fail(`a free start answered ${free.res.statusCode} ${code(free.res)}`);
+        if (free.order.includes('tier')) fail('a free activity start asked for the tier');
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
+    }
+
     /* ── a draft that cannot be read is logged, and the activity opens ─ */
     {
       const id = `DRAFTERR${stamp}`.padEnd(20, 'a');
